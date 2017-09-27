@@ -94,17 +94,17 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public boolean removeFromOnlineRegions(Region r, ServerName destination) {
+  public boolean removeRegion(Region r, ServerName destination) {
     return this.regions.remove(r.getRegionInfo().getEncodedName()) != null;
   }
 
   @Override
-  public Region getFromOnlineRegions(String encodedRegionName) {
+  public Region getRegion(String encodedRegionName) {
     return this.regions.get(encodedRegionName);
   }
 
   @Override
-  public List<Region> getOnlineRegions(TableName tableName) throws IOException {
+  public List<Region> getRegions(TableName tableName) throws IOException {
     return null;
   }
 
@@ -114,24 +114,24 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public List<Region> getOnlineRegions() {
+  public List<Region> getRegions() {
     return null;
   }
 
   @Override
-  public void addToOnlineRegions(Region r) {
+  public void addRegion(Region r) {
     this.regions.put(r.getRegionInfo().getEncodedName(), r);
   }
 
   @Override
   public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
-    addToOnlineRegions(r);
+    addRegion(r);
   }
 
   @Override
   public void postOpenDeployTasks(PostOpenDeployContext context) throws KeeperException,
       IOException {
-    addToOnlineRegions(context.getRegion());
+    addRegion(context.getRegion());
   }
 
   @Override

@@ -4442,7 +4442,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public int getNumHFilesForRS(final HRegionServer rs, final TableName tableName,
                                final byte[] family) {
     int numHFiles = 0;
-    for (Region region : rs.getOnlineRegions(tableName)) {
+    for (Region region : rs.getRegions(tableName)) {
       numHFiles += region.getStore(family).getStorefilesCount();
     }
     return numHFiles;

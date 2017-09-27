@@ -64,7 +64,7 @@ public class TestAsyncMetaRegionLocator {
   private Optional<ServerName> getRSCarryingMeta() {
     return TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
         .map(t -> t.getRegionServer())
-        .filter(rs -> !rs.getOnlineRegions(TableName.META_TABLE_NAME).isEmpty()).findAny()
+        .filter(rs -> !rs.getRegions(TableName.META_TABLE_NAME).isEmpty()).findAny()
         .map(rs -> rs.getServerName());
   }
 

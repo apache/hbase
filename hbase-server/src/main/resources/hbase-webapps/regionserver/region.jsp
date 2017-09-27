@@ -36,7 +36,7 @@
   HRegionServer rs = (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   Configuration conf = rs.getConfiguration();
 
-  Region region = rs.getFromOnlineRegions(regionName);
+  Region region = rs.getRegion(regionName);
   String displayName = HRegionInfo.getRegionNameAsStringForDisplay(region.getRegionInfo(),
     rs.getConfiguration());
 %>

@@ -754,7 +754,7 @@ public final class SnapshotTestingUtils {
                                             final TableName tableName)
       throws IOException, InterruptedException {
     HRegionServer rs = util.getRSForFirstRegionInTable(tableName);
-    List<Region> onlineRegions = rs.getOnlineRegions(tableName);
+    List<Region> onlineRegions = rs.getRegions(tableName);
     for (Region region : onlineRegions) {
       region.waitForFlushesAndCompactions();
     }

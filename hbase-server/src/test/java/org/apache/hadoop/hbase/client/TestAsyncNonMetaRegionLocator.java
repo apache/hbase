@@ -176,7 +176,7 @@ public class TestAsyncNonMetaRegionLocator {
     ServerName[] serverNames = new ServerName[startKeys.length];
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
         .forEach(rs -> {
-          rs.getOnlineRegions(TABLE_NAME).forEach(r -> {
+          rs.getRegions(TABLE_NAME).forEach(r -> {
             serverNames[Arrays.binarySearch(startKeys, r.getRegionInfo().getStartKey(),
               Bytes::compareTo)] = rs.getServerName();
           });
@@ -270,7 +270,7 @@ public class TestAsyncNonMetaRegionLocator {
         LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.AFTER, false).get();
     ServerName afterServerName =
         TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
-            .filter(rs -> rs.getOnlineRegions(TABLE_NAME).stream()
+            .filter(rs -> rs.getRegions(TABLE_NAME).stream()
                 .anyMatch(r -> Bytes.equals(splitKey, r.getRegionInfo().getStartKey())))
             .findAny().get().getServerName();
     assertLocEquals(splitKey, EMPTY_END_ROW, afterServerName, afterLoc);

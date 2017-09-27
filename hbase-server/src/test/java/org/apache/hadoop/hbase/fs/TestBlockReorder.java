@@ -292,7 +292,7 @@ public class TestBlockReorder {
 
     int nbTest = 0;
     while (nbTest < 10) {
-      final List<Region> regions = targetRs.getOnlineRegions(h.getName());
+      final List<Region> regions = targetRs.getRegions(h.getName());
       final CountDownLatch latch = new CountDownLatch(regions.size());
       // listen for successful log rolls
       final WALActionsListener listener = new WALActionsListener.Base() {

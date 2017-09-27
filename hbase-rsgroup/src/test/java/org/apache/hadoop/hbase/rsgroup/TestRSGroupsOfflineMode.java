@@ -176,10 +176,10 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return failoverRS.getOnlineRegions(failoverTable).size() >= 1;
+        return failoverRS.getRegions(failoverTable).size() >= 1;
       }
     });
-    Assert.assertEquals(0, failoverRS.getOnlineRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
+    Assert.assertEquals(0, failoverRS.getRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
 
     // Need this for minicluster to shutdown cleanly.
     master.stopMaster();

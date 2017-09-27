@@ -62,7 +62,7 @@ public class ErrorThrowingGetObserver implements RegionObserver {
           throw new NotServingRegionException("Failing for test");
         case REGION_MOVED:
           throw new RegionMovedException(
-              e.getEnvironment().getRegionServerServices().getServerName(), 1);
+              e.getEnvironment().getCoprocessorRegionServerServices().getServerName(), 1);
         case SCANNER_RESET:
           throw new ScannerResetException("Failing for test");
         case UNKNOWN_SCANNER:

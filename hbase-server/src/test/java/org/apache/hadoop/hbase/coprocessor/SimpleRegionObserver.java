@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -137,12 +136,6 @@ public class SimpleRegionObserver implements RegionObserver {
 
   @Override
   public void start(CoprocessorEnvironment e) throws IOException {
-    // this only makes sure that leases and locks are available to coprocessors
-    // from external packages
-    RegionCoprocessorEnvironment re = (RegionCoprocessorEnvironment)e;
-    Leases leases = re.getRegionServerServices().getLeases();
-    leases.createLease(re.getRegion().getRegionInfo().getRegionNameAsString(), 2000, null);
-    leases.cancelLease(re.getRegion().getRegionInfo().getRegionNameAsString());
   }
 
   @Override

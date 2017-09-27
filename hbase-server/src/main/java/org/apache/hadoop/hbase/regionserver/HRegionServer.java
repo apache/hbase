@@ -2757,7 +2757,7 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public void addToOnlineRegions(Region region) {
+  public void addRegion(Region region) {
     this.onlineRegions.put(region.getRegionInfo().getEncodedName(), region);
     configurationManager.registerObserver(region);
   }
@@ -3003,7 +3003,7 @@ public class HRegionServer extends HasThread implements
    * @return Online regions from <code>tableName</code>
    */
   @Override
-  public List<Region> getOnlineRegions(TableName tableName) {
+  public List<Region> getRegions(TableName tableName) {
      List<Region> tableRegions = new ArrayList<>();
      synchronized (this.onlineRegions) {
        for (Region region: this.onlineRegions.values()) {
@@ -3017,7 +3017,7 @@ public class HRegionServer extends HasThread implements
    }
 
   @Override
-  public List<Region> getOnlineRegions() {
+  public List<Region> getRegions() {
     List<Region> allRegions = new ArrayList<>();
     synchronized (this.onlineRegions) {
       // Return a clone copy of the onlineRegions
@@ -3103,7 +3103,7 @@ public class HRegionServer extends HasThread implements
   protected boolean closeRegion(String encodedName, final boolean abort, final ServerName sn)
       throws NotServingRegionException {
     //Check for permissions to close.
-    Region actualRegion = this.getFromOnlineRegions(encodedName);
+    Region actualRegion = this.getRegion(encodedName);
     // Can be null if we're calling close on a region that's not online
     if ((actualRegion != null) && (actualRegion.getCoprocessorHost() != null)) {
       try {
@@ -3128,7 +3128,7 @@ public class HRegionServer extends HasThread implements
         return closeRegion(encodedName, abort, sn);
       }
       // Let's get the region from the online region list again
-      actualRegion = this.getFromOnlineRegions(encodedName);
+      actualRegion = this.getRegion(encodedName);
       if (actualRegion == null) { // If already online, we still need to close it.
         LOG.info("The opening previously in progress has been cancelled by a CLOSE request.");
         // The master deletes the znode when it receives this exception.
@@ -3170,7 +3170,7 @@ public class HRegionServer extends HasThread implements
  protected boolean closeAndOfflineRegionForSplitOrMerge(
      final List<String> regionEncodedName) throws IOException {
    for (int i = 0; i < regionEncodedName.size(); ++i) {
-     Region regionToClose = this.getFromOnlineRegions(regionEncodedName.get(i));
+     Region regionToClose = this.getRegion(regionEncodedName.get(i));
      if (regionToClose != null) {
        Map<byte[], List<HStoreFile>> hstoreFiles = null;
        Exception exceptionToThrow = null;
@@ -3211,7 +3211,7 @@ public class HRegionServer extends HasThread implements
          MetaTableAccessor.putToMetaTable(getConnection(), finalBarrier);
        }
        // Offline the region
-       this.removeFromOnlineRegions(regionToClose, null);
+       this.removeRegion(regionToClose, null);
      }
    }
    return true;
@@ -3232,13 +3232,13 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public Region getFromOnlineRegions(final String encodedRegionName) {
+  public Region getRegion(final String encodedRegionName) {
     return this.onlineRegions.get(encodedRegionName);
   }
 
 
   @Override
-  public boolean removeFromOnlineRegions(final Region r, ServerName destination) {
+  public boolean removeRegion(final Region r, ServerName destination) {
     Region toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
     if (destination != null) {
       long closeSeqNum = r.getMaxFlushedSeqId();

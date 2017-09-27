@@ -801,7 +801,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     ArrayList<HRegion> ret = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
-      for (Region region : hrs.getOnlineRegions(tableName)) {
+      for (Region region : hrs.getRegions(tableName)) {
         if (region.getTableDescriptor().getTableName().equals(tableName)) {
           ret.add((HRegion)region);
         }

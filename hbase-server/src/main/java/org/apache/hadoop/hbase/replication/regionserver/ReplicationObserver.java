@@ -55,7 +55,7 @@ public class ReplicationObserver implements RegionObserver {
           + "data replication.");
       return;
     }
-    HRegionServer rs = (HRegionServer) env.getRegionServerServices();
+    HRegionServer rs = (HRegionServer) env.getCoprocessorRegionServerServices();
     Replication rep = (Replication) rs.getReplicationSourceService();
     rep.addHFileRefsToQueue(env.getRegionInfo().getTable(), family, pairs);
   }

@@ -64,7 +64,7 @@ public class TestFileSystemUtilizationChore {
         .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
 
     final Region region = mockRegionWithSize(regionSizes);
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(region));
+    when(rs.getRegions()).thenReturn(Arrays.asList(region));
     chore.chore();
   }
 
@@ -81,7 +81,7 @@ public class TestFileSystemUtilizationChore {
         .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
 
     final Region region = mockRegionWithSize(regionSizes);
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(region));
+    when(rs.getRegions()).thenReturn(Arrays.asList(region));
     chore.chore();
   }
 
@@ -107,7 +107,7 @@ public class TestFileSystemUtilizationChore {
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionWithSize(r2Sizes);
     final Region r3 = mockRegionWithSize(r3Sizes);
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2, r3));
+    when(rs.getRegions()).thenReturn(Arrays.asList(r1, r2, r3));
     chore.chore();
   }
 
@@ -173,7 +173,7 @@ public class TestFileSystemUtilizationChore {
     final Region r1 = mockRegionWithSize(Arrays.asList(1024L, 2048L));
     final Region r2 = mockRegionWithSize(Arrays.asList(1024L * 1024L));
     final Region r3 = mockRegionWithSize(Arrays.asList(10L * 1024L * 1024L));
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2, r3, lr1, lr2));
+    when(rs.getRegions()).thenReturn(Arrays.asList(r1, r2, r3, lr1, lr2));
 
     chore.chore();
   }
@@ -206,7 +206,7 @@ public class TestFileSystemUtilizationChore {
     final Region r2 = mockRegionWithSize(Arrays.asList(1024L * 1024L));
     final Region r3 = mockRegionWithSize(Arrays.asList(10L * 1024L * 1024L));
     // lr2 is no longer online, so it should be ignored
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2, r3, lr1));
+    when(rs.getRegions()).thenReturn(Arrays.asList(r1, r2, r3, lr1));
 
     chore.chore();
   }
@@ -229,7 +229,7 @@ public class TestFileSystemUtilizationChore {
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockSplitParentRegionWithSize(r2Sizes);
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2));
+    when(rs.getRegions()).thenReturn(Arrays.asList(r1, r2));
     chore.chore();
   }
 
@@ -251,7 +251,7 @@ public class TestFileSystemUtilizationChore {
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionReplicaWithSize(r2Sizes);
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2));
+    when(rs.getRegions()).thenReturn(Arrays.asList(r1, r2));
     chore.chore();
   }
 
@@ -278,7 +278,7 @@ public class TestFileSystemUtilizationChore {
 
     final Region r1 = mockRegionWithHFileLinks(r1StoreFileSizes, r1HFileSizes);
     final Region r2 = mockRegionWithHFileLinks(r2StoreFileSizes, r2HFileSizes);
-    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2));
+    when(rs.getRegions()).thenReturn(Arrays.asList(r1, r2));
     chore.chore();
   }
 

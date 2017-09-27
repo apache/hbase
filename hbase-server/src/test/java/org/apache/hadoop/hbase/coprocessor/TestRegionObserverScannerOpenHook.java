@@ -300,7 +300,7 @@ public class TestRegionObserverScannerOpenHook {
     table.put(put);
 
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    List<Region> regions = rs.getOnlineRegions(desc.getTableName());
+    List<Region> regions = rs.getRegions(desc.getTableName());
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());

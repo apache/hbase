@@ -96,7 +96,7 @@ public class TestClientPushback {
     BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(tableName);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getOnlineRegions(tableName).get(0);
+    Region region = rs.getRegions(tableName).get(0);
 
     LOG.debug("Writing some data to "+tableName);
     // write some data
@@ -183,7 +183,7 @@ public class TestClientPushback {
     ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
     Table table = conn.getTable(tableName);
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getOnlineRegions(tableName).get(0);
+    Region region = rs.getRegions(tableName).get(0);
 
     RowMutations mutations = new RowMutations(Bytes.toBytes("row"));
     Put p = new Put(Bytes.toBytes("row"));

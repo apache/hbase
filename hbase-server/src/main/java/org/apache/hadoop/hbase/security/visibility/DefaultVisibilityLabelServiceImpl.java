@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -111,7 +112,9 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
 
   @Override
   public void init(RegionCoprocessorEnvironment e) throws IOException {
-    ZooKeeperWatcher zk = e.getRegionServerServices().getZooKeeper();
+    assert e.getCoprocessorRegionServerServices() instanceof RegionServerServices;
+    ZooKeeperWatcher zk = ((RegionServerServices) e.getCoprocessorRegionServerServices())
+        .getZooKeeper();
     try {
       labelsCache = VisibilityLabelsCache.createAndGet(zk, this.conf);
     } catch (IOException ioe) {

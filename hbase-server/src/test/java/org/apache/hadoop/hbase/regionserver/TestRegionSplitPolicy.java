@@ -105,7 +105,7 @@ public class TestRegionSplitPolicy {
     // return 'online regions'.
     RegionServerServices rss = Mockito.mock(RegionServerServices.class);
     final List<Region> regions = new ArrayList<>();
-    Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
+    Mockito.when(rss.getRegions(TABLENAME)).thenReturn(regions);
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
     // Set max size for this 'table'.
     long maxSplitSize = 1024L;
@@ -164,7 +164,7 @@ public class TestRegionSplitPolicy {
 
     RegionServerServices rss  = Mockito.mock(RegionServerServices.class);
     final List<Region> regions = new ArrayList<>();
-    Mockito.when(rss.getOnlineRegions(TABLENAME)).thenReturn(regions);
+    Mockito.when(rss.getRegions(TABLENAME)).thenReturn(regions);
     Mockito.when(mockRegion.getRegionServerServices()).thenReturn(rss);
     Mockito.when(mockRegion.getBlockedRequestsCount()).thenReturn(0L);
     Mockito.when(mockRegion.getWriteRequestsCount()).thenReturn(0L);

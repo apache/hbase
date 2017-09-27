@@ -417,7 +417,7 @@ public class TestRegionPlacement {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     for (int i = 0; i < SLAVES; i++) {
       HRegionServer rs = cluster.getRegionServer(i);
-      for (Region region: rs.getOnlineRegions(TableName.valueOf("testRegionAssignment"))) {
+      for (Region region: rs.getRegions(TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
         List<ServerName> favoredServerList = plan.getAssignmentMap().get(region.getRegionInfo());

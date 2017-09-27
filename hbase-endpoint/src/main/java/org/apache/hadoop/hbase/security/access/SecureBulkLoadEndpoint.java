@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadService;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 
 import com.google.protobuf.RpcCallback;
@@ -62,10 +63,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   private static final Log LOG = LogFactory.getLog(SecureBulkLoadEndpoint.class);
 
   private RegionCoprocessorEnvironment env;
+  private RegionServerServices rsServices;
 
   @Override
   public void start(CoprocessorEnvironment env) {
     this.env = (RegionCoprocessorEnvironment)env;
+    assert this.env.getCoprocessorRegionServerServices() instanceof RegionServerServices;
+    rsServices = (RegionServerServices) this.env.getCoprocessorRegionServerServices();
     LOG.warn("SecureBulkLoadEndpoint is deprecated. It will be removed in future releases.");
     LOG.warn("Secure bulk load has been integrated into HBase core.");
   }
@@ -78,8 +82,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   public void prepareBulkLoad(RpcController controller, PrepareBulkLoadRequest request,
       RpcCallback<PrepareBulkLoadResponse> done) {
     try {
-      SecureBulkLoadManager secureBulkLoadManager =
-          this.env.getRegionServerServices().getSecureBulkLoadManager();
+      SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
 
       String bulkToken = secureBulkLoadManager.prepareBulkLoad(this.env.getRegion(),
           convert(request));
@@ -106,8 +109,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   public void cleanupBulkLoad(RpcController controller, CleanupBulkLoadRequest request,
       RpcCallback<CleanupBulkLoadResponse> done) {
     try {
-      SecureBulkLoadManager secureBulkLoadManager =
-          this.env.getRegionServerServices().getSecureBulkLoadManager();
+      SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
       secureBulkLoadManager.cleanupBulkLoad(this.env.getRegion(), convert(request));
       done.run(CleanupBulkLoadResponse.newBuilder().build());
     } catch (IOException e) {
@@ -138,8 +140,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     boolean loaded = false;
     Map<byte[], List<Path>> map = null;
     try {
-      SecureBulkLoadManager secureBulkLoadManager =
-          this.env.getRegionServerServices().getSecureBulkLoadManager();
+      SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
       BulkLoadHFileRequest bulkLoadHFileRequest = ConvertSecureBulkLoadHFilesRequest(request);
       map = secureBulkLoadManager.secureBulkLoadHFiles(this.env.getRegion(),
           convert(bulkLoadHFileRequest));

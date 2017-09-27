@@ -150,7 +150,7 @@ public class TestRegionsOnMasterOptions {
     try {
       Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY, REGIONS);
       LOG.info("Server: " + cluster.getMaster().getServerManager().getOnlineServersList());
-      List<Region> regions = cluster.getMaster().getOnlineRegions();
+      List<Region> regions = cluster.getMaster().getRegions();
       int mActualCount = regions.size();
       if (masterCount == 0 || masterCount == SYSTEM_REGIONS) {
         // 0 means no regions on master.
@@ -163,7 +163,7 @@ public class TestRegionsOnMasterOptions {
       // thread though it is a regionserver so we have to check master and then below the
       // regionservers.
       for (JVMClusterUtil.RegionServerThread rst: cluster.getRegionServerThreads()) {
-        regions = rst.getRegionServer().getOnlineRegions();
+        regions = rst.getRegionServer().getRegions();
         int rsActualCount = regions.size();
         checkCount(rsActualCount, rsCount);
       }
@@ -179,7 +179,7 @@ public class TestRegionsOnMasterOptions {
       }
       LOG.info("Cluster is up; running balancer");
       cluster.getMaster().balance();
-      regions = cluster.getMaster().getOnlineRegions();
+      regions = cluster.getMaster().getRegions();
       int mNewActualCount = regions.size();
       if (masterCount == 0 || masterCount == SYSTEM_REGIONS) {
         // 0 means no regions on master. After crash, should still be no regions on master.

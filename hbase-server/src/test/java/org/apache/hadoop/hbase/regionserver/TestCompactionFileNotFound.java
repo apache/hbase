@@ -133,7 +133,7 @@ public class TestCompactionFileNotFound {
           int numRegionsAfterSplit = 0;
           List<RegionServerThread> rst = util.getMiniHBaseCluster().getLiveRegionServerThreads();
           for (RegionServerThread t : rst) {
-            numRegionsAfterSplit += t.getRegionServer().getOnlineRegions(TEST_TABLE).size();
+            numRegionsAfterSplit += t.getRegionServer().getRegions(TEST_TABLE).size();
           }
           // Make sure that the split went through and all the regions are assigned
           return (numRegionsAfterSplit == numRegionsBeforeSplit + 1

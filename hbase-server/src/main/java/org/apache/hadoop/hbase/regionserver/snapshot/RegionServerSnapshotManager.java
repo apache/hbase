@@ -223,7 +223,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * @throws IOException
    */
   private List<Region> getRegionsToSnapshot(SnapshotDescription snapshot) throws IOException {
-    List<Region> onlineRegions = rss.getOnlineRegions(TableName.valueOf(snapshot.getTable()));
+    List<Region> onlineRegions = rss.getRegions(TableName.valueOf(snapshot.getTable()));
     Iterator<Region> iterator = onlineRegions.iterator();
     // remove the non-default regions
     while (iterator.hasNext()) {

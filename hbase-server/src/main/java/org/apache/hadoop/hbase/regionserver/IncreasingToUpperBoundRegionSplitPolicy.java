@@ -110,7 +110,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
     TableName tablename = region.getTableDescriptor().getTableName();
     int tableRegionsCount = 0;
     try {
-      List<Region> hri = rss.getOnlineRegions(tablename);
+      List<Region> hri = rss.getRegions(tablename);
       tableRegionsCount = hri == null || hri.isEmpty() ? 0 : hri.size();
     } catch (IOException e) {
       LOG.debug("Failed getOnlineRegions " + tablename, e);

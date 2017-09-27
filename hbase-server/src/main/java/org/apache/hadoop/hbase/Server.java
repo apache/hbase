@@ -19,19 +19,17 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Defines the set of shared functions implemented by HBase servers (Masters
  * and RegionServers).
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface Server extends Abortable, Stoppable {
   /**
    * Gets the configuration object for this server.

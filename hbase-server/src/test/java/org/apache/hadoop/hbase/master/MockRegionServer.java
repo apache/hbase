@@ -263,18 +263,18 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public void addToOnlineRegions(Region r) {
+  public void addRegion(Region r) {
     // TODO Auto-generated method stub
   }
 
   @Override
-  public boolean removeFromOnlineRegions(Region r, ServerName destination) {
+  public boolean removeRegion(Region r, ServerName destination) {
     // TODO Auto-generated method stub
     return false;
   }
 
   @Override
-  public HRegion getFromOnlineRegions(String encodedRegionName) {
+  public HRegion getRegion(String encodedRegionName) {
     // TODO Auto-generated method stub
     return null;
   }
@@ -468,7 +468,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public List<Region> getOnlineRegions() {
+  public List<Region> getRegions() {
     return null;
   }
 
@@ -535,7 +535,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public List<Region> getOnlineRegions(TableName tableName) throws IOException {
+  public List<Region> getRegions(TableName tableName) throws IOException {
     // TODO Auto-generated method stub
     return null;
   }

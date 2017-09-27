@@ -2148,7 +2148,7 @@ public class TestAccessController extends SecureTestUtil {
 
       final int RETRIES_LIMIT = 10;
       int retries = 0;
-      while (newRs.getOnlineRegions(TEST_TABLE2).size() < 1 && retries < RETRIES_LIMIT) {
+      while (newRs.getRegions(TEST_TABLE2).size() < 1 && retries < RETRIES_LIMIT) {
         LOG.debug("Waiting for region to be opened. Already retried " + retries
             + " times.");
         try {
@@ -2609,7 +2609,7 @@ public class TestAccessController extends SecureTestUtil {
     for (JVMClusterUtil.RegionServerThread thread:
         TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       HRegionServer rs = thread.getRegionServer();
-      for (Region region: rs.getOnlineRegions(TEST_TABLE)) {
+      for (Region region: rs.getRegions(TEST_TABLE)) {
         region.getCoprocessorHost().load(PingCoprocessor.class,
           Coprocessor.PRIORITY_USER, conf);
       }

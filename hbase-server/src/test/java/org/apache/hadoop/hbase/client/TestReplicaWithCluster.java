@@ -134,7 +134,7 @@ public class TestReplicaWithCluster {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
         LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
         throw new RegionServerStoppedException("Server " +
-            e.getEnvironment().getRegionServerServices().getServerName()
+            e.getEnvironment().getCoprocessorRegionServerServices().getServerName()
             + " not running");
       } else {
         LOG.info("We're replica region " + replicaId);
@@ -151,7 +151,7 @@ public class TestReplicaWithCluster {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
         LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
         throw new RegionServerStoppedException("Server " +
-            e.getEnvironment().getRegionServerServices().getServerName()
+            e.getEnvironment().getCoprocessorRegionServerServices().getServerName()
             + " not running");
       } else {
         LOG.info("We're replica region " + replicaId);
@@ -179,8 +179,9 @@ public class TestReplicaWithCluster {
         if (!e.getEnvironment().getRegion().getRegionInfo().isMetaRegion() && (replicaId == 0)) {
           LOG.info("Get, throw Region Server Stopped Exceptoin for region " + e.getEnvironment()
               .getRegion().getRegionInfo());
-          throw new RegionServerStoppedException("Server " +
-              e.getEnvironment().getRegionServerServices().getServerName() + " not running");
+          throw new RegionServerStoppedException(
+              "Server " + e.getEnvironment().getCoprocessorRegionServerServices().getServerName()
+                  + " not running");
         }
       } else {
         LOG.info("Get, We're replica region " + replicaId);
@@ -209,8 +210,9 @@ public class TestReplicaWithCluster {
           LOG.info("Scan, throw Region Server Stopped Exceptoin for replica " + e.getEnvironment()
               .getRegion().getRegionInfo());
 
-          throw new RegionServerStoppedException("Server " +
-              e.getEnvironment().getRegionServerServices().getServerName() + " not running");
+          throw new RegionServerStoppedException(
+              "Server " + e.getEnvironment().getCoprocessorRegionServerServices().getServerName()
+                  + " not running");
         } else {
           LOG.info("Scan, We're replica region " + replicaId);
         }

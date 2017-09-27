@@ -133,7 +133,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       Store store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
@@ -307,7 +307,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
       Region region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
+          TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       Store store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);

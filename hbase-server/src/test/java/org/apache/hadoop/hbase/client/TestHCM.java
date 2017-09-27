@@ -1328,7 +1328,7 @@ public class TestHCM {
       assertTrue(!destServerName.equals(metaServerName));
 
        //find another row in the cur server that is less than ROW_X
-      List<Region> regions = curServer.getOnlineRegions(TABLE_NAME3);
+      List<Region> regions = curServer.getRegions(TABLE_NAME3);
       byte[] otherRow = null;
        for (Region region : regions) {
          if (!region.getRegionInfo().getEncodedName().equals(toMove.getRegionInfo().getEncodedName())

@@ -21,24 +21,21 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.Service;
@@ -46,13 +43,9 @@ import com.google.protobuf.Service;
 /**
  * Services provided by {@link HRegionServer}
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
-public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegion {
-  /**
-   * @return True if this regionserver is stopping.
-   */
-  boolean isStopping();
+@InterfaceAudience.Private
+public interface RegionServerServices
+    extends Server, OnlineRegions, FavoredNodesForRegion, CoprocessorRegionServerServices {
 
   /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */
@@ -189,11 +182,6 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   ConcurrentMap<byte[], Boolean> getRegionsInTransitionInRS();
 
   /**
-   * @return Return the FileSystem object used by the regionserver
-   */
-  FileSystem getFileSystem();
-
-  /**
    * @return The RegionServer's "Leases" service
    */
   Leases getLeases();
@@ -213,12 +201,6 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    * @return The RegionServer's NonceManager
    */
   public ServerNonceManager getNonceManager();
-
-  /**
-   * @return all the online tables in this RS
-   */
-  Set<TableName> getOnlineTables();
-
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to be

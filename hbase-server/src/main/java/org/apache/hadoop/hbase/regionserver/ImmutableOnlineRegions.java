@@ -18,28 +18,43 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.ServerName;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Interface to Map of online regions.  In the  Map, the key is the region's
  * encoded name and the value is an {@link Region} instance.
  */
-@InterfaceAudience.Private
-public interface OnlineRegions extends ImmutableOnlineRegions {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
+public interface ImmutableOnlineRegions {
 
   /**
-   * Add to online regions.
-   * @param r
+   * Return {@link Region} instance.
+   * Only works if caller is in same context, in same JVM. Region is not
+   * serializable.
+   * @param encodedRegionName
+   * @return Region for the passed encoded <code>encodedRegionName</code> or
+   * null if named region is not member of the online regions.
    */
-  void addRegion(final Region r);
+  Region getRegion(String encodedRegionName);
 
-  /**
-   * This method removes Region corresponding to hri from the Map of onlineRegions.
-   *
-   * @param r Region to remove.
-   * @param destination Destination, if any, null otherwise.
-   * @return True if we removed a region from online list.
-   */
-  boolean removeRegion(final Region r, ServerName destination);
+   /**
+    * Get all online regions of a table in this RS.
+    * @param tableName
+    * @return List of Region
+    * @throws java.io.IOException
+    */
+   List<Region> getRegions(TableName tableName) throws IOException;
+
+   /**
+    * Get all online regions in this RS.
+    * @return List of online Region
+    */
+   List<Region> getRegions();
 }

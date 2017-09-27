@@ -307,7 +307,7 @@ public abstract class TestVisibilityLabels {
         List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
             .getRegionServerThreads();
         for (RegionServerThread rsThread : regionServerThreads) {
-          List<Region> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
+          List<Region> onlineRegions = rsThread.getRegionServer().getRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             rsThread.getRegionServer().abort("Aborting ");
@@ -341,7 +341,7 @@ public abstract class TestVisibilityLabels {
     for (RegionServerThread rsThread : regionServerThreads) {
       while (true) {
         if (!rsThread.getRegionServer().isAborted()) {
-          List<Region> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
+          List<Region> onlineRegions = rsThread.getRegionServer().getRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             break;
@@ -392,13 +392,13 @@ public abstract class TestVisibilityLabels {
       } catch (InterruptedException e) {
       }
     }
-    while (regionServer.getOnlineRegions(LABELS_TABLE_NAME).isEmpty()) {
+    while (regionServer.getRegions(LABELS_TABLE_NAME).isEmpty()) {
       try {
         Thread.sleep(10);
       } catch (InterruptedException e) {
       }
     }
-    Region labelsTableRegion = regionServer.getOnlineRegions(LABELS_TABLE_NAME).get(0);
+    Region labelsTableRegion = regionServer.getRegions(LABELS_TABLE_NAME).get(0);
     while (labelsTableRegion.isRecovering()) {
       try {
         Thread.sleep(10);

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,31 +15,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor;
+package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import java.util.Set;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.metrics.MetricRegistry;
-import org.apache.hadoop.hbase.regionserver.CoprocessorRegionServerServices;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
+/**
+ * Services exposed to CPs by {@link HRegionServer}
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionServerCoprocessorEnvironment extends CoprocessorEnvironment {
-  /**
-   * Gets the region server services.
-   *
-   * @return the region server services
-   */
-  CoprocessorRegionServerServices getCoprocessorRegionServerServices();
+public interface CoprocessorRegionServerServices extends ImmutableOnlineRegions {
 
   /**
-   * Returns a MetricRegistry that can be used to track metrics at the region server level.
-   *
-   * <p>See ExampleMasterObserverWithMetrics class in the hbase-examples modules for examples
-   * of how metrics can be instantiated and used.</p>
-   * @return A MetricRegistry for the coprocessor class to track and export metrics.
+   * @return True if this regionserver is stopping.
    */
-  MetricRegistry getMetricRegistryForRegionServer();
+  boolean isStopping();
+
+  /**
+   * @return Return the FileSystem object used by the regionserver
+   */
+  FileSystem getFileSystem();
+
+  /**
+   * @return all the online tables in this RS
+   */
+  Set<TableName> getOnlineTables();
+
+  /**
+   * Returns a reference to the servers' connection.
+   *
+   * Important note: this method returns a reference to Connection which is managed
+   * by Server itself, so callers must NOT attempt to close connection obtained.
+   */
+  Connection getConnection();
+
+  /**
+   * @return The unique server name for this server.
+   */
+  ServerName getServerName();
 }

@@ -496,7 +496,7 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes("mobdata");
     try {
       Table table = TEST_UTIL.createTable(htd, new byte[0][0], conf);
-      Region region = rs.getOnlineRegions(tableName).get(0);
+      Region region = rs.getRegions(tableName).get(0);
       for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
         Put p = new Put(Bytes.toBytes(insertCount));
         p.addColumn(cf, qualifier, val);

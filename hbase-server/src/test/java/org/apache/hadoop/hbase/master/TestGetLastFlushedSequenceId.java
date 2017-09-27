@@ -80,7 +80,7 @@ public class TestGetLastFlushedSequenceId {
     Region region = null;
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region r : hrs.getOnlineRegions(tableName)) {
+      for (Region r : hrs.getRegions(tableName)) {
         region = r;
         break;
       }

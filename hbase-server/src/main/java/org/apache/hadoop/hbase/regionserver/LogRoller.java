@@ -204,7 +204,7 @@ public class LogRoller extends HasThread implements Closeable {
    */
   private void scheduleFlush(final byte [] encodedRegionName) {
     boolean scheduled = false;
-    Region r = this.services.getFromOnlineRegions(Bytes.toString(encodedRegionName));
+    Region r = this.services.getRegion(Bytes.toString(encodedRegionName));
     FlushRequester requester = null;
     if (r != null) {
       requester = this.services.getFlushRequester();

@@ -1712,9 +1712,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     List<Region> regions;
     if (request.hasTableName()) {
       TableName tableName = ProtobufUtil.toTableName(request.getTableName());
-      regions = regionServer.getOnlineRegions(tableName);
+      regions = regionServer.getRegions(tableName);
     } else {
-      regions = regionServer.getOnlineRegions();
+      regions = regionServer.getRegions();
     }
     List<RegionLoad> rLoads = new ArrayList<>(regions.size());
     RegionLoad.Builder regionLoadBuilder = ClusterStatusProtos.RegionLoad.newBuilder();
@@ -1902,7 +1902,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       try {
         String encodedName = region.getEncodedName();
         byte[] encodedNameBytes = region.getEncodedNameAsBytes();
-        final Region onlineRegion = regionServer.getFromOnlineRegions(encodedName);
+        final Region onlineRegion = regionServer.getRegion(encodedName);
         if (onlineRegion != null) {
           // The region is already online. This should not happen any more.
           String error = "Received OPEN for the region:"
@@ -1919,7 +1919,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           encodedNameBytes, Boolean.TRUE);
 
         if (Boolean.FALSE.equals(previous)) {
-          if (regionServer.getFromOnlineRegions(encodedName) != null) {
+          if (regionServer.getRegion(encodedName) != null) {
             // There is a close in progress. This should not happen any more.
             String error = "Received OPEN for the region:"
               + region.getRegionNameAsString() + ", which we are already trying to CLOSE";
@@ -2027,7 +2027,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       String encodedName = region.getEncodedName();
       byte[] encodedNameBytes = region.getEncodedNameAsBytes();
-      final Region onlineRegion = regionServer.getFromOnlineRegions(encodedName);
+      final Region onlineRegion = regionServer.getRegion(encodedName);
 
       if (onlineRegion != null) {
         LOG.info("Region already online. Skipping warming up " + region);

@@ -4528,8 +4528,7 @@ public class TestFromClientSide {
       // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
       // in Store.rowAtOrBeforeFromStoreFile
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region =
-          TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
+      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       Put put1 = new Put(firstRow);
       Put put2 = new Put(secondRow);
       Put put3 = new Put(thirdRow);
@@ -5295,8 +5294,7 @@ public class TestFromClientSide {
       // get the block cache and region
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
 
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
-          .getFromOnlineRegions(regionName);
+      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       Store store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);

@@ -247,7 +247,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
     for (int i=0; i < NB_SERVERS; i++) {
       HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
-      List<Region> onlineRegions = rs.getOnlineRegions(tableName);
+      List<Region> onlineRegions = rs.getRegions(tableName);
       for (Region region : onlineRegions) {
         regions[region.getRegionInfo().getReplicaId()] = region;
       }

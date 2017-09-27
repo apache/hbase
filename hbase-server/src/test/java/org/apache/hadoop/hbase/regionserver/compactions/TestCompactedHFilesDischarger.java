@@ -78,7 +78,7 @@ public class TestCompactedHFilesDischarger {
     rss = mock(RegionServerServices.class);
     List<Region> regions = new ArrayList<>(1);
     regions.add(region);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
   }
 
   @After

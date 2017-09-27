@@ -138,7 +138,7 @@ public class RegionCoprocessorHost
 
     /** @return reference to the region server services */
     @Override
-    public RegionServerServices getRegionServerServices() {
+    public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
       return rsServices;
     }
 

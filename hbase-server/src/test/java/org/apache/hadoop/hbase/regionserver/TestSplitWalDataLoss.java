@@ -95,7 +95,7 @@ public class TestSplitWalDataLoss {
   @Test
   public void test() throws IOException, InterruptedException {
     final HRegionServer rs = testUtil.getRSForFirstRegionInTable(tableName);
-    final HRegion region = (HRegion) rs.getOnlineRegions(tableName).get(0);
+    final HRegion region = (HRegion) rs.getRegions(tableName).get(0);
     HRegion spiedRegion = spy(region);
     final MutableBoolean flushed = new MutableBoolean(false);
     final MutableBoolean reported = new MutableBoolean(false);
