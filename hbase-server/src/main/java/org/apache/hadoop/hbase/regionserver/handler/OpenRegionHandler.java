@@ -88,7 +88,7 @@ public class OpenRegionHandler extends EventHandler {
       // 2) The region is now marked as online while we're suppose to open. This would be a bug.
 
       // Check that this region is not already online
-      if (this.rsServices.getFromOnlineRegions(encodedName) != null) {
+      if (this.rsServices.getRegion(encodedName) != null) {
         LOG.error("Region " + encodedName +
             " was already online when we started processing the opening. " +
             "Marking this new attempt as failed");
@@ -119,7 +119,7 @@ public class OpenRegionHandler extends EventHandler {
       }
 
       // Successful region open, and add it to OnlineRegions
-      this.rsServices.addToOnlineRegions(region);
+      this.rsServices.addRegion(region);
       openSuccessful = true;
 
       // Done!  Successful region open
@@ -313,7 +313,7 @@ public class OpenRegionHandler extends EventHandler {
 
   void cleanupFailedOpen(final HRegion region) throws IOException {
     if (region != null) {
-      this.rsServices.removeFromOnlineRegions(region, null);
+      this.rsServices.removeRegion(region, null);
       region.close();
     }
   }

@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
+import org.apache.hadoop.hbase.regionserver.CoprocessorRegionServerServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -265,7 +266,7 @@ public class TestTokenAuthentication {
         public HRegion getRegion() { return null; }
 
         @Override
-        public RegionServerServices getRegionServerServices() {
+        public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
           return mockServices;
         }
 

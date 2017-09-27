@@ -77,7 +77,7 @@ public class FileSystemUtilizationChore extends ScheduledChore {
       return;
     }
     final Map<HRegionInfo,Long> onlineRegionSizes = new HashMap<>();
-    final Set<Region> onlineRegions = new HashSet<>(rs.getOnlineRegions());
+    final Set<Region> onlineRegions = new HashSet<>(rs.getRegions());
     // Process the regions from the last run if we have any. If we are somehow having difficulty
     // processing the Regions, we want to avoid creating a backlog in memory of Region objs.
     Iterator<Region> oldRegionsToProcess = getLeftoverRegions();

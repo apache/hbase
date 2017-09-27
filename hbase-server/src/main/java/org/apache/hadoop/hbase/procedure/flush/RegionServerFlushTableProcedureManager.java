@@ -175,7 +175,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * @throws IOException
    */
   private List<Region> getRegionsToFlush(String table) throws IOException {
-    return rss.getOnlineRegions(TableName.valueOf(table));
+    return rss.getRegions(TableName.valueOf(table));
   }
 
   public class FlushTableSubprocedureBuilder implements SubprocedureFactory {

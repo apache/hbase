@@ -189,7 +189,7 @@ public abstract class AbstractTestLogRolling  {
     this.tableName = getName();
     // TODO: Why does this write data take for ever?
     startAndWriteData();
-    HRegionInfo region = server.getOnlineRegions(TableName.valueOf(tableName)).get(0)
+    HRegionInfo region = server.getRegions(TableName.valueOf(tableName)).get(0)
         .getRegionInfo();
     final WAL log = server.getWAL(region);
     LOG.info("after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) + " log files");
@@ -249,7 +249,7 @@ public abstract class AbstractTestLogRolling  {
       table = createTestTable(getName());
 
       server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
-      Region region = server.getOnlineRegions(table.getName()).get(0);
+      Region region = server.getRegions(table.getName()).get(0);
       final WAL log = server.getWAL(region.getRegionInfo());
       Store s = region.getStore(HConstants.CATALOG_FAMILY);
 

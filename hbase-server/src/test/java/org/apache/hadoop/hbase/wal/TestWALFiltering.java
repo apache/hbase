@@ -130,7 +130,7 @@ public class TestWALFiltering {
   private List<byte[]> getRegionsByServer(int rsId) throws IOException {
     List<byte[]> regionNames = Lists.newArrayList();
     HRegionServer hrs = getRegionServer(rsId);
-    for (Region r : hrs.getOnlineRegions(TABLE_NAME)) {
+    for (Region r : hrs.getRegions(TABLE_NAME)) {
       regionNames.add(r.getRegionInfo().getRegionName());
     }
     return regionNames;

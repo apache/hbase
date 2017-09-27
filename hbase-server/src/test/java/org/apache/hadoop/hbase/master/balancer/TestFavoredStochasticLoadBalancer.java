@@ -544,7 +544,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
   private void compactTable(TableName tableName) throws IOException {
     for(JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
-      for(Region region : t.getRegionServer().getOnlineRegions(tableName)) {
+      for(Region region : t.getRegionServer().getRegions(tableName)) {
         region.compact(true);
       }
     }

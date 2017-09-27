@@ -180,7 +180,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
     List<Region> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner =
         new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -233,7 +233,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
     List<Region> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner =
         new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -243,7 +243,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
     regions = new ArrayList<>();
     regions.add(otherRegion);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
     final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
         rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);

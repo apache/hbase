@@ -125,7 +125,7 @@ public class TestCompactionInDeadRegionServer {
   @Test
   public void test() throws Exception {
     HRegionServer rsToSuspend = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    HRegion region = (HRegion) rsToSuspend.getOnlineRegions(TABLE_NAME).get(0);
+    HRegion region = (HRegion) rsToSuspend.getRegions(TABLE_NAME).get(0);
     ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
     watcher.getRecoverableZooKeeper().delete(
       ZKUtil.joinZNode(watcher.getZNodePaths().rsZNode, rsToSuspend.getServerName().toString()),
@@ -137,7 +137,7 @@ public class TestCompactionInDeadRegionServer {
         for (RegionServerThread thread : UTIL.getHBaseCluster().getRegionServerThreads()) {
           HRegionServer rs = thread.getRegionServer();
           if (rs != rsToSuspend) {
-            return !rs.getOnlineRegions(TABLE_NAME).isEmpty();
+            return !rs.getRegions(TABLE_NAME).isEmpty();
           }
         }
         return false;

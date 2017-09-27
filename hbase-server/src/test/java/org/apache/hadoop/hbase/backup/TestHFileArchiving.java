@@ -241,7 +241,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<Region> regions = hrs.getOnlineRegions(tableName);
+    List<Region> regions = hrs.getRegions(tableName);
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);
@@ -320,7 +320,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<Region> regions = hrs.getOnlineRegions(tableName);
+    List<Region> regions = hrs.getRegions(tableName);
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);

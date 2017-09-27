@@ -330,7 +330,7 @@ public class TestPerColumnFamilyFlush {
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region region : hrs.getOnlineRegions(tableName)) {
+      for (Region region : hrs.getRegions(tableName)) {
         return Pair.newPair(region, hrs);
       }
     }

@@ -309,7 +309,7 @@ public class RegionServerCoprocessorHost extends
     }
 
     @Override
-    public RegionServerServices getRegionServerServices() {
+    public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
       return regionServerServices;
     }
 

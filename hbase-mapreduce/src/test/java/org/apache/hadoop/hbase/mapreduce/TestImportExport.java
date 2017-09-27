@@ -740,7 +740,7 @@ public class TestImportExport {
 
       // Register the wal listener for the import table
       HRegionInfo region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-          .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
+          .getRegions(importTable.getName()).get(0).getRegionInfo();
       TableWALActionListener walListener = new TableWALActionListener(region);
       WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
       wal.registerWALActionsListener(walListener);
@@ -759,7 +759,7 @@ public class TestImportExport {
       importTableName = name.getMethodName() + "import2";
       importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
       region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-          .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
+          .getRegions(importTable.getName()).get(0).getRegionInfo();
       wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
       walListener = new TableWALActionListener(region);
       wal.registerWALActionsListener(walListener);

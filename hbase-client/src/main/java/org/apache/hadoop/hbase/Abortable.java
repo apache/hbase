@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Interface to support the aborting of a given server or client.
@@ -29,8 +28,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * <p>
  * Implemented by the Master, RegionServer, and TableServers (client).
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface Abortable {
   /**
    * Abort the server or client.

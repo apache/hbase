@@ -328,7 +328,7 @@ public class TestSnapshotFromMaster {
         .getRegionServerThreads();
     HRegionServer hrs = null;
     for (RegionServerThread rs : regionServerThreads) {
-      if (!rs.getRegionServer().getOnlineRegions(TABLE_NAME).isEmpty()) {
+      if (!rs.getRegionServer().getRegions(TABLE_NAME).isEmpty()) {
         hrs = rs.getRegionServer();
         break;
       }

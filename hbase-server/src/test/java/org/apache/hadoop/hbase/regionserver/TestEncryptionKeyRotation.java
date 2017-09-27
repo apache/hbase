@@ -209,7 +209,7 @@ public class TestEncryptionKeyRotation {
       throws IOException, InterruptedException {
     boolean compacted = false;
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getOnlineRegions(tableName)) {
+        .getRegions(tableName)) {
       for (HStore store : ((HRegion) region).getStores()) {
         compacted = false;
         while (!compacted) {
@@ -235,7 +235,7 @@ public class TestEncryptionKeyRotation {
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getOnlineRegions(tableName)) {
+        .getRegions(tableName)) {
       for (HStore store : ((HRegion) region).getStores()) {
         for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
@@ -248,7 +248,7 @@ public class TestEncryptionKeyRotation {
   private static List<Path> findCompactedStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getOnlineRegions(tableName)) {
+        .getRegions(tableName)) {
       for (HStore store : ((HRegion) region).getStores()) {
         Collection<HStoreFile> compactedfiles =
             store.getStoreEngine().getStoreFileManager().getCompactedfiles();

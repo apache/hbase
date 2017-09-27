@@ -78,7 +78,7 @@ public class TestFlushWithThroughputController {
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region region : hrs.getOnlineRegions(tableName)) {
+      for (Region region : hrs.getRegions(tableName)) {
         return region.getStores().iterator().next();
       }
     }
@@ -165,7 +165,7 @@ public class TestFlushWithThroughputController {
     HRegionServer regionServer = hbtu.getRSForFirstRegionInTable(tableName);
     PressureAwareFlushThroughputController throughputController =
         (PressureAwareFlushThroughputController) regionServer.getFlushThroughputController();
-    for (Region region : regionServer.getOnlineRegions()) {
+    for (Region region : regionServer.getRegions()) {
       region.flush(true);
     }
     assertEquals(0.0, regionServer.getFlushPressure(), EPSILON);

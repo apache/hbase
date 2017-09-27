@@ -961,7 +961,7 @@ public class TestFromClientSide3 {
   private static Region find(final TableName tableName)
       throws IOException, InterruptedException {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<Region> regions = rs.getOnlineRegions(tableName);
+    List<Region> regions = rs.getRegions(tableName);
     assertEquals(1, regions.size());
     return regions.get(0);
   }

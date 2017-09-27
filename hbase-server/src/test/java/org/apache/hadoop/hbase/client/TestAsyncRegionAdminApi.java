@@ -301,7 +301,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
             ServerName serverName = rs.getServerName();
             try {
               Assert.assertEquals(admin.getOnlineRegions(serverName).get().size(), rs
-                  .getOnlineRegions().size());
+                  .getRegions().size());
             } catch (Exception e) {
               fail("admin.getOnlineRegions() method throws a exception: " + e.getMessage());
             }
@@ -527,7 +527,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
         TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
             .map(rsThread -> rsThread.getRegionServer()).collect(Collectors.toList());
     List<Region> regions = new ArrayList<>();
-    rsList.forEach(rs -> regions.addAll(rs.getOnlineRegions(tableName)));
+    rsList.forEach(rs -> regions.addAll(rs.getRegions(tableName)));
     Assert.assertEquals(regions.size(), 1);
     int countBefore = countStoreFilesInFamilies(regions, families);
     Assert.assertTrue(countBefore > 0);
@@ -568,7 +568,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     TEST_UTIL
         .getHBaseCluster()
         .getLiveRegionServerThreads()
-        .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getOnlineRegions(tableName)));
+        .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getRegions(tableName)));
     Assert.assertEquals(regions.size(), 1);
 
     int countBefore = countStoreFilesInFamilies(regions, families);

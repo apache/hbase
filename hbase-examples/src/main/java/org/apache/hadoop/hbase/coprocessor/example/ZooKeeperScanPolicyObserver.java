@@ -65,9 +65,16 @@ import org.apache.zookeeper.ZooKeeper;
  * listeners registered with ZooKeeperWatcher cannot be removed.
  */
 public class ZooKeeperScanPolicyObserver implements RegionObserver {
+  // The zk ensemble info is put in hbase config xml with given custom key.
+  public static final String ZK_ENSEMBLE_KEY = "ZooKeeperScanPolicyObserver.zookeeper.ensemble";
+  public static final String ZK_SESSION_TIMEOUT_KEY =
+      "ZooKeeperScanPolicyObserver.zookeeper.session.timeout";
+  public static final int ZK_SESSION_TIMEOUT_DEFAULT = 30 * 1000; // 30 secs
   public static final String node = "/backup/example/lastbackup";
   public static final String zkkey = "ZK";
   private static final Log LOG = LogFactory.getLog(ZooKeeperScanPolicyObserver.class);
+
+  private ZooKeeper zk = null;
 
   /**
    * Internal watcher that keep "data" up to date asynchronously.
@@ -165,8 +172,22 @@ public class ZooKeeperScanPolicyObserver implements RegionObserver {
     if (!re.getSharedData().containsKey(zkkey)) {
       // there is a short race here
       // in the worst case we create a watcher that will be notified once
-      re.getSharedData().putIfAbsent(zkkey, new ZKWatcher(
-          re.getRegionServerServices().getZooKeeper().getRecoverableZooKeeper().getZooKeeper()));
+      String ensemble = re.getConfiguration().get(ZK_ENSEMBLE_KEY);
+      int sessionTimeout = re.getConfiguration().getInt(ZK_SESSION_TIMEOUT_KEY,
+          ZK_SESSION_TIMEOUT_DEFAULT);
+      this.zk = new ZooKeeper(ensemble, sessionTimeout, null);
+      re.getSharedData().putIfAbsent(zkkey, new ZKWatcher(zk));
+    }
+  }
+
+  @Override
+  public void stop(CoprocessorEnvironment env) throws IOException {
+    if (this.zk != null) {
+      try {
+        this.zk.close();
+      } catch (InterruptedException e) {
+        LOG.error("Excepion while closing the ZK connection!", e);
+      }
     }
   }
 

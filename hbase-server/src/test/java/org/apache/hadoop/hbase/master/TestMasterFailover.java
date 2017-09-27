@@ -225,8 +225,8 @@ public class TestMasterFailover {
     // region server should expire (how it can be verified?)
     MetaTableLocator.setMetaLocation(activeMaster.getZooKeeper(),
       rs.getServerName(), State.OPENING);
-    Region meta = rs.getFromOnlineRegions(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-    rs.removeFromOnlineRegions(meta, null);
+    Region meta = rs.getRegion(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    rs.removeRegion(meta, null);
     ((HRegion)meta).close();
 
     log("Aborting master");

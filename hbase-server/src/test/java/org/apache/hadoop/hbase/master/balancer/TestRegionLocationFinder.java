@@ -62,7 +62,7 @@ public class TestRegionLocationFinder {
 
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      for (Region region : server.getOnlineRegions(tableName)) {
+      for (Region region : server.getRegions(tableName)) {
         region.flush(true);
       }
     }
@@ -83,7 +83,7 @@ public class TestRegionLocationFinder {
   public void testInternalGetTopBlockLocation() throws Exception {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      for (Region region : server.getOnlineRegions(tableName)) {
+      for (Region region : server.getRegions(tableName)) {
         // get region's hdfs block distribution by region and RegionLocationFinder, 
         // they should have same result
         HDFSBlocksDistribution blocksDistribution1 = region.getHDFSBlocksDistribution();
@@ -122,7 +122,7 @@ public class TestRegionLocationFinder {
   public void testGetTopBlockLocations() throws Exception {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      for (Region region : server.getOnlineRegions(tableName)) {
+      for (Region region : server.getRegions(tableName)) {
         List<ServerName> servers = finder.getTopBlockLocations(region
             .getRegionInfo());
         // test table may have empty region
@@ -147,7 +147,7 @@ public class TestRegionLocationFinder {
     finder.getCache().invalidateAll();
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
-      List<Region> regions = server.getOnlineRegions(tableName);
+      List<Region> regions = server.getRegions(tableName);
       if (regions.size() <= 0) {
         continue;
       }

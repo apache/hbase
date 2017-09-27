@@ -176,7 +176,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // replay the edits to the secondary using replay callable
     replicateUsingCallable(connection, entries);
 
-    Region region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
+    Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.deleteNumericRows(table, f, 0, 1000);
@@ -216,7 +216,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // replay the edits to the secondary using replay callable
     replicateUsingCallable(connection, entries);
 
-    Region region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
+    Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.loadNumericRows(table, f, 1000, 2000); // load some more data to primary
@@ -228,7 +228,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // replicate the new data
     replicateUsingCallable(connection, entries);
 
-    region = rs1.getFromOnlineRegions(hriSecondary.getEncodedName());
+    region = rs1.getRegion(hriSecondary.getEncodedName());
     // verify the new data. old data may or may not be there
     HTU.verifyNumericRows(region, f, 1000, 2000);
 
@@ -261,7 +261,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     replicator.replicate(new ReplicateContext().setEntries(Lists.newArrayList(entries))
         .setWalGroupId(fakeWalGroupId));
 
-    Region region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
+    Region region = rs0.getRegion(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.deleteNumericRows(table, f, 0, 1000);

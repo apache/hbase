@@ -258,7 +258,7 @@ public class TestAssignmentListener {
         admin.majorCompact(tableName);
         mergeable = 0;
         for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
-          for (Region region: regionThread.getRegionServer().getOnlineRegions(tableName)) {
+          for (Region region: regionThread.getRegionServer().getRegions(tableName)) {
             mergeable += ((HRegion)region).isMergeable() ? 1 : 0;
           }
         }
@@ -299,7 +299,7 @@ public class TestAssignmentListener {
     MiniHBaseCluster miniCluster = TEST_UTIL.getMiniHBaseCluster();
     int serverCount = 0;
     for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
-      if (!regionThread.getRegionServer().getOnlineRegions(TABLE_NAME).isEmpty()) {
+      if (!regionThread.getRegionServer().getRegions(TABLE_NAME).isEmpty()) {
         ++serverCount;
       }
       if (serverCount > 1) {

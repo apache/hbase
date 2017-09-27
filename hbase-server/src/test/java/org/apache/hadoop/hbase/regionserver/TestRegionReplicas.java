@@ -162,7 +162,7 @@ public class TestRegionReplicas {
       openRegion(HTU, getRS(), hriSecondary);
 
       // first try directly against region
-      region = getRS().getFromOnlineRegions(hriSecondary.getEncodedName());
+      region = getRS().getRegion(hriSecondary.getEncodedName());
       assertGet(region, 42, true);
 
       assertGetRpc(hriSecondary, 42, true);
@@ -259,7 +259,7 @@ public class TestRegionReplicas {
       Threads.sleep(4 * refreshPeriod);
 
       LOG.info("Checking results from secondary region replica");
-      Region secondaryRegion = getRS().getFromOnlineRegions(hriSecondary.getEncodedName());
+      Region secondaryRegion = getRS().getRegion(hriSecondary.getEncodedName());
       Assert.assertEquals(1, secondaryRegion.getStore(f).getStorefilesCount());
 
       assertGet(secondaryRegion, 42, true);
@@ -446,11 +446,11 @@ public class TestRegionReplicas {
         region.flush(true);
       }
 
-      Region primaryRegion = getRS().getFromOnlineRegions(hriPrimary.getEncodedName());
+      Region primaryRegion = getRS().getRegion(hriPrimary.getEncodedName());
       Assert.assertEquals(3, primaryRegion.getStore(f).getStorefilesCount());
 
       // Refresh store files on the secondary
-      Region secondaryRegion = getRS().getFromOnlineRegions(hriSecondary.getEncodedName());
+      Region secondaryRegion = getRS().getRegion(hriSecondary.getEncodedName());
       secondaryRegion.getStore(f).refreshStoreFiles();
       Assert.assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
 

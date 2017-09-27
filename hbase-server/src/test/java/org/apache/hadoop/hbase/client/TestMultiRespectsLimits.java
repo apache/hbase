@@ -159,7 +159,7 @@ public class TestMultiRespectsLimits {
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return regionServer.getOnlineRegions(tableName).get(0).getMaxFlushedSeqId() > 3;
+          return regionServer.getRegions(tableName).get(0).getMaxFlushedSeqId() > 3;
         }
       });
     }

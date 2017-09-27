@@ -168,7 +168,7 @@ public class TestRegionServerAbort {
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
                        Durability durability) throws IOException {
       if (put.getAttribute(DO_ABORT) != null) {
-        HRegionServer rs = (HRegionServer) c.getEnvironment().getRegionServerServices();
+        HRegionServer rs = (HRegionServer) c.getEnvironment().getCoprocessorRegionServerServices();
         LOG.info("Triggering abort for regionserver " + rs.getServerName());
         rs.abort("Aborting for test");
       }

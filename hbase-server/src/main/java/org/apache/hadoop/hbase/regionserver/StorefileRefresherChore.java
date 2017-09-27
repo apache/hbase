@@ -122,7 +122,7 @@ public class StorefileRefresherChore extends ScheduledChore {
     Iterator<String> lastRefreshTimesIter = lastRefreshTimes.keySet().iterator();
     while (lastRefreshTimesIter.hasNext()) {
       String encodedName = lastRefreshTimesIter.next();
-      if (regionServer.getFromOnlineRegions(encodedName) == null) {
+      if (regionServer.getRegion(encodedName) == null) {
         lastRefreshTimesIter.remove();
       }
     }

@@ -138,7 +138,7 @@ public class TestCompactionState {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-      List<Region> regions = rs.getOnlineRegions(table);
+      List<Region> regions = rs.getRegions(table);
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files

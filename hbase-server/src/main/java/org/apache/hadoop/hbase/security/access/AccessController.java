@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -949,12 +950,14 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
       zk = mEnv.getMasterServices().getZooKeeper();
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
       RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment) env;
-      zk = rsEnv.getRegionServerServices().getZooKeeper();
+      assert rsEnv.getCoprocessorRegionServerServices() instanceof RegionServerServices;
+      zk = ((RegionServerServices) rsEnv.getCoprocessorRegionServerServices()).getZooKeeper();
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
       conf.addBytesMap(regionEnv.getRegion().getTableDescriptor().getValues());
-      zk = regionEnv.getRegionServerServices().getZooKeeper();
+      assert regionEnv.getCoprocessorRegionServerServices() instanceof RegionServerServices;
+      zk = ((RegionServerServices) regionEnv.getCoprocessorRegionServerServices()).getZooKeeper();
       compatibleEarlyTermination = conf.getBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT,
         AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);
     }

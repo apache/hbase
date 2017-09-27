@@ -451,7 +451,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // flakiness of this test.
       HRegion r = HRegion.openHRegion(
           region, htdDisabled, hrs.getWAL(region), conf);
-      hrs.addToOnlineRegions(r);
+      hrs.addRegion(r);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {

@@ -101,7 +101,7 @@ public class TestCompactionArchiveIOException {
     RegionServerServices rss = mock(RegionServerServices.class);
     List<Region> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
 
     // Create the cleaner object
     final CompactedHFilesDischarger cleaner =

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -61,7 +62,9 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
     if (env instanceof RegionCoprocessorEnvironment) {
       RegionCoprocessorEnvironment regionEnv =
           (RegionCoprocessorEnvironment)env;
-      RpcServerInterface server = regionEnv.getRegionServerServices().getRpcServer();
+      assert regionEnv.getCoprocessorRegionServerServices() instanceof RegionServerServices;
+      RpcServerInterface server = ((RegionServerServices) regionEnv
+          .getCoprocessorRegionServerServices()).getRpcServer();
       SecretManager<?> mgr = ((RpcServer)server).getSecretManager();
       if (mgr instanceof AuthenticationTokenSecretManager) {
         secretManager = (AuthenticationTokenSecretManager)mgr;

@@ -181,7 +181,7 @@ public class TestHRegionReplayEvents {
     primaryRegion.close();
     List<Region> regions = new ArrayList<>();
     regions.add(primaryRegion);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
 
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, null, CONF, rss, null);
@@ -1393,7 +1393,7 @@ public class TestHRegionReplayEvents {
     primaryRegion.compactStores();
     List<Region> regions = new ArrayList<>();
     regions.add(primaryRegion);
-    when(rss.getOnlineRegions()).thenReturn(regions);
+    when(rss.getRegions()).thenReturn(regions);
     CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, rss, false);
     cleaner.chore();
     secondaryRegion.refreshStoreFiles();
