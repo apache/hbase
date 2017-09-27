@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -99,7 +99,6 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
-import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerStateNode;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
@@ -472,66 +471,73 @@ public class HMaster extends HRegionServer implements MasterServices {
   public HMaster(final Configuration conf, CoordinatedStateManager csm)
       throws IOException, KeeperException {
     super(conf, csm);
-    this.rsFatals = new MemoryBoundedLogMessageBuffer(
-      conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
+    try {
+      this.rsFatals = new MemoryBoundedLogMessageBuffer(
+          conf.getLong("hbase.master.buffer.for.rs.fatals", 1 * 1024 * 1024));
 
-    LOG.info("hbase.rootdir=" + getRootDir() +
-      ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
+      LOG.info("hbase.rootdir=" + getRootDir() +
+          ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
-    // Disable usage of meta replicas in the master
-    this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
+      // Disable usage of meta replicas in the master
+      this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
 
-    Replication.decorateMasterConfiguration(this.conf);
+      Replication.decorateMasterConfiguration(this.conf);
 
-    // Hack! Maps DFSClient => Master for logs.  HDFS made this
-    // config param for task trackers, but we can piggyback off of it.
-    if (this.conf.get("mapreduce.task.attempt.id") == null) {
-      this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
-    }
-
-    // should we check the compression codec type at master side, default true, HBASE-6370
-    this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
-
-    // should we check encryption settings at master side, default true
-    this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
-
-    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(this));
-
-    // preload table descriptor at startup
-    this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
-
-    this.maxBlancingTime = getMaxBalancingTime();
-    this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
-      HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
-
-    // Do we publish the status?
-
-    boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
-        HConstants.STATUS_PUBLISHED_DEFAULT);
-    Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
-        conf.getClass(ClusterStatusPublisher.STATUS_PUBLISHER_CLASS,
-            ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS,
-            ClusterStatusPublisher.Publisher.class);
-
-    if (shouldPublish) {
-      if (publisherClass == null) {
-        LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
-            ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS +
-            " is not set - not publishing status");
-      } else {
-        clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
-        getChoreService().scheduleChore(clusterStatusPublisherChore);
+      // Hack! Maps DFSClient => Master for logs.  HDFS made this
+      // config param for task trackers, but we can piggyback off of it.
+      if (this.conf.get("mapreduce.task.attempt.id") == null) {
+        this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
       }
-    }
 
-    // Some unit tests don't need a cluster, so no zookeeper at all
-    if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-      setInitLatch(new CountDownLatch(1));
-      activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
-      int infoPort = putUpJettyServer();
-      startActiveMasterManager(infoPort);
-    } else {
-      activeMasterManager = null;
+      // should we check the compression codec type at master side, default true, HBASE-6370
+      this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
+
+      // should we check encryption settings at master side, default true
+      this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
+
+      this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(this));
+
+      // preload table descriptor at startup
+      this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
+
+      this.maxBlancingTime = getMaxBalancingTime();
+      this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
+          HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
+
+      // Do we publish the status?
+
+      boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
+          HConstants.STATUS_PUBLISHED_DEFAULT);
+      Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
+          conf.getClass(ClusterStatusPublisher.STATUS_PUBLISHER_CLASS,
+              ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS,
+              ClusterStatusPublisher.Publisher.class);
+
+      if (shouldPublish) {
+        if (publisherClass == null) {
+          LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
+              ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS +
+              " is not set - not publishing status");
+        } else {
+          clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
+          getChoreService().scheduleChore(clusterStatusPublisherChore);
+        }
+      }
+
+      // Some unit tests don't need a cluster, so no zookeeper at all
+      if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+        setInitLatch(new CountDownLatch(1));
+        activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+        int infoPort = putUpJettyServer();
+        startActiveMasterManager(infoPort);
+      } else {
+        activeMasterManager = null;
+      }
+    } catch (Throwable t) {
+      // Make sure we log the exception. HMaster is often started via reflection and the
+      // cause of failed startup is lost.
+      LOG.error("Failed construction of Master", t);
+      throw t;
     }
   }
 
@@ -1100,15 +1106,15 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   private void startServiceThreads() throws IOException{
    // Start the executor service pools
-   this.service.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
+   this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
       conf.getInt("hbase.master.executor.openregion.threads", 5));
-   this.service.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
+   this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
       conf.getInt("hbase.master.executor.closeregion.threads", 5));
-   this.service.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
+   this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
       conf.getInt("hbase.master.executor.serverops.threads", 5));
-   this.service.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
+   this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
       conf.getInt("hbase.master.executor.meta.serverops.threads", 5));
-   this.service.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS,
+   this.executorService.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS,
       conf.getInt("hbase.master.executor.logreplayops.threads", 10));
 
    // We depend on there being only one instance of this executor running
@@ -1116,7 +1122,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    // tables.
    // Any time changing this maxThreads to > 1, pls see the comment at
    // AccessController#postCompletedCreateTableAction
-   this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
+   this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
    startProcedureExecutor();
 
    // Start log cleaner thread

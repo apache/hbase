@@ -315,6 +315,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
 
   /**
+   * Services launched in RSRpcServices. By default they are on but you can use the below
+   * booleans to selectively enable/disable either Admin or Client Service (Rare is the case
+   * where you would ever turn off one or the other).
+   */
+  public static final String REGIONSERVER_ADMIN_SERVICE_CONFIG =
+      "hbase.regionserver.admin.executorService";
+  public static final String REGIONSERVER_CLIENT_SERVICE_CONFIG =
+      "hbase.regionserver.client.executorService";
+
+  /**
    * An Rpc callback for closing a RegionScanner.
    */
   private static final class RegionScannerCloseCallBack implements RpcCallback {
@@ -591,13 +601,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /**
    * Mutate a list of rows atomically.
    *
-   * @param region
-   * @param actions
    * @param cellScanner if non-null, the mutation data -- the Cell content.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param compareOp
    * @param comparator @throws IOException
    */
   private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
@@ -649,12 +653,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /**
    * Execute an append mutation.
    *
-   * @param region
-   * @param m
-   * @param cellScanner
    * @return result to return to client if default operation should be
    * bypassed as indicated by RegionObserver, null otherwise
-   * @throws IOException
    */
   private Result append(final HRegion region, final OperationQuota quota,
       final MutationProto mutation, final CellScanner cellScanner, long nonceGroup,
@@ -1426,17 +1426,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
-   * @return list of blocking services and their security info classes that this server supports
+   * By default, put up an Admin and a Client Service.
+   * Set booleans <code>hbase.regionserver.admin.executorService</code> and
+   * <code>hbase.regionserver.client.executorService</code> if you want to enable/disable services.
+   * Default is that both are enabled.
+   * @return immutable list of blocking services and the security info classes that this server
+   * supports
    */
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<>(2);
-    bssi.add(new BlockingServiceAndInterface(
+    boolean admin =
+      getConfiguration().getBoolean(REGIONSERVER_ADMIN_SERVICE_CONFIG, true);
+    boolean client =
+      getConfiguration().getBoolean(REGIONSERVER_CLIENT_SERVICE_CONFIG, true);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<>();
+    if (client) {
+      bssi.add(new BlockingServiceAndInterface(
       ClientService.newReflectiveBlockingService(this),
       ClientService.BlockingInterface.class));
-    bssi.add(new BlockingServiceAndInterface(
+    }
+    if (admin) {
+      bssi.add(new BlockingServiceAndInterface(
       AdminService.newReflectiveBlockingService(this),
       AdminService.BlockingInterface.class));
-    return bssi;
+    }
+    return new org.apache.hadoop.hbase.shaded.com.google.common.collect.
+        ImmutableList.Builder<BlockingServiceAndInterface>().addAll(bssi).build();
   }
 
   public InetSocketAddress getSocketAddress() {
@@ -1943,20 +1957,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.
-          if (region.isMetaRegion()) {
-            regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, masterSystemTime));
+          if (regionServer.executorService == null) {
+            LOG.info("No executor executorService; skipping open request");
           } else {
-            if (regionOpenInfo.getFavoredNodesCount() > 0) {
-              regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
-                  regionOpenInfo.getFavoredNodesList());
-            }
-            if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
-              regionServer.service.submit(new OpenPriorityRegionHandler(
-                regionServer, regionServer, region, htd, masterSystemTime));
+            if (region.isMetaRegion()) {
+              regionServer.executorService.submit(new OpenMetaHandler(
+              regionServer, regionServer, region, htd, masterSystemTime));
             } else {
-              regionServer.service.submit(new OpenRegionHandler(
+              if (regionOpenInfo.getFavoredNodesCount() > 0) {
+                regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
+                regionOpenInfo.getFavoredNodesList());
+              }
+              if (htd.getPriority() >= HConstants.ADMIN_QOS || region.getTable().isSystemTable()) {
+                regionServer.executorService.submit(new OpenPriorityRegionHandler(
                 regionServer, regionServer, region, htd, masterSystemTime));
+              } else {
+                regionServer.executorService.submit(new OpenRegionHandler(
+                regionServer, regionServer, region, htd, masterSystemTime));
+              }
             }
           }
         }
