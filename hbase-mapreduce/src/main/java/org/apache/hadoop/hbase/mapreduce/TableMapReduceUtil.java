@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -372,6 +373,43 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
+    resetCacheConfig(job.getConfiguration());
+  }
+
+  /**
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
+   * and read directly from snapshot files.
+   *
+   * @param snapshotName The name of the snapshot (of a table) to read from.
+   * @param scan  The scan instance with the columns, time range etc.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   *
+   * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
+   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
+   * After the job is finished, restore directory can be deleted.
+   * @param splitAlgo algorithm to split
+   * @param numSplitsPerRegion how many input splits to generate per one region
+   * @throws IOException When setting up the details fails.
+   * @see TableSnapshotInputFormat
+   */
+  public static void initTableSnapshotMapperJob(String snapshotName, Scan scan,
+                                                Class<? extends TableMapper> mapper,
+                                                Class<?> outputKeyClass,
+                                                Class<?> outputValueClass, Job job,
+                                                boolean addDependencyJars, Path tmpRestoreDir,
+                                                RegionSplitter.SplitAlgorithm splitAlgo,
+                                                int numSplitsPerRegion)
+          throws IOException {
+    TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir, splitAlgo,
+            numSplitsPerRegion);
+    initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
+            outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
     resetCacheConfig(job.getConfiguration());
   }
 
