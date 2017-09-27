@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.TokenUtil;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
@@ -184,6 +185,43 @@ public class TableMapReduceUtil {
       addDependencyJars, TableSnapshotInputFormat.class);
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.resetCacheConfig(job);
   }
+
+  /**
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
+   * and read directly from snapshot files.
+   *
+   * @param snapshotName The name of the snapshot (of a table) to read from.
+   * @param columns  The columns to scan.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param jobConf  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
+   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
+   * After the job is finished, restore directory can be deleted.
+   * @param splitAlgo algorithm to split
+   * @param numSplitsPerRegion how many input splits to generate per one region
+   * @throws IOException When setting up the details fails.
+   * @see TableSnapshotInputFormat
+   */
+  public static void initTableSnapshotMapJob(String snapshotName, String columns,
+                                             Class<? extends TableMap> mapper,
+                                             Class<?> outputKeyClass,
+                                             Class<?> outputValueClass, JobConf jobConf,
+                                             boolean addDependencyJars, Path tmpRestoreDir,
+                                             RegionSplitter.SplitAlgorithm splitAlgo,
+                                             int numSplitsPerRegion)
+          throws IOException {
+    TableSnapshotInputFormat.setInput(jobConf, snapshotName, tmpRestoreDir, splitAlgo,
+            numSplitsPerRegion);
+    initTableMapJob(snapshotName, columns, mapper, outputKeyClass, outputValueClass, jobConf,
+            addDependencyJars, TableSnapshotInputFormat.class);
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.resetCacheConfig(jobConf);
+  }
+
 
   /**
    * Use this before submitting a TableReduce job. It will

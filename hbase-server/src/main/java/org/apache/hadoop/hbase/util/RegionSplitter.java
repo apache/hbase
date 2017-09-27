@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -180,6 +181,17 @@ public class RegionSplitter {
      *         length of the returned array should be numRegions-1.
      */
     byte[][] split(int numRegions);
+
+    /**
+     * Some MapReduce jobs may want to run multiple mappers per region,
+     * this is intended for such usecase.
+     *
+     * @param start first row (inclusive)
+     * @param end last row (exclusive)
+     * @param numSplits number of splits to generate
+     * @param inclusive whether start and end are returned as split points
+     */
+    byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive);
 
     /**
      * In HBase, the first row is represented by an empty byte array. This might
@@ -918,6 +930,39 @@ public class RegionSplitter {
       return convertToBytes(splits);
     }
 
+    @Override
+    public byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive) {
+      BigInteger s = convertToBigInteger(start);
+      BigInteger e = convertToBigInteger(end);
+
+      Preconditions.checkArgument(e.compareTo(s) > 0,
+                      "last row (%s) is configured less than first row (%s)", rowToStr(end),
+                      end);
+      // +1 to range because the last row is inclusive
+      BigInteger range = e.subtract(s).add(BigInteger.ONE);
+      Preconditions.checkState(range.compareTo(BigInteger.valueOf(numSplits)) >= 0,
+              "split granularity (%s) is greater than the range (%s)", numSplits, range);
+
+      BigInteger[] splits = new BigInteger[numSplits - 1];
+      BigInteger sizeOfEachSplit = range.divide(BigInteger.valueOf(numSplits));
+      for (int i = 1; i < numSplits; i++) {
+        // NOTE: this means the last region gets all the slop.
+        // This is not a big deal if we're assuming n << MAXHEX
+        splits[i - 1] = s.add(sizeOfEachSplit.multiply(BigInteger
+                .valueOf(i)));
+      }
+
+      if (inclusive) {
+        BigInteger[] inclusiveSplitPoints = new BigInteger[numSplits + 1];
+        inclusiveSplitPoints[0] = convertToBigInteger(start);
+        inclusiveSplitPoints[numSplits] = convertToBigInteger(end);
+        System.arraycopy(splits, 0, inclusiveSplitPoints, 1, splits.length);
+        return convertToBytes(inclusiveSplitPoints);
+      } else {
+        return convertToBytes(splits);
+      }
+    }
+
     public byte[] firstRow() {
       return convertToByte(firstRowInt);
     }
@@ -1059,6 +1104,32 @@ public class RegionSplitter {
       // remove endpoints, which are included in the splits list
 
       return splits == null? null: Arrays.copyOfRange(splits, 1, splits.length - 1);
+    }
+
+    @Override
+    public byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive) {
+      if (Arrays.equals(start, HConstants.EMPTY_BYTE_ARRAY)) {
+        start = firstRowBytes;
+      }
+      if (Arrays.equals(end, HConstants.EMPTY_BYTE_ARRAY)) {
+        end = lastRowBytes;
+      }
+      Preconditions.checkArgument(
+              Bytes.compareTo(end, start) > 0,
+              "last row (%s) is configured less than first row (%s)",
+              Bytes.toStringBinary(end),
+              Bytes.toStringBinary(start));
+
+      byte[][] splits = Bytes.split(start, end, true,
+              numSplits - 1);
+      Preconditions.checkState(splits != null,
+              "Could not calculate input splits with given user input: " + this);
+      if (inclusive) {
+        return splits;
+      } else {
+        // remove endpoints, which are included in the splits list
+        return Arrays.copyOfRange(splits, 1, splits.length - 1);
+      }
     }
 
     @Override

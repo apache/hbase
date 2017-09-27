@@ -78,10 +78,10 @@ public abstract class TableSnapshotInputFormatTestBase {
   }
 
   protected abstract void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
-    int numRegions, int expectedNumSplits) throws Exception;
+    int numRegions, int numSplitsPerRegion, int expectedNumSplits) throws Exception;
 
   protected abstract void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
-    String snapshotName, Path tableDir, int numRegions, int expectedNumSplits,
+    String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion, int expectedNumSplits,
     boolean shutdownCluster) throws Exception;
 
   protected abstract byte[] getStartRow();
@@ -90,28 +90,33 @@ public abstract class TableSnapshotInputFormatTestBase {
 
   @Test
   public void testWithMockedMapReduceSingleRegion() throws Exception {
-    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceSingleRegion", 1, 1);
+    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceSingleRegion", 1, 1, 1);
   }
 
   @Test
   public void testWithMockedMapReduceMultiRegion() throws Exception {
-    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 8);
+    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 1, 8);
   }
 
   @Test
   public void testWithMapReduceSingleRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceSingleRegion", 1, 1, false);
+    testWithMapReduce(UTIL, "testWithMapReduceSingleRegion", 1, 1, 1, false);
   }
 
   @Test
   public void testWithMapReduceMultiRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 8, false);
+    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 1, 8, false);
+  }
+
+  @Test
+  public void testWithMapReduceMultipleMappersPerRegion() throws Exception {
+    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 5, 50, false);
   }
 
   @Test
   // run the MR job while HBase is offline
   public void testWithMapReduceAndOfflineHBaseMultiRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 8, true);
+    testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 1, 8, true);
   }
 
   // Test that snapshot restore does not create back references in the HBase root dir.
@@ -159,13 +164,13 @@ public abstract class TableSnapshotInputFormatTestBase {
       String snapshotName, Path tmpTableDir) throws Exception;
 
   protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
-      int numRegions, int expectedNumSplits, boolean shutdownCluster) throws Exception {
+      int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
     setupCluster();
     try {
       Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
       TableName tableName = TableName.valueOf("testWithMapReduce");
       testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions,
-        expectedNumSplits, shutdownCluster);
+              numSplitsPerRegion, expectedNumSplits, shutdownCluster);
     } finally {
       tearDownCluster();
     }
