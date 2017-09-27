@@ -168,6 +168,16 @@ public class TestRegionSplitter {
         // Halfway between df... and ff... should be ef....
         splitPoint = splitter.split("dfffffff".getBytes(), lastRow);
         assertArrayEquals(splitPoint,"efffffff".getBytes());
+
+        // Check splitting region with multiple mappers per region
+        byte[][] splits = splitter.split("00000000".getBytes(), "30000000".getBytes(), 3, false);
+        assertEquals(2, splits.length);
+        assertArrayEquals(splits[0], "10000000".getBytes());
+        assertArrayEquals(splits[1], "20000000".getBytes());
+
+        splits = splitter.split("00000000".getBytes(), "20000000".getBytes(), 2, true);
+        assertEquals(3, splits.length);
+        assertArrayEquals(splits[1], "10000000".getBytes());
     }
 
     /**
@@ -215,6 +225,16 @@ public class TestRegionSplitter {
 
         splitPoint = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'b'});
         assertArrayEquals(splitPoint, new byte[] { 'a', 'a', 'a', (byte) 0x80 });
+
+        // Check splitting region with multiple mappers per region
+        byte[][] splits = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'd'}, 3, false);
+        assertEquals(2, splits.length);
+        assertArrayEquals(splits[0], new byte[]{'a', 'a', 'b'});
+        assertArrayEquals(splits[1], new byte[]{'a', 'a', 'c'});
+
+        splits = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'e'}, 2, true);
+        assertEquals(3, splits.length);
+        assertArrayEquals(splits[1], new byte[] { 'a', 'a', 'c'});
     }
 
   @Test

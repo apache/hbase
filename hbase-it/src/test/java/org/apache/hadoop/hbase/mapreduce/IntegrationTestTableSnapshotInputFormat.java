@@ -151,7 +151,7 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
       int expectedNumSplits = numRegions > 2 ? numRegions - 2 : numRegions;
 
       org.apache.hadoop.hbase.mapreduce.TestTableSnapshotInputFormat.doTestWithMapReduce(util,
-        tableName, snapshotName, START_ROW, END_ROW, tableDir, numRegions,
+        tableName, snapshotName, START_ROW, END_ROW, tableDir, numRegions, 1,
         expectedNumSplits, false);
     } else if (mr.equalsIgnoreCase(MAPRED_IMPLEMENTATION)) {
       /*
@@ -165,7 +165,7 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
       int expectedNumSplits = numRegions;
 
       org.apache.hadoop.hbase.mapred.TestTableSnapshotInputFormat.doTestWithMapReduce(util,
-        tableName, snapshotName, MAPRED_START_ROW, MAPRED_END_ROW, tableDir, numRegions,
+        tableName, snapshotName, MAPRED_START_ROW, MAPRED_END_ROW, tableDir, numRegions, 1,
         expectedNumSplits, false);
     } else {
       throw new IllegalArgumentException("Unrecognized mapreduce implementation: " + mr +".");
