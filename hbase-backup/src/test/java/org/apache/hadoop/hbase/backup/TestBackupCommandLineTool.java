@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -78,6 +79,15 @@ public class TestBackupCommandLineTool {
     output = baos.toString();
     System.out.println(baos.toString());
     assertTrue(output.indexOf(USAGE_DESCRIBE) >= 0);
+  }
+
+
+  @Test
+  public void testBackupDriverCreateTopLevelBackupDest() throws Exception {
+    String[] args = new String[] { "create", "full", "hdfs://localhost:1020", "-t", "t1" };
+    int result = ToolRunner.run(conf, new BackupDriver(), args);
+    // FAILED
+    assertEquals(1, result);
   }
 
   @Test
@@ -419,7 +429,7 @@ public class TestBackupCommandLineTool {
   public void testBackupDriverBackupSetAndList() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     System.setOut(new PrintStream(baos));
-    String[] args = new String[] { "create", "full", "file:/", "-t", "clicks", "-s", "s" };
+    String[] args = new String[] { "create", "full", "file:/localhost", "-t", "clicks", "-s", "s" };
     ToolRunner.run(conf, new BackupDriver(), args);
 
     String output = baos.toString();
