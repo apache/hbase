@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -83,7 +82,7 @@ public class TestMvccConsistentScanner {
   }
 
   private void move() throws IOException, InterruptedException {
-    HRegionInfo region =
+    RegionInfo region =
         UTIL.getHBaseCluster().getRegions(tableName).stream().findAny().get().getRegionInfo();
     HRegionServer rs =
         UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())

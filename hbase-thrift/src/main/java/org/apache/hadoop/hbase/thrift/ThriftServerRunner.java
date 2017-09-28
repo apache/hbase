@@ -20,6 +20,11 @@ package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslServer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -39,12 +44,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.UnsupportedCallbackException;
-import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.Sasl;
-import javax.security.sasl.SaslServer;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
@@ -55,7 +54,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -63,7 +61,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -72,6 +69,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -83,7 +81,6 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -123,17 +120,22 @@ import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import org.eclipse.jetty.http.HttpVersion;
-import org.eclipse.jetty.server.*;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * ThriftServerRunner - this class starts up a Thrift server which implements
@@ -893,7 +895,7 @@ public class ThriftServerRunner implements Runnable {
         List<HRegionLocation> regionLocations = locator.getAllRegionLocations();
         List<TRegionInfo> results = new ArrayList<>(regionLocations.size());
         for (HRegionLocation regionLocation : regionLocations) {
-          HRegionInfo info = regionLocation.getRegionInfo();
+          RegionInfo info = regionLocation.getRegionInfo();
           ServerName serverName = regionLocation.getServerName();
           TRegionInfo region = new TRegionInfo();
           region.serverName = ByteBuffer.wrap(
@@ -987,7 +989,7 @@ public class ThriftServerRunner implements Runnable {
      */
     public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, byte[] family,
         byte[] qualifier, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1033,7 +1035,7 @@ public class ThriftServerRunner implements Runnable {
     protected List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, byte[] family,
         byte[] qualifier, long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1085,7 +1087,7 @@ public class ThriftServerRunner implements Runnable {
     public List<TRowResult> getRowWithColumnsTs(
         ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns,
         long timestamp, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1151,7 +1153,7 @@ public class ThriftServerRunner implements Runnable {
                                                  List<ByteBuffer> rows,
         List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table= null;
       try {
         List<Get> gets = new ArrayList<>(rows.size());
@@ -1500,7 +1502,7 @@ public class ThriftServerRunner implements Runnable {
     public int scannerOpenWithScan(ByteBuffer tableName, TScan tScan,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1555,7 +1557,7 @@ public class ThriftServerRunner implements Runnable {
     public int scannerOpen(ByteBuffer tableName, ByteBuffer startRow,
         List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1585,7 +1587,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer stopRow, List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1616,7 +1618,7 @@ public class ThriftServerRunner implements Runnable {
                                      List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1648,7 +1650,7 @@ public class ThriftServerRunner implements Runnable {
     public int scannerOpenTs(ByteBuffer tableName, ByteBuffer startRow,
         List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1679,7 +1681,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer stopRow, List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
-      
+
       Table table = null;
       try {
         table = getTable(tableName);
@@ -1709,7 +1711,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public Map<ByteBuffer, ColumnDescriptor> getColumnDescriptors(
         ByteBuffer tableName) throws IOError, TException {
-      
+
       Table table = null;
       try {
         TreeMap<ByteBuffer, ColumnDescriptor> columns = new TreeMap<>();
@@ -1741,7 +1743,7 @@ public class ThriftServerRunner implements Runnable {
         throw getIOError(e);
       }
     }
-    
+
     @Override
     public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
       try {
@@ -1755,9 +1757,9 @@ public class ThriftServerRunner implements Runnable {
         }
 
         // find region start and end keys
-        HRegionInfo regionInfo = MetaTableAccessor.getHRegionInfo(startRowResult);
+        RegionInfo regionInfo = MetaTableAccessor.getRegionInfo(startRowResult);
         if (regionInfo == null) {
-          throw new IOException("HRegionInfo REGIONINFO was null or " +
+          throw new IOException("RegionInfo REGIONINFO was null or " +
                                 " empty in Meta for row="
                                 + Bytes.toStringBinary(row));
         }
@@ -1787,7 +1789,7 @@ public class ThriftServerRunner implements Runnable {
       scan.setReversed(true);
       scan.addFamily(family);
       scan.setStartRow(row);
-      Table table = getTable(tableName);      
+      Table table = getTable(tableName);
       try (ResultScanner scanner = table.getScanner(scan)) {
         return scanner.next();
       } finally{

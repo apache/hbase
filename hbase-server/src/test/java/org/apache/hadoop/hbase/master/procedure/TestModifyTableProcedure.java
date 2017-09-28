@@ -25,9 +25,9 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -190,7 +190,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1", cf3);
     UTIL.getAdmin().disableTable(tableName);
 
@@ -230,7 +230,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1", cf3);
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
@@ -268,7 +268,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1");
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
@@ -297,7 +297,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1");
     UTIL.getAdmin().disableTable(tableName);
 

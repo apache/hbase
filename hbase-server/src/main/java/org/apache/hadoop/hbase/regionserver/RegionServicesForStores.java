@@ -23,9 +23,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Services a Store needs from a Region.
@@ -67,7 +67,7 @@ public class RegionServicesForStores {
     region.addAndGetMemstoreSize(size);
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return region.getRegionInfo();
   }
 

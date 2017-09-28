@@ -26,15 +26,16 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 
 /**
@@ -80,7 +81,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
   }
 
   @Override
-  public void planSkipped(HRegionInfo hri, PlanType type) {
+  public void planSkipped(RegionInfo hri, PlanType type) {
     skippedCount[type.ordinal()]++;
   }
 
@@ -119,7 +120,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     }
 
     List<NormalizationPlan> plans = new ArrayList<>();
-    List<HRegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
+    List<RegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
       getRegionsOfTable(table);
 
     //TODO: should we make min number of regions a config param?
@@ -137,7 +138,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     int acutalRegionCnt = 0;
 
     for (int i = 0; i < tableRegions.size(); i++) {
-      HRegionInfo hri = tableRegions.get(i);
+      RegionInfo hri = tableRegions.get(i);
       long regionSize = getRegionSize(hri);
       if (regionSize > 0) {
         acutalRegionCnt++;
@@ -165,7 +166,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       LOG.debug("Unable to determine whether split is enabled", e);
     }
     while (candidateIdx < tableRegions.size()) {
-      HRegionInfo hri = tableRegions.get(candidateIdx);
+      RegionInfo hri = tableRegions.get(candidateIdx);
       long regionSize = getRegionSize(hri);
       // if the region is > 2 times larger than average, we split it, split
       // is more high priority normalization action than merge.
@@ -180,7 +181,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
           break;
         }
         if (mergeEnabled) {
-          HRegionInfo hri2 = tableRegions.get(candidateIdx+1);
+          RegionInfo hri2 = tableRegions.get(candidateIdx+1);
           long regionSize2 = getRegionSize(hri2);
           if (regionSize >= 0 && regionSize2 >= 0 && regionSize + regionSize2 < avgRegionSize) {
             LOG.info("Table " + table + ", small region size: " + regionSize
@@ -201,7 +202,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     return plans;
   }
 
-  private long getRegionSize(HRegionInfo hri) {
+  private long getRegionSize(RegionInfo hri) {
     ServerName sn = masterServices.getAssignmentManager().getRegionStates().
       getRegionServerOfRegion(hri);
     RegionLoad regionLoad = masterServices.getServerManager().getLoad(sn).

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -34,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -50,13 +49,16 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+
+import com.google.protobuf.Service;
 
 /**
  * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
@@ -242,7 +244,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public WAL getWAL(HRegionInfo regionInfo) throws IOException {
+  public WAL getWAL(RegionInfo regionInfo) throws IOException {
     return null;
   }
 
@@ -280,13 +282,13 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
-      HRegionInfo... hris) {
+      RegionInfo... hris) {
     return false;
   }
 
   @Override
   public boolean reportRegionStateTransition(TransitionCode code,
-      HRegionInfo... hris) {
+      RegionInfo... hris) {
     return false;
   }
 
@@ -332,7 +334,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public EntityLock regionLock(List<HRegionInfo> regionInfos, String description, Abortable abort)
+  public EntityLock regionLock(List<RegionInfo> regionInfos, String description, Abortable abort)
       throws IOException {
     return null;
   }

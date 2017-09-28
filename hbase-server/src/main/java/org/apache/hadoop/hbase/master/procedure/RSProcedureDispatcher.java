@@ -18,25 +18,26 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
-
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.ipc.RemoteException;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProc
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * A remote procecdure dispatcher for regionservers.
@@ -473,15 +473,15 @@ public class RSProcedureDispatcher
   }
 
   public static abstract class RegionOperation extends RemoteOperation {
-    private final HRegionInfo regionInfo;
+    private final RegionInfo regionInfo;
 
     protected RegionOperation(final RemoteProcedure remoteProcedure,
-        final HRegionInfo regionInfo) {
+        final RegionInfo regionInfo) {
       super(remoteProcedure);
       this.regionInfo = regionInfo;
     }
 
-    public HRegionInfo getRegionInfo() {
+    public RegionInfo getRegionInfo() {
       return this.regionInfo;
     }
   }
@@ -492,7 +492,7 @@ public class RSProcedureDispatcher
     private boolean failedOpen;
 
     public RegionOpenOperation(final RemoteProcedure remoteProcedure,
-        final HRegionInfo regionInfo, final List<ServerName> favoredNodes,
+        final RegionInfo regionInfo, final List<ServerName> favoredNodes,
         final boolean openForReplay) {
       super(remoteProcedure, regionInfo);
       this.favoredNodes = favoredNodes;
@@ -519,7 +519,7 @@ public class RSProcedureDispatcher
     private boolean closed = false;
 
     public RegionCloseOperation(final RemoteProcedure remoteProcedure,
-        final HRegionInfo regionInfo, final ServerName destinationServer) {
+        final RegionInfo regionInfo, final ServerName destinationServer) {
       super(remoteProcedure, regionInfo);
       this.destinationServer = destinationServer;
     }

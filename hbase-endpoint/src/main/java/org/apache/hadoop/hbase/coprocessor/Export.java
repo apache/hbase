@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import java.io.Closeable;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -39,12 +36,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -64,7 +59,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,6 +71,14 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 /**
  * Export an HBase table. Writes content to sequence files up in HDFS. Use
@@ -179,7 +181,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   private static SequenceFile.Writer.Option getOutputPath(final Configuration conf,
-          final HRegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
+          final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
     Path file = new Path(request.getOutputPath(), "export-" + info.getEncodedName());
     FileSystem fs = file.getFileSystem(conf);
     if (fs.exists(file)) {
@@ -189,7 +191,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   private static List<SequenceFile.Writer.Option> getWriterOptions(final Configuration conf,
-          final HRegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
+          final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
     List<SequenceFile.Writer.Option> rval = new LinkedList<>();
     rval.add(SequenceFile.Writer.keyClass(ImmutableBytesWritable.class));
     rval.add(SequenceFile.Writer.valueClass(Result.class));
@@ -341,7 +343,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     }
   }
 
-  private Scan validateKey(final HRegionInfo region, final ExportProtos.ExportRequest request) throws IOException {
+  private Scan validateKey(final RegionInfo region, final ExportProtos.ExportRequest request) throws IOException {
     Scan scan = ProtobufUtil.toScan(request.getScan());
     byte[] regionStartKey = region.getStartKey();
     byte[] originStartKey = scan.getStartRow();

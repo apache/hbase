@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
@@ -88,7 +88,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   @Override
   public String getRegionName() {
-    HRegionInfo regionInfo = this.region.getRegionInfo();
+    RegionInfo regionInfo = this.region.getRegionInfo();
     if (regionInfo == null) {
       return UNKNOWN;
     }

@@ -19,11 +19,12 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -43,13 +44,13 @@ class Util {
    * @throws IOException Let it out so can report this IOE as reason for failure
    */
   static GetRegionInfoResponse getRegionInfoResponse(final MasterProcedureEnv env,
-      final ServerName regionLocation, final HRegionInfo hri)
+      final ServerName regionLocation, final RegionInfo hri)
   throws IOException {
     return getRegionInfoResponse(env, regionLocation, hri, false);
   }
 
   static GetRegionInfoResponse getRegionInfoResponse(final MasterProcedureEnv env,
-      final ServerName regionLocation, final HRegionInfo hri, boolean includeBestSplitRow)
+      final ServerName regionLocation, final RegionInfo hri, boolean includeBestSplitRow)
   throws IOException {
     // TODO: There is no timeout on this controller. Set one!
     HBaseRpcController controller = env.getMasterServices().getClusterConnection().

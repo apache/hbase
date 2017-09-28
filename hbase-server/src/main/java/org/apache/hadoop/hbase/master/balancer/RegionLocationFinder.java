@@ -33,15 +33,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheLoader;
@@ -71,10 +71,10 @@ class RegionLocationFinder {
   // Do not scheduleFullRefresh at master startup
   private long lastFullRefresh = EnvironmentEdgeManager.currentTime();
 
-  private CacheLoader<HRegionInfo, HDFSBlocksDistribution> loader =
-      new CacheLoader<HRegionInfo, HDFSBlocksDistribution>() {
+  private CacheLoader<RegionInfo, HDFSBlocksDistribution> loader =
+      new CacheLoader<RegionInfo, HDFSBlocksDistribution>() {
 
-        public ListenableFuture<HDFSBlocksDistribution> reload(final HRegionInfo hri,
+        public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
                HDFSBlocksDistribution oldValue) throws Exception {
           return executor.submit(new Callable<HDFSBlocksDistribution>() {
             @Override
@@ -85,13 +85,13 @@ class RegionLocationFinder {
         }
 
         @Override
-        public HDFSBlocksDistribution load(HRegionInfo key) throws Exception {
+        public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
           return internalGetTopBlockLocation(key);
         }
       };
 
   // The cache for where regions are located.
-  private LoadingCache<HRegionInfo, HDFSBlocksDistribution> cache = null;
+  private LoadingCache<RegionInfo, HDFSBlocksDistribution> cache = null;
 
   RegionLocationFinder() {
     this.cache = createCache();
@@ -109,7 +109,7 @@ class RegionLocationFinder {
    * @param time time to cache the locations
    * @return A new Cache.
    */
-  private LoadingCache<HRegionInfo, HDFSBlocksDistribution> createCache() {
+  private LoadingCache<RegionInfo, HDFSBlocksDistribution> createCache() {
     return CacheBuilder.newBuilder()
         .expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
         .build(loader);
@@ -155,14 +155,14 @@ class RegionLocationFinder {
 
     // TODO: Should this refresh all the regions or only the ones assigned?
     boolean includesUserTables = false;
-    for (final HRegionInfo hri : am.getAssignedRegions()) {
+    for (final RegionInfo hri : am.getAssignedRegions()) {
       cache.refresh(hri);
       includesUserTables = includesUserTables || !hri.isSystemTable();
     }
     return includesUserTables;
   }
 
-  protected List<ServerName> getTopBlockLocations(HRegionInfo region) {
+  protected List<ServerName> getTopBlockLocations(RegionInfo region) {
     List<String> topHosts = getBlockDistribution(region).getTopHosts();
     return mapHostNameToServerName(topHosts);
   }
@@ -171,7 +171,7 @@ class RegionLocationFinder {
    * Returns an ordered list of hosts which have better locality for this region
    * than the current host.
    */
-  protected List<ServerName> getTopBlockLocations(HRegionInfo region, String currentHost) {
+  protected List<ServerName> getTopBlockLocations(RegionInfo region, String currentHost) {
     HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
     List<String> topHosts = new ArrayList<>();
     for (String host : blocksDistribution.getTopHosts()) {
@@ -192,7 +192,7 @@ class RegionLocationFinder {
    * @param region region
    * @return ordered list of hosts holding blocks of the specified region
    */
-  protected HDFSBlocksDistribution internalGetTopBlockLocation(HRegionInfo region) {
+  protected HDFSBlocksDistribution internalGetTopBlockLocation(RegionInfo region) {
     try {
       TableDescriptor tableDescriptor = getTableDescriptor(region.getTable());
       if (tableDescriptor != null) {
@@ -272,7 +272,7 @@ class RegionLocationFinder {
     return topServerNames;
   }
 
-  public HDFSBlocksDistribution getBlockDistribution(HRegionInfo hri) {
+  public HDFSBlocksDistribution getBlockDistribution(RegionInfo hri) {
     HDFSBlocksDistribution blockDistbn = null;
     try {
       if (cache.asMap().containsKey(hri)) {
@@ -294,7 +294,7 @@ class RegionLocationFinder {
   }
 
   private ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(
-      HRegionInfo hri) {
+      RegionInfo hri) {
     try {
       return loader.reload(hri, EMPTY_BLOCK_DISTRIBUTION);
     } catch (Exception e) {
@@ -302,13 +302,13 @@ class RegionLocationFinder {
     }
   }
 
-  public void refreshAndWait(Collection<HRegionInfo> hris) {
+  public void refreshAndWait(Collection<RegionInfo> hris) {
     ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures = new ArrayList<>(hris.size());
-    for (HRegionInfo hregionInfo : hris) {
+    for (RegionInfo hregionInfo : hris) {
       regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
     }
     int index = 0;
-    for (HRegionInfo hregionInfo : hris) {
+    for (RegionInfo hregionInfo : hris) {
       ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures
           .get(index);
       try {
@@ -325,7 +325,7 @@ class RegionLocationFinder {
   }
 
   // For test
-  LoadingCache<HRegionInfo, HDFSBlocksDistribution> getCache() {
+  LoadingCache<RegionInfo, HDFSBlocksDistribution> getCache() {
     return cache;
   }
 }

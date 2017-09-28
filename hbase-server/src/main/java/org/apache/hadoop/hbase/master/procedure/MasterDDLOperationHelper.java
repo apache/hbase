@@ -24,13 +24,13 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Helper class for schema change procedures
@@ -47,21 +47,21 @@ public final class MasterDDLOperationHelper {
   public static void deleteColumnFamilyFromFileSystem(
       final MasterProcedureEnv env,
       final TableName tableName,
-      final List<HRegionInfo> regionInfoList,
+      final List<RegionInfo> regionInfoList,
       final byte[] familyName,
       final boolean hasMob) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing family=" + Bytes.toString(familyName) + " from table=" + tableName);
     }
-    for (HRegionInfo hri : regionInfoList) {
+    for (RegionInfo hri : regionInfoList) {
       // Delete the family directory in FS for all the regions one by one
       mfs.deleteFamilyFromFS(hri, familyName);
     }
     if (hasMob) {
       // Delete the mob region
       Path mobRootDir = new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME);
-      HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
+      RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
       mfs.deleteFamilyFromFS(mobRootDir, mobRegionInfo, familyName);
     }
   }

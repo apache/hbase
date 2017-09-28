@@ -28,11 +28,11 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -42,6 +42,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Test HBASE-3694 whether the GlobalMemStoreSize is the same as the summary
@@ -91,7 +93,7 @@ public class TestGlobalMemStoreSize {
 
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
-      for (HRegionInfo regionInfo :
+      for (RegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
         globalMemStoreSize += server.getRegion(regionInfo.getEncodedName()).getMemstoreSize();
       }
@@ -105,7 +107,7 @@ public class TestGlobalMemStoreSize {
       LOG.info("Starting flushes on " + server.getServerName() +
         ", size=" + server.getRegionServerAccounting().getGlobalMemstoreDataSize());
 
-      for (HRegionInfo regionInfo :
+      for (RegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
         Region r = server.getRegion(regionInfo.getEncodedName());
         flush(r, server);
@@ -121,7 +123,7 @@ public class TestGlobalMemStoreSize {
       if (size > 0) {
         // If size > 0, see if its because the meta region got edits while
         // our test was running....
-        for (HRegionInfo regionInfo :
+        for (RegionInfo regionInfo :
             ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
           Region r = server.getRegion(regionInfo.getEncodedName());
           long l = r.getMemstoreSize();

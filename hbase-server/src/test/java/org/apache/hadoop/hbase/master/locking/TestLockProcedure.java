@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
@@ -46,12 +46,6 @@ import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.hamcrest.core.IsInstanceOf;
@@ -66,6 +60,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestLockProcedure {
@@ -87,9 +88,9 @@ public class TestLockProcedure {
 
   private static String namespace = "namespace";
   private static TableName tableName1 = TableName.valueOf(namespace, "table1");
-  private static List<HRegionInfo> tableRegions1;
+  private static List<RegionInfo> tableRegions1;
   private static TableName tableName2 = TableName.valueOf(namespace, "table2");
-  private static List<HRegionInfo> tableRegions2;
+  private static List<RegionInfo> tableRegions2;
 
   private String testMethodName;
 
@@ -109,8 +110,8 @@ public class TestLockProcedure {
     UTIL.createTable(tableName2, new byte[][]{"fam".getBytes()}, new byte[][] {"1".getBytes()});
     masterRpcService = UTIL.getHBaseCluster().getMaster().getMasterRpcServices();
     procExec = UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
-    tableRegions1 = UTIL.getAdmin().getTableRegions(tableName1);
-    tableRegions2 = UTIL.getAdmin().getTableRegions(tableName2);
+    tableRegions1 = UTIL.getAdmin().getRegions(tableName1);
+    tableRegions2 = UTIL.getAdmin().getRegions(tableName2);
     assert tableRegions1.size() > 0;
     assert tableRegions2.size() > 0;
   }
@@ -151,7 +152,7 @@ public class TestLockProcedure {
         null, tableName, null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  private LockRequest getRegionLock(List<HRegionInfo> regionInfos, String description) {
+  private LockRequest getRegionLock(List<RegionInfo> regionInfos, String description) {
     return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
         null, null, regionInfos, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
@@ -178,7 +179,7 @@ public class TestLockProcedure {
 
   @Test
   public void testLockRequestValidationRegionsFromDifferentTable() throws Exception {
-    List<HRegionInfo> regions = new ArrayList<>();
+    List<RegionInfo> regions = new ArrayList<>();
     regions.addAll(tableRegions1);
     regions.addAll(tableRegions2);
     validateLockRequestException(getRegionLock(regions, "desc"),

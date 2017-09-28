@@ -23,9 +23,9 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -193,7 +193,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "f1", "f2", "f3", cf5);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);

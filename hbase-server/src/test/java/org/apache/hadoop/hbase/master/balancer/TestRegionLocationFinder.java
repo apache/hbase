@@ -26,10 +26,10 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -84,7 +84,7 @@ public class TestRegionLocationFinder {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
       for (Region region : server.getRegions(tableName)) {
-        // get region's hdfs block distribution by region and RegionLocationFinder, 
+        // get region's hdfs block distribution by region and RegionLocationFinder,
         // they should have same result
         HDFSBlocksDistribution blocksDistribution1 = region.getHDFSBlocksDistribution();
         HDFSBlocksDistribution blocksDistribution2 = finder.getBlockDistribution(region
@@ -151,12 +151,12 @@ public class TestRegionLocationFinder {
       if (regions.size() <= 0) {
         continue;
       }
-      List<HRegionInfo> regionInfos = new ArrayList<>(regions.size());
+      List<RegionInfo> regionInfos = new ArrayList<>(regions.size());
       for (Region region : regions) {
         regionInfos.add(region.getRegionInfo());
       }
       finder.refreshAndWait(regionInfos);
-      for (HRegionInfo regionInfo : regionInfos) {
+      for (RegionInfo regionInfo : regionInfos) {
         assertNotNull(finder.getCache().getIfPresent(regionInfo));
       }
     }

@@ -39,10 +39,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -159,7 +159,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
     loadBalancer.setConf(conf);
     for (int[] mockCluster : clusterStateMocks) {
-      Map<ServerName, List<HRegionInfo>> servers = mockClusterServers(mockCluster);
+      Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
       List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
       assertNull(plans);
     }
@@ -183,7 +183,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
     for (int[] mockCluster : clusterStateMocks) {
-      Map<ServerName, List<HRegionInfo>> servers = mockClusterServers(mockCluster);
+      Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
       List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
@@ -192,7 +192,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       assertClusterAsBalanced(balancedCluster);
       List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(servers);
       assertNull(secondPlans);
-      for (Map.Entry<ServerName, List<HRegionInfo>> entry : servers.entrySet()) {
+      for (Map.Entry<ServerName, List<RegionInfo>> entry : servers.entrySet()) {
         returnRegions(entry.getValue());
         returnServer(entry.getKey());
       }
@@ -375,7 +375,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     int replication = 1;
     int numTables = 2;
 
-    Map<ServerName, List<HRegionInfo>> serverMap =
+    Map<ServerName, List<RegionInfo>> serverMap =
         createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     List<ServerAndLoad> list = convertToList(serverMap);
 
@@ -419,7 +419,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         costFunction = new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
 
     int [] servers = new int[] {3,3,3,3,3};
-    TreeMap<ServerName, List<HRegionInfo>> clusterState = mockClusterServers(servers);
+    TreeMap<ServerName, List<RegionInfo>> clusterState = mockClusterServers(servers);
 
     BaseLoadBalancer.Cluster cluster;
 
@@ -429,7 +429,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(0, costWithoutReplicas, 0);
 
     // replicate the region from first server to the last server
-    HRegionInfo replica1 = RegionReplicaUtil.getRegionInfoForReplica(
+    RegionInfo replica1 = RegionReplicaUtil.getRegionInfoForReplica(
       clusterState.firstEntry().getValue().get(0),1);
     clusterState.lastEntry().getValue().add(replica1);
 
@@ -440,7 +440,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(0, costWith1ReplicaDifferentServer, 0);
 
     // add a third replica to the last server
-    HRegionInfo replica2 = RegionReplicaUtil.getRegionInfoForReplica(replica1, 2);
+    RegionInfo replica2 = RegionReplicaUtil.getRegionInfoForReplica(replica1, 2);
     clusterState.lastEntry().getValue().add(replica2);
 
     cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
@@ -451,14 +451,14 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     // test with replication = 4 for following:
 
-    HRegionInfo replica3;
-    Iterator<Entry<ServerName, List<HRegionInfo>>> it;
-    Entry<ServerName, List<HRegionInfo>> entry;
+    RegionInfo replica3;
+    Iterator<Entry<ServerName, List<RegionInfo>>> it;
+    Entry<ServerName, List<RegionInfo>> entry;
 
     clusterState = mockClusterServers(servers);
     it = clusterState.entrySet().iterator();
     entry = it.next(); //first server
-    HRegionInfo hri = entry.getValue().get(0);
+    RegionInfo hri = entry.getValue().get(0);
     replica1 = RegionReplicaUtil.getRegionInfoForReplica(hri, 1);
     replica2 = RegionReplicaUtil.getRegionInfoForReplica(hri, 2);
     replica3 = RegionReplicaUtil.getRegionInfoForReplica(hri, 3);
@@ -491,10 +491,10 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testNeedsBalanceForColocatedReplicas() {
     // check for the case where there are two hosts and with one rack, and where
     // both the replicas are hosted on the same server
-    List<HRegionInfo> regions = randomRegions(1);
+    List<RegionInfo> regions = randomRegions(1);
     ServerName s1 = ServerName.valueOf("host1", 1000, 11111);
     ServerName s2 = ServerName.valueOf("host11", 1000, 11111);
-    Map<ServerName, List<HRegionInfo>> map = new HashMap<>();
+    Map<ServerName, List<RegionInfo>> map = new HashMap<>();
     map.put(s1, regions);
     regions.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
     // until the step above s1 holds two replicas of a region
@@ -505,7 +505,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     // and both the replicas are on the same rack
     map.clear();
     regions = randomRegions(1);
-    List<HRegionInfo> regionsOnS2 = new ArrayList<>(1);
+    List<RegionInfo> regionsOnS2 = new ArrayList<>(1);
     regionsOnS2.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
     map.put(s1, regions);
     map.put(s2, regionsOnS2);
@@ -615,13 +615,13 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 5;
     int numTables = 10;
-    Map<ServerName, List<HRegionInfo>> serverMap =
+    Map<ServerName, List<RegionInfo>> serverMap =
         createServerMap(numHosts, numRegions, numRegionsPerServer, replication, numTables);
     int numNodesPerHost = 4;
 
     // create a new map with 4 RS per host.
-    Map<ServerName, List<HRegionInfo>> newServerMap = new TreeMap<>(serverMap);
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry : serverMap.entrySet()) {
+    Map<ServerName, List<RegionInfo>> newServerMap = new TreeMap<>(serverMap);
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : serverMap.entrySet()) {
       for (int i=1; i < numNodesPerHost; i++) {
         ServerName s1 = entry.getKey();
         ServerName s2 = ServerName.valueOf(s1.getHostname(), s1.getPort() + i, 1); // create an RS for the same host
@@ -662,7 +662,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     int numRegionsPerServer = 28;
     int numTables = 10;
     int numRacks = 4; // all replicas should be on a different rack
-    Map<ServerName, List<HRegionInfo>> serverMap =
+    Map<ServerName, List<RegionInfo>> serverMap =
         createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     RackManager rm = new ForTestRackManager(numRacks);
 

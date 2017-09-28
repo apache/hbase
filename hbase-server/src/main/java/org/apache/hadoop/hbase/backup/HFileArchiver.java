@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,7 +75,7 @@ public class HFileArchiver {
   /**
    * @return True if the Region exits in the filesystem.
    */
-  public static boolean exists(Configuration conf, FileSystem fs, HRegionInfo info)
+  public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     Path regionDir = HRegion.getRegionDir(rootDir, info);
@@ -87,10 +87,10 @@ public class HFileArchiver {
    * archive directory
    * @param conf the configuration to use
    * @param fs the file system object
-   * @param info HRegionInfo for region to be deleted
+   * @param info RegionInfo for region to be deleted
    * @throws IOException
    */
-  public static void archiveRegion(Configuration conf, FileSystem fs, HRegionInfo info)
+  public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
     archiveRegion(fs, rootDir, FSUtils.getTableDir(rootDir, info.getTable()),
@@ -176,7 +176,7 @@ public class HFileArchiver {
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveFamily(FileSystem fs, Configuration conf,
-      HRegionInfo parent, Path tableDir, byte[] family) throws IOException {
+      RegionInfo parent, Path tableDir, byte[] family) throws IOException {
     Path familyDir = new Path(tableDir, new Path(parent.getEncodedName(), Bytes.toString(family)));
     archiveFamilyByFamilyDir(fs, conf, parent, familyDir, family);
   }
@@ -192,7 +192,7 @@ public class HFileArchiver {
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf,
-      HRegionInfo parent, Path familyDir, byte[] family) throws IOException {
+      RegionInfo parent, Path familyDir, byte[] family) throws IOException {
     FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
       LOG.debug("No store files to dispose for region=" + parent.getRegionNameAsString() +
@@ -219,13 +219,13 @@ public class HFileArchiver {
    * Remove the store files, either by archiving them or outright deletion
    * @param conf {@link Configuration} to examine to determine the archive directory
    * @param fs the filesystem where the store files live
-   * @param regionInfo {@link HRegionInfo} of the region hosting the store files
+   * @param regionInfo {@link RegionInfo} of the region hosting the store files
    * @param family the family hosting the store files
    * @param compactedFiles files to be disposed of. No further reading of these files should be
    *          attempted; otherwise likely to cause an {@link IOException}
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveStoreFiles(Configuration conf, FileSystem fs, HRegionInfo regionInfo,
+  public static void archiveStoreFiles(Configuration conf, FileSystem fs, RegionInfo regionInfo,
       Path tableDir, byte[] family, Collection<HStoreFile> compactedFiles)
       throws IOException, FailedArchiveException {
 
@@ -284,7 +284,7 @@ public class HFileArchiver {
    * @param storeFile file to be archived
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveStoreFile(Configuration conf, FileSystem fs, HRegionInfo regionInfo,
+  public static void archiveStoreFile(Configuration conf, FileSystem fs, RegionInfo regionInfo,
       Path tableDir, byte[] family, Path storeFile) throws IOException {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
     // make sure we don't archive if we can't and that the archive dir exists

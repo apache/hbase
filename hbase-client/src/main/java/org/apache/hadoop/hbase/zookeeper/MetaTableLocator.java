@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
@@ -27,19 +25,19 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -47,17 +45,20 @@ import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
@@ -93,8 +94,8 @@ public class MetaTableLocator {
    * @param zkw ZooKeeper watcher to be used
    * @return meta table regions and their locations.
    */
-  public List<Pair<HRegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw) {
-    return getMetaRegionsAndLocations(zkw, HRegionInfo.DEFAULT_REPLICA_ID);
+  public List<Pair<RegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw) {
+    return getMetaRegionsAndLocations(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
@@ -103,12 +104,12 @@ public class MetaTableLocator {
    * @param replicaId
    * @return meta table regions and their locations.
    */
-  public List<Pair<HRegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw,
+  public List<Pair<RegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw,
       int replicaId) {
     ServerName serverName = getMetaRegionLocation(zkw, replicaId);
-    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<>(1);
+    List<Pair<RegionInfo, ServerName>> list = new ArrayList<>(1);
     list.add(new Pair<>(RegionReplicaUtil.getRegionInfoForReplica(
-        HRegionInfo.FIRST_META_REGIONINFO, replicaId), serverName));
+        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId), serverName));
     return list;
   }
 
@@ -116,8 +117,8 @@ public class MetaTableLocator {
    * @param zkw ZooKeeper watcher to be used
    * @return List of meta regions
    */
-  public List<HRegionInfo> getMetaRegions(ZooKeeperWatcher zkw) {
-    return getMetaRegions(zkw, HRegionInfo.DEFAULT_REPLICA_ID);
+  public List<RegionInfo> getMetaRegions(ZooKeeperWatcher zkw) {
+    return getMetaRegions(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
@@ -126,17 +127,17 @@ public class MetaTableLocator {
    * @param replicaId
    * @return List of meta regions
    */
-  public List<HRegionInfo> getMetaRegions(ZooKeeperWatcher zkw, int replicaId) {
-    List<Pair<HRegionInfo, ServerName>> result;
+  public List<RegionInfo> getMetaRegions(ZooKeeperWatcher zkw, int replicaId) {
+    List<Pair<RegionInfo, ServerName>> result;
     result = getMetaRegionsAndLocations(zkw, replicaId);
-    return getListOfHRegionInfos(result);
+    return getListOfRegionInfos(result);
   }
 
-  private List<HRegionInfo> getListOfHRegionInfos(
-      final List<Pair<HRegionInfo, ServerName>> pairs) {
-    if (pairs == null || pairs.isEmpty()) return null;
-    List<HRegionInfo> result = new ArrayList<>(pairs.size());
-    for (Pair<HRegionInfo, ServerName> pair: pairs) {
+  private List<RegionInfo> getListOfRegionInfos(
+      final List<Pair<RegionInfo, ServerName>> pairs) {
+    if (pairs == null || pairs.isEmpty()) return Collections.EMPTY_LIST;
+    List<RegionInfo> result = new ArrayList<>(pairs.size());
+    for (Pair<RegionInfo, ServerName> pair: pairs) {
       result.add(pair.getFirst());
     }
     return result;
@@ -185,7 +186,7 @@ public class MetaTableLocator {
    */
   public ServerName waitMetaRegionLocation(ZooKeeperWatcher zkw, long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
-    return waitMetaRegionLocation(zkw, HRegionInfo.DEFAULT_REPLICA_ID, timeout);
+    return waitMetaRegionLocation(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
   }
 
   /**
@@ -261,7 +262,7 @@ public class MetaTableLocator {
   public boolean verifyMetaRegionLocation(ClusterConnection hConnection,
       ZooKeeperWatcher zkw, final long timeout)
   throws InterruptedException, IOException {
-    return verifyMetaRegionLocation(hConnection, zkw, timeout, HRegionInfo.DEFAULT_REPLICA_ID);
+    return verifyMetaRegionLocation(hConnection, zkw, timeout, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
@@ -291,7 +292,7 @@ public class MetaTableLocator {
     }
     return (service != null) && verifyRegionLocation(connection, service,
             getMetaRegionLocation(zkw, replicaId), RegionReplicaUtil.getRegionInfoForReplica(
-                HRegionInfo.FIRST_META_REGIONINFO, replicaId).getRegionName());
+                RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId).getRegionName());
   }
 
   /**
@@ -425,7 +426,7 @@ public class MetaTableLocator {
    */
   public static void setMetaLocation(ZooKeeperWatcher zookeeper,
       ServerName serverName, RegionState.State state) throws KeeperException {
-    setMetaLocation(zookeeper, serverName, HRegionInfo.DEFAULT_REPLICA_ID, state);
+    setMetaLocation(zookeeper, serverName, RegionInfo.DEFAULT_REPLICA_ID, state);
   }
 
   /**
@@ -456,7 +457,7 @@ public class MetaTableLocator {
       ZKUtil.setData(zookeeper,
           zookeeper.znodePaths.getZNodeForReplica(replicaId), data);
     } catch(KeeperException.NoNodeException nne) {
-      if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+      if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
         LOG.debug("META region location doesn't exist, create it");
       } else {
         LOG.debug("META region location doesn't exist for replicaId=" + replicaId +
@@ -470,7 +471,7 @@ public class MetaTableLocator {
    * Load the meta region state from the meta server ZNode.
    */
   public static RegionState getMetaRegionState(ZooKeeperWatcher zkw) throws KeeperException {
-    return getMetaRegionState(zkw, HRegionInfo.DEFAULT_REPLICA_ID);
+    return getMetaRegionState(zkw, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
@@ -514,7 +515,7 @@ public class MetaTableLocator {
       state = RegionState.State.OFFLINE;
     }
     return new RegionState(
-        RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, replicaId),
+        RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId),
       state, serverName);
   }
 
@@ -525,12 +526,12 @@ public class MetaTableLocator {
    */
   public void deleteMetaLocation(ZooKeeperWatcher zookeeper)
   throws KeeperException {
-    deleteMetaLocation(zookeeper, HRegionInfo.DEFAULT_REPLICA_ID);
+    deleteMetaLocation(zookeeper, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   public void deleteMetaLocation(ZooKeeperWatcher zookeeper, int replicaId)
   throws KeeperException {
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
       LOG.info("Deleting hbase:meta region location in ZooKeeper");
     } else {
       LOG.info("Deleting hbase:meta for " + replicaId + " region location in ZooKeeper");
@@ -586,7 +587,7 @@ public class MetaTableLocator {
   public ServerName blockUntilAvailable(final ZooKeeperWatcher zkw,
       final long timeout)
   throws InterruptedException {
-    return blockUntilAvailable(zkw, HRegionInfo.DEFAULT_REPLICA_ID, timeout);
+    return blockUntilAvailable(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
   }
 
   /**

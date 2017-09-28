@@ -39,7 +39,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -598,10 +597,10 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
       TEST_UTIL.getAdmin().split(tableName, ROW1);
-      List<HRegionInfo> tableRegions = TEST_UTIL.getAdmin().getTableRegions(tableName);
+      List<RegionInfo> tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
       // Wait for splits
       while (tableRegions.size() != 2) {
-        tableRegions = TEST_UTIL.getAdmin().getTableRegions(tableName);
+        tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
         Thread.sleep(100);
         LOG.info("Waiting on SPLIT to complete...");
       }
@@ -1520,7 +1519,7 @@ public class TestBlockEvictionFromClient {
     }
 
     @Override
-    public HRegionInfo getRegionInfo() {
+    public RegionInfo getRegionInfo() {
       return delegate.getRegionInfo();
     }
 

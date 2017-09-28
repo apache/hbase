@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
@@ -78,7 +78,7 @@ public interface Region extends ConfigurationObserver {
   // Region state
 
   /** @return region information for this region */
-  HRegionInfo getRegionInfo();
+  RegionInfo getRegionInfo();
 
   /** @return table descriptor for this region */
   TableDescriptor getTableDescriptor();
@@ -308,11 +308,11 @@ public interface Region extends ConfigurationObserver {
    *
    * Before calling this function make sure that a region operation has already been
    * started (the calling thread has already acquired the region-close-guard lock).
-   * 
+   *
    * NOTE: the boolean passed here has changed. It used to be a boolean that
    * stated whether or not to wait on the lock. Now it is whether it an exclusive
    * lock is requested.
-   * 
+   *
    * @param row The row actions will be performed against
    * @param readLock is the lock reader or writer. True indicates that a non-exclusive
    * lock is requested

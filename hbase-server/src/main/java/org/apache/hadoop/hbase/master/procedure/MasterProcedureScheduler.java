@@ -29,12 +29,11 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.AbstractProcedureScheduler;
@@ -45,12 +44,14 @@ import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.LockedResourceType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureDeque;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlIterableList;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlKeyComparator;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlLinkedNode;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlTree;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlTreeIterator;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * ProcedureScheduler for the Master Procedures.
@@ -783,7 +784,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @param regionInfo the region we are trying to lock
    * @return true if the procedure has to wait for the regions to be available
    */
-  public boolean waitRegion(final Procedure procedure, final HRegionInfo regionInfo) {
+  public boolean waitRegion(final Procedure procedure, final RegionInfo regionInfo) {
     return waitRegions(procedure, regionInfo.getTable(), regionInfo);
   }
 
@@ -795,8 +796,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @return true if the procedure has to wait for the regions to be available
    */
   public boolean waitRegions(final Procedure procedure, final TableName table,
-      final HRegionInfo... regionInfo) {
-    Arrays.sort(regionInfo);
+      final RegionInfo... regionInfo) {
+    Arrays.sort(regionInfo, RegionInfo.COMPARATOR);
     schedLock();
     try {
       // If there is parent procedure, it would have already taken xlock, so no need to take
@@ -842,7 +843,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @param procedure the procedure that was holding the region
    * @param regionInfo the region the procedure was holding
    */
-  public void wakeRegion(final Procedure procedure, final HRegionInfo regionInfo) {
+  public void wakeRegion(final Procedure procedure, final RegionInfo regionInfo) {
     wakeRegions(procedure, regionInfo.getTable(), regionInfo);
   }
 
@@ -852,8 +853,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @param regionInfo the list of regions the procedure was holding
    */
   public void wakeRegions(final Procedure procedure,final TableName table,
-      final HRegionInfo... regionInfo) {
-    Arrays.sort(regionInfo);
+      final RegionInfo... regionInfo) {
+    Arrays.sort(regionInfo, RegionInfo.COMPARATOR);
     schedLock();
     try {
       int numProcs = 0;

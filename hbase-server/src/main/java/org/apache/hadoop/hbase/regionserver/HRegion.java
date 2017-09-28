@@ -91,7 +91,6 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -111,6 +110,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -668,7 +668,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the supplied path.
    * @param fs is the filesystem.
    * @param confParam is global configuration settings.
-   * @param regionInfo - HRegionInfo that describes the region
+   * @param regionInfo - RegionInfo that describes the region
    * is new), then read them from the supplied path.
    * @param htd the table descriptor
    * @param rsServices reference to {@link RegionServerServices} or null
@@ -677,7 +677,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Deprecated
   @VisibleForTesting
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
-      final Configuration confParam, final HRegionInfo regionInfo,
+      final Configuration confParam, final RegionInfo regionInfo,
       final TableDescriptor htd, final RegionServerServices rsServices) {
     this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
       wal, confParam, htd, rsServices);
@@ -880,7 +880,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Write HRI to a file in case we need to recover hbase:meta
     // Only the primary replica should write .regioninfo
-    if (this.getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+    if (this.getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       status.setStatus("Writing region info on filesystem");
       fs.checkRegionInfoOnFilesystem();
     } else {
@@ -1140,7 +1140,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-      TableDescriptor tableDescriptor, HRegionInfo regionInfo) throws IOException {
+      TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
     Path tablePath = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDescriptor.getTableName());
     return computeHDFSBlocksDistribution(conf, tableDescriptor, regionInfo, tablePath);
   }
@@ -1155,7 +1155,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
-      TableDescriptor tableDescriptor, HRegionInfo regionInfo, Path tablePath) throws IOException {
+      TableDescriptor tableDescriptor, RegionInfo regionInfo, Path tablePath) throws IOException {
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     FileSystem fs = tablePath.getFileSystem(conf);
 
@@ -1222,7 +1222,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return this.fs.getRegionInfo();
   }
 
@@ -2307,7 +2307,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     long modifiedFlushCheckInterval = flushCheckInterval;
     if (getRegionInfo().isSystemTable() &&
-        getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+        getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       modifiedFlushCheckInterval = SYSTEM_CACHE_FLUSH_INTERVAL;
     }
     if (modifiedFlushCheckInterval <= 0) { //disabled
@@ -2558,7 +2558,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Sync unflushed WAL changes. See HBASE-8208 for details
    */
-  private static void doSyncOfUnflushedWALChanges(final WAL wal, final HRegionInfo hri)
+  private static void doSyncOfUnflushedWALChanges(final WAL wal, final RegionInfo hri)
   throws IOException {
     if (wal == null) {
       return;
@@ -5798,7 +5798,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private final FilterWrapper filter;
 
     @Override
-    public HRegionInfo getRegionInfo() {
+    public RegionInfo getRegionInfo() {
       return region.getRegionInfo();
     }
 
@@ -6435,13 +6435,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the supplied path.
    * @param fs is the filesystem.
    * @param conf is global configuration settings.
-   * @param regionInfo - HRegionInfo that describes the region
+   * @param regionInfo - RegionInfo that describes the region
    * is new), then read them from the supplied path.
    * @param htd the table descriptor
    * @return the new instance
    */
   static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs,
-      Configuration conf, HRegionInfo regionInfo, final TableDescriptor htd,
+      Configuration conf, RegionInfo regionInfo, final TableDescriptor htd,
       RegionServerServices rsServices) {
     try {
       @SuppressWarnings("unchecked")
@@ -6450,7 +6450,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       Constructor<? extends HRegion> c =
           regionClass.getConstructor(Path.class, WAL.class, FileSystem.class,
-              Configuration.class, HRegionInfo.class, TableDescriptor.class,
+              Configuration.class, RegionInfo.class, TableDescriptor.class,
               RegionServerServices.class);
 
       return c.newInstance(tableDir, wal, fs, conf, regionInfo, htd, rsServices);
@@ -6470,7 +6470,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return new HRegion
    * @throws IOException
    */
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
         final Configuration conf, final TableDescriptor hTableDescriptor,
         final WAL wal, final boolean initialize)
   throws IOException {
@@ -6485,7 +6485,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return region;
   }
 
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+  public static HRegion createHRegion(final RegionInfo info, final Path rootDir,
                                       final Configuration conf,
                                       final TableDescriptor hTableDescriptor,
                                       final WAL wal)
@@ -6505,7 +6505,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * @throws IOException
    */
-  public static HRegion openHRegion(final HRegionInfo info,
+  public static HRegion openHRegion(final RegionInfo info,
       final TableDescriptor htd, final WAL wal,
       final Configuration conf)
   throws IOException {
@@ -6527,7 +6527,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *
    * @throws IOException
    */
-  public static HRegion openHRegion(final HRegionInfo info,
+  public static HRegion openHRegion(final RegionInfo info,
     final TableDescriptor htd, final WAL wal, final Configuration conf,
     final RegionServerServices rsServices,
     final CancelableProgressable reporter)
@@ -6548,7 +6548,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return new HRegion
    * @throws IOException
    */
-  public static HRegion openHRegion(Path rootDir, final HRegionInfo info,
+  public static HRegion openHRegion(Path rootDir, final RegionInfo info,
       final TableDescriptor htd, final WAL wal, final Configuration conf)
   throws IOException {
     return openHRegion(rootDir, info, htd, wal, conf, null, null);
@@ -6569,7 +6569,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return new HRegion
    * @throws IOException
    */
-  public static HRegion openHRegion(final Path rootDir, final HRegionInfo info,
+  public static HRegion openHRegion(final Path rootDir, final RegionInfo info,
       final TableDescriptor htd, final WAL wal, final Configuration conf,
       final RegionServerServices rsServices,
       final CancelableProgressable reporter)
@@ -6599,7 +6599,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final HRegionInfo info, final TableDescriptor htd, final WAL wal)
+      final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal)
       throws IOException {
     return openHRegion(conf, fs, rootDir, info, htd, wal, null, null);
   }
@@ -6621,7 +6621,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final HRegionInfo info, final TableDescriptor htd, final WAL wal,
+      final Path rootDir, final RegionInfo info, final TableDescriptor htd, final WAL wal,
       final RegionServerServices rsServices, final CancelableProgressable reporter)
       throws IOException {
     Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
@@ -6645,7 +6645,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   public static HRegion openHRegion(final Configuration conf, final FileSystem fs,
-      final Path rootDir, final Path tableDir, final HRegionInfo info, final TableDescriptor htd,
+      final Path rootDir, final Path tableDir, final RegionInfo info, final TableDescriptor htd,
       final WAL wal, final RegionServerServices rsServices,
       final CancelableProgressable reporter)
       throws IOException {
@@ -6709,7 +6709,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this;
   }
 
-  public static void warmupHRegion(final HRegionInfo info,
+  public static void warmupHRegion(final RegionInfo info,
       final TableDescriptor htd, final WAL wal, final Configuration conf,
       final RegionServerServices rsServices,
       final CancelableProgressable reporter)
@@ -6760,7 +6760,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param hri Spec. for daughter region to open.
    * @throws IOException
    */
-  public HRegion createDaughterRegionFromSplits(final HRegionInfo hri) throws IOException {
+  public HRegion createDaughterRegionFromSplits(final RegionInfo hri) throws IOException {
     // Move the files from the temporary .splits to the final /table/region directory
     fs.commitDaughterRegion(hri);
 
@@ -6779,7 +6779,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return merged HRegion
    * @throws IOException
    */
-  HRegion createMergedRegionFromMerges(final HRegionInfo mergedRegionInfo,
+  HRegion createMergedRegionFromMerges(final RegionInfo mergedRegionInfo,
       final HRegion region_b) throws IOException {
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(),
         fs.getFileSystem(), this.getBaseConf(), mergedRegionInfo,
@@ -6812,33 +6812,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Computes the Path of the HRegion
    *
    * @param rootdir qualified path of HBase root directory
-   * @param info HRegionInfo for the region
+   * @param info RegionInfo for the region
    * @return qualified path of region directory
    * @deprecated For tests only; to be removed.
    */
   @Deprecated
   @VisibleForTesting
-  public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
+  public static Path getRegionDir(final Path rootdir, final RegionInfo info) {
     return new Path(
       FSUtils.getTableDir(rootdir, info.getTable()), info.getEncodedName());
   }
 
   /**
    * Determines if the specified row is within the row range specified by the
-   * specified HRegionInfo
+   * specified RegionInfo
    *
-   * @param info HRegionInfo that specifies the row range
+   * @param info RegionInfo that specifies the row range
    * @param row row to be checked
-   * @return true if the row is within the range specified by the HRegionInfo
+   * @return true if the row is within the range specified by the RegionInfo
    */
-  public static boolean rowIsInRange(HRegionInfo info, final byte [] row) {
+  public static boolean rowIsInRange(RegionInfo info, final byte [] row) {
     return ((info.getStartKey().length == 0) ||
         (Bytes.compareTo(info.getStartKey(), row) <= 0)) &&
         ((info.getEndKey().length == 0) ||
             (Bytes.compareTo(info.getEndKey(), row) > 0));
   }
 
-  public static boolean rowIsInRange(HRegionInfo info, final byte [] row, final int offset,
+  public static boolean rowIsInRange(RegionInfo info, final byte [] row, final int offset,
       final short length) {
     return ((info.getStartKey().length == 0) ||
         (Bytes.compareTo(info.getStartKey(), 0, info.getStartKey().length,

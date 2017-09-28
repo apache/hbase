@@ -29,11 +29,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A client scanner for a region opened for read-only on the client side. Assumes region data
@@ -49,7 +48,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   List<Cell> values;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs,
-      Path rootDir, TableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics)
+      Path rootDir, TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics)
           throws IOException {
     // region is immutable, set isolation level
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);

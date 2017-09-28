@@ -18,14 +18,15 @@
 </%doc>
 <%args>
         HRegionServer regionServer;
-        List<HRegionInfo> onlineRegions;
+        List<RegionInfo> onlineRegions;
 </%args>
 <%import>
         java.util.*;
         org.apache.commons.lang3.time.FastDateFormat;
         org.apache.hadoop.hbase.regionserver.HRegionServer;
         org.apache.hadoop.hbase.util.Bytes;
-        org.apache.hadoop.hbase.HRegionInfo;
+        org.apache.hadoop.hbase.client.RegionInfo;
+        org.apache.hadoop.hbase.client.RegionInfoDisplay;
         org.apache.hadoop.hbase.regionserver.Region;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.HBaseConfiguration;
@@ -39,7 +40,7 @@
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>
 
     <%java>
-        Collections.sort(onlineRegions);
+        Collections.sort(onlineRegions, RegionInfo.COMPARATOR);
     </%java>
 
     <div class="tabbable">
@@ -85,7 +86,7 @@
 
 <%def baseInfo>
 <%args>
-    List<HRegionInfo> onlineRegions;
+    List<RegionInfo> onlineRegions;
 </%args>
     <table class="table table-striped">
         <tr>
@@ -95,16 +96,16 @@
             <th>ReplicaID</th>
         </tr>
 
-        <%for HRegionInfo r: onlineRegions %>
+        <%for RegionInfo r: onlineRegions %>
         <tr>
             <%java>
-             String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+             String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
                regionServer.getConfiguration());
             </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
-            <td><% Bytes.toStringBinary(HRegionInfo.getStartKeyForDisplay(r,
+            <td><% Bytes.toStringBinary(RegionInfoDisplay.getStartKeyForDisplay(r,
                                         regionServer.getConfiguration())) %></td>
-            <td><% Bytes.toStringBinary(HRegionInfo.getEndKeyForDisplay(r,
+            <td><% Bytes.toStringBinary(RegionInfoDisplay.getEndKeyForDisplay(r,
                                         regionServer.getConfiguration())) %></td>
             <td><% r.getReplicaId() %></td>
         </tr>
@@ -114,7 +115,7 @@
 
 <%def requestStats>
 <%args>
-    List<HRegionInfo> onlineRegions;
+    List<RegionInfo> onlineRegions;
 </%args>
     <table class="table table-striped">
         <tr>
@@ -124,12 +125,12 @@
             <th>Write Request Count</th>
         </tr>
 
-        <%for HRegionInfo r: onlineRegions %>
+        <%for RegionInfo r: onlineRegions %>
 
         <tr>
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
-            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+            String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
@@ -146,7 +147,7 @@
 
 <%def storeStats>
 <%args>
-    List<HRegionInfo> onlineRegions;
+    List<RegionInfo> onlineRegions;
 </%args>
     <table class="table table-striped">
         <tr>
@@ -160,12 +161,12 @@
             <th>Data Locality</th>
         </tr>
 
-        <%for HRegionInfo r: onlineRegions %>
+        <%for RegionInfo r: onlineRegions %>
 
         <tr>
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
-            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+            String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
@@ -190,7 +191,7 @@
 
 <%def compactStats>
 <%args>
-    List<HRegionInfo> onlineRegions;
+    List<RegionInfo> onlineRegions;
 </%args>
     <table class="table table-striped">
         <tr>
@@ -201,7 +202,7 @@
             <th>Last Major Compaction</th>
         </tr>
 
-        <%for HRegionInfo r: onlineRegions %>
+        <%for RegionInfo r: onlineRegions %>
 
         <tr>
         <%java>
@@ -218,7 +219,7 @@
                 compactTime = fdf.format(load.getLastMajorCompactionTs());
               }
             }
-            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+            String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
@@ -235,7 +236,7 @@
 
 <%def memstoreStats>
 <%args>
-    List<HRegionInfo> onlineRegions;
+    List<RegionInfo> onlineRegions;
 </%args>
     <table class="table table-striped">
         <tr>
@@ -243,12 +244,12 @@
             <th>Memstore Size</th>
         </tr>
 
-        <%for HRegionInfo r: onlineRegions %>
+        <%for RegionInfo r: onlineRegions %>
 
         <tr>
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
-            String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
+            String displayName = RegionInfoDisplay.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>

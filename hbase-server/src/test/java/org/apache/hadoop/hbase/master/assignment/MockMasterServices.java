@@ -26,7 +26,6 @@ import java.util.SortedSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -35,6 +34,8 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -54,6 +55,11 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -66,10 +72,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * A mocked master services.
@@ -156,7 +158,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     this.connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(getConfiguration(),
           Mockito.mock(AdminProtos.AdminService.BlockingInterface.class), ri, MOCK_MASTER_SERVERNAME,
-          HRegionInfo.FIRST_META_REGIONINFO);
+          RegionInfoBuilder.FIRST_META_REGIONINFO);
     // Set hbase.rootdir into test dir.
     Path rootdir = FSUtils.getRootDir(getConfiguration());
     FSUtils.setRootDir(getConfiguration(), rootdir);
@@ -291,7 +293,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     }
 
     @Override
-    public void updateRegionLocation(HRegionInfo regionInfo, State state, ServerName regionLocation,
+    public void updateRegionLocation(RegionInfo regionInfo, State state, ServerName regionLocation,
         ServerName lastHost, long openSeqNum, long pid) throws IOException {
     }
   }

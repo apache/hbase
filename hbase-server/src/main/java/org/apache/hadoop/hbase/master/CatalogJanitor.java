@@ -32,13 +32,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -53,8 +52,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A janitor for the catalog tables.  Scans the <code>hbase:meta</code> catalog
@@ -137,7 +135,7 @@ public class CatalogJanitor extends ScheduledChore {
    *         parent regioninfos
    * @throws IOException
    */
-  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>
+  Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>>
     getMergedRegionsAndSplitParents() throws IOException {
     return getMergedRegionsAndSplitParents(null);
   }
@@ -152,15 +150,15 @@ public class CatalogJanitor extends ScheduledChore {
    *         parent regioninfos
    * @throws IOException
    */
-  Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>
+  Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>>
     getMergedRegionsAndSplitParents(final TableName tableName) throws IOException {
     final boolean isTableSpecified = (tableName != null);
     // TODO: Only works with single hbase:meta region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
-    final Map<HRegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
-    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<>();
+    final Map<RegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
+    final Map<RegionInfo, Result> mergedRegions = new TreeMap<>(RegionInfo.COMPARATOR);
     // This visitor collects split parents and counts rows in the hbase:meta table
 
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
@@ -168,7 +166,7 @@ public class CatalogJanitor extends ScheduledChore {
       public boolean visit(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
-        HRegionInfo info = MetaTableAccessor.getHRegionInfo(r);
+        RegionInfo info = MetaTableAccessor.getRegionInfo(r);
         if (info == null) return true; // Keep scanning
         if (isTableSpecified
             && info.getTable().compareTo(tableName) > 0) {
@@ -200,8 +198,8 @@ public class CatalogJanitor extends ScheduledChore {
    *         the files on the file system
    * @throws IOException
    */
-  boolean cleanMergeRegion(final HRegionInfo mergedRegion,
-      final HRegionInfo regionA, final HRegionInfo regionB) throws IOException {
+  boolean cleanMergeRegion(final RegionInfo mergedRegion,
+      final RegionInfo regionA, final RegionInfo regionB) throws IOException {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
@@ -244,21 +242,21 @@ public class CatalogJanitor extends ScheduledChore {
         LOG.debug("CatalogJanitor already running");
         return result;
       }
-      Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> scanTriple =
+      Triple<Integer, Map<RegionInfo, Result>, Map<RegionInfo, Result>> scanTriple =
         getMergedRegionsAndSplitParents();
       /**
        * clean merge regions first
        */
-      Map<HRegionInfo, Result> mergedRegions = scanTriple.getSecond();
-      for (Map.Entry<HRegionInfo, Result> e : mergedRegions.entrySet()) {
+      Map<RegionInfo, Result> mergedRegions = scanTriple.getSecond();
+      for (Map.Entry<RegionInfo, Result> e : mergedRegions.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
           break;
         }
 
-        PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
-        HRegionInfo regionA = p.getFirst();
-        HRegionInfo regionB = p.getSecond();
+        PairOfSameType<RegionInfo> p = MetaTableAccessor.getMergeRegions(e.getValue());
+        RegionInfo regionA = p.getFirst();
+        RegionInfo regionB = p.getSecond();
         if (regionA == null || regionB == null) {
           LOG.warn("Unexpected references regionA="
               + (regionA == null ? "null" : regionA.getShortNameToLog())
@@ -274,12 +272,12 @@ public class CatalogJanitor extends ScheduledChore {
       /**
        * clean split parents
        */
-      Map<HRegionInfo, Result> splitParents = scanTriple.getThird();
+      Map<RegionInfo, Result> splitParents = scanTriple.getThird();
 
       // Now work on our list of found parents. See if any we can clean up.
       // regions whose parents are still around
       HashSet<String> parentNotCleaned = new HashSet<>();
-      for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
+      for (Map.Entry<RegionInfo, Result> e : splitParents.entrySet()) {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
           break;
@@ -291,7 +289,7 @@ public class CatalogJanitor extends ScheduledChore {
         } else {
           // We could not clean the parent, so it's daughters should not be
           // cleaned either (HBASE-6160)
-          PairOfSameType<HRegionInfo> daughters =
+          PairOfSameType<RegionInfo> daughters =
               MetaTableAccessor.getDaughterRegions(e.getValue());
           parentNotCleaned.add(daughters.getFirst().getEncodedName());
           parentNotCleaned.add(daughters.getSecond().getEncodedName());
@@ -307,11 +305,11 @@ public class CatalogJanitor extends ScheduledChore {
    * Compare HRegionInfos in a way that has split parents sort BEFORE their
    * daughters.
    */
-  static class SplitParentFirstComparator implements Comparator<HRegionInfo> {
+  static class SplitParentFirstComparator implements Comparator<RegionInfo> {
     Comparator<byte[]> rowEndKeyComparator = new Bytes.RowEndKeyComparator();
     @Override
-    public int compare(HRegionInfo left, HRegionInfo right) {
-      // This comparator differs from the one HRegionInfo in that it sorts
+    public int compare(RegionInfo left, RegionInfo right) {
+      // This comparator differs from the one RegionInfo in that it sorts
       // parent before daughters.
       if (left == null) return -1;
       if (right == null) return 1;
@@ -330,14 +328,14 @@ public class CatalogJanitor extends ScheduledChore {
 
   /**
    * If daughters no longer hold reference to the parents, delete the parent.
-   * @param parent HRegionInfo of split offlined parent
+   * @param parent RegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
    * <code>metaRegionName</code>
    * @return True if we removed <code>parent</code> from meta table and from
    * the filesystem.
    * @throws IOException
    */
-  boolean cleanParent(final HRegionInfo parent, Result rowContent)
+  boolean cleanParent(final RegionInfo parent, Result rowContent)
   throws IOException {
     // Check whether it is a merged region and not clean reference
     // No necessary to check MERGEB_QUALIFIER because these two qualifiers will
@@ -347,7 +345,7 @@ public class CatalogJanitor extends ScheduledChore {
       return false;
     }
     // Run checks on each daughter split.
-    PairOfSameType<HRegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
+    PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
@@ -388,7 +386,7 @@ public class CatalogJanitor extends ScheduledChore {
    * whether the daughter has references to the parent.
    * @throws IOException
    */
-  Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent, final HRegionInfo daughter)
+  Pair<Boolean, Boolean> checkDaughterInFs(final RegionInfo parent, final RegionInfo daughter)
   throws IOException {
     if (daughter == null)  {
       return new Pair<>(Boolean.FALSE, Boolean.FALSE);
@@ -443,11 +441,11 @@ public class CatalogJanitor extends ScheduledChore {
    * @return true if the specified region doesn't have merge qualifier now
    * @throws IOException
    */
-  public boolean cleanMergeQualifier(final HRegionInfo region)
+  public boolean cleanMergeQualifier(final RegionInfo region)
       throws IOException {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
-    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
+    Pair<RegionInfo, RegionInfo> mergeRegions = MetaTableAccessor
         .getRegionsFromMergeQualifier(this.services.getConnection(),
           region.getRegionName());
     if (mergeRegions == null

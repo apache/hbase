@@ -26,16 +26,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -96,7 +95,7 @@ public class TestSafemodeBringsDownMaster {
     final byte[][] splitKeys = new byte[][] {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
         getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     MiniDFSCluster dfsCluster = UTIL.getDFSCluster();
     DistributedFileSystem dfs = (DistributedFileSystem) dfsCluster.getFileSystem();

@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -29,6 +36,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
@@ -47,13 +55,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
@@ -112,13 +113,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     try (Table ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILYNAME, 5)) {
       // Need to get sorted list of regions here
       List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME);
-      Collections.sort(generatedRegions, new Comparator<HRegion>() {
-        @Override
-        public int compare(HRegion o1, HRegion o2) {
-          return o1.getRegionInfo().compareTo(o2.getRegionInfo());
-        }
-      });
-
+      Collections.sort(generatedRegions, Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
       HRegion region = generatedRegions.get(0);
       generateTestData(region, 1);
       region.flush(true);
@@ -189,12 +184,7 @@ public class TestSimpleRegionNormalizerOnCluster {
     try (Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILYNAME, 5)) {
       // Need to get sorted list of regions here
       List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      Collections.sort(generatedRegions, new Comparator<HRegion>() {
-        @Override
-        public int compare(HRegion o1, HRegion o2) {
-          return o1.getRegionInfo().compareTo(o2.getRegionInfo());
-        }
-      });
+      Collections.sort(generatedRegions, Comparator.comparing(HRegion::getRegionInfo, RegionInfo.COMPARATOR));
 
       HRegion region = generatedRegions.get(0);
       generateTestData(region, 1);

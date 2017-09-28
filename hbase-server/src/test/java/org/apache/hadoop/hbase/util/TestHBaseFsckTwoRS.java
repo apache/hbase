@@ -34,8 +34,24 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -43,7 +59,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -57,6 +72,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 @Ignore // Until after HBASE-14614 goes in.
 @Category({MiscTests.class, LargeTests.class})
@@ -111,10 +127,10 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
   @Test(timeout=180000)
   public void testFixAssignmentsWhenMETAinTransition() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    admin.unassign(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), true);
-    assignmentManager.offlineRegion(HRegionInfo.FIRST_META_REGIONINFO);
+    admin.unassign(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(), true);
+    assignmentManager.offlineRegion(RegionInfoBuilder.FIRST_META_REGIONINFO);
     new MetaTableLocator().deleteMetaLocation(cluster.getMaster().getZooKeeper());
-    assertFalse(regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+    assertFalse(regionStates.isRegionOnline(RegionInfoBuilder.FIRST_META_REGIONINFO));
     HBaseFsck hbck = doFsck(conf, true);
     assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.UNKNOWN, HBaseFsck.ErrorReporter.ERROR_CODE.NO_META_REGION,
         HBaseFsck.ErrorReporter.ERROR_CODE.NULL_META_REGION });
@@ -134,7 +150,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       assertEquals(ROWKEYS.length, countRows());
 
       // Now let's mess it up, by adding a region with a duplicate startkey
-      HRegionInfo hriDupe =
+      RegionInfo hriDupe =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("A2"));
       TEST_UTIL.assignRegion(hriDupe);
 
@@ -172,7 +188,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       assertEquals(ROWKEYS.length, countRows());
 
       // Now let's mess it up, by adding a region with a duplicate startkey
-      HRegionInfo hriDupe =
+      RegionInfo hriDupe =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("B"));
       TEST_UTIL.assignRegion(hriDupe);
 
@@ -221,7 +237,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       assertEquals(ROWKEYS.length, countRows());
 
       // Mess it up by creating an overlap in the metadata
-      HRegionInfo hriOverlap =
+      RegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
       TEST_UTIL.assignRegion(hriOverlap);
 
@@ -397,11 +413,11 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
       // Mess it up by creating an overlap
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-      HRegionInfo hriOverlap1 =
+      RegionInfo hriOverlap1 =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("AB"));
       TEST_UTIL.assignRegion(hriOverlap1);
 
-      HRegionInfo hriOverlap2 =
+      RegionInfo hriOverlap2 =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("AB"), Bytes.toBytes("B"));
       TEST_UTIL.assignRegion(hriOverlap2);
 
@@ -491,7 +507,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
     Scan scan = new Scan();
     scan.setStartRow(Bytes.toBytes(tableName+",,"));
     ResultScanner scanner = meta.getScanner(scan);
-    HRegionInfo hri = null;
+    RegionInfo hri = null;
 
     Result res = scanner.next();
     ServerName currServer =
@@ -515,7 +531,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
         put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
             Bytes.toBytes(sn.getStartcode()));
         meta.put(put);
-        hri = MetaTableAccessor.getHRegionInfo(res);
+        hri = MetaTableAccessor.getRegionInfo(res);
         break;
       }
     }
@@ -555,7 +571,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // Mess it up by leaving a hole in the meta data
       admin.disableTable(tableName);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), true,
-        true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+        true, false, true, RegionInfo.DEFAULT_REPLICA_ID);
       admin.enableTable(tableName);
 
       HBaseFsck hbck = doFsck(conf, false);
@@ -607,7 +623,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       admin.enableCatalogJanitor(false);
       meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
       HRegionLocation loc = this.connection.getRegionLocation(table, SPLITS[0], false);
-      HRegionInfo hriParent = loc.getRegionInfo();
+      RegionInfo hriParent = loc.getRegionInfo();
 
       // Split Region A just before B
       this.connection.getAdmin().split(table, Bytes.toBytes("A@"));

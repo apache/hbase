@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -52,8 +54,6 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import com.google.protobuf.Service;
-
-import static org.mockito.Mockito.mock;
 
 public class MockNoopMasterServices implements MasterServices, Server {
   private final Configuration conf;
@@ -309,7 +309,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public long mergeRegions(
-      final HRegionInfo[] regionsToMerge,
+      final RegionInfo[] regionsToMerge,
       final boolean forcible,
       final long nonceGroup,
       final long nonce) throws IOException {
@@ -318,7 +318,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public long splitRegion(
-      final HRegionInfo regionInfo,
+      final RegionInfo regionInfo,
       final byte[] splitRow,
       final long nonceGroup,
       final long nonce) throws IOException {

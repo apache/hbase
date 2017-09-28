@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
-import org.apache.hadoop.hbase.util.Threads;
-
-import static org.junit.Assert.assertEquals;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -40,7 +40,7 @@ public abstract class AssignmentTestingUtil {
   private AssignmentTestingUtil() {}
 
   public static void waitForRegionToBeInTransition(final HBaseTestingUtility util,
-      final HRegionInfo hri) throws Exception {
+      final RegionInfo hri) throws Exception {
     while (!getMaster(util).getAssignmentManager().getRegionStates().isRegionInTransition(hri)) {
       Threads.sleep(10);
     }
@@ -85,14 +85,14 @@ public abstract class AssignmentTestingUtil {
   }
 
   public static ServerName crashRsWithRegion(final HBaseTestingUtility util,
-      final HRegionInfo hri, final boolean kill) throws Exception {
+      final RegionInfo hri, final boolean kill) throws Exception {
     ServerName serverName = getServerHoldingRegion(util, hri);
     crashRs(util, serverName, kill);
     return serverName;
   }
 
   public static ServerName getServerHoldingRegion(final HBaseTestingUtility util,
-      final HRegionInfo hri) throws Exception {
+      final RegionInfo hri) throws Exception {
     ServerName serverName = util.getMiniHBaseCluster().getServerHoldingRegion(
       hri.getTable(), hri.getRegionName());
     ServerName amServerName = getMaster(util).getAssignmentManager().getRegionStates()
@@ -107,7 +107,7 @@ public abstract class AssignmentTestingUtil {
 
   public static boolean isServerHoldingMeta(final HBaseTestingUtility util,
       final ServerName serverName) throws Exception {
-    for (HRegionInfo hri: getMetaRegions(util)) {
+    for (RegionInfo hri: getMetaRegions(util)) {
       if (serverName.equals(getServerHoldingRegion(util, hri))) {
         return true;
       }
@@ -115,7 +115,7 @@ public abstract class AssignmentTestingUtil {
     return false;
   }
 
-  public static Set<HRegionInfo> getMetaRegions(final HBaseTestingUtility util) {
+  public static Set<RegionInfo> getMetaRegions(final HBaseTestingUtility util) {
     return getMaster(util).getAssignmentManager().getMetaRegionSet();
   }
 

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,15 +28,16 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
-import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
-import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
+import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
+import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -84,10 +85,10 @@ public class TestRegionPlacement2 {
       ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
       servers.add(server);
     }
-    List<HRegionInfo> regions = new ArrayList<>(1);
-    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    List<RegionInfo> regions = new ArrayList<>(1);
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     regions.add(region);
-    Map<ServerName,List<HRegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
+    Map<ServerName,List<RegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
         servers);
     Set<ServerName> serverBefore = assignmentMap.keySet();
     List<ServerName> favoredNodesBefore =
@@ -145,8 +146,8 @@ public class TestRegionPlacement2 {
       ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
       servers.add(server);
     }
-    List<HRegionInfo> regions = new ArrayList<>(1);
-    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    List<RegionInfo> regions = new ArrayList<>(1);
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     regions.add(region);
     ServerName serverBefore = balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesBefore =

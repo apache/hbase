@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
@@ -31,15 +34,14 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverMetaState;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Set;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RecoverMetaState;
+
+import com.google.common.base.Preconditions;
 
 /**
  * This procedure recovers meta from prior shutdown/ crash of a server, and brings meta online by
@@ -75,7 +77,7 @@ public class RecoverMetaProcedure
                               final ProcedurePrepareLatch latch) {
     this.failedMetaServer = failedMetaServer;
     this.shouldSplitWal = shouldSplitLog;
-    this.replicaId = HRegionInfo.DEFAULT_REPLICA_ID;
+    this.replicaId = RegionInfo.DEFAULT_REPLICA_ID;
     this.syncLatch = latch;
   }
 
@@ -120,8 +122,8 @@ public class RecoverMetaProcedure
           break;
 
         case RECOVER_META_ASSIGN_REGIONS:
-          HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
-              HRegionInfo.FIRST_META_REGIONINFO, this.replicaId);
+          RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
+              RegionInfoBuilder.FIRST_META_REGIONINFO, this.replicaId);
 
           AssignProcedure metaAssignProcedure;
           if (failedMetaServer != null) {
@@ -204,7 +206,7 @@ public class RecoverMetaProcedure
     this.shouldSplitWal = state.hasShouldSplitWal() && state.getShouldSplitWal();
     this.failedMetaServer = state.hasFailedMetaServer() ?
         ProtobufUtil.toServerName(state.getFailedMetaServer()) : null;
-    this.replicaId = state.hasReplicaId() ? state.getReplicaId() : HRegionInfo.DEFAULT_REPLICA_ID;
+    this.replicaId = state.hasReplicaId() ? state.getReplicaId() : RegionInfo.DEFAULT_REPLICA_ID;
   }
 
   @Override

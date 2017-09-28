@@ -33,7 +33,7 @@ public class ImmutableHRegionInfo extends HRegionInfo {
    *
    * @param other
    */
-  public ImmutableHRegionInfo(HRegionInfo other) {
+  public ImmutableHRegionInfo(RegionInfo other) {
     super(other);
   }
 

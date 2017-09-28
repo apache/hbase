@@ -36,11 +36,12 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
@@ -436,7 +437,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public GetRegionInfoResponse getRegionInfo(RpcController controller,
       GetRegionInfoRequest request) throws ServiceException {
     GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-    builder.setRegionInfo(HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO));
+    builder.setRegionInfo(ProtobufUtil.toRegionInfo(RegionInfoBuilder.FIRST_META_REGIONINFO));
     return builder.build();
   }
 
@@ -558,7 +559,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public WAL getWAL(HRegionInfo regionInfo) throws IOException {
+  public WAL getWAL(RegionInfo regionInfo) throws IOException {
     return null;
   }
 
@@ -608,13 +609,13 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris) {
+  public boolean reportRegionStateTransition(TransitionCode code, RegionInfo... hris) {
     return false;
   }
 
   @Override
   public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
-      HRegionInfo... hris) {
+      RegionInfo... hris) {
     return false;
   }
 
@@ -674,7 +675,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public EntityLock regionLock(List<HRegionInfo> regionInfos, String description, Abortable abort)
+  public EntityLock regionLock(List<RegionInfo> regionInfos, String description, Abortable abort)
       throws IOException {
     return null;
   }

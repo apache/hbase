@@ -24,10 +24,10 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -101,7 +101,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
 
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, families);
     // load and verify that there are rows in the table
     MasterProcedureTestingUtility.loadData(
@@ -119,7 +119,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // validate the table regions and layout
-    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new HRegionInfo[0]);
+    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new RegionInfo[0]);
     if (preserveSplits) {
       assertEquals(1 + splitKeys.length, regions.length);
     } else {
@@ -157,7 +157,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     final byte[][] splitKeys = new byte[][] {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, families);
     // load and verify that there are rows in the table
     MasterProcedureTestingUtility.loadData(
@@ -181,7 +181,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // validate the table regions and layout
-    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new HRegionInfo[0]);
+    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new RegionInfo[0]);
     if (preserveSplits) {
       assertEquals(1 + splitKeys.length, regions.length);
     } else {

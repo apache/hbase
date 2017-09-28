@@ -131,7 +131,7 @@ public abstract class RegionSplitPolicy extends Configured {
   }
 
   /**
-   * In {@link HRegionFileSystem#splitStoreFile(org.apache.hadoop.hbase.HRegionInfo, String,
+   * In {@link HRegionFileSystem#splitStoreFile(org.apache.hadoop.hbase.client.RegionInfo, String,
    * HStoreFile, byte[], boolean, RegionSplitPolicy)} we are not creating the split reference
    * if split row not lies in the StoreFile range. But in some use cases we may need to create
    * the split reference even when the split row not lies in the range. This method can be used

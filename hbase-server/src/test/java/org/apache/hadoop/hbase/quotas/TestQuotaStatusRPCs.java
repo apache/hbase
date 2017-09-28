@@ -30,11 +30,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
@@ -94,7 +94,7 @@ public class TestQuotaStatusRPCs {
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        Map<HRegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+        Map<RegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
         LOG.trace("Region sizes=" + regionSizes);
         return numRegions == countRegionsForTable(tn, regionSizes) &&
             tableSize <= getTableSize(tn, regionSizes);
@@ -271,9 +271,9 @@ public class TestQuotaStatusRPCs {
     });
   }
 
-  private int countRegionsForTable(TableName tn, Map<HRegionInfo,Long> regionSizes) {
+  private int countRegionsForTable(TableName tn, Map<RegionInfo,Long> regionSizes) {
     int size = 0;
-    for (HRegionInfo regionInfo : regionSizes.keySet()) {
+    for (RegionInfo regionInfo : regionSizes.keySet()) {
       if (tn.equals(regionInfo.getTable())) {
         size++;
       }
@@ -281,10 +281,10 @@ public class TestQuotaStatusRPCs {
     return size;
   }
 
-  private int getTableSize(TableName tn, Map<HRegionInfo,Long> regionSizes) {
+  private int getTableSize(TableName tn, Map<RegionInfo,Long> regionSizes) {
     int tableSize = 0;
-    for (Entry<HRegionInfo,Long> entry : regionSizes.entrySet()) {
-      HRegionInfo regionInfo = entry.getKey();
+    for (Entry<RegionInfo,Long> entry : regionSizes.entrySet()) {
+      RegionInfo regionInfo = entry.getKey();
       long regionSize = entry.getValue();
       if (tn.equals(regionInfo.getTable())) {
         tableSize += regionSize;

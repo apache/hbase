@@ -24,18 +24,18 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 
 /**
  * Helper methods to ease Region Server integration with the Write Ahead Log (WAL).
@@ -60,7 +60,7 @@ public class WALUtil {
    * @param mvcc Used by WAL to get sequence Id for the waledit.
    */
   public static WALKey writeCompactionMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, HRegionInfo hri, final CompactionDescriptor c,
+      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri, final CompactionDescriptor c,
       MultiVersionConcurrencyControl mvcc)
   throws IOException {
     WALKey walKey = writeMarker(wal, replicationScope, hri, WALEdit.createCompaction(hri, c), mvcc);
@@ -76,7 +76,7 @@ public class WALUtil {
    * <p>This write is for internal use only. Not for external client consumption.
    */
   public static WALKey writeFlushMarker(WAL wal, NavigableMap<byte[], Integer> replicationScope,
-      HRegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
+      RegionInfo hri, final FlushDescriptor f, boolean sync, MultiVersionConcurrencyControl mvcc)
           throws IOException {
     WALKey walKey = doFullAppendTransaction(wal, replicationScope, hri,
         WALEdit.createFlushWALEdit(hri, f), mvcc, sync);
@@ -91,7 +91,7 @@ public class WALUtil {
    * This write is for internal use only. Not for external client consumption.
    */
   public static WALKey writeRegionEventMarker(WAL wal,
-      NavigableMap<byte[], Integer> replicationScope, HRegionInfo hri,
+      NavigableMap<byte[], Integer> replicationScope, RegionInfo hri,
       final RegionEventDescriptor r, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
     WALKey walKey = writeMarker(wal, replicationScope, hri,
@@ -113,7 +113,7 @@ public class WALUtil {
    * @throws IOException We will throw an IOException if we can not append to the HLog.
    */
   public static WALKey writeBulkLoadMarkerAndSync(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALProtos.BulkLoadDescriptor desc, final MultiVersionConcurrencyControl mvcc)
           throws IOException {
     WALKey walKey = writeMarker(wal, replicationScope, hri, WALEdit.createBulkLoadEvent(hri, desc),
@@ -125,7 +125,7 @@ public class WALUtil {
   }
 
   private static WALKey writeMarker(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALEdit edit, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
     // If sync == true in below, then timeout is not used; safe to pass UNSPECIFIED_TIMEOUT
@@ -141,7 +141,7 @@ public class WALUtil {
    * @return WALKey that was added to the WAL.
    */
   public static WALKey doFullAppendTransaction(final WAL wal,
-      final NavigableMap<byte[], Integer> replicationScope, final HRegionInfo hri,
+      final NavigableMap<byte[], Integer> replicationScope, final RegionInfo hri,
       final WALEdit edit, final MultiVersionConcurrencyControl mvcc, final boolean sync)
   throws IOException {
     // TODO: Pass in current time to use?

@@ -86,7 +86,7 @@ public class TestRegionInfoBuilder {
     RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     byte [] bytes = RegionInfo.toByteArray(ri);
     RegionInfo pbri = RegionInfo.parseFrom(bytes);
-    assertTrue(ri.equals(pbri));
+    assertTrue(RegionInfo.COMPARATOR.compare(ri, pbri) == 0);
   }
 
   @Test
@@ -286,7 +286,7 @@ public class TestRegionInfoBuilder {
             .setReplicaId(replicaId).build();
 
     // convert two times, compare
-    RegionInfo convertedRi = ProtobufUtil.toRegionInfo(ProtobufUtil.toProtoRegionInfo(ri));
+    RegionInfo convertedRi = ProtobufUtil.toRegionInfo(ProtobufUtil.toRegionInfo(ri));
 
     assertEquals(ri, convertedRi);
 

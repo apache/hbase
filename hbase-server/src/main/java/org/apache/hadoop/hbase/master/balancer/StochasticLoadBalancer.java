@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,11 +36,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
@@ -57,6 +55,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Optional;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will
@@ -315,7 +315,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   @Override
   public synchronized List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-    List<HRegionInfo>> clusterState) {
+    List<RegionInfo>> clusterState) {
     this.tableName = tableName;
     return balanceCluster(clusterState);
   }
@@ -332,7 +332,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   @Override
   public synchronized List<RegionPlan> balanceCluster(Map<ServerName,
-    List<HRegionInfo>> clusterState) {
+    List<RegionInfo>> clusterState) {
     List<RegionPlan> plans = balanceMasterRegions(clusterState);
     if (plans != null || clusterState == null || clusterState.size() <= 1) {
       return plans;
@@ -504,7 +504,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       int newServerIndex = cluster.regionIndexToServerIndex[regionIndex];
 
       if (initialServerIndex != newServerIndex) {
-        HRegionInfo region = cluster.regions[regionIndex];
+        RegionInfo region = cluster.regions[regionIndex];
         ServerName initialServer = cluster.servers[initialServerIndex];
         ServerName newServer = cluster.servers[newServerIndex];
 
@@ -624,7 +624,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
      * @param server         index of the server
      * @param chanceOfNoSwap Chance that this will decide to try a move rather
      *                       than a swap.
-     * @return a random {@link HRegionInfo} or null if an asymmetrical move is
+     * @return a random {@link RegionInfo} or null if an asymmetrical move is
      *         suggested.
      */
     protected int pickRandomRegion(Cluster cluster, int server, double chanceOfNoSwap) {

@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.master;
 import java.io.Serializable;
 import java.util.Comparator;
 
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 
 /**
  * Stores the plan for the move of an individual region.
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.ServerName;
 @InterfaceAudience.LimitedPrivate("Coprocessors")
 @InterfaceStability.Evolving
 public class RegionPlan implements Comparable<RegionPlan> {
-  private final HRegionInfo hri;
+  private final RegionInfo hri;
   private final ServerName source;
   private ServerName dest;
 
@@ -66,7 +66,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
    * @param source regionserver region should be moved from
    * @param dest regionserver region should be moved to
    */
-  public RegionPlan(final HRegionInfo hri, ServerName source, ServerName dest) {
+  public RegionPlan(final RegionInfo hri, ServerName source, ServerName dest) {
     this.hri = hri;
     this.source = source;
     this.dest = dest;
@@ -103,7 +103,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
     return this.hri.getEncodedName();
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return this.hri;
   }
 

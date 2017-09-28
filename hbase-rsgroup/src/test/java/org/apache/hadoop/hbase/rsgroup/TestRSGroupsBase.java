@@ -36,32 +36,32 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import org.junit.rules.TestName;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
@@ -166,7 +166,7 @@ public abstract class TestRSGroupsBase {
       for(RegionLoad rl : status.getLoad(serverName).getRegionsLoad().values()) {
         TableName tableName = null;
         try {
-          tableName = HRegionInfo.getTable(rl.getName());
+          tableName = RegionInfo.getTable(rl.getName());
         } catch (IllegalArgumentException e) {
           LOG.warn("Failed parse a table name from regionname=" +
               Bytes.toStringBinary(rl.getName()));
@@ -417,7 +417,7 @@ public abstract class TestRSGroupsBase {
     Map<ServerName,List<String>> assignMap =
         getTableServerRegionMap().get(tableName);
     final ServerName first = assignMap.entrySet().iterator().next().getKey();
-    for(HRegionInfo region: admin.getTableRegions(tableName)) {
+    for(RegionInfo region: admin.getTableRegions(tableName)) {
       if(!assignMap.get(first).contains(region)) {
         admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(first.getServerName()));
       }
@@ -514,7 +514,7 @@ public abstract class TestRSGroupsBase {
     });
 
     // Lets move this region to the new group.
-    TEST_UTIL.getAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
+    TEST_UTIL.getAdmin().move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
         Bytes.toBytes(targetServer.getServerName()));
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -587,7 +587,7 @@ public abstract class TestRSGroupsBase {
         appInfo.getServers().iterator().next().toString());
     AdminProtos.AdminService.BlockingInterface targetRS =
       ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
-    HRegionInfo targetRegion = ProtobufUtil.getOnlineRegions(targetRS).get(0);
+    RegionInfo targetRegion = ProtobufUtil.getOnlineRegions(targetRS).get(0);
     Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
 
     try {
@@ -728,7 +728,7 @@ public abstract class TestRSGroupsBase {
     //get server which is not a member of new group
     ServerName targetServer = null;
     for(ServerName server : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
-      if(!newGroup.containsServer(server.getAddress()) && 
+      if(!newGroup.containsServer(server.getAddress()) &&
            !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
         targetServer = server;
         break;
@@ -780,7 +780,7 @@ public abstract class TestRSGroupsBase {
     List<String> regionList = getTableRegionMap().get(tableName);
     for(String region : regionList) {
       // Lets move this region to the targetServer
-      TEST_UTIL.getAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(region))),
+      TEST_UTIL.getAdmin().move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(region))),
               Bytes.toBytes(targetServer.getServerName()));
     }
 

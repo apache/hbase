@@ -30,13 +30,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -87,11 +87,11 @@ public class TestRegionSizeUse {
     admin.flush(tn);
     LOG.debug("Data flushed to disk");
     // Get the final region distribution
-    final List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tn);
+    final List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(tn);
 
     HMaster master = cluster.getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
-    Map<HRegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+    Map<RegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
     // Wait until we get all of the region reports for our table
     // The table may split, so make sure we have at least as many as expected right after we
     // finished writing the data.
@@ -181,9 +181,9 @@ public class TestRegionSizeUse {
    * @param regions A collection of region sizes
    * @return The number of regions for the given table.
    */
-  private int numRegionsForTable(TableName tn, Map<HRegionInfo,Long> regions) {
+  private int numRegionsForTable(TableName tn, Map<RegionInfo,Long> regions) {
     int sum = 0;
-    for (Entry<HRegionInfo,Long> entry : regions.entrySet()) {
+    for (Entry<RegionInfo,Long> entry : regions.entrySet()) {
       if (tn.equals(entry.getKey().getTable()) && 0 < entry.getValue()) {
         sum++;
       }

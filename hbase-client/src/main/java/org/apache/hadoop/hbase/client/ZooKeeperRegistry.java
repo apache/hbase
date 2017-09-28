@@ -22,14 +22,13 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -76,8 +75,8 @@ class ZooKeeperRegistry implements Registry {
       HRegionLocation[] locs = new HRegionLocation[servers.size()];
       int i = 0;
       for (ServerName server : servers) {
-        HRegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(
-                HRegionInfo.FIRST_META_REGIONINFO, i);
+        RegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(
+                RegionInfoBuilder.FIRST_META_REGIONINFO, i);
         if (server == null) locs[i++] = null;
         else locs[i++] = new HRegionLocation(h, server, 0);
       }

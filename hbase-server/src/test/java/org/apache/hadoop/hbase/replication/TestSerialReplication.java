@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,13 +34,13 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -59,8 +61,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import static org.junit.Assert.assertEquals;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestSerialReplication {
@@ -271,7 +271,7 @@ public class TestSerialReplication {
         put.addColumn(famName, VALUE, VALUE);
         t1.put(put);
       }
-      List<Pair<HRegionInfo, ServerName>> regions =
+      List<Pair<RegionInfo, ServerName>> regions =
           MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), tableName);
       utility1.getAdmin().mergeRegionsAsync(regions.get(0).getFirst().getRegionName(),
           regions.get(1).getFirst().getRegionName(), true);
@@ -336,10 +336,10 @@ public class TestSerialReplication {
   }
 
   private void moveRegion(Table table, int index) throws IOException {
-    List<Pair<HRegionInfo, ServerName>> regions =
+    List<Pair<RegionInfo, ServerName>> regions =
         MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), table.getName());
     assertEquals(1, regions.size());
-    HRegionInfo regionInfo = regions.get(0).getFirst();
+    RegionInfo regionInfo = regions.get(0).getFirst();
     ServerName name = utility1.getHBaseCluster().getRegionServer(index).getServerName();
     utility1.getAdmin()
         .move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(name.getServerName()));
@@ -354,12 +354,12 @@ public class TestSerialReplication {
   }
 
   private void balanceTwoRegions(Table table) throws Exception {
-    List<Pair<HRegionInfo, ServerName>> regions =
+    List<Pair<RegionInfo, ServerName>> regions =
         MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), table.getName());
     assertEquals(2, regions.size());
-    HRegionInfo regionInfo1 = regions.get(0).getFirst();
+    RegionInfo regionInfo1 = regions.get(0).getFirst();
     ServerName name1 = utility1.getHBaseCluster().getRegionServer(0).getServerName();
-    HRegionInfo regionInfo2 = regions.get(1).getFirst();
+    RegionInfo regionInfo2 = regions.get(1).getFirst();
     ServerName name2 = utility1.getHBaseCluster().getRegionServer(1).getServerName();
     utility1.getAdmin()
         .move(regionInfo1.getEncodedNameAsBytes(), Bytes.toBytes(name1.getServerName()));
@@ -377,7 +377,7 @@ public class TestSerialReplication {
 
   private void waitTableHasRightNumberOfRegions(TableName tableName, int num) throws IOException {
     while (true) {
-      List<Pair<HRegionInfo, ServerName>> regions =
+      List<Pair<RegionInfo, ServerName>> regions =
           MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), tableName);
       if (regions.size() == num) {
         return;

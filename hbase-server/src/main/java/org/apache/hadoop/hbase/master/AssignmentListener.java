@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Get notification of assignment events. The invocations are inline
@@ -33,11 +32,11 @@ public interface AssignmentListener {
    * @param regionInfo The opened region.
    * @param serverName The remote servers name.
    */
-  void regionOpened(final HRegionInfo regionInfo, final ServerName serverName);
+  void regionOpened(final RegionInfo regionInfo, final ServerName serverName);
 
   /**
    * The region was closed on the region server.
    * @param regionInfo The closed region.
    */
-  void regionClosed(final HRegionInfo regionInfo);
+  void regionClosed(final RegionInfo regionInfo);
 }

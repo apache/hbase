@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
@@ -147,7 +147,7 @@ public class WALCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALWrite(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
+  public boolean preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     return execOperationWithResult(false, coprocEnvironments.isEmpty() ? null :
         new ObserverOperationWithResult<WALObserver, Boolean>(walObserverGetter) {
@@ -164,7 +164,7 @@ public class WALCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALWrite(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
+  public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
       @Override

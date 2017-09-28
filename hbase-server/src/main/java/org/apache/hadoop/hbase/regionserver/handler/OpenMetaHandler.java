@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Handles opening of a meta region on a region server.
@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 @InterfaceAudience.Private
 public class OpenMetaHandler extends OpenRegionHandler {
   public OpenMetaHandler(final Server server,
-                         final RegionServerServices rsServices, HRegionInfo regionInfo,
+                         final RegionServerServices rsServices, RegionInfo regionInfo,
                          final TableDescriptor htd, long masterSystemTime) {
     super(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_META);
   }

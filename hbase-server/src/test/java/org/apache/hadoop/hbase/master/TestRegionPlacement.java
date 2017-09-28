@@ -40,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -81,7 +81,7 @@ public class TestRegionPlacement {
   private static Position[] positions = Position.values();
   private int lastRegionOnPrimaryRSCount = 0;
   private int REGION_NUM = 10;
-  private Map<HRegionInfo, ServerName[]> favoredNodesAssignmentPlan = new HashMap<>();
+  private Map<RegionInfo, ServerName[]> favoredNodesAssignmentPlan = new HashMap<>();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -204,9 +204,9 @@ public class TestRegionPlacement {
     } while (ServerName.isSameAddress(metaServer, serverToKill) || isNamespaceServer ||
         TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getNumberOfOnlineRegions() == 0);
     LOG.debug("Stopping RS " + serverToKill);
-    Map<HRegionInfo, Pair<ServerName, ServerName>> regionsToVerify = new HashMap<>();
+    Map<RegionInfo, Pair<ServerName, ServerName>> regionsToVerify = new HashMap<>();
     // mark the regions to track
-    for (Map.Entry<HRegionInfo, ServerName[]> entry : favoredNodesAssignmentPlan.entrySet()) {
+    for (Map.Entry<RegionInfo, ServerName[]> entry : favoredNodesAssignmentPlan.entrySet()) {
       ServerName s = entry.getValue()[0];
       if (ServerName.isSameAddress(s, serverToKill)) {
         regionsToVerify.put(entry.getKey(), new Pair<>(entry.getValue()[1], entry.getValue()[2]));
@@ -225,7 +225,7 @@ public class TestRegionPlacement {
       curr = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getNumRegionsOpened();
     }
     // now verify
-    for (Map.Entry<HRegionInfo, Pair<ServerName, ServerName>> entry : regionsToVerify.entrySet()) {
+    for (Map.Entry<RegionInfo, Pair<ServerName, ServerName>> entry : regionsToVerify.entrySet()) {
       ServerName newDestination = TEST_UTIL.getHBaseCluster().getMaster()
           .getAssignmentManager().getRegionStates().getRegionServerOfRegion(entry.getKey());
       Pair<ServerName, ServerName> secondaryTertiaryServers = entry.getValue();
@@ -300,7 +300,7 @@ public class TestRegionPlacement {
       FavoredNodesPlan.Position p1, FavoredNodesPlan.Position p2) throws IOException {
     FavoredNodesPlan shuffledPlan = new FavoredNodesPlan();
 
-    Map<String, HRegionInfo> regionToHRegion =
+    Map<String, RegionInfo> regionToHRegion =
         rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap();
     for (Map.Entry<String, List<ServerName>> entry :
       plan.getAssignmentMap().entrySet()) {
@@ -470,7 +470,7 @@ public class TestRegionPlacement {
       public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
-          HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
+          RegionInfo info = MetaTableAccessor.getRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;

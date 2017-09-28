@@ -43,10 +43,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -56,7 +57,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -64,19 +64,6 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -93,6 +80,19 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestAssignmentManager {
@@ -152,7 +152,7 @@ public class TestAssignmentManager {
 
   private void setUpMeta() throws Exception {
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
-    am.assign(HRegionInfo.FIRST_META_REGIONINFO);
+    am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
     am.wakeMetaLoadedEvent();
     am.setFailoverCleanupDone(true);
   }
@@ -172,7 +172,12 @@ public class TestAssignmentManager {
   @Ignore @Test // TODO
   public void testGoodSplit() throws Exception {
     TableName tableName = TableName.valueOf(this.name.getMethodName());
-    HRegionInfo hri = new HRegionInfo(tableName, Bytes.toBytes(0), Bytes.toBytes(2), false, 0);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes(0))
+        .setEndKey(Bytes.toBytes(2))
+        .setSplit(false)
+        .setRegionId(0)
+        .build();
     SplitTableRegionProcedure split =
         new SplitTableRegionProcedure(this.master.getMasterProcedureExecutor().getEnvironment(),
             hri, Bytes.toBytes(1));
@@ -209,7 +214,7 @@ public class TestAssignmentManager {
   @Test
   public void testAssignAndCrashBeforeResponse() throws Exception {
     final TableName tableName = TableName.valueOf("testAssignAndCrashBeforeResponse");
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
     rsDispatcher.setMockRsExecutor(new HangThenRSCrashExecutor());
     AssignProcedure proc = am.createAssignProcedure(hri, false);
     waitOnFuture(submitProcedure(proc));
@@ -218,7 +223,7 @@ public class TestAssignmentManager {
   @Test
   public void testUnassignAndCrashBeforeResponse() throws Exception {
     final TableName tableName = TableName.valueOf("testAssignAndCrashBeforeResponse");
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
     rsDispatcher.setMockRsExecutor(new HangOnCloseThenRSCrashExecutor());
     for (int i = 0; i < HangOnCloseThenRSCrashExecutor.TYPES_OF_FAILURE; i++) {
       AssignProcedure assign = am.createAssignProcedure(hri, false);
@@ -232,7 +237,7 @@ public class TestAssignmentManager {
   @Test
   public void testAssignWithRandExec() throws Exception {
     final TableName tableName = TableName.valueOf("testAssignWithRandExec");
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
 
     rsDispatcher.setMockRsExecutor(new RandRsExecutor());
     // Loop a bunch of times so we hit various combos of exceptions.
@@ -246,7 +251,7 @@ public class TestAssignmentManager {
   @Ignore @Test // Disabled for now. Since HBASE-18551, this mock is insufficient.
   public void testSocketTimeout() throws Exception {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -272,7 +277,7 @@ public class TestAssignmentManager {
 
   private void testRetriesExhaustedFailure(final TableName tableName,
       final MockRSExecutor executor) throws Exception {
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -335,7 +340,7 @@ public class TestAssignmentManager {
 
   private void testFailedOpen(final TableName tableName,
       final MockRSExecutor executor) throws Exception {
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
 
     // Test Assign operation failure
     rsDispatcher.setMockRsExecutor(executor);
@@ -376,7 +381,7 @@ public class TestAssignmentManager {
   @Test
   public void testAssignAnAssignedRegion() throws Exception {
     final TableName tableName = TableName.valueOf("testAssignAnAssignedRegion");
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -406,7 +411,7 @@ public class TestAssignmentManager {
   @Test
   public void testUnassignAnUnassignedRegion() throws Exception {
     final TableName tableName = TableName.valueOf("testUnassignAnUnassignedRegion");
-    final HRegionInfo hri = createRegionInfo(tableName, 1);
+    final RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
     collectAssignmentManagerMetrics();
@@ -482,26 +487,31 @@ public class TestAssignmentManager {
   }
 
   private AssignProcedure createAndSubmitAssign(TableName tableName, int regionId) {
-    HRegionInfo hri = createRegionInfo(tableName, regionId);
+    RegionInfo hri = createRegionInfo(tableName, regionId);
     AssignProcedure proc = am.createAssignProcedure(hri, false);
     master.getMasterProcedureExecutor().submitProcedure(proc);
     return proc;
   }
 
   private UnassignProcedure createAndSubmitUnassign(TableName tableName, int regionId) {
-    HRegionInfo hri = createRegionInfo(tableName, regionId);
+    RegionInfo hri = createRegionInfo(tableName, regionId);
     UnassignProcedure proc = am.createUnassignProcedure(hri, null, false);
     master.getMasterProcedureExecutor().submitProcedure(proc);
     return proc;
   }
 
-  private HRegionInfo createRegionInfo(final TableName tableName, final long regionId) {
-    return new HRegionInfo(tableName,
-      Bytes.toBytes(regionId), Bytes.toBytes(regionId + 1), false, 0);
+  private RegionInfo createRegionInfo(final TableName tableName, final long regionId) {
+    return RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes(regionId))
+        .setEndKey(Bytes.toBytes(regionId + 1))
+        .setSplit(false)
+        .setRegionId(0)
+        .build();
   }
 
   private void sendTransitionReport(final ServerName serverName,
-      final RegionInfo regionInfo, final TransitionCode state) throws IOException {
+      final org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo regionInfo,
+      final TransitionCode state) throws IOException {
     ReportRegionStateTransitionRequest.Builder req =
       ReportRegionStateTransitionRequest.newBuilder();
     req.setServer(ProtobufUtil.toServerName(serverName));
@@ -568,7 +578,7 @@ public class TestAssignmentManager {
         regions = new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
         regionsToRegionServers.put(server, regions);
       }
-      HRegionInfo hri = HRegionInfo.convert(openReq.getRegion());
+      RegionInfo hri = ProtobufUtil.toRegionInfo(openReq.getRegion());
       if (regions.contains(hri.getRegionName())) {
         throw new UnsupportedOperationException(hri.getRegionNameAsString());
       }
@@ -579,8 +589,8 @@ public class TestAssignmentManager {
     @Override
     protected CloseRegionResponse execCloseRegion(ServerName server, byte[] regionName)
         throws IOException {
-      HRegionInfo hri = am.getRegionInfo(regionName);
-      sendTransitionReport(server, HRegionInfo.convert(hri), TransitionCode.CLOSED);
+      RegionInfo hri = am.getRegionInfo(regionName);
+      sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED);
       return CloseRegionResponse.newBuilder().setClosed(true).build();
     }
   }
@@ -745,8 +755,8 @@ public class TestAssignmentManager {
       CloseRegionResponse.Builder resp = CloseRegionResponse.newBuilder();
       boolean closed = rand.nextBoolean();
       if (closed) {
-        HRegionInfo hri = am.getRegionInfo(regionName);
-        sendTransitionReport(server, HRegionInfo.convert(hri), TransitionCode.CLOSED);
+        RegionInfo hri = am.getRegionInfo(regionName);
+        sendTransitionReport(server, ProtobufUtil.toRegionInfo(hri), TransitionCode.CLOSED);
       }
       resp.setClosed(closed);
       return resp.build();

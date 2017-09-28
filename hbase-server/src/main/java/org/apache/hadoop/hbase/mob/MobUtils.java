@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -53,6 +52,8 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -385,7 +386,7 @@ public final class MobUtils {
    */
   public static Path getMobRegionPath(Configuration conf, TableName tableName) {
     Path tablePath = FSUtils.getTableDir(getMobHome(conf), tableName);
-    HRegionInfo regionInfo = getMobRegionInfo(tableName);
+    RegionInfo regionInfo = getMobRegionInfo(tableName);
     return new Path(tablePath, regionInfo.getEncodedName());
   }
 
@@ -413,24 +414,27 @@ public final class MobUtils {
   }
 
   /**
-   * Gets the HRegionInfo of the mob files.
+   * Gets the RegionInfo of the mob files.
    * This is a dummy region. The mob files are not saved in a region in HBase.
    * This is only used in mob snapshot. It's internally used only.
    * @param tableName
    * @return A dummy mob region info.
    */
-  public static HRegionInfo getMobRegionInfo(TableName tableName) {
-    HRegionInfo info = new HRegionInfo(tableName, MobConstants.MOB_REGION_NAME_BYTES,
-        HConstants.EMPTY_END_ROW, false, 0);
-    return info;
+  public static RegionInfo getMobRegionInfo(TableName tableName) {
+    return RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(MobConstants.MOB_REGION_NAME_BYTES)
+        .setEndKey(HConstants.EMPTY_END_ROW)
+        .setSplit(false)
+        .setRegionId(0)
+        .build();
   }
 
   /**
-   * Gets whether the current HRegionInfo is a mob one.
-   * @param regionInfo The current HRegionInfo.
-   * @return If true, the current HRegionInfo is a mob one.
+   * Gets whether the current RegionInfo is a mob one.
+   * @param regionInfo The current RegionInfo.
+   * @return If true, the current RegionInfo is a mob one.
    */
-  public static boolean isMobRegionInfo(HRegionInfo regionInfo) {
+  public static boolean isMobRegionInfo(RegionInfo regionInfo) {
     return regionInfo == null ? false : getMobRegionInfo(regionInfo.getTable()).getEncodedName()
         .equals(regionInfo.getEncodedName());
   }

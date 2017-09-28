@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
-import java.io.IOException;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,25 +36,23 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
-import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.util.StringUtils;
-
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
  * Tool for dumping snapshot information.
@@ -294,7 +292,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
      * @param filesMap store files map for all snapshots, it may be null
      * @return the store file information
      */
-    FileInfo addStoreFile(final HRegionInfo region, final String family,
+    FileInfo addStoreFile(final RegionInfo region, final String family,
         final SnapshotRegionManifest.StoreFile storeFile,
         final Map<Path, Integer> filesMap) throws IOException {
       HFileLink link = HFileLink.build(conf, snapshotTable, region.getEncodedName(),
@@ -466,7 +464,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
         "SnapshotInfo",
       new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
+        public void storeFile(final RegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
           if (storeFile.hasReference()) return;
 
@@ -576,7 +574,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
         "SnapshotsStatsAggregation", new SnapshotReferenceUtil.SnapshotVisitor() {
           @Override
-          public void storeFile(final HRegionInfo regionInfo, final String family,
+          public void storeFile(final RegionInfo regionInfo, final String family,
               final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
             if (!storeFile.hasReference()) {
               stats.addStoreFile(regionInfo, family, storeFile, filesMap);
@@ -631,7 +629,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest, exec,
         new SnapshotReferenceUtil.SnapshotVisitor() {
-          @Override public void storeFile(final HRegionInfo regionInfo, final String family,
+          @Override public void storeFile(final RegionInfo regionInfo, final String family,
               final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
             if (!storeFile.hasReference()) {
               HFileLink link = HFileLink.build(conf, snapshot.getTableName(),

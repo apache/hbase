@@ -23,15 +23,16 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AddColumnFamilyState;
@@ -48,7 +49,7 @@ public class AddColumnFamilyProcedure
   private TableDescriptor unmodifiedTableDescriptor;
   private ColumnFamilyDescriptor cfDescriptor;
 
-  private List<HRegionInfo> regionInfoList;
+  private List<RegionInfo> regionInfoList;
   private Boolean traceEnabled;
 
   public AddColumnFamilyProcedure() {
@@ -347,7 +348,7 @@ public class AddColumnFamilyProcedure
     }
   }
 
-  private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
+  private List<RegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
     if (regionInfoList == null) {
       regionInfoList = env.getAssignmentManager().getRegionStates()
           .getRegionsOfTable(getTableName());

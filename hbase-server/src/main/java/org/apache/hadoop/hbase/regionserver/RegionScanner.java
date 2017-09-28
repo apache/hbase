@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -36,7 +36,7 @@ public interface RegionScanner extends InternalScanner, Shipper {
   /**
    * @return The RegionInfo for this scanner.
    */
-  HRegionInfo getRegionInfo();
+  RegionInfo getRegionInfo();
 
   /**
    * @return True if a filter indicates that this scanner will return no further rows.
@@ -57,7 +57,7 @@ public interface RegionScanner extends InternalScanner, Shipper {
   boolean reseek(byte[] row) throws IOException;
 
   /**
-   * @return The preferred max buffersize. See 
+   * @return The preferred max buffersize. See
    * {@link org.apache.hadoop.hbase.client.Scan#setMaxResultSize(long)}
    */
   long getMaxResultSize();
@@ -83,7 +83,7 @@ public interface RegionScanner extends InternalScanner, Shipper {
    * @throws IOException e
    */
   boolean nextRaw(List<Cell> result) throws IOException;
-  
+
   /**
    * Grab the next row's worth of values. The {@link ScannerContext} is used to enforce and track
    * any limits associated with this call. Any progress that exists in the {@link ScannerContext}

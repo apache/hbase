@@ -18,15 +18,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Arrays;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import java.util.Arrays;
 
 @InterfaceAudience.Private
 public class RegionInfoBuilder {
@@ -52,7 +53,15 @@ public class RegionInfoBuilder {
   public static final RegionInfo FIRST_META_REGIONINFO =
     new MutableRegionInfo(1L, TableName.META_TABLE_NAME, RegionInfo.DEFAULT_REPLICA_ID);
 
-  private MutableRegionInfo content = null;
+  private final TableName tableName;
+  private byte[] startKey = HConstants.EMPTY_START_ROW;
+  private byte[] endKey = HConstants.EMPTY_END_ROW;
+  private long regionId = System.currentTimeMillis();
+  private int replicaId = RegionInfo.DEFAULT_REPLICA_ID;
+  private boolean offLine = false;
+  private boolean split = false;
+  private byte[] regionName = null;
+  private String encodedName = null;
 
   public static RegionInfoBuilder newBuilder(TableName tableName) {
     return new RegionInfoBuilder(tableName);
@@ -63,52 +72,54 @@ public class RegionInfoBuilder {
   }
 
   private RegionInfoBuilder(TableName tableName) {
-    this.content = new MutableRegionInfo(tableName);
+    this.tableName = tableName;
   }
 
   private RegionInfoBuilder(RegionInfo regionInfo) {
-    this.content = new MutableRegionInfo(regionInfo);
+    this.tableName = regionInfo.getTable();
+    this.startKey = regionInfo.getStartKey();
+    this.endKey = regionInfo.getEndKey();
+    this.offLine = regionInfo.isOffline();
+    this.split = regionInfo.isSplit();
+    this.regionId = regionInfo.getRegionId();
+    this.replicaId = regionInfo.getReplicaId();
+    this.regionName = regionInfo.getRegionName();
+    this.encodedName = regionInfo.getEncodedName();
   }
 
   public RegionInfoBuilder setStartKey(byte[] startKey) {
-    content.setStartKey(startKey);
+    this.startKey = startKey;
     return this;
   }
 
   public RegionInfoBuilder setEndKey(byte[] endKey) {
-    content.setEndKey(endKey);
+    this.endKey = endKey;
     return this;
   }
 
   public RegionInfoBuilder setRegionId(long regionId) {
-    content.setRegionId(regionId);
+    this.regionId = regionId;
     return this;
   }
 
   public RegionInfoBuilder setReplicaId(int replicaId) {
-    content.setReplicaId(replicaId);
+    this.replicaId = replicaId;
     return this;
   }
 
-  public RegionInfoBuilder setSplit(boolean isSplit) {
-    content.setSplit(isSplit);
+  public RegionInfoBuilder setSplit(boolean split) {
+    this.split = split;
     return this;
   }
 
-  public RegionInfoBuilder setOffline(boolean isOffline) {
-    content.setOffline(isOffline);
+  public RegionInfoBuilder setOffline(boolean offLine) {
+    this.offLine = offLine;
     return this;
   }
 
   public RegionInfo build() {
-    RegionInfo ri = new MutableRegionInfo(content);
-    // Run a late check that we are not creating default meta region.
-    if (ri.getTable().equals(TableName.META_TABLE_NAME) &&
-        ri.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
-      throw new IllegalArgumentException("Cannot create the default meta region; " +
-        "use static define FIRST_META_REGIONINFO");
-    }
-    return new MutableRegionInfo(content);
+    return new MutableRegionInfo(tableName, startKey, endKey, split,
+        regionId, replicaId, offLine, regionName, encodedName);
   }
 
   /**
@@ -144,26 +155,49 @@ public class RegionInfoBuilder {
     // but now table state is kept up in zookeeper as of 0.90.0 HBase.
     private boolean offLine = false;
     private boolean split = false;
-    private long regionId = -1;
-    private int replicaId = RegionInfo.DEFAULT_REPLICA_ID;
-    private transient byte [] regionName = HConstants.EMPTY_BYTE_ARRAY;
-    private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
-    private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
-    private int hashCode = -1;
-    private String encodedName;
-    private byte [] encodedNameAsBytes;
-    // Current TableName
-    private TableName tableName;
+    private final long regionId;
+    private final int replicaId;
+    private final byte[] regionName;
+    private final byte[] startKey;
+    private final byte[] endKey;
+    private final int hashCode;
+    private final String encodedName;
+    private final byte[] encodedNameAsBytes;
+    private final TableName tableName;
 
-    private void setHashCode() {
-      int result = Arrays.hashCode(this.regionName);
-      result ^= this.regionId;
-      result ^= Arrays.hashCode(this.startKey);
-      result ^= Arrays.hashCode(this.endKey);
-      result ^= Boolean.valueOf(this.offLine).hashCode();
-      result ^= Arrays.hashCode(this.tableName.getName());
-      result ^= this.replicaId;
-      this.hashCode = result;
+    private static int generateHashCode(final TableName tableName, final byte[] startKey,
+        final byte[] endKey, final long regionId,
+        final int replicaId, boolean offLine, byte[] regionName) {
+      int result = Arrays.hashCode(regionName);
+      result ^= regionId;
+      result ^= Arrays.hashCode(checkStartKey(startKey));
+      result ^= Arrays.hashCode(checkEndKey(endKey));
+      result ^= Boolean.valueOf(offLine).hashCode();
+      result ^= Arrays.hashCode(tableName.getName());
+      result ^= replicaId;
+      return result;
+    }
+
+    private static byte[] checkStartKey(byte[] startKey) {
+      return startKey == null? HConstants.EMPTY_START_ROW: startKey;
+    }
+
+    private static byte[] checkEndKey(byte[] endKey) {
+      return endKey == null? HConstants.EMPTY_END_ROW: endKey;
+    }
+
+    private static TableName checkTableName(TableName tableName) {
+      if (tableName == null) {
+        throw new IllegalArgumentException("TableName cannot be null");
+      }
+      return tableName;
+    }
+
+    private static int checkReplicaId(int regionId) {
+      if (regionId > MAX_REPLICA_ID) {
+        throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
+      }
+      return regionId;
     }
 
     /**
@@ -171,162 +205,57 @@ public class RegionInfoBuilder {
      * first meta regions
      */
     private MutableRegionInfo(long regionId, TableName tableName, int replicaId) {
-      // This constructor is currently private for making hbase:meta region only.
-      super();
-      this.regionId = regionId;
-      this.tableName = tableName;
-      this.replicaId = replicaId;
-      // Note: First Meta region replicas names are in old format so we pass false here.
-      this.regionName =
-        RegionInfo.createRegionName(tableName, null, regionId, replicaId, false);
-      setHashCode();
+      this(tableName,
+          HConstants.EMPTY_START_ROW,
+          HConstants.EMPTY_END_ROW,
+          false,
+          regionId,
+          replicaId,
+          false,
+          RegionInfo.createRegionName(tableName, null, regionId, replicaId, false));
     }
 
-    MutableRegionInfo(final TableName tableName) {
-      this(tableName, null, null);
-    }
-
-    /**
-     * Construct MutableRegionInfo with explicit parameters
-     *
-     * @param tableName the table name
-     * @param startKey first key in region
-     * @param endKey end of key range
-     * @throws IllegalArgumentException
-     */
-    MutableRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey)
-    throws IllegalArgumentException {
-      this(tableName, startKey, endKey, false);
-    }
-
-    /**
-     * Construct MutableRegionInfo with explicit parameters
-     *
-     * @param tableName the table descriptor
-     * @param startKey first key in region
-     * @param endKey end of key range
-     * @param split true if this region has split and we have daughter regions
-     * regions that may or may not hold references to this region.
-     * @throws IllegalArgumentException
-     */
-    MutableRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
-        final boolean split)
-    throws IllegalArgumentException {
-      this(tableName, startKey, endKey, split, System.currentTimeMillis());
-    }
-
-    /**
-     * Construct MutableRegionInfo with explicit parameters
-     *
-     * @param tableName the table descriptor
-     * @param startKey first key in region
-     * @param endKey end of key range
-     * @param split true if this region has split and we have daughter regions
-     * regions that may or may not hold references to this region.
-     * @param regionid Region id to use.
-     * @throws IllegalArgumentException
-     */
     MutableRegionInfo(final TableName tableName, final byte[] startKey,
-                       final byte[] endKey, final boolean split, final long regionid)
-    throws IllegalArgumentException {
-      this(tableName, startKey, endKey, split, regionid, RegionInfo.DEFAULT_REPLICA_ID);
+        final byte[] endKey, final boolean split, final long regionId,
+        final int replicaId, boolean offLine, byte[] regionName) {
+      this(checkTableName(tableName),
+          checkStartKey(startKey),
+          checkEndKey(endKey),
+          split, regionId,
+          checkReplicaId(replicaId),
+          offLine,
+          regionName,
+          RegionInfo.encodeRegionName(regionName));
     }
 
-    /**
-     * Construct MutableRegionInfo with explicit parameters
-     *
-     * @param tableName the table descriptor
-     * @param startKey first key in region
-     * @param endKey end of key range
-     * @param split true if this region has split and we have daughter regions
-     * regions that may or may not hold references to this region.
-     * @param regionid Region id to use.
-     * @param replicaId the replicaId to use
-     * @throws IllegalArgumentException
-     */
     MutableRegionInfo(final TableName tableName, final byte[] startKey,
-                       final byte[] endKey, final boolean split, final long regionid,
-                       final int replicaId)
-      throws IllegalArgumentException {
-      super();
-      if (tableName == null) {
-        throw new IllegalArgumentException("TableName cannot be null");
-      }
-      this.tableName = tableName;
-      this.offLine = false;
-      this.regionId = regionid;
-      this.replicaId = replicaId;
-      if (this.replicaId > MAX_REPLICA_ID) {
-        throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
-      }
-
-      this.regionName = RegionInfo.createRegionName(this.tableName, startKey, regionId, replicaId,
-        !this.tableName.equals(TableName.META_TABLE_NAME));
-
+        final byte[] endKey, final boolean split, final long regionId,
+        final int replicaId, boolean offLine, byte[] regionName, String encodedName) {
+      this.tableName = checkTableName(tableName);
+      this.startKey = checkStartKey(startKey);
+      this.endKey = checkEndKey(endKey);
       this.split = split;
-      this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
-      this.startKey = startKey == null?
-        HConstants.EMPTY_START_ROW: startKey.clone();
-      this.tableName = tableName;
-      setHashCode();
-    }
-
-    /**
-     * Construct MutableRegionInfo.
-     * Only for RegionInfoBuilder to use.
-     * @param other
-     */
-    MutableRegionInfo(MutableRegionInfo other, boolean isMetaRegion) {
-      super();
-      if (other.getTable() == null) {
-        throw new IllegalArgumentException("TableName cannot be null");
-      }
-      this.tableName = other.getTable();
-      this.offLine = other.isOffline();
-      this.regionId = other.getRegionId();
-      this.replicaId = other.getReplicaId();
-      if (this.replicaId > MAX_REPLICA_ID) {
-        throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
-      }
-
-      if(isMetaRegion) {
-        // Note: First Meta region replicas names are in old format
-        this.regionName = RegionInfo.createRegionName(
-                other.getTable(), null, other.getRegionId(),
-                other.getReplicaId(), false);
+      this.regionId = regionId;
+      this.replicaId = checkReplicaId(replicaId);
+      this.offLine = offLine;
+      if (ArrayUtils.isEmpty(regionName)) {
+        this.regionName = RegionInfo.createRegionName(this.tableName, this.startKey, this.regionId, this.replicaId,
+            !this.tableName.equals(TableName.META_TABLE_NAME));
+        this.encodedName = RegionInfo.encodeRegionName(this.regionName);
       } else {
-        this.regionName = RegionInfo.createRegionName(
-                other.getTable(), other.getStartKey(), other.getRegionId(),
-                other.getReplicaId(), true);
+        this.regionName = regionName;
+        this.encodedName = encodedName;
       }
-
-      this.split = other.isSplit();
-      this.endKey = other.getEndKey() == null? HConstants.EMPTY_END_ROW: other.getEndKey().clone();
-      this.startKey = other.getStartKey() == null?
-        HConstants.EMPTY_START_ROW: other.getStartKey().clone();
-      this.tableName = other.getTable();
-      setHashCode();
+      this.hashCode = generateHashCode(
+          this.tableName,
+          this.startKey,
+          this.endKey,
+          this.regionId,
+          this.replicaId,
+          this.offLine,
+          this.regionName);
+      this.encodedNameAsBytes = Bytes.toBytes(this.encodedName);
     }
-
-    /**
-     * Construct a copy of RegionInfo as MutableRegionInfo.
-     * Only for RegionInfoBuilder to use.
-     * @param regionInfo
-     */
-    MutableRegionInfo(RegionInfo regionInfo) {
-      super();
-      this.endKey = regionInfo.getEndKey();
-      this.offLine = regionInfo.isOffline();
-      this.regionId = regionInfo.getRegionId();
-      this.regionName = regionInfo.getRegionName();
-      this.split = regionInfo.isSplit();
-      this.startKey = regionInfo.getStartKey();
-      this.hashCode = regionInfo.hashCode();
-      this.encodedName = regionInfo.getEncodedName();
-      this.tableName = regionInfo.getTable();
-      this.replicaId = regionInfo.getReplicaId();
-    }
-
     /**
      * @return Return a short, printable name for this region
      * (usually encoded name) for us logging.
@@ -342,15 +271,6 @@ public class RegionInfoBuilder {
       return regionId;
     }
 
-    /**
-     * set region id.
-     * @param regionId
-     * @return MutableRegionInfo
-     */
-    public MutableRegionInfo setRegionId(long regionId) {
-      this.regionId = regionId;
-      return this;
-    }
 
     /**
      * @return the regionName as an array of bytes.
@@ -359,16 +279,6 @@ public class RegionInfoBuilder {
     @Override
     public byte [] getRegionName(){
       return regionName;
-    }
-
-    /**
-     * set region name.
-     * @param regionName
-     * @return MutableRegionInfo
-     */
-    public MutableRegionInfo setRegionName(byte[] regionName) {
-      this.regionName = regionName;
-      return this;
     }
 
     /**
@@ -389,18 +299,12 @@ public class RegionInfoBuilder {
 
     /** @return the encoded region name */
     @Override
-    public synchronized String getEncodedName() {
-      if (this.encodedName == null) {
-        this.encodedName = RegionInfo.encodeRegionName(this.regionName);
-      }
+    public String getEncodedName() {
       return this.encodedName;
     }
 
     @Override
-    public synchronized byte [] getEncodedNameAsBytes() {
-      if (this.encodedNameAsBytes == null) {
-        this.encodedNameAsBytes = Bytes.toBytes(getEncodedName());
-      }
+    public byte [] getEncodedNameAsBytes() {
       return this.encodedNameAsBytes;
     }
 
@@ -410,14 +314,6 @@ public class RegionInfoBuilder {
       return startKey;
     }
 
-    /**
-     * @param startKey
-     * @return MutableRegionInfo
-     */
-    public MutableRegionInfo setStartKey(byte[] startKey) {
-      this.startKey = startKey;
-      return this;
-    }
 
     /** @return the endKey */
     @Override
@@ -426,26 +322,11 @@ public class RegionInfoBuilder {
     }
 
     /**
-     * @param endKey
-     * @return MutableRegionInfo
-     */
-    public MutableRegionInfo setEndKey(byte[] endKey) {
-      this.endKey = endKey;
-      return this;
-    }
-
-    /**
      * Get current table name of the region
      * @return TableName
      */
     @Override
     public TableName getTable() {
-      // This method name should be getTableName but there was already a method getTableName
-      // that returned a byte array.  It is unfortunate given everywhere else, getTableName returns
-      // a TableName instance.
-      if (tableName == null || tableName.getName().length == 0) {
-        tableName = RegionInfo.getTable(getRegionName());
-      }
       return this.tableName;
     }
 
@@ -558,11 +439,6 @@ public class RegionInfoBuilder {
     @Override
     public int getReplicaId() {
       return replicaId;
-    }
-
-    public MutableRegionInfo setReplicaId(int replicaId) {
-      this.replicaId = replicaId;
-      return this;
     }
 
     /**

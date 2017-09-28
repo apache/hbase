@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.wal;
 
+import static com.codahale.metrics.MetricRegistry.name;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -42,40 +43,40 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
-import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.apache.htrace.impl.ProbabilitySampler;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.MetricRegistry;
 
 // imports for things that haven't moved from regionserver.wal yet.
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-
-import static com.codahale.metrics.MetricRegistry.name;
 
 /**
  * This class runs performance benchmarks for {@link WAL}.
@@ -184,7 +185,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             Put put = setupPut(rand, key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
             addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
-            HRegionInfo hri = region.getRegionInfo();
+            RegionInfo hri = region.getRegionInfo();
             final WALKey logkey =
                 new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
             wal.append(hri, logkey, walEdit, true);
@@ -347,7 +348,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         long putTime = runBenchmark(benchmarks, numThreads);
         logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations +
           ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);
-        
+
         for (int i = 0; i < numRegions; i++) {
           if (regions[i] != null) {
             closeRegion(regions[i]);
@@ -449,7 +450,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   private static void logBenchmarkResult(String testName, long numTests, long totalTime) {
     float tsec = totalTime / 1000.0f;
     LOG.info(String.format("%s took %.3fs %.3fops/s", testName, tsec, numTests / tsec));
-    
+
   }
 
   private void printUsageAndExit() {
@@ -493,7 +494,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd,
       final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {
     // Initialize HRegion
-    HRegionInfo regionInfo = new HRegionInfo(htd.getTableName());
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     // Initialize WAL
     final WAL wal =
         wals.getWAL(regionInfo.getEncodedNameAsBytes(), regionInfo.getTable().getNamespace());
@@ -529,7 +530,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
       });
     }
-     
+
     return HRegion.createHRegion(regionInfo, dir, getConf(), htd, wal);
   }
 

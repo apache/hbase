@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,7 +41,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -48,6 +51,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -56,11 +61,9 @@ import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -70,6 +73,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
@@ -79,6 +83,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSmallTests extends TestReplicationBase {
@@ -753,8 +758,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testCompactionWALEdits() throws Exception {
     WALProtos.CompactionDescriptor compactionDescriptor =
         WALProtos.CompactionDescriptor.getDefaultInstance();
-    HRegionInfo hri = new HRegionInfo(htable1.getName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htable1.getName())
+        .setStartKey(HConstants.EMPTY_START_ROW)
+        .setEndKey(HConstants.EMPTY_END_ROW)
+        .build();
     WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
     Replication.scopeWALEdits(new WALKey(), edit,
       htable1.getConfiguration(), null);
@@ -822,7 +829,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final TableName tableName = htable1.getName();
 
     HRegion region = utility1.getMiniHBaseCluster().getRegions(tableName).get(0);
-    HRegionInfo hri = region.getRegionInfo();
+    RegionInfo hri = region.getRegionInfo();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htable1.getTableDescriptor().getFamiliesKeys()) {
       scopes.put(fam, 1);
@@ -989,7 +996,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final List<Path> emptyWalPaths = new ArrayList<>();
     long ts = System.currentTimeMillis();
     for (int i = 0; i < numRs; i++) {
-      HRegionInfo regionInfo =
+      RegionInfo regionInfo =
           utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       Path currentWalPath = AbstractFSWALProvider.getCurrentFileName(wal);
@@ -1012,7 +1019,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     // roll the original wal, which enqueues a new wal behind our empty wal
     for (int i = 0; i < numRs; i++) {
-      HRegionInfo regionInfo =
+      RegionInfo regionInfo =
           utility1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();
       WAL wal = utility1.getHBaseCluster().getRegionServer(i).getWAL(regionInfo);
       wal.rollWriter(true);

@@ -33,20 +33,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -63,6 +62,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MasterProcedureTestingUtility {
@@ -148,10 +148,10 @@ public class MasterProcedureTestingUtility {
     return builder.build();
   }
 
-  public static HRegionInfo[] createTable(final ProcedureExecutor<MasterProcedureEnv> procExec,
+  public static RegionInfo[] createTable(final ProcedureExecutor<MasterProcedureEnv> procExec,
       final TableName tableName, final byte[][] splitKeys, String... family) throws IOException {
     TableDescriptor htd = createHTD(tableName, family);
-    HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
@@ -159,12 +159,12 @@ public class MasterProcedureTestingUtility {
   }
 
   public static void validateTableCreation(final HMaster master, final TableName tableName,
-      final HRegionInfo[] regions, String... family) throws IOException {
+      final RegionInfo[] regions, String... family) throws IOException {
     validateTableCreation(master, tableName, regions, true, family);
   }
 
   public static void validateTableCreation(final HMaster master, final TableName tableName,
-      final HRegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
+      final RegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
@@ -230,7 +230,7 @@ public class MasterProcedureTestingUtility {
       public boolean visit(Result rowResult) throws IOException {
         RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
         if (list == null) {
-          LOG.warn("No serialized HRegionInfo in " + rowResult);
+          LOG.warn("No serialized RegionInfo in " + rowResult);
           return true;
         }
         HRegionLocation l = list.getRegionLocation();

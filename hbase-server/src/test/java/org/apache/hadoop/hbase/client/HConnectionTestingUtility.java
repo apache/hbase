@@ -83,7 +83,7 @@ public class HConnectionTestingUtility {
    * itself a mock.
    * @param sn ServerName to include in the region location returned by this
    * <code>connection</code>
-   * @param hri HRegionInfo to include in the location returned when
+   * @param hri RegionInfo to include in the location returned when
    * getRegionLocator is called on the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link ClusterConnection#getConfiguration()} is called, a 'location' when
@@ -99,7 +99,7 @@ public class HConnectionTestingUtility {
   public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
       final AdminProtos.AdminService.BlockingInterface admin,
       final ClientProtos.ClientService.BlockingInterface client,
-      final ServerName sn, final HRegionInfo hri)
+      final ServerName sn, final RegionInfo hri)
   throws IOException {
     ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);

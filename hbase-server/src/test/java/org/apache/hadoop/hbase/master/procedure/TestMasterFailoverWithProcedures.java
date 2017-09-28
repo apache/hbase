@@ -26,18 +26,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateTableState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,6 +44,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateTableState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverWithProcedures {
@@ -113,7 +114,7 @@ public class TestMasterFailoverWithProcedures {
     // Start the Create procedure && kill the executor
     byte[][] splitKeys = null;
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
-    HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
         new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
     testRecoveryAndDoubleExecution(UTIL, procId, step);
@@ -140,7 +141,7 @@ public class TestMasterFailoverWithProcedures {
 
     // create the table
     byte[][] splitKeys = null;
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
         getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     Path tableDir = FSUtils.getTableDir(getRootDir(), tableName);
     MasterProcedureTestingUtility.validateTableCreation(
@@ -182,7 +183,7 @@ public class TestMasterFailoverWithProcedures {
     final byte[][] splitKeys = new byte[][] {
         Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
         getMasterProcedureExecutor(), tableName, splitKeys, families);
     // load and verify that there are rows in the table
     MasterProcedureTestingUtility.loadData(
@@ -203,7 +204,7 @@ public class TestMasterFailoverWithProcedures {
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // validate the table regions and layout
-    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new HRegionInfo[0]);
+    regions = UTIL.getAdmin().getTableRegions(tableName).toArray(new RegionInfo[0]);
     if (preserveSplits) {
       assertEquals(1 + splitKeys.length, regions.length);
     } else {

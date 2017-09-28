@@ -18,25 +18,21 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.UnmodifiableIterator;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -81,7 +77,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Pass RegionStates and allow balancer to set the current cluster load.
    * @param ClusterLoad
    */
-  void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> ClusterLoad);
+  void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> ClusterLoad);
 
   /**
    * Set the master service.
@@ -96,7 +92,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return List of plans
    */
   List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
-      List<HRegionInfo>> clusterState) throws HBaseIOException;
+      List<RegionInfo>> clusterState) throws HBaseIOException;
 
   /**
    * Perform the major balance operation
@@ -104,7 +100,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return List of plans
    */
   List<RegionPlan> balanceCluster(Map<ServerName,
-      List<HRegionInfo>> clusterState) throws HBaseIOException;
+      List<RegionInfo>> clusterState) throws HBaseIOException;
 
   /**
    * Perform a Round Robin assignment of regions.
@@ -112,8 +108,8 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param servers
    * @return Map of servername to regioninfos
    */
-  Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
-    List<HRegionInfo> regions,
+  Map<ServerName, List<RegionInfo>> roundRobinAssignment(
+    List<RegionInfo> regions,
     List<ServerName> servers
   ) throws HBaseIOException;
 
@@ -124,8 +120,8 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return List of plans
    */
   @Nullable
-  Map<ServerName, List<HRegionInfo>> retainAssignment(
-    Map<HRegionInfo, ServerName> regions,
+  Map<ServerName, List<RegionInfo>> retainAssignment(
+    Map<RegionInfo, ServerName> regions,
     List<ServerName> servers
   ) throws HBaseIOException;
 
@@ -136,7 +132,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @return Servername
    */
   ServerName randomAssignment(
-    HRegionInfo regionInfo, List<ServerName> servers
+    RegionInfo regionInfo, List<ServerName> servers
   ) throws HBaseIOException;
 
   /**
@@ -150,13 +146,13 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param regionInfo
    * @param sn
    */
-  void regionOnline(HRegionInfo regionInfo, ServerName sn);
+  void regionOnline(RegionInfo regionInfo, ServerName sn);
 
   /**
    * Marks the region as offline at balancer.
    * @param regionInfo
    */
-  void regionOffline(HRegionInfo regionInfo);
+  void regionOffline(RegionInfo regionInfo);
 
   /*
    * Notification that config has changed

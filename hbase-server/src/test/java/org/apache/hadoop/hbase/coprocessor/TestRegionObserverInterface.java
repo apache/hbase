@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -53,6 +52,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -668,7 +668,7 @@ public class TestRegionObserverInterface {
         if (!t.isAlive() || t.getRegionServer().isAborted() || t.getRegionServer().isStopping()) {
           continue;
         }
-        for (HRegionInfo r : ProtobufUtil
+        for (RegionInfo r : ProtobufUtil
             .getOnlineRegions(t.getRegionServer().getRSRpcServices())) {
           if (!r.getTable().equals(tableName)) {
             continue;

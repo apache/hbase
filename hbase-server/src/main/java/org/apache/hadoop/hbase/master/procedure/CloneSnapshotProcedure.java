@@ -30,11 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -46,11 +45,6 @@ import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsR
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
@@ -59,8 +53,14 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
 public class CloneSnapshotProcedure
@@ -70,7 +70,7 @@ public class CloneSnapshotProcedure
   private TableDescriptor tableDescriptor;
   private SnapshotDescription snapshot;
   private boolean restoreAcl;
-  private List<HRegionInfo> newRegions = null;
+  private List<RegionInfo> newRegions = null;
   private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
   // Monitor
@@ -253,8 +253,8 @@ public class CloneSnapshotProcedure
         .setSnapshot(this.snapshot)
         .setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
     if (newRegions != null) {
-      for (HRegionInfo hri: newRegions) {
-        cloneSnapshotMsg.addRegionInfo(HRegionInfo.convert(hri));
+      for (RegionInfo hri: newRegions) {
+        cloneSnapshotMsg.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (!parentsToChildrenPairMap.isEmpty()) {
@@ -289,7 +289,7 @@ public class CloneSnapshotProcedure
     } else {
       newRegions = new ArrayList<>(cloneSnapshotMsg.getRegionInfoCount());
       for (HBaseProtos.RegionInfo hri: cloneSnapshotMsg.getRegionInfoList()) {
-        newRegions.add(HRegionInfo.convert(hri));
+        newRegions.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (cloneSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {
@@ -357,8 +357,8 @@ public class CloneSnapshotProcedure
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      final HRegionInfo[] regions = (newRegions == null) ? null :
-        newRegions.toArray(new HRegionInfo[newRegions.size()]);
+      final RegionInfo[] regions = (newRegions == null) ? null :
+        newRegions.toArray(new RegionInfo[newRegions.size()]);
       cpHost.postCompletedCreateTableAction(tableDescriptor, regions, getUser());
     }
   }
@@ -368,16 +368,16 @@ public class CloneSnapshotProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private List<HRegionInfo> createFilesystemLayout(
+  private List<RegionInfo> createFilesystemLayout(
     final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor,
-    final List<HRegionInfo> newRegions) throws IOException {
+    final List<RegionInfo> newRegions) throws IOException {
     return createFsLayout(env, tableDescriptor, newRegions, new CreateHdfsRegions() {
       @Override
-      public List<HRegionInfo> createHdfsRegions(
+      public List<RegionInfo> createHdfsRegions(
         final MasterProcedureEnv env,
         final Path tableRootDir, final TableName tableName,
-        final List<HRegionInfo> newRegions) throws IOException {
+        final List<RegionInfo> newRegions) throws IOException {
 
         final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
         final FileSystem fs = mfs.getFileSystem();
@@ -429,10 +429,10 @@ public class CloneSnapshotProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private List<HRegionInfo> createFsLayout(
+  private List<RegionInfo> createFsLayout(
     final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor,
-    List<HRegionInfo> newRegions,
+    List<RegionInfo> newRegions,
     final CreateHdfsRegions hdfsRegionHandler) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tempdir = mfs.getTempDir();

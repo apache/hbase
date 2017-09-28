@@ -21,14 +21,14 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
+import org.apache.yetus.audience.InterfaceAudience;
 
 // imports for things that haven't moved yet
-import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 
 /**
  * This is a utility class, used by tests, which fails operation specified by FailureType enum
@@ -44,11 +44,11 @@ public class FaultyFSLog extends FSHLog {
       throws IOException {
     super(fs, rootDir, logName, conf);
   }
-  
+
   public void setFailureType(FailureType fType) {
     this.ft = fType;
   }
-  
+
   @Override
   public void sync(long txid) throws IOException {
     if (this.ft == FailureType.SYNC) {
@@ -58,7 +58,7 @@ public class FaultyFSLog extends FSHLog {
   }
 
   @Override
-  public long append(HRegionInfo info, WALKey key,
+  public long append(RegionInfo info, WALKey key,
       WALEdit edits, boolean inMemstore) throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");

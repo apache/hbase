@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
@@ -265,7 +265,7 @@ public class TestSpaceQuotas {
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
     RegionServerSpaceQuotaManager spaceQuotaManager = rs.getRegionServerSpaceQuotaManager();
     Map<TableName,SpaceQuotaSnapshot> snapshots = spaceQuotaManager.copyQuotaSnapshots();
-    Map<HRegionInfo,Long> regionSizes = getReportedSizesForTable(tn);
+    Map<RegionInfo,Long> regionSizes = getReportedSizesForTable(tn);
     while (true) {
       SpaceQuotaSnapshot snapshot = snapshots.get(tn);
       if (snapshot != null && snapshot.getLimit() > 0) {
@@ -348,11 +348,11 @@ public class TestSpaceQuotas {
     verifyViolation(policy, tn, p);
   }
 
-  private Map<HRegionInfo,Long> getReportedSizesForTable(TableName tn) {
+  private Map<RegionInfo,Long> getReportedSizesForTable(TableName tn) {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
-    Map<HRegionInfo,Long> filteredRegionSizes = new HashMap<>();
-    for (Entry<HRegionInfo,Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
+    Map<RegionInfo,Long> filteredRegionSizes = new HashMap<>();
+    for (Entry<RegionInfo,Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
       if (entry.getKey().getTable().equals(tn)) {
         filteredRegionSizes.put(entry.getKey(), entry.getValue());
       }

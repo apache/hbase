@@ -43,20 +43,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -64,6 +63,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Tool for loading/unloading regions to/from given regionserver This tool can be run from Command
@@ -253,7 +253,7 @@ public class RegionMover extends AbstractHBaseTool {
     public Boolean call() throws IOException {
       Connection conn = ConnectionFactory.createConnection(rm.conf);
       try {
-        List<HRegionInfo> regionsToMove = readRegionsFromFile(rm.filename);
+        List<RegionInfo> regionsToMove = readRegionsFromFile(rm.filename);
         if (regionsToMove.isEmpty()) {
           LOG.info("No regions to load.Exiting");
           return true;
@@ -313,7 +313,7 @@ public class RegionMover extends AbstractHBaseTool {
 
   private class Unload implements Callable<Boolean> {
 
-    List<HRegionInfo> movedRegions = Collections.synchronizedList(new ArrayList<HRegionInfo>());
+    List<RegionInfo> movedRegions = Collections.synchronizedList(new ArrayList<RegionInfo>());
     private RegionMover rm;
 
     public Unload(RegionMover rm) {
@@ -366,9 +366,9 @@ public class RegionMover extends AbstractHBaseTool {
   }
 
   private void loadRegions(Admin admin, String hostname, int port,
-      List<HRegionInfo> regionsToMove, boolean ack) throws Exception {
+      List<RegionInfo> regionsToMove, boolean ack) throws Exception {
     String server = null;
-    List<HRegionInfo> movedRegions = Collections.synchronizedList(new ArrayList<HRegionInfo>());
+    List<RegionInfo> movedRegions = Collections.synchronizedList(new ArrayList<RegionInfo>());
     int maxWaitInSeconds =
         admin.getConfiguration().getInt(SERVERSTART_WAIT_MAX_KEY, DEFAULT_SERVERSTART_WAIT_MAX);
     long maxWait = EnvironmentEdgeManager.currentTime() + maxWaitInSeconds * 1000;
@@ -402,7 +402,7 @@ public class RegionMover extends AbstractHBaseTool {
     List<Future<Boolean>> taskList = new ArrayList<>();
     int counter = 0;
     while (counter < regionsToMove.size()) {
-      HRegionInfo region = regionsToMove.get(counter);
+      RegionInfo region = regionsToMove.get(counter);
       String currentServer = getServerNameForRegion(admin, region);
       if (currentServer == null) {
         LOG.warn("Could not get server for Region:" + region.getEncodedName() + " moving on");
@@ -462,8 +462,8 @@ public class RegionMover extends AbstractHBaseTool {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DLS_DEAD_LOCAL_STORE",
       justification="FB is wrong; its size is read")
   private void unloadRegions(Admin admin, String server, ArrayList<String> regionServers,
-      boolean ack, List<HRegionInfo> movedRegions) throws Exception {
-    List<HRegionInfo> regionsToMove = new ArrayList<>();// FindBugs: DLS_DEAD_LOCAL_STORE
+      boolean ack, List<RegionInfo> movedRegions) throws Exception {
+    List<RegionInfo> regionsToMove = new ArrayList<>();// FindBugs: DLS_DEAD_LOCAL_STORE
     regionsToMove = getRegions(this.conf, server);
     if (regionsToMove.isEmpty()) {
       LOG.info("No Regions to move....Quitting now");
@@ -540,13 +540,13 @@ public class RegionMover extends AbstractHBaseTool {
    */
   private class MoveWithAck implements Callable<Boolean> {
     private Admin admin;
-    private HRegionInfo region;
+    private RegionInfo region;
     private String targetServer;
-    private List<HRegionInfo> movedRegions;
+    private List<RegionInfo> movedRegions;
     private String sourceServer;
 
-    public MoveWithAck(Admin admin, HRegionInfo regionInfo, String sourceServer,
-        String targetServer, List<HRegionInfo> movedRegions) {
+    public MoveWithAck(Admin admin, RegionInfo regionInfo, String sourceServer,
+        String targetServer, List<RegionInfo> movedRegions) {
       this.admin = admin;
       this.region = regionInfo;
       this.targetServer = targetServer;
@@ -605,13 +605,13 @@ public class RegionMover extends AbstractHBaseTool {
    */
   private static class MoveWithoutAck implements Callable<Boolean> {
     private Admin admin;
-    private HRegionInfo region;
+    private RegionInfo region;
     private String targetServer;
-    private List<HRegionInfo> movedRegions;
+    private List<RegionInfo> movedRegions;
     private String sourceServer;
 
-    public MoveWithoutAck(Admin admin, HRegionInfo regionInfo, String sourceServer,
-        String targetServer, List<HRegionInfo> movedRegions) {
+    public MoveWithoutAck(Admin admin, RegionInfo regionInfo, String sourceServer,
+        String targetServer, List<RegionInfo> movedRegions) {
       this.admin = admin;
       this.region = regionInfo;
       this.targetServer = targetServer;
@@ -637,8 +637,8 @@ public class RegionMover extends AbstractHBaseTool {
     }
   }
 
-  private List<HRegionInfo> readRegionsFromFile(String filename) throws IOException {
-    List<HRegionInfo> regions = new ArrayList<>();
+  private List<RegionInfo> readRegionsFromFile(String filename) throws IOException {
+    List<RegionInfo> regions = new ArrayList<>();
     File f = new File(filename);
     if (!f.exists()) {
       return regions;
@@ -651,7 +651,7 @@ public class RegionMover extends AbstractHBaseTool {
       int numRegions = dis.readInt();
       int index = 0;
       while (index < numRegions) {
-        regions.add(HRegionInfo.parseFromOrNull(Bytes.readByteArray(dis)));
+        regions.add(RegionInfo.parseFromOrNull(Bytes.readByteArray(dis)));
         index++;
       }
     } catch (IOException e) {
@@ -675,10 +675,10 @@ public class RegionMover extends AbstractHBaseTool {
    * @return List of Regions online on the server
    * @throws IOException
    */
-  private List<HRegionInfo> getRegions(Configuration conf, String server) throws IOException {
+  private List<RegionInfo> getRegions(Configuration conf, String server) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     try {
-      return conn.getAdmin().getOnlineRegions(ServerName.valueOf(server));
+      return conn.getAdmin().getRegions(ServerName.valueOf(server));
     } finally {
       conn.close();
     }
@@ -691,15 +691,15 @@ public class RegionMover extends AbstractHBaseTool {
    * @param movedRegions
    * @throws IOException
    */
-  private void writeFile(String filename, List<HRegionInfo> movedRegions) throws IOException {
+  private void writeFile(String filename, List<RegionInfo> movedRegions) throws IOException {
     FileOutputStream fos = null;
     DataOutputStream dos = null;
     try {
       fos = new FileOutputStream(filename);
       dos = new DataOutputStream(fos);
       dos.writeInt(movedRegions.size());
-      for (HRegionInfo region : movedRegions) {
-        Bytes.writeByteArray(dos, region.toByteArray());
+      for (RegionInfo region : movedRegions) {
+        Bytes.writeByteArray(dos, RegionInfo.toByteArray(region));
       }
     } catch (IOException e) {
       LOG.error("ERROR: Was Not able to write regions moved to output file but moved "
@@ -846,7 +846,7 @@ public class RegionMover extends AbstractHBaseTool {
    * @param region
    * @throws IOException
    */
-  private void isSuccessfulScan(Admin admin, HRegionInfo region) throws IOException {
+  private void isSuccessfulScan(Admin admin, RegionInfo region) throws IOException {
     Scan scan = new Scan(region.getStartKey());
     scan.setBatch(1);
     scan.setCaching(1);
@@ -877,7 +877,7 @@ public class RegionMover extends AbstractHBaseTool {
    * @return true if region is hosted on serverName otherwise false
    * @throws IOException
    */
-  private boolean isSameServer(Admin admin, HRegionInfo region, String serverName)
+  private boolean isSameServer(Admin admin, RegionInfo region, String serverName)
       throws IOException {
     String serverForRegion = getServerNameForRegion(admin, region);
     if (serverForRegion != null && serverForRegion.equals(serverName)) {
@@ -894,7 +894,7 @@ public class RegionMover extends AbstractHBaseTool {
    * @return regionServer hosting the given region
    * @throws IOException
    */
-  private String getServerNameForRegion(Admin admin, HRegionInfo region) throws IOException {
+  private String getServerNameForRegion(Admin admin, RegionInfo region) throws IOException {
     String server = null;
     if (!admin.isTableEnabled(region.getTable())) {
       return null;

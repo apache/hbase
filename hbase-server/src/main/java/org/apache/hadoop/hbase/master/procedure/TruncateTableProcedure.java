@@ -25,20 +25,22 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateTableState;
-import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 
 @InterfaceAudience.Private
 public class TruncateTableProcedure
@@ -46,7 +48,7 @@ public class TruncateTableProcedure
   private static final Log LOG = LogFactory.getLog(TruncateTableProcedure.class);
 
   private boolean preserveSplits;
-  private List<HRegionInfo> regions;
+  private List<RegionInfo> regions;
   private TableDescriptor tableDescriptor;
   private TableName tableName;
 
@@ -104,7 +106,7 @@ public class TruncateTableProcedure
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           if (!preserveSplits) {
             // if we are not preserving splits, generate a new single region
-            regions = Arrays.asList(ModifyRegionUtils.createHRegionInfos(tableDescriptor, null));
+            regions = Arrays.asList(ModifyRegionUtils.createRegionInfos(tableDescriptor, null));
           } else {
             regions = recreateRegionInfo(regions);
           }
@@ -222,8 +224,8 @@ public class TruncateTableProcedure
       state.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (regions != null) {
-      for (HRegionInfo hri: regions) {
-        state.addRegionInfo(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regions) {
+        state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
     serializer.serialize(state.build());
@@ -249,15 +251,18 @@ public class TruncateTableProcedure
     } else {
       regions = new ArrayList<>(state.getRegionInfoCount());
       for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
-        regions.add(HRegionInfo.convert(hri));
+        regions.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
   }
 
-  private static List<HRegionInfo> recreateRegionInfo(final List<HRegionInfo> regions) {
-    ArrayList<HRegionInfo> newRegions = new ArrayList<>(regions.size());
-    for (HRegionInfo hri: regions) {
-      newRegions.add(new HRegionInfo(hri.getTable(), hri.getStartKey(), hri.getEndKey()));
+  private static List<RegionInfo> recreateRegionInfo(final List<RegionInfo> regions) {
+    ArrayList<RegionInfo> newRegions = new ArrayList<>(regions.size());
+    for (RegionInfo hri: regions) {
+      newRegions.add(RegionInfoBuilder.newBuilder(hri.getTable())
+          .setStartKey(hri.getStartKey())
+          .setEndKey(hri.getEndKey())
+          .build());
     }
     return newRegions;
   }

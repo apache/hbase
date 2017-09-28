@@ -26,20 +26,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -192,7 +192,7 @@ public class WALEdit implements HeapSize {
     return sb.toString();
   }
 
-  public static WALEdit createFlushWALEdit(HRegionInfo hri, FlushDescriptor f) {
+  public static WALEdit createFlushWALEdit(RegionInfo hri, FlushDescriptor f) {
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, FLUSH,
       EnvironmentEdgeManager.currentTime(), f.toByteArray());
     return new WALEdit().add(kv);
@@ -205,7 +205,7 @@ public class WALEdit implements HeapSize {
     return null;
   }
 
-  public static WALEdit createRegionEventWALEdit(HRegionInfo hri,
+  public static WALEdit createRegionEventWALEdit(RegionInfo hri,
       RegionEventDescriptor regionEventDesc) {
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, REGION_EVENT,
       EnvironmentEdgeManager.currentTime(), regionEventDesc.toByteArray());
@@ -224,14 +224,14 @@ public class WALEdit implements HeapSize {
    * @param c
    * @return A WALEdit that has <code>c</code> serialized as its value
    */
-  public static WALEdit createCompaction(final HRegionInfo hri, final CompactionDescriptor c) {
+  public static WALEdit createCompaction(final RegionInfo hri, final CompactionDescriptor c) {
     byte [] pbbytes = c.toByteArray();
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, COMPACTION,
       EnvironmentEdgeManager.currentTime(), pbbytes);
     return new WALEdit().add(kv); //replication scope null so that this won't be replicated
   }
 
-  public static byte[] getRowForRegion(HRegionInfo hri) {
+  public static byte[] getRowForRegion(RegionInfo hri) {
     byte[] startKey = hri.getStartKey();
     if (startKey.length == 0) {
       // empty row key is not allowed in mutations because it is both the start key and the end key
@@ -265,11 +265,11 @@ public class WALEdit implements HeapSize {
   /**
    * Create a bulk loader WALEdit
    *
-   * @param hri                The HRegionInfo for the region in which we are bulk loading
+   * @param hri                The RegionInfo for the region in which we are bulk loading
    * @param bulkLoadDescriptor The descriptor for the Bulk Loader
    * @return The WALEdit for the BulkLoad
    */
-  public static WALEdit createBulkLoadEvent(HRegionInfo hri,
+  public static WALEdit createBulkLoadEvent(RegionInfo hri,
                                             WALProtos.BulkLoadDescriptor bulkLoadDescriptor) {
     KeyValue kv = new KeyValue(getRowForRegion(hri),
         METAFAMILY,

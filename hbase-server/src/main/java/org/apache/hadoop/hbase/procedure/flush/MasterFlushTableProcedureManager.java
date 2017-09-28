@@ -24,15 +24,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -43,12 +43,13 @@ import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinator;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class MasterFlushTableProcedureManager extends MasterProcedureManager {
@@ -125,7 +126,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // It is possible that regions may move after we get the region server list.
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
-    List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
+    List<Pair<RegionInfo, ServerName>> regionsAndLocations;
 
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
@@ -136,9 +137,9 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     }
 
     Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
-    for (Pair<HRegionInfo, ServerName> region : regionsAndLocations) {
+    for (Pair<RegionInfo, ServerName> region : regionsAndLocations) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {
-        HRegionInfo hri = region.getFirst();
+        RegionInfo hri = region.getFirst();
         if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
         regionServers.add(region.getSecond().toString());
       }

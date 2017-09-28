@@ -40,17 +40,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
-import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.master.AssignmentListener;
@@ -66,7 +65,7 @@ import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerStateNode;
-// TODO: why are they here?
+import org.apache.hadoop.hbase.master.balancer.FavoredStochasticBalancer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
@@ -77,19 +76,21 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+
+// TODO: why are they here?
 
 /**
  * The AssignmentManager is the coordinator for region assign/unassign operations.
@@ -256,7 +257,7 @@ public class AssignmentManager implements ServerListener {
     if (hasProcExecutor) {
       getProcedureScheduler().suspendEvent(metaLoadEvent);
       setFailoverCleanupDone(false);
-      for (HRegionInfo hri: getMetaRegionSet()) {
+      for (RegionInfo hri: getMetaRegionSet()) {
         setMetaInitialized(hri, false);
       }
     }
@@ -326,7 +327,7 @@ public class AssignmentManager implements ServerListener {
     return regionStateStore;
   }
 
-  public List<ServerName> getFavoredNodes(final HRegionInfo regionInfo) {
+  public List<ServerName> getFavoredNodes(final RegionInfo regionInfo) {
     return this.shouldAssignRegionsWithFavoredNodes?
         ((FavoredStochasticBalancer)getBalancer()).getFavoredNodes(regionInfo):
           ServerName.EMPTY_SERVER_LIST;
@@ -351,7 +352,7 @@ public class AssignmentManager implements ServerListener {
   // ============================================================================================
   //  META Helpers
   // ============================================================================================
-  private boolean isMetaRegion(final HRegionInfo regionInfo) {
+  private boolean isMetaRegion(final RegionInfo regionInfo) {
     return regionInfo.isMetaRegion();
   }
 
@@ -359,8 +360,8 @@ public class AssignmentManager implements ServerListener {
     return getMetaRegionFromName(regionName) != null;
   }
 
-  public HRegionInfo getMetaRegionFromName(final byte[] regionName) {
-    for (HRegionInfo hri: getMetaRegionSet()) {
+  public RegionInfo getMetaRegionFromName(final byte[] regionName) {
+    for (RegionInfo hri: getMetaRegionSet()) {
       if (Bytes.equals(hri.getRegionName(), regionName)) {
         return hri;
       }
@@ -369,7 +370,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   public boolean isCarryingMeta(final ServerName serverName) {
-    for (HRegionInfo hri: getMetaRegionSet()) {
+    for (RegionInfo hri: getMetaRegionSet()) {
       if (isCarryingRegion(serverName, hri)) {
         return true;
       }
@@ -377,23 +378,23 @@ public class AssignmentManager implements ServerListener {
     return false;
   }
 
-  private boolean isCarryingRegion(final ServerName serverName, final HRegionInfo regionInfo) {
+  private boolean isCarryingRegion(final ServerName serverName, final RegionInfo regionInfo) {
     // TODO: check for state?
     final RegionStateNode node = regionStates.getRegionNode(regionInfo);
     return(node != null && serverName.equals(node.getRegionLocation()));
   }
 
-  private HRegionInfo getMetaForRegion(final HRegionInfo regionInfo) {
+  private RegionInfo getMetaForRegion(final RegionInfo regionInfo) {
     //if (regionInfo.isMetaRegion()) return regionInfo;
     // TODO: handle multiple meta. if the region provided is not meta lookup
     // which meta the region belongs to.
-    return HRegionInfo.FIRST_META_REGIONINFO;
+    return RegionInfoBuilder.FIRST_META_REGIONINFO;
   }
 
   // TODO: handle multiple meta.
-  private static final Set<HRegionInfo> META_REGION_SET =
-      Collections.singleton(HRegionInfo.FIRST_META_REGIONINFO);
-  public Set<HRegionInfo> getMetaRegionSet() {
+  private static final Set<RegionInfo> META_REGION_SET =
+      Collections.singleton(RegionInfoBuilder.FIRST_META_REGIONINFO);
+  public Set<RegionInfo> getMetaRegionSet() {
     return META_REGION_SET;
   }
 
@@ -411,15 +412,15 @@ public class AssignmentManager implements ServerListener {
   public boolean waitMetaInitialized(final Procedure proc) {
     // TODO: handle multiple meta. should this wait on all meta?
     // this is used by the ServerCrashProcedure...
-    return waitMetaInitialized(proc, HRegionInfo.FIRST_META_REGIONINFO);
+    return waitMetaInitialized(proc, RegionInfoBuilder.FIRST_META_REGIONINFO);
   }
 
-  public boolean waitMetaInitialized(final Procedure proc, final HRegionInfo regionInfo) {
+  public boolean waitMetaInitialized(final Procedure proc, final RegionInfo regionInfo) {
     return getProcedureScheduler().waitEvent(
       getMetaInitializedEvent(getMetaForRegion(regionInfo)), proc);
   }
 
-  private void setMetaInitialized(final HRegionInfo metaRegionInfo, final boolean isInitialized) {
+  private void setMetaInitialized(final RegionInfo metaRegionInfo, final boolean isInitialized) {
     assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
     final ProcedureEvent metaInitEvent = getMetaInitializedEvent(metaRegionInfo);
     if (isInitialized) {
@@ -429,7 +430,7 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  private ProcedureEvent getMetaInitializedEvent(final HRegionInfo metaRegionInfo) {
+  private ProcedureEvent getMetaInitializedEvent(final RegionInfo metaRegionInfo) {
     assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
     // TODO: handle multiple meta.
     return metaInitializedEvent;
@@ -451,11 +452,11 @@ public class AssignmentManager implements ServerListener {
   // ============================================================================================
   //  TODO: Sync helpers
   // ============================================================================================
-  public void assignMeta(final HRegionInfo metaRegionInfo) throws IOException {
+  public void assignMeta(final RegionInfo metaRegionInfo) throws IOException {
     assignMeta(metaRegionInfo, null);
   }
 
-  public void assignMeta(final HRegionInfo metaRegionInfo, final ServerName serverName)
+  public void assignMeta(final RegionInfo metaRegionInfo, final ServerName serverName)
       throws IOException {
     assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
     AssignProcedure proc;
@@ -490,9 +491,9 @@ public class AssignmentManager implements ServerListener {
               // handling.
               continue;
             }
-            List<HRegionInfo> regionsShouldMove = getCarryingSystemTables(server);
+            List<RegionInfo> regionsShouldMove = getCarryingSystemTables(server);
             if (!regionsShouldMove.isEmpty()) {
-              for (HRegionInfo regionInfo : regionsShouldMove) {
+              for (RegionInfo regionInfo : regionsShouldMove) {
                 // null value for dest forces destination server to be selected by balancer
                 RegionPlan plan = new RegionPlan(regionInfo, server, null);
                 if (regionInfo.isMetaRegion()) {
@@ -514,31 +515,31 @@ public class AssignmentManager implements ServerListener {
     }).start();
   }
 
-  private List<HRegionInfo> getCarryingSystemTables(ServerName serverName) {
+  private List<RegionInfo> getCarryingSystemTables(ServerName serverName) {
     Set<RegionStateNode> regions = this.getRegionStates().getServerNode(serverName).getRegions();
     if (regions == null) {
       return new ArrayList<>();
     }
     return regions.stream()
         .map(RegionStateNode::getRegionInfo)
-        .filter(HRegionInfo::isSystemTable)
+        .filter(RegionInfo::isSystemTable)
         .collect(Collectors.toList());
   }
 
-  public void assign(final HRegionInfo regionInfo) throws IOException {
+  public void assign(final RegionInfo regionInfo) throws IOException {
     assign(regionInfo, true);
   }
 
-  public void assign(final HRegionInfo regionInfo, final boolean forceNewPlan) throws IOException {
+  public void assign(final RegionInfo regionInfo, final boolean forceNewPlan) throws IOException {
     AssignProcedure proc = createAssignProcedure(regionInfo, forceNewPlan);
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
-  public void unassign(final HRegionInfo regionInfo) throws IOException {
+  public void unassign(final RegionInfo regionInfo) throws IOException {
     unassign(regionInfo, false);
   }
 
-  public void unassign(final HRegionInfo regionInfo, final boolean forceNewPlan)
+  public void unassign(final RegionInfo regionInfo, final boolean forceNewPlan)
   throws IOException {
     // TODO: rename this reassign
     RegionStateNode node = this.regionStates.getRegionNode(regionInfo);
@@ -557,13 +558,13 @@ public class AssignmentManager implements ServerListener {
   }
 
   @VisibleForTesting
-  public boolean waitForAssignment(final HRegionInfo regionInfo) throws IOException {
+  public boolean waitForAssignment(final RegionInfo regionInfo) throws IOException {
     return waitForAssignment(regionInfo, Long.MAX_VALUE);
   }
 
   @VisibleForTesting
   // TODO: Remove this?
-  public boolean waitForAssignment(final HRegionInfo regionInfo, final long timeout)
+  public boolean waitForAssignment(final RegionInfo regionInfo, final long timeout)
   throws IOException {
     RegionStateNode node = null;
     // This method can be called before the regionInfo has made it into the regionStateMap
@@ -597,16 +598,16 @@ public class AssignmentManager implements ServerListener {
   //  RegionTransition procedures helpers
   // ============================================================================================
 
-  public AssignProcedure[] createAssignProcedures(final Collection<HRegionInfo> regionInfo) {
+  public AssignProcedure[] createAssignProcedures(final Collection<RegionInfo> regionInfo) {
     return createAssignProcedures(regionInfo, false);
   }
 
-  public AssignProcedure[] createAssignProcedures(final Collection<HRegionInfo> regionInfo,
+  public AssignProcedure[] createAssignProcedures(final Collection<RegionInfo> regionInfo,
       final boolean forceNewPlan) {
     if (regionInfo.isEmpty()) return null;
     final AssignProcedure[] procs = new AssignProcedure[regionInfo.size()];
     int index = 0;
-    for (HRegionInfo hri: regionInfo) {
+    for (RegionInfo hri: regionInfo) {
       procs[index++] = createAssignProcedure(hri, forceNewPlan);
     }
     return procs;
@@ -629,10 +630,10 @@ public class AssignmentManager implements ServerListener {
     return procs.toArray(UNASSIGNED_PROCEDURE_FOR_TYPE_INFO);
   }
 
-  public MoveRegionProcedure[] createReopenProcedures(final Collection<HRegionInfo> regionInfo) {
+  public MoveRegionProcedure[] createReopenProcedures(final Collection<RegionInfo> regionInfo) {
     final MoveRegionProcedure[] procs = new MoveRegionProcedure[regionInfo.size()];
     int index = 0;
-    for (HRegionInfo hri: regionInfo) {
+    for (RegionInfo hri: regionInfo) {
       final ServerName serverName = regionStates.getRegionServerOfRegion(hri);
       final RegionPlan plan = new RegionPlan(hri, serverName, serverName);
       procs[index++] = createMoveRegionProcedure(plan);
@@ -664,21 +665,21 @@ public class AssignmentManager implements ServerListener {
     return createReopenProcedures(regionStates.getRegionsOfTable(tableName));
   }
 
-  public AssignProcedure createAssignProcedure(final HRegionInfo regionInfo,
+  public AssignProcedure createAssignProcedure(final RegionInfo regionInfo,
       final boolean forceNewPlan) {
     AssignProcedure proc = new AssignProcedure(regionInfo, forceNewPlan);
     proc.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
     return proc;
   }
 
-  public AssignProcedure createAssignProcedure(final HRegionInfo regionInfo,
+  public AssignProcedure createAssignProcedure(final RegionInfo regionInfo,
       final ServerName targetServer) {
     AssignProcedure proc = new AssignProcedure(regionInfo, targetServer);
     proc.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
     return proc;
   }
 
-  public UnassignProcedure createUnassignProcedure(final HRegionInfo regionInfo,
+  public UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
       final ServerName destinationServer, final boolean force) {
     // If destinationServer is null, figure it.
     ServerName sn = destinationServer != null? destinationServer:
@@ -707,13 +708,13 @@ public class AssignmentManager implements ServerListener {
   }
 
 
-  public SplitTableRegionProcedure createSplitProcedure(final HRegionInfo regionToSplit,
+  public SplitTableRegionProcedure createSplitProcedure(final RegionInfo regionToSplit,
       final byte[] splitKey) throws IOException {
     return new SplitTableRegionProcedure(getProcedureEnvironment(), regionToSplit, splitKey);
   }
 
-  public MergeTableRegionsProcedure createMergeProcedure(final HRegionInfo regionToMergeA,
-      final HRegionInfo regionToMergeB) throws IOException {
+  public MergeTableRegionsProcedure createMergeProcedure(final RegionInfo regionToMergeA,
+      final RegionInfo regionToMergeB) throws IOException {
     return new MergeTableRegionsProcedure(getProcedureEnvironment(), regionToMergeA,regionToMergeB);
   }
 
@@ -721,10 +722,10 @@ public class AssignmentManager implements ServerListener {
    * Delete the region states. This is called by "DeleteTable"
    */
   public void deleteTable(final TableName tableName) throws IOException {
-    final ArrayList<HRegionInfo> regions = regionStates.getTableRegionsInfo(tableName);
+    final ArrayList<RegionInfo> regions = regionStates.getTableRegionsInfo(tableName);
     regionStateStore.deleteRegions(regions);
     for (int i = 0; i < regions.size(); ++i) {
-      final HRegionInfo regionInfo = regions.get(i);
+      final RegionInfo regionInfo = regions.get(i);
       // we expect the region to be offline
       regionStates.removeFromOfflineRegions(regionInfo);
       regionStates.deleteRegion(regionInfo);
@@ -748,7 +749,7 @@ public class AssignmentManager implements ServerListener {
           case FAILED_OPEN:
           case CLOSED:
             assert transition.getRegionInfoCount() == 1 : transition;
-            final HRegionInfo hri = HRegionInfo.convert(transition.getRegionInfo(0));
+            final RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
             updateRegionTransition(serverName, transition.getTransitionCode(), hri,
                 transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM);
             break;
@@ -757,9 +758,9 @@ public class AssignmentManager implements ServerListener {
           case SPLIT:
           case SPLIT_REVERTED:
             assert transition.getRegionInfoCount() == 3 : transition;
-            final HRegionInfo parent = HRegionInfo.convert(transition.getRegionInfo(0));
-            final HRegionInfo splitA = HRegionInfo.convert(transition.getRegionInfo(1));
-            final HRegionInfo splitB = HRegionInfo.convert(transition.getRegionInfo(2));
+            final RegionInfo parent = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
+            final RegionInfo splitA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
+            final RegionInfo splitB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
             updateRegionSplitTransition(serverName, transition.getTransitionCode(),
               parent, splitA, splitB);
             break;
@@ -768,9 +769,9 @@ public class AssignmentManager implements ServerListener {
           case MERGED:
           case MERGE_REVERTED:
             assert transition.getRegionInfoCount() == 3 : transition;
-            final HRegionInfo merged = HRegionInfo.convert(transition.getRegionInfo(0));
-            final HRegionInfo mergeA = HRegionInfo.convert(transition.getRegionInfo(1));
-            final HRegionInfo mergeB = HRegionInfo.convert(transition.getRegionInfo(2));
+            final RegionInfo merged = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
+            final RegionInfo mergeA = ProtobufUtil.toRegionInfo(transition.getRegionInfo(1));
+            final RegionInfo mergeB = ProtobufUtil.toRegionInfo(transition.getRegionInfo(2));
             updateRegionMergeTransition(serverName, transition.getTransitionCode(),
               merged, mergeA, mergeB);
             break;
@@ -789,7 +790,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   private void updateRegionTransition(final ServerName serverName, final TransitionCode state,
-      final HRegionInfo regionInfo, final long seqId)
+      final RegionInfo regionInfo, final long seqId)
       throws PleaseHoldException, UnexpectedStateException {
     checkFailoverCleanupCompleted(regionInfo);
 
@@ -830,7 +831,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   private void updateRegionSplitTransition(final ServerName serverName, final TransitionCode state,
-      final HRegionInfo parent, final HRegionInfo hriA, final HRegionInfo hriB)
+      final RegionInfo parent, final RegionInfo hriA, final RegionInfo hriB)
       throws IOException {
     checkFailoverCleanupCompleted(parent);
 
@@ -863,7 +864,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   private void updateRegionMergeTransition(final ServerName serverName, final TransitionCode state,
-      final HRegionInfo merged, final HRegionInfo hriA, final HRegionInfo hriB) throws IOException {
+      final RegionInfo merged, final RegionInfo hriA, final RegionInfo hriB) throws IOException {
     checkFailoverCleanupCompleted(merged);
 
     if (state != TransitionCode.READY_TO_MERGE) {
@@ -935,7 +936,7 @@ public class AssignmentManager implements ServerListener {
       final Set<byte[]> regionNames) {
     try {
       for (byte[] regionName: regionNames) {
-        final HRegionInfo hri = getMetaRegionFromName(regionName);
+        final RegionInfo hri = getMetaRegionFromName(regionName);
         if (hri == null) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skip online report for region=" + Bytes.toStringBinary(regionName) +
@@ -1094,12 +1095,12 @@ public class AssignmentManager implements ServerListener {
       return m != null? m.values(): Collections.EMPTY_SET;
     }
 
-    public boolean isRegionOverThreshold(final HRegionInfo regionInfo) {
+    public boolean isRegionOverThreshold(final RegionInfo regionInfo) {
       Map<String, RegionState> m = this.ritsOverThreshold;
       return m != null && m.containsKey(regionInfo.getEncodedName());
     }
 
-    public boolean isRegionTwiceOverThreshold(final HRegionInfo regionInfo) {
+    public boolean isRegionTwiceOverThreshold(final RegionInfo regionInfo) {
       Map<String, RegionState> m = this.ritsOverThreshold;
       if (m == null) return false;
       final RegionState state = m.get(regionInfo.getEncodedName());
@@ -1138,7 +1139,7 @@ public class AssignmentManager implements ServerListener {
     metrics.updateRITCountOverThreshold(ritStat.getTotalRITsOverThreshold());
   }
 
-  private void handleRegionOverStuckWarningThreshold(final HRegionInfo regionInfo) {
+  private void handleRegionOverStuckWarningThreshold(final RegionInfo regionInfo) {
     final RegionStateNode regionNode = regionStates.getRegionNode(regionInfo);
     //if (regionNode.isStuck()) {
     LOG.warn("TODO Handle stuck in transition: " + regionNode);
@@ -1176,7 +1177,7 @@ public class AssignmentManager implements ServerListener {
     // TODO: use a thread pool
     regionStateStore.visitMeta(new RegionStateStore.RegionStateVisitor() {
       @Override
-      public void visitRegionState(final HRegionInfo regionInfo, final State state,
+      public void visitRegionState(final RegionInfo regionInfo, final State state,
           final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
         final RegionStateNode regionNode = regionStates.getOrCreateRegionNode(regionInfo);
         synchronized (regionNode) {
@@ -1211,7 +1212,7 @@ public class AssignmentManager implements ServerListener {
     boolean failover = !master.getServerManager().getDeadServers().isEmpty();
 
     final Set<ServerName> offlineServersWithOnlineRegions = new HashSet<ServerName>();
-    final ArrayList<HRegionInfo> regionsToAssign = new ArrayList<HRegionInfo>();
+    final ArrayList<RegionInfo> regionsToAssign = new ArrayList<RegionInfo>();
     long st, et;
 
     st = System.currentTimeMillis();
@@ -1246,7 +1247,7 @@ public class AssignmentManager implements ServerListener {
 
     // assign offline regions
     st = System.currentTimeMillis();
-    for (HRegionInfo regionInfo: getOrderedRegions(regionsToAssign)) {
+    for (RegionInfo regionInfo: getOrderedRegions(regionsToAssign)) {
       master.getMasterProcedureExecutor().submitProcedure(
         createAssignProcedure(regionInfo, false));
     }
@@ -1285,7 +1286,7 @@ public class AssignmentManager implements ServerListener {
    * @param hri region to check if it is already rebuild
    * @throws PleaseHoldException if the failover cleanup is not completed
    */
-  private void checkFailoverCleanupCompleted(final HRegionInfo hri) throws PleaseHoldException {
+  private void checkFailoverCleanupCompleted(final RegionInfo hri) throws PleaseHoldException {
     if (!isRunning()) {
       throw new PleaseHoldException("AssignmentManager not running");
     }
@@ -1317,18 +1318,18 @@ public class AssignmentManager implements ServerListener {
       " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
   }
 
-  public void offlineRegion(final HRegionInfo regionInfo) {
+  public void offlineRegion(final RegionInfo regionInfo) {
     // TODO used by MasterRpcServices ServerCrashProcedure
     final RegionStateNode node = regionStates.getRegionNode(regionInfo);
     if (node != null) node.offline();
   }
 
-  public void onlineRegion(final HRegionInfo regionInfo, final ServerName serverName) {
+  public void onlineRegion(final RegionInfo regionInfo, final ServerName serverName) {
     // TODO used by TestSplitTransactionOnCluster.java
   }
 
-  public Map<ServerName, List<HRegionInfo>> getSnapShotOfAssignment(
-      final Collection<HRegionInfo> regions) {
+  public Map<ServerName, List<RegionInfo>> getSnapShotOfAssignment(
+      final Collection<RegionInfo> regions) {
     return regionStates.getSnapShotOfAssignment(regions);
   }
 
@@ -1359,13 +1360,13 @@ public class AssignmentManager implements ServerListener {
    * @param regions
    * @return A list of regions with system regions at front
    */
-  public List<HRegionInfo> getOrderedRegions(
-      final List<HRegionInfo> regions) {
+  public List<RegionInfo> getOrderedRegions(
+      final List<RegionInfo> regions) {
     if (regions == null) return Collections.emptyList();
 
-    List<HRegionInfo> systemList = new ArrayList<>();
-    List<HRegionInfo> userList = new ArrayList<>();
-    for (HRegionInfo hri : regions) {
+    List<RegionInfo> systemList = new ArrayList<>();
+    List<RegionInfo> userList = new ArrayList<>();
+    for (RegionInfo hri : regions) {
       if (hri.isSystemTable()) systemList.add(hri);
       else userList.add(hri);
     }
@@ -1395,11 +1396,11 @@ public class AssignmentManager implements ServerListener {
     return regionStates.getRegionsInTransition();
   }
 
-  public List<HRegionInfo> getAssignedRegions() {
+  public List<RegionInfo> getAssignedRegions() {
     return regionStates.getAssignedRegions();
   }
 
-  public HRegionInfo getRegionInfo(final byte[] regionName) {
+  public RegionInfo getRegionInfo(final byte[] regionName) {
     final RegionStateNode regionState = regionStates.getRegionNodeFromName(regionName);
     return regionState != null ? regionState.getRegionInfo() : null;
   }
@@ -1407,7 +1408,7 @@ public class AssignmentManager implements ServerListener {
   // ============================================================================================
   //  TODO: Region Status update
   // ============================================================================================
-  private void sendRegionOpenedNotification(final HRegionInfo regionInfo,
+  private void sendRegionOpenedNotification(final RegionInfo regionInfo,
       final ServerName serverName) {
     getBalancer().regionOnline(regionInfo, serverName);
     if (!this.listeners.isEmpty()) {
@@ -1417,7 +1418,7 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  private void sendRegionClosedNotification(final HRegionInfo regionInfo) {
+  private void sendRegionClosedNotification(final RegionInfo regionInfo) {
     getBalancer().regionOffline(regionInfo);
     if (!this.listeners.isEmpty()) {
       for (AssignmentListener listener : this.listeners) {
@@ -1454,7 +1455,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   public void markRegionAsOpened(final RegionStateNode regionNode) throws IOException {
-    final HRegionInfo hri = regionNode.getRegionInfo();
+    final RegionInfo hri = regionNode.getRegionInfo();
     synchronized (regionNode) {
       State state = regionNode.transitionState(State.OPEN, RegionStates.STATES_EXPECTED_ON_OPEN);
       if (isMetaRegion(hri)) {
@@ -1473,7 +1474,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   public void markRegionAsClosing(final RegionStateNode regionNode) throws IOException {
-    final HRegionInfo hri = regionNode.getRegionInfo();
+    final RegionInfo hri = regionNode.getRegionInfo();
     synchronized (regionNode) {
       State state = regionNode.transitionState(State.CLOSING, RegionStates.STATES_EXPECTED_ON_CLOSE);
       // Set meta has not initialized early. so people trying to create/edit tables will wait
@@ -1496,7 +1497,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   public void markRegionAsClosed(final RegionStateNode regionNode) throws IOException {
-    final HRegionInfo hri = regionNode.getRegionInfo();
+    final RegionInfo hri = regionNode.getRegionInfo();
     synchronized (regionNode) {
       State state = regionNode.transitionState(State.CLOSED, RegionStates.STATES_EXPECTED_ON_CLOSE);
       regionStates.removeRegionFromServer(regionNode.getRegionLocation(), regionNode);
@@ -1509,8 +1510,8 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  public void markRegionAsSplit(final HRegionInfo parent, final ServerName serverName,
-      final HRegionInfo daughterA, final HRegionInfo daughterB)
+  public void markRegionAsSplit(final RegionInfo parent, final ServerName serverName,
+      final RegionInfo daughterA, final RegionInfo daughterB)
   throws IOException {
     // Update hbase:meta. Parent will be marked offline and split up in hbase:meta.
     // The parent stays in regionStates until cleared when removed by CatalogJanitor.
@@ -1535,8 +1536,8 @@ public class AssignmentManager implements ServerListener {
    * by the catalog janitor running against hbase:meta. It notices when the merged region no
    * longer holds references to the old regions.
    */
-  public void markRegionAsMerged(final HRegionInfo child, final ServerName serverName,
-      final HRegionInfo mother, final HRegionInfo father) throws IOException {
+  public void markRegionAsMerged(final RegionInfo child, final ServerName serverName,
+      final RegionInfo mother, final RegionInfo father) throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionNode(child);
     node.setState(State.MERGED);
     regionStates.deleteRegion(mother);
@@ -1552,7 +1553,7 @@ public class AssignmentManager implements ServerListener {
    * Favored nodes should be applied only when FavoredNodes balancer is configured and the region
    * belongs to a non-system table.
    */
-  private boolean shouldAssignFavoredNodes(HRegionInfo region) {
+  private boolean shouldAssignFavoredNodes(RegionInfo region) {
     return this.shouldAssignRegionsWithFavoredNodes &&
         FavoredNodesManager.isFavoredNodeApplicable(region);
   }
@@ -1622,8 +1623,8 @@ public class AssignmentManager implements ServerListener {
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings("WA_AWAIT_NOT_IN_LOOP")
-  private HashMap<HRegionInfo, RegionStateNode> waitOnAssignQueue() {
-    HashMap<HRegionInfo, RegionStateNode> regions = null;
+  private HashMap<RegionInfo, RegionStateNode> waitOnAssignQueue() {
+    HashMap<RegionInfo, RegionStateNode> regions = null;
 
     assignQueueLock.lock();
     try {
@@ -1633,7 +1634,7 @@ public class AssignmentManager implements ServerListener {
 
       if (!isRunning()) return null;
       assignQueueFullCond.await(assignDispatchWaitMillis, TimeUnit.MILLISECONDS);
-      regions = new HashMap<HRegionInfo, RegionStateNode>(pendingAssignQueue.size());
+      regions = new HashMap<RegionInfo, RegionStateNode>(pendingAssignQueue.size());
       for (RegionStateNode regionNode: pendingAssignQueue) {
         regions.put(regionNode.getRegionInfo(), regionNode);
       }
@@ -1648,7 +1649,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   private void processAssignQueue() {
-    final HashMap<HRegionInfo, RegionStateNode> regions = waitOnAssignQueue();
+    final HashMap<RegionInfo, RegionStateNode> regions = waitOnAssignQueue();
     if (regions == null || regions.size() == 0 || !isRunning()) {
       return;
     }
@@ -1658,13 +1659,13 @@ public class AssignmentManager implements ServerListener {
     }
 
     // TODO: Optimize balancer. pass a RegionPlan?
-    final HashMap<HRegionInfo, ServerName> retainMap = new HashMap<>();
-    final List<HRegionInfo> userRRList = new ArrayList<>();
+    final HashMap<RegionInfo, ServerName> retainMap = new HashMap<>();
+    final List<RegionInfo> userRRList = new ArrayList<>();
     // regions for system tables requiring reassignment
-    final List<HRegionInfo> sysRRList = new ArrayList<>();
+    final List<RegionInfo> sysRRList = new ArrayList<>();
     for (RegionStateNode regionNode : regions.values()) {
       boolean sysTable = regionNode.isSystemTable();
-      final List<HRegionInfo> rrList = sysTable ? sysRRList : userRRList;
+      final List<RegionInfo> rrList = sysTable ? sysRRList : userRRList;
 
       if (regionNode.getRegionLocation() != null) {
         retainMap.put(regionNode.getRegionInfo(), regionNode.getRegionLocation());
@@ -1711,8 +1712,8 @@ public class AssignmentManager implements ServerListener {
     processAssignmentPlans(regions, retainMap, userRRList, servers);
   }
 
-  private void processAssignmentPlans(final HashMap<HRegionInfo, RegionStateNode> regions,
-      final HashMap<HRegionInfo, ServerName> retainMap, final List<HRegionInfo> rrList,
+  private void processAssignmentPlans(final HashMap<RegionInfo, RegionStateNode> regions,
+      final HashMap<RegionInfo, ServerName> retainMap, final List<RegionInfo> rrList,
       final List<ServerName> servers) {
     boolean isTraceEnabled = LOG.isTraceEnabled();
     if (isTraceEnabled) {
@@ -1736,7 +1737,7 @@ public class AssignmentManager implements ServerListener {
     // TODO: Do we need to split retain and round-robin?
     // the retain seems to fallback to round-robin/random if the region is not in the map.
     if (!rrList.isEmpty()) {
-      Collections.sort(rrList);
+      Collections.sort(rrList, RegionInfo.COMPARATOR);
       if (isTraceEnabled) {
         LOG.trace("round robin regions=" + rrList);
       }
@@ -1749,8 +1750,8 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  private void acceptPlan(final HashMap<HRegionInfo, RegionStateNode> regions,
-      final Map<ServerName, List<HRegionInfo>> plan) throws HBaseIOException {
+  private void acceptPlan(final HashMap<RegionInfo, RegionStateNode> regions,
+      final Map<ServerName, List<RegionInfo>> plan) throws HBaseIOException {
     final ProcedureEvent[] events = new ProcedureEvent[regions.size()];
     final long st = System.currentTimeMillis();
 
@@ -1761,9 +1762,9 @@ public class AssignmentManager implements ServerListener {
     if (plan.isEmpty()) return;
 
     int evcount = 0;
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry: plan.entrySet()) {
+    for (Map.Entry<ServerName, List<RegionInfo>> entry: plan.entrySet()) {
       final ServerName server = entry.getKey();
-      for (HRegionInfo hri: entry.getValue()) {
+      for (RegionInfo hri: entry.getValue()) {
         final RegionStateNode regionNode = regions.get(hri);
         regionNode.setRegionLocation(server);
         events[evcount++] = regionNode.getProcedureEvent();
@@ -1778,11 +1779,11 @@ public class AssignmentManager implements ServerListener {
     }
   }
 
-  private void addToPendingAssignment(final HashMap<HRegionInfo, RegionStateNode> regions,
-      final Collection<HRegionInfo> pendingRegions) {
+  private void addToPendingAssignment(final HashMap<RegionInfo, RegionStateNode> regions,
+      final Collection<RegionInfo> pendingRegions) {
     assignQueueLock.lock();
     try {
-      for (HRegionInfo hri: pendingRegions) {
+      for (RegionInfo hri: pendingRegions) {
         pendingAssignQueue.add(regions.get(hri));
       }
     } finally {

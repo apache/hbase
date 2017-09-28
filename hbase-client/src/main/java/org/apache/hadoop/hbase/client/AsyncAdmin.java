@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.List;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -29,20 +29,19 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.quotas.QuotaFilter;
-import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
+import org.apache.hadoop.hbase.quotas.QuotaFilter;
+import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import com.google.protobuf.RpcChannel;
 
@@ -306,12 +305,12 @@ public interface AsyncAdmin {
   /**
    * Get all the online regions on a region server.
    */
-  CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName serverName);
+  CompletableFuture<List<RegionInfo>> getOnlineRegions(ServerName serverName);
 
   /**
    * Get the regions of a given table.
    */
-  CompletableFuture<List<HRegionInfo>> getTableRegions(TableName tableName);
+  CompletableFuture<List<RegionInfo>> getTableRegions(TableName tableName);
 
   /**
    * Flush a table.

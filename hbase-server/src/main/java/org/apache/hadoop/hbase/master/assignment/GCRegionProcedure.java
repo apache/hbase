@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
@@ -32,10 +32,12 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCRegionState;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCRegionState;
 
 /**
  * GC a Region that is no longer in use. It has been split or merged away.
@@ -47,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCRegionState> {
   private static final Log LOG = LogFactory.getLog(GCRegionProcedure.class);
 
-  public GCRegionProcedure(final MasterProcedureEnv env, final HRegionInfo hri) {
+  public GCRegionProcedure(final MasterProcedureEnv env, final RegionInfo hri) {
     super(env, hri);
   }
 
@@ -135,7 +137,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
     // Double serialization of regionname. Superclass is also serializing. Fix.
     final MasterProcedureProtos.GCRegionStateData.Builder msg =
         MasterProcedureProtos.GCRegionStateData.newBuilder()
-        .setRegionInfo(HRegionInfo.convert(getRegion()));
+        .setRegionInfo(ProtobufUtil.toRegionInfo(getRegion()));
     serializer.serialize(msg.build());
   }
 
@@ -145,7 +147,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
     super.deserializeStateData(serializer);
     final MasterProcedureProtos.GCRegionStateData msg =
         serializer.deserialize(MasterProcedureProtos.GCRegionStateData.class);
-    setRegion(HRegionInfo.convert(msg.getRegionInfo()));
+    setRegion(ProtobufUtil.toRegionInfo(msg.getRegionInfo()));
   }
 
   @Override

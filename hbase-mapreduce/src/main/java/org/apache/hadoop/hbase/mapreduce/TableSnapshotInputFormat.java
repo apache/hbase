@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -34,13 +40,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. The job
@@ -120,10 +122,18 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       delegate.readFields(in);
     }
 
+    /**
+     * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+     *             Use {@link #getRegion()}
+     */
+    @Deprecated
     public HRegionInfo getRegionInfo() {
       return delegate.getRegionInfo();
     }
 
+    public RegionInfo getRegion() {
+      return delegate.getRegionInfo();
+    }
   }
 
   @VisibleForTesting

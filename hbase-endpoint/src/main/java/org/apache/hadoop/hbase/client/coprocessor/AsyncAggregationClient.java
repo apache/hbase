@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.validateArgAndGetPB;
 
-import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -31,11 +29,10 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallback;
 import org.apache.hadoop.hbase.client.RawScanResultConsumer;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
@@ -44,6 +41,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRespo
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import com.google.protobuf.Message;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the Region Server side via
@@ -73,7 +73,7 @@ public class AsyncAggregationClient {
     }
 
     @Override
-    public synchronized void onRegionError(HRegionInfo region, Throwable error) {
+    public synchronized void onRegionError(RegionInfo region, Throwable error) {
       completeExceptionally(error);
     }
 
@@ -82,11 +82,11 @@ public class AsyncAggregationClient {
       completeExceptionally(error);
     }
 
-    protected abstract void aggregate(HRegionInfo region, AggregateResponse resp)
+    protected abstract void aggregate(RegionInfo region, AggregateResponse resp)
         throws IOException;
 
     @Override
-    public synchronized void onRegionComplete(HRegionInfo region, AggregateResponse resp) {
+    public synchronized void onRegionComplete(RegionInfo region, AggregateResponse resp) {
       try {
         aggregate(region, resp);
       } catch (IOException e) {
@@ -135,7 +135,7 @@ public class AsyncAggregationClient {
       private R max;
 
       @Override
-      protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
         if (resp.getFirstPartCount() > 0) {
           R result = getCellValueFromProto(ci, resp, 0);
           if (max == null || (result != null && ci.compare(max, result) < 0)) {
@@ -171,7 +171,7 @@ public class AsyncAggregationClient {
       private R min;
 
       @Override
-      protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
         if (resp.getFirstPartCount() > 0) {
           R result = getCellValueFromProto(ci, resp, 0);
           if (min == null || (result != null && ci.compare(min, result) > 0)) {
@@ -208,7 +208,7 @@ public class AsyncAggregationClient {
       private long count;
 
       @Override
-      protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
         count += resp.getFirstPart(0).asReadOnlyByteBuffer().getLong();
       }
 
@@ -239,7 +239,7 @@ public class AsyncAggregationClient {
       private S sum;
 
       @Override
-      protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
         if (resp.getFirstPartCount() > 0) {
           S s = getPromotedValueFromProto(ci, resp, 0);
           sum = ci.add(sum, s);
@@ -276,7 +276,7 @@ public class AsyncAggregationClient {
       long count = 0L;
 
       @Override
-      protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
         if (resp.getFirstPartCount() > 0) {
           sum = ci.add(sum, getPromotedValueFromProto(ci, resp, 0));
           count += resp.getSecondPart().asReadOnlyByteBuffer().getLong();
@@ -315,7 +315,7 @@ public class AsyncAggregationClient {
       private long count;
 
       @Override
-      protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+      protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
         if (resp.getFirstPartCount() > 0) {
           sum = ci.add(sum, getPromotedValueFromProto(ci, resp, 0));
           sumSq = ci.add(sumSq, getPromotedValueFromProto(ci, resp, 1));
@@ -357,7 +357,7 @@ public class AsyncAggregationClient {
           private final NavigableMap<byte[], S> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
           @Override
-          protected void aggregate(HRegionInfo region, AggregateResponse resp) throws IOException {
+          protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
             if (resp.getFirstPartCount() > 0) {
               map.put(region.getStartKey(), getPromotedValueFromProto(ci, resp, firstPartIndex));
             }

@@ -23,8 +23,6 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 
-import com.google.protobuf.RpcChannel;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,13 +36,15 @@ import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequ
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
+
+import com.google.protobuf.RpcChannel;
 
 /**
  * The implementation of RawAsyncTable.
@@ -439,7 +439,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   private <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable, HRegionInfo region, byte[] row) {
+      CoprocessorCallable<S, R> callable, RegionInfo region, byte[] row) {
     RegionCoprocessorRpcChannelImpl channel = new RegionCoprocessorRpcChannelImpl(conn, tableName,
         region, row, rpcTimeoutNs, operationTimeoutNs);
     S stub = stubMaker.apply(channel);
@@ -461,7 +461,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
     return coprocessorService(stubMaker, callable, null, row);
   }
 
-  private boolean locateFinished(HRegionInfo region, byte[] endKey, boolean endKeyInclusive) {
+  private boolean locateFinished(RegionInfo region, byte[] endKey, boolean endKeyInclusive) {
     if (isEmptyStopRow(endKey)) {
       if (isEmptyStopRow(region.getEndKey())) {
         return true;
@@ -488,7 +488,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
       return;
     }
     unfinishedRequest.incrementAndGet();
-    HRegionInfo region = loc.getRegionInfo();
+    RegionInfo region = loc.getRegionInfo();
     if (locateFinished(region, endKey, endKeyInclusive)) {
       locateFinished.set(true);
     } else {

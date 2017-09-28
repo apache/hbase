@@ -23,19 +23,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 /**
  * Handles opening of a region on a region server.
  * <p>
@@ -47,18 +48,18 @@ public class OpenRegionHandler extends EventHandler {
 
   protected final RegionServerServices rsServices;
 
-  private final HRegionInfo regionInfo;
+  private final RegionInfo regionInfo;
   private final TableDescriptor htd;
   private final long masterSystemTime;
 
   public OpenRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      final RegionServerServices rsServices, RegionInfo regionInfo,
       TableDescriptor htd, long masterSystemTime) {
     this(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,
-                              final RegionServerServices rsServices, final HRegionInfo regionInfo,
+                              final RegionServerServices rsServices, final RegionInfo regionInfo,
                               final TableDescriptor htd, long masterSystemTime, EventType eventType) {
     super(server, eventType);
     this.rsServices = rsServices;
@@ -67,7 +68,7 @@ public class OpenRegionHandler extends EventHandler {
     this.masterSystemTime = masterSystemTime;
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return regionInfo;
   }
 
@@ -319,7 +320,7 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   private static boolean isRegionStillOpening(
-      HRegionInfo regionInfo, RegionServerServices rsServices) {
+      RegionInfo regionInfo, RegionServerServices rsServices) {
     byte[] encodedName = regionInfo.getEncodedNameAsBytes();
     Boolean action = rsServices.getRegionsInTransitionInRS().get(encodedName);
     return Boolean.TRUE.equals(action); // true means opening for RIT

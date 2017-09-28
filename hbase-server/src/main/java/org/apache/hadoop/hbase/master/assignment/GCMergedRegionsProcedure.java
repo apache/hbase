@@ -18,17 +18,20 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCMergedRegionsState;
 
@@ -43,14 +46,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.G
 public class GCMergedRegionsProcedure
 extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
   private static final Log LOG = LogFactory.getLog(GCMergedRegionsProcedure.class);
-  private HRegionInfo father;
-  private HRegionInfo mother;
-  private HRegionInfo mergedChild;
+  private RegionInfo father;
+  private RegionInfo mother;
+  private RegionInfo mergedChild;
 
   public GCMergedRegionsProcedure(final MasterProcedureEnv env,
-      final HRegionInfo mergedChild,
-      final HRegionInfo father,
-      final HRegionInfo mother) {
+      final RegionInfo mergedChild,
+      final RegionInfo father,
+      final RegionInfo mother) {
     super(env);
     this.father = father;
     this.mother = mother;
@@ -100,7 +103,7 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
   private GCRegionProcedure[] createGCRegionProcedures(final MasterProcedureEnv env) {
     GCRegionProcedure [] procs = new GCRegionProcedure[2];
     int index = 0;
-    for (HRegionInfo hri: new HRegionInfo [] {this.father, this.mother}) {
+    for (RegionInfo hri: new RegionInfo [] {this.father, this.mother}) {
       GCRegionProcedure proc = new GCRegionProcedure(env, hri);
       proc.setOwner(env.getRequestUser().getShortName());
       procs[index++] = proc;
@@ -135,9 +138,9 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
     super.serializeStateData(serializer);
     final MasterProcedureProtos.GCMergedRegionsStateData.Builder msg =
         MasterProcedureProtos.GCMergedRegionsStateData.newBuilder().
-        setParentA(HRegionInfo.convert(this.father)).
-        setParentB(HRegionInfo.convert(this.mother)).
-        setMergedChild(HRegionInfo.convert(this.mergedChild));
+        setParentA(ProtobufUtil.toRegionInfo(this.father)).
+        setParentB(ProtobufUtil.toRegionInfo(this.mother)).
+        setMergedChild(ProtobufUtil.toRegionInfo(this.mergedChild));
     serializer.serialize(msg.build());
   }
 
@@ -147,9 +150,9 @@ extends AbstractStateMachineTableProcedure<GCMergedRegionsState> {
     super.deserializeStateData(serializer);
     final MasterProcedureProtos.GCMergedRegionsStateData msg =
         serializer.deserialize(MasterProcedureProtos.GCMergedRegionsStateData.class);
-    this.father = HRegionInfo.convert(msg.getParentA());
-    this.mother = HRegionInfo.convert(msg.getParentB());
-    this.mergedChild = HRegionInfo.convert(msg.getMergedChild());
+    this.father = ProtobufUtil.toRegionInfo(msg.getParentA());
+    this.mother = ProtobufUtil.toRegionInfo(msg.getParentB());
+    this.mergedChild = ProtobufUtil.toRegionInfo(msg.getMergedChild());
   }
 
   @Override

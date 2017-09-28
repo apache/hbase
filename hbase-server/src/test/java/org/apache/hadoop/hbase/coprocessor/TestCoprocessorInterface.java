@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -114,7 +115,7 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public HRegionInfo getRegionInfo() {
+    public RegionInfo getRegionInfo() {
       return delegate.getRegionInfo();
     }
 
@@ -376,7 +377,7 @@ public class TestCoprocessorInterface {
 
   Region reopenRegion(final Region closedRegion, Class<?> ... implClasses)
       throws IOException {
-    //HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    //RegionInfo info = new RegionInfo(tableName, null, null, false);
     Region r = HRegion.openHRegion(closedRegion, null);
 
     // this following piece is a hack. currently a coprocessorHost
@@ -409,7 +410,11 @@ public class TestCoprocessorInterface {
       htd.addFamily(new HColumnDescriptor(family));
     }
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
-    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(null)
+        .setEndKey(null)
+        .setSplit(false)
+        .build();
     Path path = new Path(DIR + callingMethod);
     Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 

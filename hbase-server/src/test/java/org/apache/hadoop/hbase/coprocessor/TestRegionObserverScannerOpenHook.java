@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -262,7 +263,7 @@ public class TestRegionObserverScannerOpenHook {
 
     @SuppressWarnings("deprecation")
     public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
+        FileSystem fs, Configuration confParam, RegionInfo info,
         TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }

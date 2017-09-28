@@ -43,32 +43,32 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The ServerManager class manages info about region servers.
@@ -257,7 +257,7 @@ public class ServerManager {
   private void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl) {
     Map<byte[], RegionLoad> regionsLoad = hsl.getRegionsLoad();
     for (Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
-      byte[] encodedRegionName = Bytes.toBytes(HRegionInfo.encodeRegionName(entry.getKey()));
+      byte[] encodedRegionName = Bytes.toBytes(RegionInfo.encodeRegionName(entry.getKey()));
       Long existingValue = flushedSequenceIdByRegion.get(encodedRegionName);
       long l = entry.getValue().getCompleteSequenceId();
       // Don't let smaller sequence ids override greater sequence ids.
@@ -714,7 +714,7 @@ public class ServerManager {
    * @param region region to  warmup
    */
   public void sendRegionWarmup(ServerName server,
-      HRegionInfo region) {
+      RegionInfo region) {
     if (server == null) return;
     try {
       AdminService.BlockingInterface admin = getRsAdmin(server);
@@ -732,7 +732,7 @@ public class ServerManager {
    * to close the region.  This bypasses the active hmaster.
    */
   public static void closeRegionSilentlyAndWait(ClusterConnection connection,
-    ServerName server, HRegionInfo region, long timeout) throws IOException, InterruptedException {
+    ServerName server, RegionInfo region, long timeout) throws IOException, InterruptedException {
     AdminService.BlockingInterface rs = connection.getAdmin(server);
     HBaseRpcController controller = connection.getRpcControllerFactory().newController();
     try {
@@ -744,7 +744,7 @@ public class ServerManager {
     while (System.currentTimeMillis() < expiration) {
       controller.reset();
       try {
-        HRegionInfo rsRegion =
+        RegionInfo rsRegion =
           ProtobufUtil.getRegionInfo(controller, rs, region.getRegionName());
         if (rsRegion == null) return;
       } catch (IOException ioe) {
@@ -1023,14 +1023,14 @@ public class ServerManager {
   /**
    * Called by delete table and similar to notify the ServerManager that a region was removed.
    */
-  public void removeRegion(final HRegionInfo regionInfo) {
+  public void removeRegion(final RegionInfo regionInfo) {
     final byte[] encodedName = regionInfo.getEncodedNameAsBytes();
     storeFlushedSequenceIdsByRegion.remove(encodedName);
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
   @VisibleForTesting
-  public boolean isRegionInServerManagerStates(final HRegionInfo hri) {
+  public boolean isRegionInServerManagerStates(final RegionInfo hri) {
     final byte[] encodedName = hri.getEncodedNameAsBytes();
     return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)
         || flushedSequenceIdByRegion.containsKey(encodedName));
@@ -1039,8 +1039,8 @@ public class ServerManager {
   /**
    * Called by delete table and similar to notify the ServerManager that a region was removed.
    */
-  public void removeRegions(final List<HRegionInfo> regions) {
-    for (HRegionInfo hri: regions) {
+  public void removeRegions(final List<RegionInfo> regions) {
+    for (RegionInfo hri: regions) {
       removeRegion(hri);
     }
   }

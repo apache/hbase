@@ -41,16 +41,15 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionAdminServiceCallable;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetryingCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
@@ -58,8 +57,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.replication.BaseWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
@@ -74,10 +71,13 @@ import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.WALSplitter.SinkWriter;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
 /**
  * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} endpoint
@@ -534,7 +534,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       for (int replicaId = 0; replicaId < locations.size(); replicaId++) {
         HRegionLocation location = locations.getRegionLocation(replicaId);
         if (!RegionReplicaUtil.isDefaultReplica(replicaId)) {
-          HRegionInfo regionInfo = location == null
+          RegionInfo regionInfo = location == null
               ? RegionReplicaUtil.getRegionInfoForReplica(
                 locations.getDefaultRegionLocation().getRegionInfo(), replicaId)
               : location.getRegionInfo();
@@ -615,7 +615,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     public RegionReplicaReplayCallable(ClusterConnection connection,
         RpcControllerFactory rpcControllerFactory, TableName tableName,
-        HRegionLocation location, HRegionInfo regionInfo, byte[] row,List<Entry> entries,
+        HRegionLocation location, RegionInfo regionInfo, byte[] row,List<Entry> entries,
         AtomicLong skippedEntries) {
       super(connection, rpcControllerFactory, location, tableName, row, regionInfo.getReplicaId());
       this.entries = entries;

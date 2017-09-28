@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -57,7 +57,7 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   protected RegionPredicate getBypassRegionPredicate() {
     return new RegionPredicate() {
       @Override
-      public boolean evaluate(final HRegionInfo regionInfo) {
+      public boolean evaluate(final RegionInfo regionInfo) {
         return MobUtils.isMobRegionInfo(regionInfo);
       }
     };

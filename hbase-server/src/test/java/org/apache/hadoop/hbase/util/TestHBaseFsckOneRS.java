@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -58,14 +57,19 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
@@ -303,10 +307,10 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // Mess it up by creating an overlap in the metadata
       admin.disableTable(tableName);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("B"), true,
-          true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+          true, false, true, RegionInfo.DEFAULT_REPLICA_ID);
       admin.enableTable(tableName);
 
-      HRegionInfo hriOverlap =
+      RegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
       TEST_UTIL.assignRegion(hriOverlap);
 
@@ -346,7 +350,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       assertEquals(ROWKEYS.length, countRows());
 
       // Mess it up by creating an overlap in the metadata
-      HRegionInfo hriOverlap =
+      RegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B2"));
       TEST_UTIL.assignRegion(hriOverlap);
 
@@ -421,13 +425,14 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       byte[][] SPLIT_KEYS = new byte[][] { new byte[0], Bytes.toBytes("aaa"),
           Bytes.toBytes("bbb"), Bytes.toBytes("ccc"), Bytes.toBytes("ddd") };
-      HTableDescriptor htdDisabled = new HTableDescriptor(tableName);
-      htdDisabled.addFamily(new HColumnDescriptor(FAM));
+      TableDescriptor htdDisabled = TableDescriptorBuilder.newBuilder(tableName)
+          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM))
+          .build();
 
       // Write the .tableinfo
       FSTableDescriptors fstd = new FSTableDescriptors(conf);
       fstd.createTableDescriptor(htdDisabled);
-      List<HRegionInfo> disabledRegions =
+      List<RegionInfo> disabledRegions =
           TEST_UTIL.createMultiRegionsInMeta(conf, htdDisabled, SPLIT_KEYS);
 
       // Let's just assign everything to first RS
@@ -439,7 +444,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       // Disable the table and close its regions
       admin.disableTable(tableName);
-      HRegionInfo region = disabledRegions.remove(0);
+      RegionInfo region = disabledRegions.remove(0);
       byte[] regionName = region.getRegionName();
 
       // The region should not be assigned currently
@@ -622,8 +627,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       try(RegionLocator rl = connection.getRegionLocator(tbl.getName())) {
         // make sure data in regions, if in wal only there is no data loss
         admin.flush(tableName);
-        HRegionInfo region1 = rl.getRegionLocation(Bytes.toBytes("A")).getRegionInfo();
-        HRegionInfo region2 = rl.getRegionLocation(Bytes.toBytes("B")).getRegionInfo();
+        RegionInfo region1 = rl.getRegionLocation(Bytes.toBytes("A")).getRegionInfo();
+        RegionInfo region2 = rl.getRegionLocation(Bytes.toBytes("B")).getRegionInfo();
 
         int regionCountBeforeMerge = rl.getAllRegionLocations().size();
 
@@ -818,15 +823,18 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       // Create a new meta entry to fake it as a split parent.
       meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
-      HRegionInfo hri = location.getRegionInfo();
-
-      HRegionInfo a = new HRegionInfo(tbl.getName(),
-          Bytes.toBytes("B"), Bytes.toBytes("BM"));
-      HRegionInfo b = new HRegionInfo(tbl.getName(),
-          Bytes.toBytes("BM"), Bytes.toBytes("C"));
-
-      hri.setOffline(true);
-      hri.setSplit(true);
+      RegionInfo a = RegionInfoBuilder.newBuilder(tbl.getName())
+          .setStartKey(Bytes.toBytes("B"))
+          .setEndKey(Bytes.toBytes("BM"))
+          .build();
+      RegionInfo b = RegionInfoBuilder.newBuilder(tbl.getName())
+          .setStartKey(Bytes.toBytes("BM"))
+          .setEndKey(Bytes.toBytes("C"))
+          .build();
+      RegionInfo hri = RegionInfoBuilder.newBuilder(location.getRegion())
+          .setOffline(true)
+          .setSplit(true)
+          .build();
 
       MetaTableAccessor.addRegionToMeta(meta, hri, a, b);
       meta.close();
@@ -897,7 +905,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         HRegionLocation location = rl.getRegionLocation(Bytes.toBytes("B"));
 
         meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
-        HRegionInfo hri = location.getRegionInfo();
+        RegionInfo hri = location.getRegionInfo();
 
         // do a regular split
         byte[] regionName = location.getRegionInfo().getRegionName();
@@ -916,7 +924,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         Get get = new Get(hri.getRegionName());
         Result result = meta.get(get);
         assertNotNull(result);
-        assertNotNull(MetaTableAccessor.getHRegionInfo(result));
+        assertNotNull(MetaTableAccessor.getRegionInfo(result));
 
         assertEquals(ROWKEYS.length, countRows());
 
@@ -949,7 +957,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       try(RegionLocator rl = connection.getRegionLocator(tbl.getName())) {
         HRegionLocation location = rl.getRegionLocation(Bytes.toBytes("B"));
 
-        HRegionInfo hri = location.getRegionInfo();
+        RegionInfo hri = location.getRegionInfo();
 
         // Disable CatalogJanitor to prevent it from cleaning up the parent region
         // after split.
@@ -960,7 +968,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
         TestEndToEndSplitTransaction.blockUntilRegionSplit(conf, 60000, regionName, true);
 
-        PairOfSameType<HRegionInfo> daughters = MetaTableAccessor.getDaughterRegions(
+        PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(
             meta.get(new Get(regionName)));
 
         // Delete daughter regions from meta, but not hdfs, unassign it.
@@ -1002,7 +1010,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         Get get = new Get(hri.getRegionName());
         Result result = meta.get(get);
         assertNotNull(result);
-        assertNotNull(MetaTableAccessor.getHRegionInfo(result));
+        assertNotNull(MetaTableAccessor.getRegionInfo(result));
 
         assertEquals(ROWKEYS.length, countRows());
 
@@ -1116,7 +1124,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       // Mess it up by closing a region
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("B"), true,
-          false, false, false, HRegionInfo.DEFAULT_REPLICA_ID);
+          false, false, false, RegionInfo.DEFAULT_REPLICA_ID);
 
       // verify there is no other errors
       HBaseFsck hbck = doFsck(conf, false);
@@ -1172,7 +1180,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       // Mess it up by deleting a region from the metadata
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
-          Bytes.toBytes("B"), false, true, false, false, HRegionInfo.DEFAULT_REPLICA_ID);
+          Bytes.toBytes("B"), false, true, false, false, RegionInfo.DEFAULT_REPLICA_ID);
 
       // verify there is no other errors
       HBaseFsck hbck = doFsck(conf, false);
@@ -1234,10 +1242,10 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // Mess it up by creating an overlap in the metadata
       admin.disableTable(tableName);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"), Bytes.toBytes("B"), true,
-          true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+          true, false, true, RegionInfo.DEFAULT_REPLICA_ID);
       admin.enableTable(tableName);
 
-      HRegionInfo hriOverlap =
+      RegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
       TEST_UTIL.assignRegion(hriOverlap);
 
@@ -1365,7 +1373,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       assertEquals(ROWKEYS.length, countRows());
 
       // Now let's mess it up, by adding a region with a duplicate startkey
-      HRegionInfo hriDupe =
+      RegionInfo hriDupe =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("B"));
       TEST_UTIL.assignRegion(hriDupe);
 
@@ -1410,7 +1418,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
         @Override
         public boolean visit(Result rowResult) throws IOException {
-          HRegionInfo hri = MetaTableAccessor.getHRegionInfo(rowResult);
+          RegionInfo hri = MetaTableAccessor.getRegionInfo(rowResult);
           if (hri != null && !hri.getTable().isSystemTable()) {
             Delete delete = new Delete(rowResult.getRow());
             delete.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
@@ -1535,7 +1543,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // Mess it up by leaving a hole in the meta data
       admin.disableTable(tableName);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), true,
-        true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+        true, false, true, RegionInfo.DEFAULT_REPLICA_ID);
       admin.enableTable(tableName);
 
       HBaseFsck hbck = doFsck(conf, false);

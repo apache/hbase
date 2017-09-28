@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.coordination;
 
-import static org.apache.hadoop.hbase.util.CollectionUtils.*;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.FAILURE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.IN_PROGRESS;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -39,17 +39,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination.TaskFinisher.Status;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -59,12 +58,15 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
  * ZooKeeper based implementation of
@@ -287,7 +289,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   public void removeRecoveringRegions(final Set<String> recoveredServerNameSet,
       Boolean isMetaRecovery)
   throws IOException {
-    final String metaEncodeRegionName = HRegionInfo.FIRST_META_REGIONINFO.getEncodedName();
+    final String metaEncodeRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName();
     int count = 0;
     try {
       List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.splitLogZNode);
@@ -594,10 +596,10 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    * @param userRegions user regiones assigned on the region server
    */
   @Override
-  public void markRegionsRecovering(final ServerName serverName, Set<HRegionInfo> userRegions)
+  public void markRegionsRecovering(final ServerName serverName, Set<RegionInfo> userRegions)
       throws IOException, InterruptedIOException {
     this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTime();
-    for (HRegionInfo region : userRegions) {
+    for (RegionInfo region : userRegions) {
       String regionEncodeName = region.getEncodedName();
       long retries = this.zkretries;
 

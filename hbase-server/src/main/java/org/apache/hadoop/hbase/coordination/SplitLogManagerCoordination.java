@@ -24,15 +24,15 @@ import java.io.InterruptedIOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
  * Coordination for SplitLogManager. It creates and works with tasks for split log operations<BR>
@@ -123,7 +123,7 @@ public interface SplitLogManagerCoordination {
    * @throws IOException in case of failure
    * @throws InterruptedIOException
    */
-  void markRegionsRecovering(final ServerName serverName, Set<HRegionInfo> userRegions)
+  void markRegionsRecovering(final ServerName serverName, Set<RegionInfo> userRegions)
       throws IOException, InterruptedIOException;
 
   /**

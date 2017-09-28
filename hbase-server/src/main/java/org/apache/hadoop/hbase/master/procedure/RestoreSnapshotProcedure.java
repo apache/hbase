@@ -30,12 +30,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -44,16 +43,18 @@ import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 @InterfaceAudience.Private
 public class RestoreSnapshotProcedure
@@ -61,9 +62,9 @@ public class RestoreSnapshotProcedure
   private static final Log LOG = LogFactory.getLog(RestoreSnapshotProcedure.class);
 
   private TableDescriptor modifiedTableDescriptor;
-  private List<HRegionInfo> regionsToRestore = null;
-  private List<HRegionInfo> regionsToRemove = null;
-  private List<HRegionInfo> regionsToAdd = null;
+  private List<RegionInfo> regionsToRestore = null;
+  private List<RegionInfo> regionsToRemove = null;
+  private List<RegionInfo> regionsToAdd = null;
   private Map<String, Pair<String, String>> parentsToChildrenPairMap = new HashMap<>();
 
   private SnapshotDescription snapshot;
@@ -239,18 +240,18 @@ public class RestoreSnapshotProcedure
         .setModifiedTableSchema(ProtobufUtil.toTableSchema(modifiedTableDescriptor));
 
     if (regionsToRestore != null) {
-      for (HRegionInfo hri: regionsToRestore) {
-        restoreSnapshotMsg.addRegionInfoForRestore(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionsToRestore) {
+        restoreSnapshotMsg.addRegionInfoForRestore(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (regionsToRemove != null) {
-      for (HRegionInfo hri: regionsToRemove) {
-        restoreSnapshotMsg.addRegionInfoForRemove(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionsToRemove) {
+        restoreSnapshotMsg.addRegionInfoForRemove(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (regionsToAdd != null) {
-      for (HRegionInfo hri: regionsToAdd) {
-        restoreSnapshotMsg.addRegionInfoForAdd(HRegionInfo.convert(hri));
+      for (RegionInfo hri: regionsToAdd) {
+        restoreSnapshotMsg.addRegionInfoForAdd(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (!parentsToChildrenPairMap.isEmpty()) {
@@ -287,7 +288,7 @@ public class RestoreSnapshotProcedure
     } else {
       regionsToRestore = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForRestoreCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForRestoreList()) {
-        regionsToRestore.add(HRegionInfo.convert(hri));
+        regionsToRestore.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (restoreSnapshotMsg.getRegionInfoForRemoveCount() == 0) {
@@ -295,7 +296,7 @@ public class RestoreSnapshotProcedure
     } else {
       regionsToRemove = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForRemoveCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForRemoveList()) {
-        regionsToRemove.add(HRegionInfo.convert(hri));
+        regionsToRemove.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (restoreSnapshotMsg.getRegionInfoForAddCount() == 0) {
@@ -303,7 +304,7 @@ public class RestoreSnapshotProcedure
     } else {
       regionsToAdd = new ArrayList<>(restoreSnapshotMsg.getRegionInfoForAddCount());
       for (HBaseProtos.RegionInfo hri: restoreSnapshotMsg.getRegionInfoForAddList()) {
-        regionsToAdd.add(HRegionInfo.convert(hri));
+        regionsToAdd.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
     if (restoreSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {

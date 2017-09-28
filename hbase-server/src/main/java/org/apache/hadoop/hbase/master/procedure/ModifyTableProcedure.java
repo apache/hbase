@@ -27,12 +27,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -41,10 +40,12 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
 public class ModifyTableProcedure
@@ -55,7 +56,7 @@ public class ModifyTableProcedure
   private TableDescriptor modifiedTableDescriptor;
   private boolean deleteColumnFamilyInModify;
 
-  private List<HRegionInfo> regionInfoList;
+  private List<RegionInfo> regionInfoList;
   private Boolean traceEnabled = null;
 
   public ModifyTableProcedure() {
@@ -413,7 +414,7 @@ public class ModifyTableProcedure
     }
   }
 
-  private List<HRegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
+  private List<RegionInfo> getRegionInfoList(final MasterProcedureEnv env) throws IOException {
     if (regionInfoList == null) {
       regionInfoList = env.getAssignmentManager().getRegionStates()
           .getRegionsOfTable(getTableName());

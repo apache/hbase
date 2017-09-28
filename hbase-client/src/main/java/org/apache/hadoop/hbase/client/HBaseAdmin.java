@@ -40,6 +40,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,8 +70,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
@@ -86,6 +85,26 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -184,28 +203,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
-import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
-import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
-import org.apache.hadoop.hbase.util.Addressing;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.zookeeper.KeeperException;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
-import java.util.stream.Collectors;
 
 /**
  * HBaseAdmin is no longer a client API. It is marked InterfaceAudience.Private indicating that
@@ -399,12 +400,26 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public List<RegionInfo> getRegions(final ServerName sn) throws IOException {
-    return getOnlineRegions(sn).stream().collect(Collectors.toList());
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    // TODO: There is no timeout on this controller. Set one!
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    return ProtobufUtil.getOnlineRegions(controller, admin);
   }
 
   @Override
   public List<RegionInfo> getRegions(final TableName tableName) throws IOException {
-    return getTableRegions(tableName).stream().collect(Collectors.toList());
+    ZooKeeperWatcher zookeeper =
+        new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
+            new ThrowableAbortable());
+    try {
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        return new MetaTableLocator().getMetaRegions(zookeeper);
+      } else {
+        return MetaTableAccessor.getTableRegions(connection, tableName, true);
+      }
+    } finally {
+      zookeeper.close();
+    }
   }
 
   private static class AbortProcedureFuture extends ProcedureFuture<Boolean> {
@@ -1164,13 +1179,7 @@ public class HBaseAdmin implements Admin {
   @Deprecated
   @Override
   public List<HRegionInfo> getOnlineRegions(final ServerName sn) throws IOException {
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
-    // TODO: There is no timeout on this controller. Set one!
-    HBaseRpcController controller = rpcControllerFactory.newController();
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(controller, admin);
-    return onlineRegions == null ? null : onlineRegions.stream()
-            .map(hri -> new ImmutableHRegionInfo(hri))
-            .collect(Collectors.toList());
+    return getRegions(sn).stream().map(ImmutableHRegionInfo::new).collect(Collectors.toList());
   }
 
   @Override
@@ -1185,14 +1194,14 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void flushRegion(final byte[] regionName) throws IOException {
-    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Unknown regionname: " + Bytes.toStringBinary(regionName));
     }
     if (regionServerPair.getSecond() == null) {
       throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
     }
-    final HRegionInfo hRegionInfo = regionServerPair.getFirst();
+    final RegionInfo hRegionInfo = regionServerPair.getFirst();
     ServerName serverName = regionServerPair.getSecond();
     final AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
     Callable<Void> callable = new Callable<Void>() {
@@ -1304,13 +1313,13 @@ public class HBaseAdmin implements Admin {
           checkTableExists(tableName);
           zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
                   new ThrowableAbortable());
-          List<Pair<HRegionInfo, ServerName>> pairs;
+          List<Pair<RegionInfo, ServerName>> pairs;
           if (TableName.META_TABLE_NAME.equals(tableName)) {
             pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
           } else {
             pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
           }
-          for (Pair<HRegionInfo, ServerName> pair: pairs) {
+          for (Pair<RegionInfo, ServerName> pair: pairs) {
             if (pair.getFirst().isOffline()) continue;
             if (pair.getSecond() == null) continue;
             try {
@@ -1344,7 +1353,7 @@ public class HBaseAdmin implements Admin {
    */
   private void compactRegion(final byte[] regionName, final byte[] columnFamily,final boolean major)
   throws IOException {
-    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
     }
@@ -1354,7 +1363,7 @@ public class HBaseAdmin implements Admin {
     compact(regionServerPair.getSecond(), regionServerPair.getFirst(), major, columnFamily);
   }
 
-  private void compact(final ServerName sn, final HRegionInfo hri,
+  private void compact(final ServerName sn, final RegionInfo hri,
       final boolean major, final byte [] family)
   throws IOException {
     final AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
@@ -1655,7 +1664,7 @@ public class HBaseAdmin implements Admin {
     }
 
     TableName tableName = null;
-    Pair<HRegionInfo, ServerName> pair;
+    Pair<RegionInfo, ServerName> pair;
 
     for(int i = 0; i < nameofRegionsToMerge.length; i++) {
       pair = getRegion(nameofRegionsToMerge[i]);
@@ -1750,7 +1759,7 @@ public class HBaseAdmin implements Admin {
       throws IOException {
     byte[] encodedNameofRegionToSplit = HRegionInfo.isEncodedRegionName(regionName) ?
         regionName : HRegionInfo.encodeRegionName(regionName).getBytes();
-    Pair<HRegionInfo, ServerName> pair = getRegion(regionName);
+    Pair<RegionInfo, ServerName> pair = getRegion(regionName);
     if (pair != null) {
       if (pair.getFirst() != null &&
           pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
@@ -1762,11 +1771,10 @@ public class HBaseAdmin implements Admin {
               + Bytes.toStringBinary(encodedNameofRegionToSplit));
     }
 
-    HRegionInfo hri = pair.getFirst();
-    return splitRegionAsync(hri, splitPoint);
+    return splitRegionAsync(pair.getFirst(), splitPoint);
   }
 
-  Future<Void> splitRegionAsync(HRegionInfo hri, byte[] splitPoint) throws IOException {
+  Future<Void> splitRegionAsync(RegionInfo hri, byte[] splitPoint) throws IOException {
     TableName tableName = hri.getTable();
     if (hri.getStartKey() != null && splitPoint != null &&
         Bytes.compareTo(hri.getStartKey(), splitPoint) == 0) {
@@ -1824,7 +1832,7 @@ public class HBaseAdmin implements Admin {
       checkTableExists(tableName);
       zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
         new ThrowableAbortable());
-      List<Pair<HRegionInfo, ServerName>> pairs;
+      List<Pair<RegionInfo, ServerName>> pairs;
       if (TableName.META_TABLE_NAME.equals(tableName)) {
         pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
       } else {
@@ -1833,10 +1841,10 @@ public class HBaseAdmin implements Admin {
       if (splitPoint == null) {
         LOG.info("SplitPoint is null, will find bestSplitPoint from Region");
       }
-      for (Pair<HRegionInfo, ServerName> pair: pairs) {
+      for (Pair<RegionInfo, ServerName> pair: pairs) {
         // May not be a server for a particular row
         if (pair.getSecond() == null) continue;
-        HRegionInfo r = pair.getFirst();
+        RegionInfo r = pair.getFirst();
         // check for parents
         if (r.isSplitParent()) continue;
         // if a split point given, only split that particular region
@@ -1854,7 +1862,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void splitRegion(final byte[] regionName, final byte [] splitPoint) throws IOException {
-    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
     }
@@ -1921,19 +1929,18 @@ public class HBaseAdmin implements Admin {
    * Throw IllegalArgumentException if <code>regionName</code> is null.
    * @throws IOException
    */
-  Pair<HRegionInfo, ServerName> getRegion(final byte[] regionName) throws IOException {
+  Pair<RegionInfo, ServerName> getRegion(final byte[] regionName) throws IOException {
     if (regionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
-    Pair<HRegionInfo, ServerName> pair =
-      MetaTableAccessor.getRegion(connection, regionName);
+    Pair<RegionInfo, ServerName> pair = MetaTableAccessor.getRegion(connection, regionName);
     if (pair == null) {
-      final AtomicReference<Pair<HRegionInfo, ServerName>> result = new AtomicReference<>(null);
+      final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
       final String encodedName = Bytes.toString(regionName);
       MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
         public boolean visit(Result data) throws IOException {
-          HRegionInfo info = MetaTableAccessor.getHRegionInfo(data);
+          RegionInfo info = MetaTableAccessor.getRegionInfo(data);
           if (info == null) {
             LOG.warn("No serialized HRegionInfo in " + data);
             return true;
@@ -1979,7 +1986,7 @@ public class HBaseAdmin implements Admin {
       return HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
     }
     byte[] tmp = regionNameOrEncodedRegionName;
-    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionNameOrEncodedRegionName);
+    Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionNameOrEncodedRegionName);
     if (regionServerPair != null && regionServerPair.getFirst() != null) {
       tmp = regionServerPair.getFirst().getRegionName();
     }
@@ -2373,23 +2380,10 @@ public class HBaseAdmin implements Admin {
   @Deprecated
   @Override
   public List<HRegionInfo> getTableRegions(final TableName tableName)
-  throws IOException {
-    ZooKeeperWatcher zookeeper =
-      new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-        new ThrowableAbortable());
-    List<HRegionInfo> regions = null;
-    try {
-      if (TableName.META_TABLE_NAME.equals(tableName)) {
-        regions = new MetaTableLocator().getMetaRegions(zookeeper);
-      } else {
-        regions = MetaTableAccessor.getTableRegions(connection, tableName, true);
-      }
-    } finally {
-      zookeeper.close();
-    }
-    return regions == null ? null : regions.stream()
-            .map(hri -> new ImmutableHRegionInfo(hri))
-            .collect(Collectors.toList());
+    throws IOException {
+    return getRegions(tableName).stream()
+        .map(ImmutableHRegionInfo::new)
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -2499,7 +2493,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public CompactionState getCompactionStateForRegion(final byte[] regionName)
   throws IOException {
-    final Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    final Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
     }
@@ -3320,7 +3314,7 @@ public class HBaseAdmin implements Admin {
       default:
         ZooKeeperWatcher zookeeper = null;
         try {
-          List<Pair<HRegionInfo, ServerName>> pairs;
+          List<Pair<RegionInfo, ServerName>> pairs;
           if (TableName.META_TABLE_NAME.equals(tableName)) {
             zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
               new ThrowableAbortable());
@@ -3328,7 +3322,7 @@ public class HBaseAdmin implements Admin {
           } else {
             pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
           }
-          for (Pair<HRegionInfo, ServerName> pair: pairs) {
+          for (Pair<RegionInfo, ServerName> pair: pairs) {
             if (pair.getFirst().isOffline()) continue;
             if (pair.getSecond() == null) continue;
             final ServerName sn = pair.getSecond();

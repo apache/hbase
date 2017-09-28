@@ -28,17 +28,18 @@ import java.util.stream.Collectors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.RegionInfoDisplay;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.client.RegionInfoDisplay;
-import org.apache.hadoop.io.DataInputBuffer;
 
 /**
  * Information about a region. A region is a range of keys in the whole keyspace of a table, an
@@ -308,7 +309,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    *
    * @param other
    */
-  public HRegionInfo(HRegionInfo other) {
+  public HRegionInfo(RegionInfo other) {
     super();
     this.endKey = other.getEndKey();
     this.offLine = other.isOffline();
@@ -710,13 +711,13 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    * @param info the HRegionInfo to convert
    * @return the converted RegionInfo
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use toProtoRegionInfo(org.apache.hadoop.hbase.client.RegionInfo)
+   *             Use toRegionInfo(org.apache.hadoop.hbase.client.RegionInfo)
    *             in org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.
    */
   @Deprecated
   @InterfaceAudience.Private
   public static HBaseProtos.RegionInfo convert(final HRegionInfo info) {
-    return ProtobufUtil.toProtoRegionInfo(info);
+    return ProtobufUtil.toRegionInfo(info);
   }
 
   /**

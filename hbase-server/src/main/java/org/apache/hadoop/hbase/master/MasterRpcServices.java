@@ -32,16 +32,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -74,6 +74,15 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -262,13 +271,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Remov
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Implements the master RPC services.
@@ -501,7 +503,7 @@ public class MasterRpcServices extends RSRpcServices
       }
 
       final byte[] regionName = req.getRegion().getValue().toByteArray();
-      final HRegionInfo regionInfo = master.getAssignmentManager().getRegionInfo(regionName);
+      final RegionInfo regionInfo = master.getAssignmentManager().getRegionInfo(regionName);
       if (regionInfo == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
 
       final AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
@@ -712,7 +714,7 @@ public class MasterRpcServices extends RSRpcServices
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
 
     assert(request.getRegionCount() == 2);
-    HRegionInfo[] regionsToMerge = new HRegionInfo[request.getRegionCount()];
+    RegionInfo[] regionsToMerge = new RegionInfo[request.getRegionCount()];
     for (int i = 0; i < request.getRegionCount(); i++) {
       final byte[] encodedNameOfRegion = request.getRegion(i).getValue().toByteArray();
       if (request.getRegion(i).getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
@@ -745,7 +747,7 @@ public class MasterRpcServices extends RSRpcServices
       final SplitTableRegionRequest request) throws ServiceException {
     try {
       long procId = master.splitRegion(
-        HRegionInfo.convert(request.getRegionInfo()),
+        ProtobufUtil.toRegionInfo(request.getRegionInfo()),
         request.hasSplitRow() ? request.getSplitRow().toByteArray() : null,
         request.getNonceGroup(),
         request.getNonce());
@@ -1344,7 +1346,7 @@ public class MasterRpcServices extends RSRpcServices
       }
 
       final byte[] regionName = request.getRegion().getValue().toByteArray();
-      final HRegionInfo hri = master.getAssignmentManager().getRegionInfo(regionName);
+      final RegionInfo hri = master.getAssignmentManager().getRegionInfo(regionName);
       if (hri == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
 
       if (master.cpHost != null) {
@@ -1502,17 +1504,17 @@ public class MasterRpcServices extends RSRpcServices
         LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      Pair<HRegionInfo, ServerName> pair =
+      Pair<RegionInfo, ServerName> pair =
         MetaTableAccessor.getRegion(master.getConnection(), regionName);
-      if (Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),regionName)) {
-        pair = new Pair<>(HRegionInfo.FIRST_META_REGIONINFO,
+      if (Bytes.equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName(),regionName)) {
+        pair = new Pair<>(RegionInfoBuilder.FIRST_META_REGIONINFO,
             master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper()));
       }
       if (pair == null) {
         throw new UnknownRegionException(Bytes.toString(regionName));
       }
 
-      HRegionInfo hri = pair.getFirst();
+      RegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
         if (master.cpHost.preUnassign(hri, force)) {
           return urr;
@@ -1598,7 +1600,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       byte[] regionName = request.getRegion().getValue().toByteArray();
-      TableName tableName = HRegionInfo.getTable(regionName);
+      TableName tableName = RegionInfo.getTable(regionName);
       // if the region is a mob region, do the mob file compaction.
       if (MobUtils.isMobRegionName(tableName, regionName)) {
         return compactMob(request, tableName);
@@ -1615,12 +1617,12 @@ public class MasterRpcServices extends RSRpcServices
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
     final GetRegionInfoRequest request) throws ServiceException {
     byte[] regionName = request.getRegion().getValue().toByteArray();
-    TableName tableName = HRegionInfo.getTable(regionName);
+    TableName tableName = RegionInfo.getTable(regionName);
     if (MobUtils.isMobRegionName(tableName, regionName)) {
       // a dummy region info contains the compaction state.
-      HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
+      RegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-      builder.setRegionInfo(HRegionInfo.convert(mobRegionInfo));
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(mobRegionInfo));
       if (request.hasCompactionState() && request.getCompactionState()) {
         builder.setCompactionState(master.getMobCompactionState(tableName));
       }
@@ -1960,9 +1962,9 @@ public class MasterRpcServices extends RSRpcServices
       NonceProcedureRunnable npr;
       LockType type = LockType.valueOf(request.getLockType().name());
       if (request.getRegionInfoCount() > 0) {
-        final HRegionInfo[] regionInfos = new HRegionInfo[request.getRegionInfoCount()];
+        final RegionInfo[] regionInfos = new RegionInfo[request.getRegionInfoCount()];
         for (int i = 0; i < request.getRegionInfoCount(); ++i) {
-          regionInfos[i] = HRegionInfo.convert(request.getRegionInfo(i));
+          regionInfos[i] = ProtobufUtil.toRegionInfo(request.getRegionInfo(i));
         }
         npr = new NonceProcedureRunnable(master, request.getNonceGroup(), request.getNonce()) {
           @Override
@@ -2051,7 +2053,7 @@ public class MasterRpcServices extends RSRpcServices
       MasterQuotaManager quotaManager = this.master.getMasterQuotaManager();
       final long now = EnvironmentEdgeManager.currentTime();
       for (RegionSpaceUse report : request.getSpaceUseList()) {
-        quotaManager.addRegionSize(HRegionInfo.convert(
+        quotaManager.addRegionSize(ProtobufUtil.toRegionInfo(
             report.getRegionInfo()), report.getRegionSize(), now);
       }
       return RegionSpaceUseReportResponse.newBuilder().build();
@@ -2069,10 +2071,10 @@ public class MasterRpcServices extends RSRpcServices
       GetSpaceQuotaRegionSizesResponse.Builder builder =
           GetSpaceQuotaRegionSizesResponse.newBuilder();
       if (quotaManager != null) {
-        Map<HRegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+        Map<RegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
         Map<TableName,Long> regionSizesByTable = new HashMap<>();
         // Translate hregioninfo+long -> tablename+long
-        for (Entry<HRegionInfo,Long> entry : regionSizes.entrySet()) {
+        for (Entry<RegionInfo,Long> entry : regionSizes.entrySet()) {
           final TableName tableName = entry.getKey().getTable();
           Long prevSize = regionSizesByTable.get(tableName);
           if (prevSize == null) {

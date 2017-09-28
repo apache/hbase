@@ -20,12 +20,12 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AssignRegionStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
@@ -87,17 +89,17 @@ public class AssignProcedure extends RegionTransitionProcedure {
     super();
   }
 
-  public AssignProcedure(final HRegionInfo regionInfo) {
+  public AssignProcedure(final RegionInfo regionInfo) {
     this(regionInfo, false);
   }
 
-  public AssignProcedure(final HRegionInfo regionInfo, final boolean forceNewPlan) {
+  public AssignProcedure(final RegionInfo regionInfo, final boolean forceNewPlan) {
     super(regionInfo);
     this.forceNewPlan = forceNewPlan;
     this.targetServer = null;
   }
 
-  public AssignProcedure(final HRegionInfo regionInfo, final ServerName destinationServer) {
+  public AssignProcedure(final RegionInfo regionInfo, final ServerName destinationServer) {
     super(regionInfo);
     this.forceNewPlan = false;
     this.targetServer = destinationServer;
@@ -123,7 +125,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
       throws IOException {
     final AssignRegionStateData.Builder state = AssignRegionStateData.newBuilder()
         .setTransitionState(getTransitionState())
-        .setRegionInfo(HRegionInfo.convert(getRegionInfo()));
+        .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
     if (forceNewPlan) {
       state.setForceNewPlan(true);
     }
@@ -138,7 +140,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
       throws IOException {
     final AssignRegionStateData state = serializer.deserialize(AssignRegionStateData.class);
     setTransitionState(state.getTransitionState());
-    setRegionInfo(HRegionInfo.convert(state.getRegionInfo()));
+    setRegionInfo(ProtobufUtil.toRegionInfo(state.getRegionInfo()));
     forceNewPlan = state.getForceNewPlan();
     if (state.hasTargetServer()) {
       this.targetServer = ProtobufUtil.toServerName(state.getTargetServer());
