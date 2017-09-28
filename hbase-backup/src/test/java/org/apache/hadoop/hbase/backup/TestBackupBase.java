@@ -98,8 +98,8 @@ public class TestBackupBase {
   protected static final byte[] qualName = Bytes.toBytes("q1");
   protected static final byte[] famName = Bytes.toBytes("f");
 
-  protected static String BACKUP_ROOT_DIR = "/backupUT";
-  protected static String BACKUP_REMOTE_ROOT_DIR = "/backupUT";
+  protected static String BACKUP_ROOT_DIR = Path.SEPARATOR +"backupUT";
+  protected static String BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
   protected static String provider = "defaultProvider";
   protected static boolean secure = false;
 
@@ -316,10 +316,14 @@ public class TestBackupBase {
     conf1 = TEST_UTIL.getConfiguration();
 
     TEST_UTIL.startMiniMapReduceCluster();
-    BACKUP_ROOT_DIR = TEST_UTIL.getConfiguration().get("fs.defaultFS") + "/backupUT";
+    BACKUP_ROOT_DIR =
+        new Path ( new Path(TEST_UTIL.getConfiguration().get("fs.defaultFS")),
+          BACKUP_ROOT_DIR).toString();
     LOG.info("ROOTDIR " + BACKUP_ROOT_DIR);
     if (useSecondCluster) {
-      BACKUP_REMOTE_ROOT_DIR = TEST_UTIL2.getConfiguration().get("fs.defaultFS") + "/backupUT";
+      BACKUP_REMOTE_ROOT_DIR =
+          new Path ( new Path(TEST_UTIL2.getConfiguration().get("fs.defaultFS"))
+          + BACKUP_REMOTE_ROOT_DIR).toString();
       LOG.info("REMOTE ROOTDIR " + BACKUP_REMOTE_ROOT_DIR);
     }
     createTables();

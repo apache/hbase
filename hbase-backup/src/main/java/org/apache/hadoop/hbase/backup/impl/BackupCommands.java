@@ -58,11 +58,11 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants.BackupCommand;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * General backup commands, options and usage messages
@@ -72,6 +72,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public final class BackupCommands {
 
   public final static String INCORRECT_USAGE = "Incorrect usage";
+
+  public final static String TOP_LEVEL_NOT_ALLOWED =
+      "Top level (root) folder is not allowed to be a backup destination";
 
   public static final String USAGE = "Usage: hbase backup COMMAND [command-specific arguments]\n"
       + "where COMMAND is one of:\n" + "  create     create a new backup image\n"
@@ -283,7 +286,11 @@ public final class BackupCommands {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
-
+      String targetBackupDir = args[2];
+      // Check if backup destination is top level (root) folder - not allowed
+      if (isRootFolder(targetBackupDir)) {
+        throw new IOException(TOP_LEVEL_NOT_ALLOWED);
+      }
       String tables = null;
 
       // Check if we have both: backup set and list of tables
@@ -331,7 +338,7 @@ public final class BackupCommands {
                 .withBackupType(BackupType.valueOf(args[1].toUpperCase()))
                 .withTableList(
                   tables != null ? Lists.newArrayList(BackupUtils.parseTableNames(tables)) : null)
-                .withTargetRootDir(args[2]).withTotalTasks(workers)
+                .withTargetRootDir(targetBackupDir).withTotalTasks(workers)
                 .withBandwidthPerTasks(bandwidth).withBackupSetName(setName).build();
         String backupId = admin.backupTables(request);
         System.out.println("Backup session " + backupId + " finished. Status: SUCCESS");
@@ -339,6 +346,11 @@ public final class BackupCommands {
         System.out.println("Backup session finished. Status: FAILURE");
         throw e;
       }
+    }
+
+    private boolean isRootFolder(String targetBackupDir) {
+      Path p = new Path(targetBackupDir);
+      return p.isRoot();
     }
 
     private boolean verifyPath(String path) {
