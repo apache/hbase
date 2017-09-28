@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -102,8 +102,8 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
   private RegionCoprocessorEnvironment env;
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override

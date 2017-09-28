@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import java.util.Optional;
 
 /**
- * WALCoprocessor don't support loading services using {@link #getService()}.
+ * WALCoprocessor don't support loading services using {@link #getServices()}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving

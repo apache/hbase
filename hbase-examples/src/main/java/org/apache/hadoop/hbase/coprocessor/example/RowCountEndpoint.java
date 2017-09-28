@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -58,8 +58,8 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
    * Just returns a reference to this object, which implements the RowCounterService interface.
    */
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   /**

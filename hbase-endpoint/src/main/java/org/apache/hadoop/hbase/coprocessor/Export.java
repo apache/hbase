@@ -22,10 +22,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -313,8 +313,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override

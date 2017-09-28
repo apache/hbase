@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +40,6 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
-
 /**
  * The aggregation implementation at a region.
  */
@@ -50,8 +49,8 @@ implements RegionCoprocessor {
   private RegionCoprocessorEnvironment env = null;
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override

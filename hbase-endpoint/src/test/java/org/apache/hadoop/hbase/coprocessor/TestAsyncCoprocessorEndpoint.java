@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Collections;
 
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
@@ -131,8 +131,8 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     public DummyRegionServerEndpoint() {}
 
     @Override
-    public Optional<Service> getService() {
-      return Optional.of(this);
+    public Iterable<Service> getServices() {
+      return Collections.singleton(this);
     }
 
     @Override
