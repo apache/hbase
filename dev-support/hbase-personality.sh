@@ -267,8 +267,8 @@ function hadoopcheck_rebuild
     echo_and_redirect "${logfile}" \
       "${MAVEN}" clean install \
         -DskipTests -DHBasePatchProcess \
-        -Dhadoop-three.version="${hadoopver} \
-        -Dhadoop.profile=3.0"
+        -Dhadoop-three.version="${hadoopver}" \
+        -Dhadoop.profile=3.0
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
