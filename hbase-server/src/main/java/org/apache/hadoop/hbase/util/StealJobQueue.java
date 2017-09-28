@@ -50,21 +50,7 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
   private final transient Condition notEmpty = lock.newCondition();
 
   public StealJobQueue(Comparator<? super T> comparator) {
-    this.stealFromQueue = new PriorityBlockingQueue<T>(11, comparator) {
-
-      private static final long serialVersionUID = -7070010365201826904L;
-
-      @Override
-      public boolean offer(T t) {
-        lock.lock();
-        try {
-          notEmpty.signal();
-          return super.offer(t);
-        } finally {
-          lock.unlock();
-        }
-      }
-    };
+    this(11, 11, comparator);
   }
 
   public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity,
