@@ -21,9 +21,9 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -58,7 +58,7 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
     doPut(table, 1);
     server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
-    HRegionInfo hri = server.getRegions(table.getName()).get(0).getRegionInfo();
+    RegionInfo hri = server.getRegions(table.getName()).get(0).getRegionInfo();
     AsyncFSWAL wal = (AsyncFSWAL) server.getWAL(hri);
     int numRolledLogFiles = AsyncFSWALProvider.getNumRolledLogFiles(wal);
     DatanodeInfo[] dnInfos = wal.getPipeline();

@@ -17,21 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import static java.util.stream.Collectors.toCollection;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import static java.util.stream.Collectors.toCollection;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
@@ -39,6 +36,9 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.htrace.Span;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A WAL Entry for {@link AbstractFSWAL} implementation.  Immutable.
@@ -54,17 +54,17 @@ class FSWALEntry extends Entry {
   // they are only in memory and held here while passing over the ring buffer.
   private final transient long txid;
   private final transient boolean inMemstore;
-  private final transient HRegionInfo hri;
+  private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
 
   // The tracing span for this entry when writing WAL.
   private transient Span span;
 
   FSWALEntry(final long txid, final WALKey key, final WALEdit edit,
-      final HRegionInfo hri, final boolean inMemstore) {
+      final RegionInfo regionInfo, final boolean inMemstore) {
     super(key, edit);
     this.inMemstore = inMemstore;
-    this.hri = hri;
+    this.regionInfo = regionInfo;
     this.txid = txid;
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
@@ -96,8 +96,8 @@ class FSWALEntry extends Entry {
     return this.inMemstore;
   }
 
-  HRegionInfo getHRegionInfo() {
-    return this.hri;
+  RegionInfo getRegionInfo() {
+    return this.regionInfo;
   }
 
   /**

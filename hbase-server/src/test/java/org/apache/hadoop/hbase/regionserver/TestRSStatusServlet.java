@@ -22,15 +22,19 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
+import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
@@ -45,16 +49,12 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.MetricsHBaseServer;
-import org.apache.hadoop.hbase.ipc.MetricsHBaseServerWrapperStub;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 
 /**
  * Tests for the region server status page and its template.
@@ -101,7 +101,7 @@ public class TestRSStatusServlet {
     CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
     Mockito.doReturn(null).when(cacheConf).getBlockCache();
     Mockito.doReturn(cacheConf).when(rs).getCacheConfig();
-    
+
     // Fake MasterAddressTracker
     MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);
     Mockito.doReturn(fakeMasterAddress).when(mat).getMasterAddress();
@@ -115,23 +115,28 @@ public class TestRSStatusServlet {
     Mockito.doReturn(new MetricsHBaseServerWrapperStub()).when(ms).getHBaseServerWrapper();
     Mockito.doReturn(ms).when(rpcServer).getMetrics();
   }
-  
+
   @Test
   public void testBasic() throws IOException, ServiceException {
     new RSStatusTmpl().render(new StringWriter(), rs);
   }
-  
+
   @Test
   public void testWithRegions() throws IOException, ServiceException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    List<HRegionInfo> regions = Lists.newArrayList(
-        new HRegionInfo(htd.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("d")),
-        new HRegionInfo(htd.getTableName(), Bytes.toBytes("d"), Bytes.toBytes("z"))
+    List<RegionInfo> regions = Lists.newArrayList(
+        RegionInfoBuilder.newBuilder(htd.getTableName())
+            .setStartKey(Bytes.toBytes("a"))
+            .setEndKey(Bytes.toBytes("d"))
+            .build(),
+        RegionInfoBuilder.newBuilder(htd.getTableName())
+            .setStartKey(Bytes.toBytes("d"))
+            .setEndKey(Bytes.toBytes("z"))
+            .build()
         );
     Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(
       regions)).when(rpcServices).getOnlineRegion((RpcController)Mockito.any(),
         (GetOnlineRegionRequest)Mockito.any());
-    
     new RSStatusTmpl().render(new StringWriter(), rs);
   }
 }

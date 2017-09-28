@@ -18,11 +18,22 @@
 
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.Assert.assertEquals;
+
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -34,16 +45,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionStates {
@@ -97,7 +98,7 @@ public class TestRegionStates {
 
   @Test
   public void testRegionDoubleCreation() throws Exception {
-    // NOTE: HRegionInfo sort by table first, so we are relying on that
+    // NOTE: RegionInfo sort by table first, so we are relying on that
     final TableName TABLE_NAME_A = TableName.valueOf("testOrderedByTableA");
     final TableName TABLE_NAME_B = TableName.valueOf("testOrderedByTableB");
     final TableName TABLE_NAME_C = TableName.valueOf("testOrderedByTableC");
@@ -129,7 +130,7 @@ public class TestRegionStates {
 
   private void checkTableRegions(final RegionStates stateMap,
       final TableName tableName, final int nregions) {
-    List<HRegionInfo> hris = stateMap.getRegionsOfTable(tableName, true);
+    List<RegionInfo> hris = stateMap.getRegionsOfTable(tableName, true);
     assertEquals(nregions, hris.size());
     for (int i = 1; i < hris.size(); ++i) {
       long a = Bytes.toLong(hris.get(i - 1).getStartKey());
@@ -143,9 +144,12 @@ public class TestRegionStates {
     executorService.submit(new Callable<Object>() {
       @Override
       public Object call() {
-        HRegionInfo hri = new HRegionInfo(tableName,
-          Bytes.toBytes(regionId), Bytes.toBytes(regionId + 1), false, 0);
-        return stateMap.getOrCreateRegionNode(hri);
+        return stateMap.getOrCreateRegionNode(RegionInfoBuilder.newBuilder(tableName)
+            .setStartKey(Bytes.toBytes(regionId))
+            .setEndKey(Bytes.toBytes(regionId + 1))
+            .setSplit(false)
+            .setRegionId(0)
+            .build());
       }
     });
   }
@@ -155,9 +159,13 @@ public class TestRegionStates {
     return stateMap.getOrCreateRegionNode(createRegionInfo(tableName, regionId));
   }
 
-  private HRegionInfo createRegionInfo(final TableName tableName, final long regionId) {
-    return new HRegionInfo(tableName,
-      Bytes.toBytes(regionId), Bytes.toBytes(regionId + 1), false, 0);
+  private RegionInfo createRegionInfo(final TableName tableName, final long regionId) {
+    return RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes(regionId))
+        .setEndKey(Bytes.toBytes(regionId + 1))
+        .setSplit(false)
+        .setRegionId(0)
+        .build();
   }
 
   @Test
@@ -172,7 +180,7 @@ public class TestRegionStates {
       executorService.submit(new Callable<Object>() {
         @Override
         public Object call() {
-          HRegionInfo hri = createRegionInfo(TABLE_NAME, regionId);
+          RegionInfo hri = createRegionInfo(TABLE_NAME, regionId);
           return stateMap.getOrCreateRegionNode(hri);
         }
       });
@@ -189,7 +197,7 @@ public class TestRegionStates {
       executorService.submit(new Callable<Object>() {
         @Override
         public Object call() {
-          HRegionInfo hri = createRegionInfo(TABLE_NAME, regionId);
+          RegionInfo hri = createRegionInfo(TABLE_NAME, regionId);
           return stateMap.getRegionState(hri);
         }
       });

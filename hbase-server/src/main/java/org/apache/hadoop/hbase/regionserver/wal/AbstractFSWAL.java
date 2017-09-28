@@ -21,8 +21,6 @@ import static org.apache.hadoop.hbase.shaded.com.google.common.base.Precondition
 import static org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
 
-import com.lmax.disruptor.RingBuffer;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.management.MemoryType;
@@ -57,12 +55,10 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -80,6 +76,11 @@ import org.apache.htrace.NullScope;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+
+import com.lmax.disruptor.RingBuffer;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -908,7 +909,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
 
     // Coprocessor hook.
-    if (!coprocessorHost.preWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit())) {
+    if (!coprocessorHost.preWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit())) {
       if (entry.getEdit().isReplay()) {
         // Set replication scope null so that this won't be replicated
         entry.getKey().serializeReplicationScope(false);
@@ -924,7 +925,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     highestUnsyncedTxid = entry.getTxid();
     sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
       entry.isInMemstore());
-    coprocessorHost.postWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit());
+    coprocessorHost.postWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     // Update metrics.
     postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
     numEntries.incrementAndGet();
@@ -958,7 +959,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
-  protected long stampSequenceIdAndPublishToRingBuffer(HRegionInfo hri, WALKey key, WALEdit edits,
+  protected long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKey key, WALEdit edits,
       boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
       throws IOException {
     if (this.closed) {
@@ -1021,7 +1022,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * this append; otherwise, you will just have to wait on the WriteEntry to get filled in.
    */
   @Override
-  public abstract long append(HRegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
+  public abstract long append(RegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
       throws IOException;
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;

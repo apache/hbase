@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -42,10 +41,11 @@ import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
@@ -141,7 +141,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     int splitRowNum = startRowNum + rowCount / 2;
@@ -175,7 +175,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
@@ -205,7 +205,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     // Split to two daughters with one of them only has 1 row
@@ -236,7 +236,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     // Split to two daughters with one of them only has 1 row
@@ -272,7 +272,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     // Split to two daughters with one of them only has 1 row
@@ -318,7 +318,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
 
@@ -347,7 +347,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     int splitRowNum = startRowNum + rowCount / 2;
@@ -387,7 +387,7 @@ public class TestSplitTableRegionProcedure {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
     int splitRowNum = startRowNum + rowCount / 2;

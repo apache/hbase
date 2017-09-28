@@ -30,11 +30,11 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
@@ -146,9 +146,9 @@ public class TestMergeTableRegionsProcedure {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    List<HRegionInfo> tableRegions = createTable(tableName);
+    List<RegionInfo> tableRegions = createTable(tableName);
 
-    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
+    RegionInfo[] regionsToMerge = new RegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -169,7 +169,7 @@ public class TestMergeTableRegionsProcedure {
     assertEquals(unassignSubmittedCount + 2, unassignProcMetrics.getSubmittedCounter().getCount());
     assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
 
-    Pair<HRegionInfo, HRegionInfo> pair =
+    Pair<RegionInfo, RegionInfo> pair =
       MetaTableAccessor.getRegionsFromMergeQualifier(UTIL.getConnection(),
         proc.getMergedRegion().getRegionName());
     assertTrue(pair.getFirst() != null && pair.getSecond() != null);
@@ -194,10 +194,10 @@ public class TestMergeTableRegionsProcedure {
     final TableName tableName = TableName.valueOf("testMergeRegionsConcurrently");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    List<HRegionInfo> tableRegions = createTable(tableName);
+    List<RegionInfo> tableRegions = createTable(tableName);
 
-    HRegionInfo[] regionsToMerge1 = new HRegionInfo[2];
-    HRegionInfo[] regionsToMerge2 = new HRegionInfo[2];
+    RegionInfo[] regionsToMerge1 = new RegionInfo[2];
+    RegionInfo[] regionsToMerge2 = new RegionInfo[2];
     regionsToMerge1[0] = tableRegions.get(0);
     regionsToMerge1[1] = tableRegions.get(1);
     regionsToMerge2[0] = tableRegions.get(2);
@@ -229,12 +229,12 @@ public class TestMergeTableRegionsProcedure {
     final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    List<HRegionInfo> tableRegions = createTable(tableName);
+    List<RegionInfo> tableRegions = createTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
+    RegionInfo[] regionsToMerge = new RegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -253,12 +253,12 @@ public class TestMergeTableRegionsProcedure {
     final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    List<HRegionInfo> tableRegions = createTable(tableName);
+    List<RegionInfo> tableRegions = createTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
+    RegionInfo[] regionsToMerge = new RegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -272,7 +272,7 @@ public class TestMergeTableRegionsProcedure {
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
   }
 
-  private List<HRegionInfo> createTable(final TableName tableName)
+  private List<RegionInfo> createTable(final TableName tableName)
       throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
@@ -284,10 +284,10 @@ public class TestMergeTableRegionsProcedure {
     return assertRegionCount(tableName, initialRegionCount);
   }
 
-  public List<HRegionInfo> assertRegionCount(final TableName tableName, final int nregions)
+  public List<RegionInfo> assertRegionCount(final TableName tableName, final int nregions)
       throws Exception {
     UTIL.waitUntilNoRegionsInTransition();
-    List<HRegionInfo> tableRegions = admin.getTableRegions(tableName);
+    List<RegionInfo> tableRegions = admin.getRegions(tableName);
     assertEquals(nregions, tableRegions.size());
     return tableRegions;
   }

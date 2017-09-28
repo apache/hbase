@@ -22,14 +22,15 @@ import java.security.PrivilegedAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * Handles processing region splits. Put in a queue, owned by HRegionServer.
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 class SplitRequest implements Runnable {
   private static final Log LOG = LogFactory.getLog(SplitRequest.class);
-  private final HRegionInfo parent;
+  private final RegionInfo parent;
   private final byte[] midKey;
   private final HRegionServer server;
   private final User user;
@@ -72,8 +73,14 @@ class SplitRequest implements Runnable {
 
   private void requestRegionSplit() {
     final TableName table = parent.getTable();
-    final HRegionInfo hri_a = new HRegionInfo(table, parent.getStartKey(), midKey);
-    final HRegionInfo hri_b = new HRegionInfo(table, midKey, parent.getEndKey());
+    final RegionInfo hri_a = RegionInfoBuilder.newBuilder(table)
+        .setStartKey(parent.getStartKey())
+        .setEndKey(midKey)
+        .build();
+    final RegionInfo hri_b = RegionInfoBuilder.newBuilder(table)
+        .setStartKey(midKey)
+        .setEndKey(parent.getEndKey())
+        .build();
     // Send the split request to the master. the master will do the validation on the split-key.
     // The parent region will be unassigned and the two new regions will be assigned.
     // hri_a and hri_b objects may not reflect the regions that will be created, those objects

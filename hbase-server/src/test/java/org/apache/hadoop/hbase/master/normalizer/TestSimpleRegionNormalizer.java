@@ -32,16 +32,13 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,6 +48,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 
 /**
  * Tests logic of {@link SimpleRegionNormalizer}.
@@ -76,10 +78,10 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testNoNormalizationForMetaTable() throws HBaseIOException {
     TableName testTable = TableName.META_TABLE_NAME;
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(testTable);
     assertTrue(plans == null);
   }
@@ -87,18 +89,23 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testNoNormalizationIfTooFewRegions() throws HBaseIOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
-
-    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
-    hris.add(hri1);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
     regionSizes.put(hri1.getRegionName(), 10);
 
-    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
-    hris.add(hri2);
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
     regionSizes.put(hri2.getRegionName(), 15);
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
     assertTrue(plans == null);
   }
@@ -106,26 +113,37 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testNoNormalizationOnNormalizedCluster() throws HBaseIOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
-    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
-    hris.add(hri1);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
     regionSizes.put(hri1.getRegionName(), 10);
 
-    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
-    hris.add(hri2);
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
     regionSizes.put(hri2.getRegionName(), 15);
 
-    HRegionInfo hri3 = new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
-    hris.add(hri3);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ccc"))
+        .setEndKey(Bytes.toBytes("ddd"))
+        .build();
+    RegionInfo.add(hri3);
     regionSizes.put(hri3.getRegionName(), 8);
 
-    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
-    hris.add(hri4);
+    RegionInfo hri4 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ddd"))
+        .setEndKey(Bytes.toBytes("eee"))
+        .build();
     regionSizes.put(hri4.getRegionName(), 10);
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
     assertTrue(plans == null);
   }
@@ -133,30 +151,45 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testMergeOfSmallRegions() throws HBaseIOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
-    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
-    hris.add(hri1);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
     regionSizes.put(hri1.getRegionName(), 15);
 
-    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
-    hris.add(hri2);
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
     regionSizes.put(hri2.getRegionName(), 5);
 
-    HRegionInfo hri3 = new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
-    hris.add(hri3);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ccc"))
+        .setEndKey(Bytes.toBytes("ddd"))
+        .build();
+    RegionInfo.add(hri3);
     regionSizes.put(hri3.getRegionName(), 5);
 
-    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
-    hris.add(hri4);
+    RegionInfo hri4 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ddd"))
+        .setEndKey(Bytes.toBytes("eee"))
+        .build();
+    RegionInfo.add(hri4);
     regionSizes.put(hri4.getRegionName(), 15);
 
-    HRegionInfo hri5 = new HRegionInfo(tableName, Bytes.toBytes("eee"), Bytes.toBytes("fff"));
-    hris.add(hri5);
+    RegionInfo hri5 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("eee"))
+        .setEndKey(Bytes.toBytes("fff"))
+        .build();
+    RegionInfo.add(hri5);
     regionSizes.put(hri5.getRegionName(), 16);
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
 
     NormalizationPlan plan = plans.get(0);
@@ -169,34 +202,52 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testMergeOfSecondSmallestRegions() throws HBaseIOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
-    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
-    hris.add(hri1);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
     regionSizes.put(hri1.getRegionName(), 1);
 
-    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
-    hris.add(hri2);
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
     regionSizes.put(hri2.getRegionName(), 10000);
 
-    HRegionInfo hri3 = new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
-    hris.add(hri3);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ccc"))
+        .setEndKey(Bytes.toBytes("ddd"))
+        .build();
+    RegionInfo.add(hri3);
     regionSizes.put(hri3.getRegionName(), 10000);
 
-    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
-    hris.add(hri4);
+    RegionInfo hri4 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ddd"))
+        .setEndKey(Bytes.toBytes("eee"))
+        .build();
+    RegionInfo.add(hri4);
     regionSizes.put(hri4.getRegionName(), 10000);
 
-    HRegionInfo hri5 = new HRegionInfo(tableName, Bytes.toBytes("eee"), Bytes.toBytes("fff"));
-    hris.add(hri5);
+    RegionInfo hri5 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("eee"))
+        .setEndKey(Bytes.toBytes("fff"))
+        .build();
+    RegionInfo.add(hri5);
     regionSizes.put(hri5.getRegionName(), 2700);
 
-    HRegionInfo hri6 = new HRegionInfo(tableName, Bytes.toBytes("fff"), Bytes.toBytes("ggg"));
-    hris.add(hri6);
+    RegionInfo hri6 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("fff"))
+        .setEndKey(Bytes.toBytes("ggg"))
+        .build();
+    RegionInfo.add(hri6);
     regionSizes.put(hri6.getRegionName(), 2700);
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
     NormalizationPlan plan = plans.get(0);
 
@@ -208,30 +259,45 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testMergeOfSmallNonAdjacentRegions() throws HBaseIOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
-    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
-    hris.add(hri1);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
     regionSizes.put(hri1.getRegionName(), 15);
 
-    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
-    hris.add(hri2);
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
     regionSizes.put(hri2.getRegionName(), 5);
 
-    HRegionInfo hri3 = new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
-    hris.add(hri3);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ccc"))
+        .setEndKey(Bytes.toBytes("ddd"))
+        .build();
+    RegionInfo.add(hri3);
     regionSizes.put(hri3.getRegionName(), 16);
 
-    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
-    hris.add(hri4);
+    RegionInfo hri4 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ddd"))
+        .setEndKey(Bytes.toBytes("eee"))
+        .build();
+    RegionInfo.add(hri4);
     regionSizes.put(hri4.getRegionName(), 15);
 
-    HRegionInfo hri5 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
-    hris.add(hri4);
+    RegionInfo hri5 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ddd"))
+        .setEndKey(Bytes.toBytes("eee"))
+        .build();
+    RegionInfo.add(hri4);
     regionSizes.put(hri5.getRegionName(), 5);
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
 
     assertTrue(plans == null);
@@ -240,26 +306,38 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testSplitOfLargeRegion() throws HBaseIOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    List<HRegionInfo> hris = new ArrayList<>();
+    List<RegionInfo> RegionInfo = new ArrayList<>();
     Map<byte[], Integer> regionSizes = new HashMap<>();
 
-    HRegionInfo hri1 = new HRegionInfo(tableName, Bytes.toBytes("aaa"), Bytes.toBytes("bbb"));
-    hris.add(hri1);
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("aaa"))
+        .setEndKey(Bytes.toBytes("bbb"))
+        .build();
+    RegionInfo.add(hri1);
     regionSizes.put(hri1.getRegionName(), 8);
 
-    HRegionInfo hri2 = new HRegionInfo(tableName, Bytes.toBytes("bbb"), Bytes.toBytes("ccc"));
-    hris.add(hri2);
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("bbb"))
+        .setEndKey(Bytes.toBytes("ccc"))
+        .build();
+    RegionInfo.add(hri2);
     regionSizes.put(hri2.getRegionName(), 6);
 
-    HRegionInfo hri3 = new HRegionInfo(tableName, Bytes.toBytes("ccc"), Bytes.toBytes("ddd"));
-    hris.add(hri3);
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ccc"))
+        .setEndKey(Bytes.toBytes("ddd"))
+        .build();
+    RegionInfo.add(hri3);
     regionSizes.put(hri3.getRegionName(), 10);
 
-    HRegionInfo hri4 = new HRegionInfo(tableName, Bytes.toBytes("ddd"), Bytes.toBytes("eee"));
-    hris.add(hri4);
+    RegionInfo hri4 = RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes("ddd"))
+        .setEndKey(Bytes.toBytes("eee"))
+        .build();
+    RegionInfo.add(hri4);
     regionSizes.put(hri4.getRegionName(), 30);
 
-    setupMocksForNormalizer(regionSizes, hris);
+    setupMocksForNormalizer(regionSizes, RegionInfo);
     List<NormalizationPlan> plans = normalizer.computePlanForTable(tableName);
     NormalizationPlan plan = plans.get(0);
 
@@ -268,16 +346,16 @@ public class TestSimpleRegionNormalizer {
   }
 
   protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
-                                         List<HRegionInfo> hris) {
+                                         List<RegionInfo> RegionInfo) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
     masterRpcServices = Mockito.mock(MasterRpcServices.class, RETURNS_DEEP_STUBS);
 
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 1L);
     when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionsOfTable(any(TableName.class))).thenReturn(hris);
+      getRegionsOfTable(any(TableName.class))).thenReturn(RegionInfo);
     when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionServerOfRegion(any(HRegionInfo.class))).thenReturn(sn);
+      getRegionServerOfRegion(any(RegionInfo.class))).thenReturn(sn);
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionLoad regionLoad = Mockito.mock(RegionLoad.class);

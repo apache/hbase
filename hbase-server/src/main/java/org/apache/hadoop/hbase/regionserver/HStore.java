@@ -59,11 +59,11 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -467,13 +467,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   /**
    * @param tabledir {@link Path} to where the table is being stored
-   * @param hri {@link HRegionInfo} for the region.
+   * @param hri {@link RegionInfo} for the region.
    * @param family {@link ColumnFamilyDescriptor} describing the column family
    * @return Path to family/Store home directory.
    */
   @Deprecated
   public static Path getStoreHomedir(final Path tabledir,
-      final HRegionInfo hri, final byte[] family) {
+      final RegionInfo hri, final byte[] family) {
     return getStoreHomedir(tabledir, hri.getEncodedName(), family);
   }
 
@@ -1454,7 +1454,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         filesCompacted.stream().map(HStoreFile::getPath).collect(Collectors.toList());
     List<Path> outputPaths =
         newFiles.stream().map(HStoreFile::getPath).collect(Collectors.toList());
-    HRegionInfo info = this.region.getRegionInfo();
+    RegionInfo info = this.region.getRegionInfo();
     CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
         family.getName(), inputPaths, outputPaths, fs.getStoreDir(getColumnFamilyDescriptor().getNameAsString()));
     // Fix reaching into Region to get the maxWaitForSeqId.
@@ -2142,7 +2142,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   @Override
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return this.fs.getRegionInfo();
   }
 
@@ -2452,7 +2452,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public boolean isPrimaryReplicaStore() {
-	   return getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID;
+    return getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID;
   }
 
   /**

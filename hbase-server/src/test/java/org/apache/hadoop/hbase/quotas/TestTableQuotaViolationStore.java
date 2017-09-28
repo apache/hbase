@@ -29,18 +29,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
@@ -48,6 +45,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
  * Test class for {@link TableQuotaSnapshotStore}.
@@ -58,7 +60,7 @@ public class TestTableQuotaViolationStore {
 
   private Connection conn;
   private QuotaObserverChore chore;
-  private Map<HRegionInfo, Long> regionReports;
+  private Map<RegionInfo, Long> regionReports;
   private TableQuotaSnapshotStore store;
 
   @Before
@@ -78,13 +80,22 @@ public class TestTableQuotaViolationStore {
     assertEquals(0, size(store.filterBySubject(tn1)));
 
     for (int i = 0; i < 5; i++) {
-      regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     for (int i = 0; i < 3; i++) {
-      regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     for (int i = 0; i < 10; i++) {
-      regionReports.put(new HRegionInfo(tn3, Bytes.toBytes(i), Bytes.toBytes(i+1)), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 0L);
     }
     assertEquals(18, regionReports.size());
     assertEquals(5, size(store.filterBySubject(tn1)));
@@ -106,14 +117,23 @@ public class TestTableQuotaViolationStore {
     // Create some junk data to filter. Makes sure it's so large that it would
     // immediately violate the quota.
     for (int i = 0; i < 3; i++) {
-      regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(i), Bytes.toBytes(i + 1)),
-          5L * ONE_MEGABYTE);
-      regionReports.put(new HRegionInfo(tn3, Bytes.toBytes(i), Bytes.toBytes(i + 1)),
-          5L * ONE_MEGABYTE);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
+              .setStartKey(Bytes.toBytes(i))
+              .setEndKey(Bytes.toBytes(i + 1))
+              .build(), 5L * ONE_MEGABYTE);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
+          .setStartKey(Bytes.toBytes(i))
+          .setEndKey(Bytes.toBytes(i + 1))
+          .build(), 5L * ONE_MEGABYTE);
     }
-
-    regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(0), Bytes.toBytes(1)), 1024L * 512L);
-    regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(1), Bytes.toBytes(2)), 1024L * 256L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+        .setStartKey(Bytes.toBytes(0))
+        .setEndKey(Bytes.toBytes(1))
+        .build(), 1024L * 512L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+        .setStartKey(Bytes.toBytes(1))
+        .setEndKey(Bytes.toBytes(2))
+        .build(), 1024L * 256L);
 
     SpaceQuotaSnapshot tn1Snapshot = new SpaceQuotaSnapshot(
         SpaceQuotaStatus.notInViolation(), 1024L * 768L, 1024L * 1024L);
@@ -121,13 +141,20 @@ public class TestTableQuotaViolationStore {
     // Below the quota
     assertEquals(tn1Snapshot, store.getTargetState(tn1, quota));
 
-    regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(2), Bytes.toBytes(3)), 1024L * 256L);
+
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+        .setStartKey(Bytes.toBytes(2))
+        .setEndKey(Bytes.toBytes(3))
+        .build(), 1024L * 256L);
     tn1Snapshot = new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 1024L * 1024L, 1024L * 1024L);
 
     // Equal to the quota is still in observance
     assertEquals(tn1Snapshot, store.getTargetState(tn1, quota));
 
-    regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(3), Bytes.toBytes(4)), 1024L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
+        .setStartKey(Bytes.toBytes(3))
+        .setEndKey(Bytes.toBytes(4))
+        .build(), 1024L);
     tn1Snapshot = new SpaceQuotaSnapshot(
         new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 1024L * 1024L + 1024L, 1024L * 1024L);
 

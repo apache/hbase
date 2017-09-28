@@ -34,14 +34,13 @@ import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -227,13 +226,13 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     // Check if regions match with the regionLoad from the server
     Collection<ServerName> servers = admin.getRegionServers().get();
     for (ServerName serverName : servers) {
-      List<HRegionInfo> regions = admin.getOnlineRegions(serverName).get();
+      List<RegionInfo> regions = admin.getOnlineRegions(serverName).get();
       checkRegionsAndRegionLoads(regions, admin.getRegionLoads(serverName).get());
     }
 
     // Check if regionLoad matches the table's regions and nothing is missed
     for (TableName table : tables) {
-      List<HRegionInfo> tableRegions = admin.getTableRegions(table).get();
+      List<RegionInfo> tableRegions = admin.getTableRegions(table).get();
       List<RegionLoad> regionLoads = Lists.newArrayList();
       for (ServerName serverName : servers) {
         regionLoads.addAll(admin.getRegionLoads(serverName, Optional.of(table)).get());
@@ -268,7 +267,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  private void checkRegionsAndRegionLoads(Collection<HRegionInfo> regions,
+  private void checkRegionsAndRegionLoads(Collection<RegionInfo> regions,
       Collection<RegionLoad> regionLoads) {
 
     assertEquals("No of regions and regionloads doesn't match", regions.size(), regionLoads.size());
@@ -277,7 +276,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     for (RegionLoad regionLoad : regionLoads) {
       regionLoadMap.put(regionLoad.getName(), regionLoad);
     }
-    for (HRegionInfo info : regions) {
+    for (RegionInfo info : regions) {
       assertTrue("Region not in regionLoadMap region:" + info.getRegionNameAsString()
           + " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
     }

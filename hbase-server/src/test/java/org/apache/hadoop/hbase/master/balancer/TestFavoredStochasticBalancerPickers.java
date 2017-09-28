@@ -29,26 +29,25 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.RackManager;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -58,6 +57,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 
 @Category(LargeTests.class)
 public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
@@ -116,7 +116,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     ServerName source = getRSWithMaxRegions(Lists.newArrayList(masterServerName, mostLoadedServer));
     assertNotNull(source);
     int regionsToMove = admin.getOnlineRegions(source).size()/2;
-    List<HRegionInfo> hris = admin.getOnlineRegions(source);
+    List<RegionInfo> hris = admin.getRegions(source);
     for (int i = 0; i < regionsToMove; i++) {
       admin.move(hris.get(i).getEncodedNameAsBytes(), Bytes.toBytes(mostLoadedServer.getServerName()));
       LOG.info("Moving region: " + hris.get(i).getRegionNameAsString() + " to " + mostLoadedServer);
@@ -132,11 +132,11 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     });
     TEST_UTIL.getHBaseCluster().startRegionServerAndWait(60000);
 
-    Map<ServerName, List<HRegionInfo>> serverAssignments = Maps.newHashMap();
+    Map<ServerName, List<RegionInfo>> serverAssignments = Maps.newHashMap();
     ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
     for (ServerName sn : status.getServers()) {
       if (!ServerName.isSameAddress(sn, masterServerName)) {
-        serverAssignments.put(sn, admin.getOnlineRegions(sn));
+        serverAssignments.put(sn, admin.getRegions(sn));
       }
     }
     RegionLocationFinder regionFinder = new RegionLocationFinder();
@@ -165,7 +165,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
         Cluster.Action action = loadPicker.generate(cluster);
         if (action.type == Cluster.Action.Type.MOVE_REGION) {
           Cluster.MoveRegionAction moveRegionAction = (Cluster.MoveRegionAction) action;
-          HRegionInfo region = cluster.regions[moveRegionAction.region];
+          RegionInfo region = cluster.regions[moveRegionAction.region];
           assertNotEquals(-1, moveRegionAction.toServer);
           ServerName destinationServer = cluster.servers[moveRegionAction.toServer];
           assertEquals(cluster.servers[moveRegionAction.fromServer], mostLoadedServer);

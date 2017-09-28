@@ -31,22 +31,22 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
 
 /**
  * Master Quota Manager.
@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 @InterfaceStability.Evolving
 public class MasterQuotaManager implements RegionStateListener {
   private static final Log LOG = LogFactory.getLog(MasterQuotaManager.class);
-  private static final Map<HRegionInfo, Long> EMPTY_MAP = Collections.unmodifiableMap(
+  private static final Map<RegionInfo, Long> EMPTY_MAP = Collections.unmodifiableMap(
       new HashMap<>());
 
   private final MasterServices masterServices;
@@ -69,7 +69,7 @@ public class MasterQuotaManager implements RegionStateListener {
   private NamedLock<String> userLocks;
   private boolean initialized = false;
   private NamespaceAuditor namespaceQuotaManager;
-  private ConcurrentHashMap<HRegionInfo, SizeSnapshotWithTimestamp> regionSizes;
+  private ConcurrentHashMap<RegionInfo, SizeSnapshotWithTimestamp> regionSizes;
 
   public MasterQuotaManager(final MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -367,14 +367,14 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   @Override
-  public void onRegionMerged(HRegionInfo mergedRegion) throws IOException {
+  public void onRegionMerged(RegionInfo mergedRegion) throws IOException {
     if (initialized) {
       namespaceQuotaManager.updateQuotaForRegionMerge(mergedRegion);
     }
   }
 
   @Override
-  public void onRegionSplit(HRegionInfo hri) throws IOException {
+  public void onRegionSplit(RegionInfo hri) throws IOException {
     if (initialized) {
       namespaceQuotaManager.checkQuotaToSplitRegion(hri);
     }
@@ -476,7 +476,7 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   @Override
-  public void onRegionSplitReverted(HRegionInfo hri) throws IOException {
+  public void onRegionSplitReverted(RegionInfo hri) throws IOException {
     if (initialized) {
       this.namespaceQuotaManager.removeRegionFromNamespaceUsage(hri);
     }
@@ -530,20 +530,20 @@ public class MasterQuotaManager implements RegionStateListener {
     this.regionSizes = new ConcurrentHashMap<>();
   }
 
-  public void addRegionSize(HRegionInfo hri, long size, long time) {
+  public void addRegionSize(RegionInfo hri, long size, long time) {
     if (regionSizes == null) {
       return;
     }
     regionSizes.put(hri, new SizeSnapshotWithTimestamp(size, time));
   }
 
-  public Map<HRegionInfo, Long> snapshotRegionSizes() {
+  public Map<RegionInfo, Long> snapshotRegionSizes() {
     if (regionSizes == null) {
       return EMPTY_MAP;
     }
 
-    Map<HRegionInfo, Long> copy = new HashMap<>();
-    for (Entry<HRegionInfo, SizeSnapshotWithTimestamp> entry : regionSizes.entrySet()) {
+    Map<RegionInfo, Long> copy = new HashMap<>();
+    for (Entry<RegionInfo, SizeSnapshotWithTimestamp> entry : regionSizes.entrySet()) {
       copy.put(entry.getKey(), entry.getValue().getSize());
     }
     return copy;
@@ -554,7 +554,7 @@ public class MasterQuotaManager implements RegionStateListener {
       return 0;
     }
     int numEntriesRemoved = 0;
-    Iterator<Entry<HRegionInfo,SizeSnapshotWithTimestamp>> iterator =
+    Iterator<Entry<RegionInfo,SizeSnapshotWithTimestamp>> iterator =
         regionSizes.entrySet().iterator();
     while (iterator.hasNext()) {
       long currentEntryTime = iterator.next().getValue().getTime();

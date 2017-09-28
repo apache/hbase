@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -43,6 +42,8 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -170,7 +171,7 @@ public class OfflineMetaRebuildTestCore {
     }
 
     for (HRegionLocation e : regions) {
-      HRegionInfo hri = e.getRegionInfo();
+      RegionInfo hri = e.getRegionInfo();
       ServerName hsa = e.getServerName();
       if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
           && Bytes.compareTo(hri.getEndKey(), endKey) == 0) {
@@ -199,11 +200,14 @@ public class OfflineMetaRebuildTestCore {
     dumpMeta(htd);
   }
 
-  protected HRegionInfo createRegion(Configuration conf, final Table htbl,
+  protected RegionInfo createRegion(Configuration conf, final Table htbl,
       byte[] startKey, byte[] endKey) throws IOException {
     Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     HTableDescriptor htd = htbl.getTableDescriptor();
-    HRegionInfo hri = new HRegionInfo(htbl.getName(), startKey, endKey);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(htbl.getName())
+        .setStartKey(startKey)
+        .setEndKey(endKey)
+        .build();
 
     LOG.info("manually adding regioninfo and hdfs data: " + hri.toString());
     Path rootDir = FSUtils.getRootDir(conf);
@@ -213,7 +217,7 @@ public class OfflineMetaRebuildTestCore {
     fs.mkdirs(p);
     Path riPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
     FSDataOutputStream out = fs.create(riPath);
-    out.write(hri.toDelimitedByteArray());
+    out.write(RegionInfo.toDelimitedByteArray(hri));
     out.close();
 
     // add to meta.
@@ -230,8 +234,8 @@ public class OfflineMetaRebuildTestCore {
     ResultScanner scanner = meta.getScanner(s);
     List<Delete> dels = new ArrayList<>();
     for (Result r : scanner) {
-      HRegionInfo info =
-          MetaTableAccessor.getHRegionInfo(r);
+      RegionInfo info =
+          MetaTableAccessor.getRegionInfo(r);
       if(info != null && !info.getTable().getNamespaceAsString()
           .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
         Delete d = new Delete(r.getRow());

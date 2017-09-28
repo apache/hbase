@@ -34,9 +34,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -61,7 +60,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(regionSizes)))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     final Region region = mockRegionWithSize(regionSizes);
     when(rs.getRegions()).thenReturn(Arrays.asList(region));
@@ -78,7 +77,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(regionSizes)))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     final Region region = mockRegionWithSize(regionSizes);
     when(rs.getRegions()).thenReturn(Arrays.asList(region));
@@ -102,7 +101,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1Sum, r2Sum, r3Sum))))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionWithSize(r2Sizes);
@@ -167,7 +166,7 @@ public class TestFileSystemUtilizationChore {
     };
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(leftover1Sum, leftover2Sum))))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     // We shouldn't compute all of these region sizes, just the leftovers
     final Region r1 = mockRegionWithSize(Arrays.asList(1024L, 2048L));
@@ -199,7 +198,7 @@ public class TestFileSystemUtilizationChore {
     };
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(leftover1Sum))))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     // We shouldn't compute all of these region sizes, just the leftovers
     final Region r1 = mockRegionWithSize(Arrays.asList(1024L, 2048L));
@@ -225,7 +224,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1Sum))))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockSplitParentRegionWithSize(r2Sizes);
@@ -247,7 +246,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(r1Sum))
         .when(rs)
-        .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionReplicaWithSize(r2Sizes);
@@ -274,7 +273,7 @@ public class TestFileSystemUtilizationChore {
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(
         sum(Arrays.asList(r1HFileSizeSum, r2HFileSizeSum))))
-        .when(rs).reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+        .when(rs).reportRegionSizesForQuotas((Map<RegionInfo,Long>) any(Map.class));
 
     final Region r1 = mockRegionWithHFileLinks(r1StoreFileSizes, r1HFileSizes);
     final Region r2 = mockRegionWithHFileLinks(r2StoreFileSizes, r2HFileSizes);
@@ -321,7 +320,7 @@ public class TestFileSystemUtilizationChore {
    */
   private Region mockRegionWithSize(Collection<Long> storeSizes) {
     final Region r = mock(Region.class);
-    final HRegionInfo info = mock(HRegionInfo.class);
+    final RegionInfo info = mock(RegionInfo.class);
     when(r.getRegionInfo()).thenReturn(info);
     List<Store> stores = new ArrayList<>();
     when(r.getStores()).thenReturn((List) stores);
@@ -335,7 +334,7 @@ public class TestFileSystemUtilizationChore {
 
   private Region mockRegionWithHFileLinks(Collection<Long> storeSizes, Collection<Long> hfileSizes) {
     final Region r = mock(Region.class);
-    final HRegionInfo info = mock(HRegionInfo.class);
+    final RegionInfo info = mock(RegionInfo.class);
     when(r.getRegionInfo()).thenReturn(info);
     List<Store> stores = new ArrayList<>();
     when(r.getStores()).thenReturn((List) stores);
@@ -363,7 +362,7 @@ public class TestFileSystemUtilizationChore {
    */
   private Region mockSplitParentRegionWithSize(Collection<Long> storeSizes) {
     final Region r = mockRegionWithSize(storeSizes);
-    final HRegionInfo info = r.getRegionInfo();
+    final RegionInfo info = r.getRegionInfo();
     when(info.isSplitParent()).thenReturn(true);
     return r;
   }
@@ -376,7 +375,7 @@ public class TestFileSystemUtilizationChore {
    */
   private Region mockRegionReplicaWithSize(Collection<Long> storeSizes) {
     final Region r = mockRegionWithSize(storeSizes);
-    final HRegionInfo info = r.getRegionInfo();
+    final RegionInfo info = r.getRegionInfo();
     when(info.getReplicaId()).thenReturn(1);
     return r;
   }
@@ -396,7 +395,7 @@ public class TestFileSystemUtilizationChore {
       Object[] args = invocation.getArguments();
       assertEquals(1, args.length);
       @SuppressWarnings("unchecked")
-      Map<HRegionInfo,Long> regionSizes = (Map<HRegionInfo,Long>) args[0];
+      Map<RegionInfo,Long> regionSizes = (Map<RegionInfo,Long>) args[0];
       long sum = 0L;
       for (Long regionSize : regionSizes.values()) {
         sum += regionSize;

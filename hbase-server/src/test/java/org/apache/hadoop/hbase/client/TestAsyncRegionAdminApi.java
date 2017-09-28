@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,6 +56,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+
 /**
  * Class to test asynchronous region admin operations.
  */
@@ -69,10 +69,10 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   public void testCloseRegion() throws Exception {
     createTableWithDefaultConf(tableName);
 
-    HRegionInfo info = null;
+    RegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (HRegionInfo regionInfo : onlineRegions) {
+    List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
+    for (RegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.getTable().isSystemTable()) {
         info = regionInfo;
         boolean closed = admin.closeRegion(regionInfo.getRegionName(),
@@ -94,10 +94,10 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   public void testCloseRegionIfInvalidRegionNameIsPassed() throws Exception {
     createTableWithDefaultConf(tableName);
 
-    HRegionInfo info = null;
+    RegionInfo info = null;
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (HRegionInfo regionInfo : onlineRegions) {
+    List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
+    for (RegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains(tableName.getNameAsString())) {
           info = regionInfo;
@@ -123,8 +123,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName);
 
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (HRegionInfo regionInfo : onlineRegions) {
+    List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
+    for (RegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
           admin.closeRegion(regionInfo.getRegionName(), Optional.empty()).get();
@@ -139,7 +139,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
     AsyncTableRegionLocator locator = ASYNC_CONN.getRegionLocator(tableName);
     HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm")).get();
-    HRegionInfo region = regionLocation.getRegionInfo();
+    RegionInfo region = regionLocation.getRegionInfo();
     byte[] regionName = regionLocation.getRegionInfo().getRegionName();
     HRegionLocation location = rawAdmin.getRegionLocation(regionName).get();
     assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
@@ -154,7 +154,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     // assign region.
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     AssignmentManager am = master.getAssignmentManager();
-    HRegionInfo hri = am.getRegionStates().getRegionsOfTable(tableName).get(0);
+    RegionInfo hri = am.getRegionStates().getRegionsOfTable(tableName).get(0);
 
     // assert region on server
     RegionStates regionStates = am.getRegionStates();
@@ -184,7 +184,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     assertTrue(regionStates.getRegionState(hri).isClosed());
   }
 
-  HRegionInfo createTableAndGetOneRegion(final TableName tableName)
+  RegionInfo createTableAndGetOneRegion(final TableName tableName)
       throws IOException, InterruptedException, ExecutionException {
     TableDescriptor desc =
         TableDescriptorBuilder.newBuilder(tableName)
@@ -195,7 +195,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     long timeoutTime = System.currentTimeMillis() + 3000;
     while (true) {
-      List<HRegionInfo> regions =
+      List<RegionInfo> regions =
           master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
       if (regions.size() > 3) {
         return regions.get(2);
@@ -215,7 +215,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   // Will cause the Master to tell the regionserver to shut itself down because
   // regionserver is reporting the state as OPEN.
   public void testOfflineRegion() throws Exception {
-    HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    RegionInfo hri = createTableAndGetOneRegion(tableName);
 
     RegionStates regionStates =
         TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
@@ -224,7 +224,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     long timeoutTime = System.currentTimeMillis() + 3000;
     while (true) {
       if (regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OFFLINE)
-          .contains(hri)) break;
+          .stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0)) break;
       long now = System.currentTimeMillis();
       if (now > timeoutTime) {
         fail("Failed to offline the region in time");
@@ -238,21 +238,21 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testGetRegionByStateOfTable() throws Exception {
-    HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    RegionInfo hri = createTableAndGetOneRegion(tableName);
 
     RegionStates regionStates =
         TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
     assertTrue(regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OPEN)
-        .contains(hri));
+        .stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
     assertFalse(regionStates.getRegionByStateOfTable(TableName.valueOf("I_am_the_phantom"))
-        .get(RegionState.State.OPEN).contains(hri));
+        .get(RegionState.State.OPEN).stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
   }
 
   @Test
   public void testMoveRegion() throws Exception {
     admin.setBalancerOn(false).join();
 
-    HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    RegionInfo hri = createTableAndGetOneRegion(tableName);
     RawAsyncHBaseAdmin rawAdmin = (RawAsyncHBaseAdmin) ASYNC_CONN.getAdmin();
     ServerName serverName = rawAdmin.getRegionLocation(hri.getRegionName()).get().getServerName();
 
@@ -312,7 +312,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testFlushTableAndRegion() throws Exception {
-    HRegionInfo hri = createTableAndGetOneRegion(tableName);
+    RegionInfo hri = createTableAndGetOneRegion(tableName);
     ServerName serverName =
         TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
             .getRegionServerOfRegion(hri);
@@ -405,7 +405,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     // Merge switch is off so merge should NOT succeed.
     assertTrue(admin.setMergeOn(false).get());
-    List<HRegionInfo> regions = admin.getTableRegions(tableName).get();
+    List<RegionInfo> regions = admin.getTableRegions(tableName).get();
     assertTrue(regions.size() > 1);
     admin.mergeRegions(regions.get(0).getRegionName(), regions.get(1).getRegionName(), true).join();
     int count = admin.getTableRegions(tableName).get().size();
@@ -437,8 +437,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
-    HRegionInfo regionA;
-    HRegionInfo regionB;
+    RegionInfo regionA;
+    RegionInfo regionB;
 
     // merge with full name
     assertEquals(3, regionLocations.size());

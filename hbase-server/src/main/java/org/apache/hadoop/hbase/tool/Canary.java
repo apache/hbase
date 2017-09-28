@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.tool;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_ZNODE_PARENT;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -62,7 +60,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -72,13 +69,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -96,10 +93,13 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ConnectStringParser;
 import org.apache.zookeeper.data.Stat;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * HBase Canary Tool, that that can be used to do
@@ -210,34 +210,34 @@ public final class Canary implements Tool {
     private Map<String, LongAdder> perTableReadLatency = new HashMap<>();
     private LongAdder writeLatency = new LongAdder();
 
-    public void publishReadFailure(ServerName serverName, HRegionInfo region, Exception e) {
+    public void publishReadFailure(ServerName serverName, RegionInfo region, Exception e) {
       incReadFailureCount();
       LOG.error(String.format("read from region %s on regionserver %s failed", region.getRegionNameAsString(), serverName), e);
     }
 
-    public void publishReadFailure(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, Exception e) {
+    public void publishReadFailure(ServerName serverName, RegionInfo region, ColumnFamilyDescriptor column, Exception e) {
       incReadFailureCount();
       LOG.error(String.format("read from region %s on regionserver %s column family %s failed",
         region.getRegionNameAsString(), serverName, column.getNameAsString()), e);
     }
 
-    public void publishReadTiming(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, long msTime) {
+    public void publishReadTiming(ServerName serverName, RegionInfo region, ColumnFamilyDescriptor column, long msTime) {
       LOG.info(String.format("read from region %s on regionserver %s column family %s in %dms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime));
     }
 
-    public void publishWriteFailure(ServerName serverName, HRegionInfo region, Exception e) {
+    public void publishWriteFailure(ServerName serverName, RegionInfo region, Exception e) {
       incWriteFailureCount();
       LOG.error(String.format("write to region %s on regionserver %s failed", region.getRegionNameAsString(), serverName), e);
     }
 
-    public void publishWriteFailure(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, Exception e) {
+    public void publishWriteFailure(ServerName serverName, RegionInfo region, ColumnFamilyDescriptor column, Exception e) {
       incWriteFailureCount();
       LOG.error(String.format("write to region %s on regionserver %s column family %s failed",
         region.getRegionNameAsString(), serverName, column.getNameAsString()), e);
     }
 
-    public void publishWriteTiming(ServerName serverName, HRegionInfo region, ColumnFamilyDescriptor column, long msTime) {
+    public void publishWriteTiming(ServerName serverName, RegionInfo region, ColumnFamilyDescriptor column, long msTime) {
       LOG.info(String.format("write to region %s on regionserver %s column family %s in %dms",
         region.getRegionNameAsString(), serverName, column.getNameAsString(), msTime));
     }
@@ -307,14 +307,14 @@ public final class Canary implements Tool {
       READ, WRITE
     }
     private Connection connection;
-    private HRegionInfo region;
+    private RegionInfo region;
     private RegionStdOutSink sink;
     private TaskType taskType;
     private boolean rawScanEnabled;
     private ServerName serverName;
     private LongAdder readWriteLatency;
 
-    RegionTask(Connection connection, HRegionInfo region, ServerName serverName, RegionStdOutSink sink,
+    RegionTask(Connection connection, RegionInfo region, ServerName serverName, RegionStdOutSink sink,
         TaskType taskType, boolean rawScanEnabled, LongAdder rwLatency) {
       this.connection = connection;
       this.region = region;
@@ -476,11 +476,11 @@ public final class Canary implements Tool {
   static class RegionServerTask implements Callable<Void> {
     private Connection connection;
     private String serverName;
-    private HRegionInfo region;
+    private RegionInfo region;
     private RegionServerStdOutSink sink;
     private AtomicLong successes;
 
-    RegionServerTask(Connection connection, String serverName, HRegionInfo region,
+    RegionServerTask(Connection connection, String serverName, RegionInfo region,
         RegionServerStdOutSink sink, AtomicLong successes) {
       this.connection = connection;
       this.serverName = serverName;
@@ -1188,7 +1188,7 @@ public final class Canary implements Tool {
         numberOfServers -= 1;
       }
 
-      List<Pair<HRegionInfo, ServerName>> pairs =
+      List<Pair<RegionInfo, ServerName>> pairs =
           MetaTableAccessor.getTableRegionsAndLocations(connection, writeTableName);
       int numberOfRegions = pairs.size();
       if (numberOfRegions < numberOfServers * regionsLowerLimit
@@ -1198,7 +1198,7 @@ public final class Canary implements Tool {
         createWriteTable(numberOfServers);
       }
       HashSet<ServerName> serverSet = new HashSet<>();
-      for (Pair<HRegionInfo, ServerName> pair : pairs) {
+      for (Pair<RegionInfo, ServerName> pair : pairs) {
         serverSet.add(pair.getSecond());
       }
       int numberOfCoveredServers = serverSet.size();
@@ -1273,7 +1273,7 @@ public final class Canary implements Tool {
       regionLocator = admin.getConnection().getRegionLocator(tableDesc.getTableName());
       for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
         ServerName rs = location.getServerName();
-        HRegionInfo region = location.getRegionInfo();
+        RegionInfo region = location.getRegionInfo();
         tasks.add(new RegionTask(admin.getConnection(), region, rs, (RegionStdOutSink) sink, taskType, rawScanEnabled,
           rwLatency));
       }
@@ -1376,7 +1376,7 @@ public final class Canary implements Tool {
           LOG.error("Run RegionServerMonitor failed!", e);
           this.errorCode = ERROR_EXIT_CODE;
         }
-        Map<String, List<HRegionInfo>> rsAndRMap = this.filterRegionServerByName();
+        Map<String, List<RegionInfo>> rsAndRMap = this.filterRegionServerByName();
         this.initialized = true;
         this.monitorRegionServers(rsAndRMap, regionServerSink);
       }
@@ -1416,18 +1416,18 @@ public final class Canary implements Tool {
       return foundTableNames.isEmpty();
     }
 
-    private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap, RegionServerStdOutSink regionServerSink) {
+    private void monitorRegionServers(Map<String, List<RegionInfo>> rsAndRMap, RegionServerStdOutSink regionServerSink) {
       List<RegionServerTask> tasks = new ArrayList<>();
       Map<String, AtomicLong> successMap = new HashMap<>();
       Random rand = new Random();
-      for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
+      for (Map.Entry<String, List<RegionInfo>> entry : rsAndRMap.entrySet()) {
         String serverName = entry.getKey();
         AtomicLong successes = new AtomicLong(0);
         successMap.put(serverName, successes);
         if (entry.getValue().isEmpty()) {
           LOG.error(String.format("Regionserver not serving any regions - %s", serverName));
         } else if (this.allRegions) {
-          for (HRegionInfo region : entry.getValue()) {
+          for (RegionInfo region : entry.getValue()) {
             tasks.add(new RegionServerTask(this.connection,
                 serverName,
                 region,
@@ -1436,7 +1436,7 @@ public final class Canary implements Tool {
           }
         } else {
           // random select a region if flag not set
-          HRegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
+          RegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
           tasks.add(new RegionServerTask(this.connection,
               serverName,
               region,
@@ -1454,7 +1454,7 @@ public final class Canary implements Tool {
           }
         }
         if (this.allRegions) {
-          for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
+          for (Map.Entry<String, List<RegionInfo>> entry : rsAndRMap.entrySet()) {
             String serverName = entry.getKey();
             LOG.info("Successfully read " + successMap.get(serverName) + " regions out of "
                     + entry.getValue().size() + " on regionserver:" + serverName);
@@ -1466,14 +1466,14 @@ public final class Canary implements Tool {
       }
     }
 
-    private Map<String, List<HRegionInfo>> filterRegionServerByName() {
-      Map<String, List<HRegionInfo>> regionServerAndRegionsMap = this.getAllRegionServerByName();
+    private Map<String, List<RegionInfo>> filterRegionServerByName() {
+      Map<String, List<RegionInfo>> regionServerAndRegionsMap = this.getAllRegionServerByName();
       regionServerAndRegionsMap = this.doFilterRegionServerByName(regionServerAndRegionsMap);
       return regionServerAndRegionsMap;
     }
 
-    private Map<String, List<HRegionInfo>> getAllRegionServerByName() {
-      Map<String, List<HRegionInfo>> rsAndRMap = new HashMap<>();
+    private Map<String, List<RegionInfo>> getAllRegionServerByName() {
+      Map<String, List<RegionInfo>> rsAndRMap = new HashMap<>();
       Table table = null;
       RegionLocator regionLocator = null;
       try {
@@ -1481,7 +1481,7 @@ public final class Canary implements Tool {
           LOG.debug(String.format("reading list of tables and locations"));
         }
         HTableDescriptor[] tableDescs = this.admin.listTables();
-        List<HRegionInfo> regions = null;
+        List<RegionInfo> regions = null;
         for (HTableDescriptor tableDesc : tableDescs) {
           table = this.admin.getConnection().getTable(tableDesc.getTableName());
           regionLocator = this.admin.getConnection().getRegionLocator(tableDesc.getTableName());
@@ -1489,7 +1489,7 @@ public final class Canary implements Tool {
           for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
             ServerName rs = location.getServerName();
             String rsName = rs.getHostname();
-            HRegionInfo r = location.getRegionInfo();
+            RegionInfo r = location.getRegionInfo();
 
             if (rsAndRMap.containsKey(rsName)) {
               regions = rsAndRMap.get(rsName);
@@ -1507,7 +1507,7 @@ public final class Canary implements Tool {
             .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
           String rsName = rs.getHostname();
           if (!rsAndRMap.containsKey(rsName)) {
-            rsAndRMap.put(rsName, Collections.<HRegionInfo> emptyList());
+            rsAndRMap.put(rsName, Collections.<RegionInfo> emptyList());
           }
         }
       } catch (IOException e) {
@@ -1527,10 +1527,10 @@ public final class Canary implements Tool {
       return rsAndRMap;
     }
 
-    private Map<String, List<HRegionInfo>> doFilterRegionServerByName(
-        Map<String, List<HRegionInfo>> fullRsAndRMap) {
+    private Map<String, List<RegionInfo>> doFilterRegionServerByName(
+        Map<String, List<RegionInfo>> fullRsAndRMap) {
 
-      Map<String, List<HRegionInfo>> filteredRsAndRMap = null;
+      Map<String, List<RegionInfo>> filteredRsAndRMap = null;
 
       if (this.targets != null && this.targets.length > 0) {
         filteredRsAndRMap = new HashMap<>();
@@ -1541,7 +1541,7 @@ public final class Canary implements Tool {
           if (this.useRegExp) {
             regExpFound = false;
             pattern = Pattern.compile(rsName);
-            for (Map.Entry<String, List<HRegionInfo>> entry : fullRsAndRMap.entrySet()) {
+            for (Map.Entry<String, List<RegionInfo>> entry : fullRsAndRMap.entrySet()) {
               matcher = pattern.matcher(entry.getKey());
               if (matcher.matches()) {
                 filteredRsAndRMap.put(entry.getKey(), entry.getValue());

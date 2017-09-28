@@ -23,14 +23,15 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MoveRegionStateData;
@@ -128,7 +129,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     super.serializeStateData(serializer);
 
     final MoveRegionStateData.Builder state = MoveRegionStateData.newBuilder()
-        // No need to serialize the HRegionInfo. The super class has the region.
+        // No need to serialize the RegionInfo. The super class has the region.
         .setSourceServer(ProtobufUtil.toServerName(plan.getSource()));
     if (plan.getDestination() != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
@@ -143,7 +144,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     super.deserializeStateData(serializer);
 
     final MoveRegionStateData state = serializer.deserialize(MoveRegionStateData.class);
-    final HRegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
+    final RegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
     final ServerName sourceServer = ProtobufUtil.toServerName(state.getSourceServer());
     final ServerName destinationServer = state.hasDestinationServer() ?
         ProtobufUtil.toServerName(state.getDestinationServer()) : null;

@@ -19,12 +19,15 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HRegionInfo;
+
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
@@ -35,11 +38,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 @InterfaceAudience.Private
 public abstract class AbstractStateMachineRegionProcedure<TState>
     extends AbstractStateMachineTableProcedure<TState> {
-  private HRegionInfo hri;
+  private RegionInfo hri;
   private volatile boolean lock = false;
 
   public AbstractStateMachineRegionProcedure(final MasterProcedureEnv env,
-      final HRegionInfo hri) {
+      final RegionInfo hri) {
     super(env);
     this.hri = hri;
   }
@@ -50,16 +53,16 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   }
 
   /**
-   * @return The HRegionInfo of the region we are operating on.
+   * @return The RegionInfo of the region we are operating on.
    */
-  protected HRegionInfo getRegion() {
+  protected RegionInfo getRegion() {
     return this.hri;
   }
 
   /**
    * Used when deserializing. Otherwise, DON'T TOUCH IT!
    */
-  protected void setRegion(final HRegionInfo hri) {
+  protected void setRegion(final RegionInfo hri) {
     this.hri = hri;
   }
 
@@ -124,13 +127,13 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   protected void serializeStateData(ProcedureStateSerializer serializer)
       throws IOException {
     super.serializeStateData(serializer);
-    serializer.serialize(HRegionInfo.convert(getRegion()));
+    serializer.serialize(ProtobufUtil.toRegionInfo(getRegion()));
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer)
       throws IOException {
     super.deserializeStateData(serializer);
-    this.hri = HRegionInfo.convert(serializer.deserialize(HBaseProtos.RegionInfo.class));
+    this.hri = ProtobufUtil.toRegionInfo(serializer.deserialize(HBaseProtos.RegionInfo.class));
   }
 }

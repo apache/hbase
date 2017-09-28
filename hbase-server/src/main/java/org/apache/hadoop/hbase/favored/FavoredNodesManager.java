@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.favored;
 
+import static org.apache.hadoop.hbase.ServerName.NON_STARTCODE;
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
 import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
-import static org.apache.hadoop.hbase.ServerName.NON_STARTCODE;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,17 +34,17 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
@@ -66,9 +66,9 @@ public class FavoredNodesManager {
   private static final Log LOG = LogFactory.getLog(FavoredNodesManager.class);
 
   private FavoredNodesPlan globalFavoredNodesAssignmentPlan;
-  private Map<ServerName, List<HRegionInfo>> primaryRSToRegionMap;
-  private Map<ServerName, List<HRegionInfo>> secondaryRSToRegionMap;
-  private Map<ServerName, List<HRegionInfo>> teritiaryRSToRegionMap;
+  private Map<ServerName, List<RegionInfo>> primaryRSToRegionMap;
+  private Map<ServerName, List<RegionInfo>> secondaryRSToRegionMap;
+  private Map<ServerName, List<RegionInfo>> teritiaryRSToRegionMap;
 
   private MasterServices masterServices;
   private RackManager rackManager;
@@ -108,7 +108,7 @@ public class FavoredNodesManager {
     return dnPort;
   }
 
-  public synchronized List<ServerName> getFavoredNodes(HRegionInfo regionInfo) {
+  public synchronized List<ServerName> getFavoredNodes(RegionInfo regionInfo) {
     return this.globalFavoredNodesAssignmentPlan.getFavoredNodes(regionInfo);
   }
 
@@ -116,7 +116,7 @@ public class FavoredNodesManager {
    * Favored nodes are not applicable for system tables. We will use this to check before
    * we apply any favored nodes logic on a region.
    */
-  public static boolean isFavoredNodeApplicable(HRegionInfo regionInfo) {
+  public static boolean isFavoredNodeApplicable(RegionInfo regionInfo) {
     return !regionInfo.isSystemTable();
   }
 
@@ -126,9 +126,9 @@ public class FavoredNodesManager {
    * @param regions - collection of regions
    * @return set of regions for which favored nodes is not applicable
    */
-  public static Set<HRegionInfo> filterNonFNApplicableRegions(Collection<HRegionInfo> regions) {
-    Set<HRegionInfo> fnRegions = Sets.newHashSet();
-    for (HRegionInfo regionInfo : regions) {
+  public static Set<RegionInfo> filterNonFNApplicableRegions(Collection<RegionInfo> regions) {
+    Set<RegionInfo> fnRegions = Sets.newHashSet();
+    for (RegionInfo regionInfo : regions) {
       if (!isFavoredNodeApplicable(regionInfo)) {
         fnRegions.add(regionInfo);
       }
@@ -141,7 +141,7 @@ public class FavoredNodesManager {
    * sending the region server port, we use the datanode port. This helps in centralizing the DN
    * port logic in Master. The RS uses the port from the favored node list as hints.
    */
-  public synchronized List<ServerName> getFavoredNodesWithDNPort(HRegionInfo regionInfo) {
+  public synchronized List<ServerName> getFavoredNodesWithDNPort(RegionInfo regionInfo) {
     if (getFavoredNodes(regionInfo) == null) {
       return null;
     }
@@ -154,12 +154,12 @@ public class FavoredNodesManager {
     return fnWithDNPort;
   }
 
-  public synchronized void updateFavoredNodes(Map<HRegionInfo, List<ServerName>> regionFNMap)
+  public synchronized void updateFavoredNodes(Map<RegionInfo, List<ServerName>> regionFNMap)
       throws IOException {
 
-    Map<HRegionInfo, List<ServerName>> regionToFavoredNodes = new HashMap<>();
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionFNMap.entrySet()) {
-      HRegionInfo regionInfo = entry.getKey();
+    Map<RegionInfo, List<ServerName>> regionToFavoredNodes = new HashMap<>();
+    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionFNMap.entrySet()) {
+      RegionInfo regionInfo = entry.getKey();
       List<ServerName> servers = entry.getValue();
 
       /*
@@ -199,18 +199,18 @@ public class FavoredNodesManager {
         masterServices.getConnection());
     deleteFavoredNodesForRegions(regionToFavoredNodes.keySet());
 
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
-      HRegionInfo regionInfo = entry.getKey();
+    for (Map.Entry<RegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
+      RegionInfo regionInfo = entry.getKey();
       List<ServerName> serversWithNoStartCodes = entry.getValue();
       globalFavoredNodesAssignmentPlan.updateFavoredNodesMap(regionInfo, serversWithNoStartCodes);
       addToReplicaLoad(regionInfo, serversWithNoStartCodes);
     }
   }
 
-  private synchronized void addToReplicaLoad(HRegionInfo hri, List<ServerName> servers) {
+  private synchronized void addToReplicaLoad(RegionInfo hri, List<ServerName> servers) {
     ServerName serverToUse = ServerName.valueOf(servers.get(PRIMARY.ordinal()).getHostAndPort(),
         NON_STARTCODE);
-    List<HRegionInfo> regionList = primaryRSToRegionMap.get(serverToUse);
+    List<RegionInfo> regionList = primaryRSToRegionMap.get(serverToUse);
     if (regionList == null) {
       regionList = new ArrayList<>();
     }
@@ -269,8 +269,8 @@ public class FavoredNodesManager {
     return result;
   }
 
-  public synchronized void deleteFavoredNodesForRegions(Collection<HRegionInfo> regionInfoList) {
-    for (HRegionInfo hri : regionInfoList) {
+  public synchronized void deleteFavoredNodesForRegions(Collection<RegionInfo> regionInfoList) {
+    for (RegionInfo hri : regionInfoList) {
       List<ServerName> favNodes = getFavoredNodes(hri);
       if (favNodes != null) {
         if (primaryRSToRegionMap.containsKey(favNodes.get(PRIMARY.ordinal()))) {

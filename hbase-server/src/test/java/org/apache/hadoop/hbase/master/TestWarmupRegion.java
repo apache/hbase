@@ -27,13 +27,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -131,7 +131,7 @@ public class TestWarmupRegion {
       public void run() {
         HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
         HRegion region = TEST_UTIL.getMiniHBaseCluster().getRegions(TABLENAME).get(0);
-        HRegionInfo info = region.getRegionInfo();
+        RegionInfo info = region.getRegionInfo();
 
         try {
           HTableDescriptor htd = table.getTableDescriptor();
@@ -155,7 +155,7 @@ public class TestWarmupRegion {
    public void testWarmup() throws Exception {
      int serverid = 0;
      HRegion region = TEST_UTIL.getMiniHBaseCluster().getRegions(TABLENAME).get(0);
-     HRegionInfo info = region.getRegionInfo();
+     RegionInfo info = region.getRegionInfo();
      runwarmup();
      for (int i = 0; i < 10; i++) {
        HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(serverid);

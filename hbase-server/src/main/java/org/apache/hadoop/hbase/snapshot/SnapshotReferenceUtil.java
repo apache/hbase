@@ -25,26 +25,27 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
 /**
  * Utility methods for interacting with the snapshot referenced files.
@@ -54,7 +55,7 @@ public final class SnapshotReferenceUtil {
   private static final Log LOG = LogFactory.getLog(SnapshotReferenceUtil.class);
 
   public interface StoreFileVisitor {
-    void storeFile(final HRegionInfo regionInfo, final String familyName,
+    void storeFile(final RegionInfo regionInfo, final String familyName,
        final SnapshotRegionManifest.StoreFile storeFile) throws IOException;
   }
 
@@ -131,7 +132,7 @@ public final class SnapshotReferenceUtil {
    */
   static void visitRegionStoreFiles(final SnapshotRegionManifest manifest,
       final StoreFileVisitor visitor) throws IOException {
-    HRegionInfo regionInfo = HRegionInfo.convert(manifest.getRegionInfo());
+    RegionInfo regionInfo = ProtobufUtil.toRegionInfo(manifest.getRegionInfo());
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
       String familyName = familyFiles.getFamilyName().toStringUtf8();
       for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {
@@ -171,7 +172,7 @@ public final class SnapshotReferenceUtil {
     final Path snapshotDir = manifest.getSnapshotDir();
     concurrentVisitReferencedFiles(conf, fs, manifest, "VerifySnapshot", new StoreFileVisitor() {
       @Override
-      public void storeFile(final HRegionInfo regionInfo, final String family,
+      public void storeFile(final RegionInfo regionInfo, final String family,
           final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
         verifyStoreFile(conf, fs, snapshotDir, snapshotDesc, regionInfo, family, storeFile);
       }
@@ -245,14 +246,14 @@ public final class SnapshotReferenceUtil {
    * @param fs {@link FileSystem}
    * @param snapshotDir {@link Path} to the Snapshot directory of the snapshot to verify
    * @param snapshot the {@link SnapshotDescription} of the snapshot to verify
-   * @param regionInfo {@link HRegionInfo} of the region that contains the store file
+   * @param regionInfo {@link RegionInfo} of the region that contains the store file
    * @param family family that contains the store file
    * @param storeFile the store file to verify
    * @throws CorruptedSnapshotException if the snapshot is corrupted
    * @throws IOException if an error occurred while scanning the directory
    */
   private static void verifyStoreFile(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotDescription snapshot, final HRegionInfo regionInfo,
+      final Path snapshotDir, final SnapshotDescription snapshot, final RegionInfo regionInfo,
       final String family, final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
     TableName table = TableName.valueOf(snapshot.getTable());
     String fileName = storeFile.getName();
@@ -347,7 +348,7 @@ public final class SnapshotReferenceUtil {
     final Set<String> names = new HashSet<>();
     visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc, new StoreFileVisitor() {
       @Override
-      public void storeFile(final HRegionInfo regionInfo, final String family,
+      public void storeFile(final RegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
         String hfile = storeFile.getName();
         if (HFileLink.isHFileLink(hfile)) {

@@ -18,17 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MD5Hash;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,9 +25,21 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
+import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * Information about a region. A region is a range of keys in the whole keyspace
@@ -436,7 +437,7 @@ public interface RegionInfo {
    * @see #parseFrom(byte[])
    */
   static byte [] toByteArray(RegionInfo ri) {
-    byte [] bytes = ProtobufUtil.toProtoRegionInfo(ri).toByteArray();
+    byte [] bytes = ProtobufUtil.toRegionInfo(ri).toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
   }
 
@@ -691,7 +692,7 @@ public interface RegionInfo {
    * @throws IOException
    */
   static byte [] toDelimitedByteArray(RegionInfo ri) throws IOException {
-    return ProtobufUtil.toDelimitedByteArray(ProtobufUtil.toProtoRegionInfo(ri));
+    return ProtobufUtil.toDelimitedByteArray(ProtobufUtil.toRegionInfo(ri));
   }
 
   /**

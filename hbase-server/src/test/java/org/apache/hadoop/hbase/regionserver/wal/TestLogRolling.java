@@ -38,10 +38,10 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -140,7 +140,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
 
     server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    HRegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
+    RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
     final FSHLog log = (FSHLog) server.getWAL(region);
     final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
 
@@ -248,7 +248,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
 
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
-      HRegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
+      RegionInfo region = server.getRegions(desc.getTableName()).get(0).getRegionInfo();
       final WAL log = server.getWAL(region);
       final List<Path> paths = new ArrayList<>(1);
       final List<Integer> preLogRolledCalled = new ArrayList<>();

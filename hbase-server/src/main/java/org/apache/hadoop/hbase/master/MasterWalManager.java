@@ -36,13 +36,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -284,7 +284,7 @@ public class MasterWalManager {
    * @param serverName Failed region server whose wals to be replayed
    * @param regions Set of regions to be recovered
    */
-  public void prepareLogReplay(ServerName serverName, Set<HRegionInfo> regions) throws IOException {
+  public void prepareLogReplay(ServerName serverName, Set<RegionInfo> regions) throws IOException {
     if (!this.distributedLogReplay) {
       return;
     }

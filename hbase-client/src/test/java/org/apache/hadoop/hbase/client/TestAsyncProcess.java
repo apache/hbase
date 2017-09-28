@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -58,26 +61,23 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncProcessTask.ListRowAccess;
+import org.apache.hadoop.hbase.client.AsyncProcessTask.SubmittedRows;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
-import org.apache.hadoop.hbase.client.AsyncProcessTask.SubmittedRows;
-import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
-import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 @Category({ClientTests.class, MediumTests.class})
 public class TestAsyncProcess {
@@ -106,9 +106,9 @@ public class TestAsyncProcess {
   private static final HRegionLocation loc3 = new HRegionLocation(hri3, sn2);
 
   // Replica stuff
-  private static final HRegionInfo hri1r1 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1),
-      hri1r2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 2);
-  private static final HRegionInfo hri2r1 = RegionReplicaUtil.getRegionInfoForReplica(hri2, 1);
+  private static final RegionInfo hri1r1 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
+  private static final RegionInfo hri1r2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 2);
+  private static final RegionInfo hri2r1 = RegionReplicaUtil.getRegionInfoForReplica(hri2, 1);
   private static final RegionLocations hrls1 = new RegionLocations(new HRegionLocation(hri1, sn),
       new HRegionLocation(hri1r1, sn2), new HRegionLocation(hri1r2, sn3));
   private static final RegionLocations hrls2 = new RegionLocations(new HRegionLocation(hri2, sn2),
@@ -355,8 +355,8 @@ public class TestAsyncProcess {
     private Map<ServerName, Long> customPrimarySleepMs = new HashMap<>();
     private final AtomicLong replicaCalls = new AtomicLong(0);
 
-    public void addFailures(HRegionInfo... hris) {
-      for (HRegionInfo hri : hris) {
+    public void addFailures(RegionInfo... hris) {
+      for (RegionInfo hri : hris) {
         failures.add(hri.getRegionName());
       }
     }

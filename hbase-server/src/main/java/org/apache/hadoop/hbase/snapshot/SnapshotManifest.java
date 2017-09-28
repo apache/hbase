@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -142,7 +142,7 @@ public final class SnapshotManifest {
   }
 
   interface RegionVisitor<TRegion, TFamily> {
-    TRegion regionOpen(final HRegionInfo regionInfo) throws IOException;
+    TRegion regionOpen(final RegionInfo regionInfo) throws IOException;
     void regionClose(final TRegion region) throws IOException;
 
     TFamily familyOpen(final TRegion region, final byte[] familyName) throws IOException;
@@ -164,7 +164,7 @@ public final class SnapshotManifest {
     }
   }
 
-  public void addMobRegion(HRegionInfo regionInfo) throws IOException {
+  public void addMobRegion(RegionInfo regionInfo) throws IOException {
     // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
@@ -173,7 +173,7 @@ public final class SnapshotManifest {
   }
 
   @VisibleForTesting
-  protected void addMobRegion(HRegionInfo regionInfo, RegionVisitor visitor) throws IOException {
+  protected void addMobRegion(RegionInfo regionInfo, RegionVisitor visitor) throws IOException {
     // 1. dump region meta info into the snapshot directory
     LOG.debug("Storing mob region '" + regionInfo + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(regionInfo);
@@ -258,7 +258,7 @@ public final class SnapshotManifest {
    * Creates a 'manifest' for the specified region, by reading directly from the disk.
    * This is used by the "offline snapshot" when the table is disabled.
    */
-  public void addRegion(final Path tableDir, final HRegionInfo regionInfo) throws IOException {
+  public void addRegion(final Path tableDir, final RegionInfo regionInfo) throws IOException {
     // Get the ManifestBuilder/RegionVisitor
     RegionVisitor visitor = createRegionVisitor(desc);
 
@@ -267,7 +267,7 @@ public final class SnapshotManifest {
   }
 
   @VisibleForTesting
-  protected void addRegion(final Path tableDir, final HRegionInfo regionInfo, RegionVisitor visitor)
+  protected void addRegion(final Path tableDir, final RegionInfo regionInfo, RegionVisitor visitor)
       throws IOException {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
     try {
@@ -566,11 +566,11 @@ public final class SnapshotManifest {
    * Extract the region encoded name from the region manifest
    */
   static String getRegionNameFromManifest(final SnapshotRegionManifest manifest) {
-    byte[] regionName = HRegionInfo.createRegionName(
+    byte[] regionName = RegionInfo.createRegionName(
             ProtobufUtil.toTableName(manifest.getRegionInfo().getTableName()),
             manifest.getRegionInfo().getStartKey().toByteArray(),
             manifest.getRegionInfo().getRegionId(), true);
-    return HRegionInfo.encodeRegionName(regionName);
+    return RegionInfo.encodeRegionName(regionName);
   }
 
   /*

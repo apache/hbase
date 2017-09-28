@@ -30,11 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.LockType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -56,7 +54,10 @@ import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * A handler for taking snapshots from the master.
@@ -170,7 +171,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       snapshotManifest.addTableDescriptor(this.htd);
       monitor.rethrowException();
 
-      List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
+      List<Pair<RegionInfo, ServerName>> regionsAndLocations;
       if (TableName.META_TABLE_NAME.equals(snapshotTable)) {
         regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
           server.getZooKeeper());
@@ -185,9 +186,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
       // extract each pair to separate lists
       Set<String> serverNames = new HashSet<>();
-      for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
+      for (Pair<RegionInfo, ServerName> p : regionsAndLocations) {
         if (p != null && p.getFirst() != null && p.getSecond() != null) {
-          HRegionInfo hri = p.getFirst();
+          RegionInfo hri = p.getFirst();
           if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
           serverNames.add(p.getSecond().toString());
         }
@@ -256,13 +257,13 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   /**
    * Snapshot the specified regions
    */
-  protected abstract void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions)
+  protected abstract void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions)
       throws IOException, KeeperException;
 
   /**
    * Take a snapshot of the specified disabled region
    */
-  protected void snapshotDisabledRegion(final HRegionInfo regionInfo)
+  protected void snapshotDisabledRegion(final RegionInfo regionInfo)
       throws IOException {
     snapshotManifest.addRegion(FSUtils.getTableDir(rootDir, snapshotTable), regionInfo);
     monitor.rethrowException();

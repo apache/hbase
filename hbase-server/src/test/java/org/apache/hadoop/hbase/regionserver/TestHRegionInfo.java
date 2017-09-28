@@ -81,9 +81,9 @@ public class TestHRegionInfo {
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);
     // Now load the file.
-    HRegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
+    org.apache.hadoop.hbase.client.RegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
-    assertTrue(hri.equals(deserializedHri));
+    assertTrue(org.apache.hadoop.hbase.client.RegionInfo.COMPARATOR.compare(hri, deserializedHri) == 0);
     HBaseTestingUtility.closeRegionAndWAL(r);
   }
 
@@ -300,12 +300,12 @@ public class TestHRegionInfo {
     String firstPart = descriptiveNameForDisplay.substring(0,
         descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)));
     String secondPart = descriptiveNameForDisplay.substring(
-        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)) + 
+        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)) +
         HRegionInfo.HIDDEN_START_KEY.length);
     String firstPartOrig = origDesc.substring(0,
         origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
-        origDesc.indexOf(Bytes.toStringBinary(startKey)) + 
+        origDesc.indexOf(Bytes.toStringBinary(startKey)) +
         Bytes.toStringBinary(startKey).length());
     assert(firstPart.equals(firstPartOrig));
     assert(secondPart.equals(secondPartOrig));

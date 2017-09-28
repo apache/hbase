@@ -31,13 +31,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -175,9 +175,9 @@ public class TestQuotaObserverChoreRegionReports {
     });
 
     // Close the region, prevent the server from sending new status reports.
-    List<HRegionInfo> regions = admin.getTableRegions(tn);
+    List<RegionInfo> regions = admin.getRegions(tn);
     assertEquals(1, regions.size());
-    HRegionInfo hri = regions.get(0);
+    RegionInfo hri = regions.get(0);
     admin.unassign(hri.getRegionName(), true);
 
     // We should see this table move out of violation after the report expires.
@@ -218,9 +218,9 @@ public class TestQuotaObserverChoreRegionReports {
     }
   }
 
-  private int getRegionReportsForTable(Map<HRegionInfo,Long> reports, TableName tn) {
+  private int getRegionReportsForTable(Map<RegionInfo,Long> reports, TableName tn) {
     int numReports = 0;
-    for (Entry<HRegionInfo,Long> entry : reports.entrySet()) {
+    for (Entry<RegionInfo,Long> entry : reports.entrySet()) {
       if (tn.equals(entry.getKey().getTable())) {
         numReports++;
       }

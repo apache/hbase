@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -985,8 +986,7 @@ public class TestDefaultMemStore {
     final long now = EnvironmentEdgeManager.currentTime();
     final List<Cell> cells = new ArrayList<>(2);
     cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-      HConstants.REGIONINFO_QUALIFIER, now,
-      r.getRegionInfo().toByteArray()));
+      HConstants.REGIONINFO_QUALIFIER, now, RegionInfo.toByteArray(r.getRegionInfo())));
     // Set into the root table the version of the meta table.
     cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
       HConstants.META_VERSION_QUALIFIER, now,

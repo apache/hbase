@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -56,7 +57,6 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -1721,14 +1721,14 @@ public final class ProtobufUtil {
    * @return the retrieved region info
    * @throws IOException
    */
-  public static HRegionInfo getRegionInfo(final RpcController controller,
+  public static org.apache.hadoop.hbase.client.RegionInfo getRegionInfo(final RpcController controller,
       final AdminService.BlockingInterface admin, final byte[] regionName) throws IOException {
     try {
       GetRegionInfoRequest request =
         RequestConverter.buildGetRegionInfoRequest(regionName);
       GetRegionInfoResponse response =
         admin.getRegionInfo(controller, request);
-      return HRegionInfo.convert(response.getRegionInfo());
+      return toRegionInfo(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
@@ -1787,7 +1787,7 @@ public final class ProtobufUtil {
    *
    */
   public static void warmupRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin, final HRegionInfo regionInfo) throws IOException {
+      final AdminService.BlockingInterface admin, final org.apache.hadoop.hbase.client.RegionInfo regionInfo) throws IOException {
 
     try {
       WarmupRegionRequest warmupRegionRequest =
@@ -1806,7 +1806,7 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static void openRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin, ServerName server, final HRegionInfo region)
+      final AdminService.BlockingInterface admin, ServerName server, final org.apache.hadoop.hbase.client.RegionInfo region)
           throws IOException {
     OpenRegionRequest request =
       RequestConverter.buildOpenRegionRequest(server, region, null, null);
@@ -1825,7 +1825,7 @@ public final class ProtobufUtil {
    * @return a list of online region info
    * @throws IOException
    */
-  public static List<HRegionInfo> getOnlineRegions(final AdminService.BlockingInterface admin)
+  public static List<org.apache.hadoop.hbase.client.RegionInfo> getOnlineRegions(final AdminService.BlockingInterface admin)
       throws IOException {
     return getOnlineRegions(null, admin);
   }
@@ -1835,7 +1835,7 @@ public final class ProtobufUtil {
    * server using admin protocol.
    * @return a list of online region info
    */
-  public static List<HRegionInfo> getOnlineRegions(final RpcController controller,
+  public static List<org.apache.hadoop.hbase.client.RegionInfo> getOnlineRegions(final RpcController controller,
       final AdminService.BlockingInterface admin)
   throws IOException {
     GetOnlineRegionRequest request = RequestConverter.buildGetOnlineRegionRequest();
@@ -1852,13 +1852,13 @@ public final class ProtobufUtil {
    * Get the list of region info from a GetOnlineRegionResponse
    *
    * @param proto the GetOnlineRegionResponse
-   * @return the list of region info or null if <code>proto</code> is null
+   * @return the list of region info or empty if <code>proto</code> is null
    */
-  public static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
-    if (proto == null) return null;
-    List<HRegionInfo> regionInfos = new ArrayList<>(proto.getRegionInfoList().size());
+  public static List<org.apache.hadoop.hbase.client.RegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
+    if (proto == null) return Collections.EMPTY_LIST;
+    List<org.apache.hadoop.hbase.client.RegionInfo> regionInfos = new ArrayList<>(proto.getRegionInfoList().size());
     for (RegionInfo regionInfo: proto.getRegionInfoList()) {
-      regionInfos.add(HRegionInfo.convert(regionInfo));
+      regionInfos.add(toRegionInfo(regionInfo));
     }
     return regionInfos;
   }
@@ -1950,7 +1950,7 @@ public final class ProtobufUtil {
     RegionSpecifierType type = regionSpecifier.getType();
     switch (type) {
       case REGION_NAME:
-        return HRegionInfo.encodeRegionName(value.toByteArray());
+        return org.apache.hadoop.hbase.client.RegionInfo.encodeRegionName(value.toByteArray());
       case ENCODED_REGION_NAME:
         return value.toStringUtf8();
       default:
@@ -2074,12 +2074,14 @@ public final class ProtobufUtil {
     return b.build();
   }
 
-  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
+  public static CompactionDescriptor toCompactionDescriptor(
+      org.apache.hadoop.hbase.client.RegionInfo info, byte[] family,
       List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     return toCompactionDescriptor(info, null, family, inputPaths, outputPaths, storeDir);
   }
 
-  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] regionName,
+  public static CompactionDescriptor toCompactionDescriptor(
+      org.apache.hadoop.hbase.client.RegionInfo info, byte[] regionName,
       byte[] family, List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     // compaction descriptor contains relative paths.
     // input / output paths are relative to the store dir
@@ -2100,7 +2102,7 @@ public final class ProtobufUtil {
     return builder.build();
   }
 
-  public static FlushDescriptor toFlushDescriptor(FlushAction action, HRegionInfo hri,
+  public static FlushDescriptor toFlushDescriptor(FlushAction action, org.apache.hadoop.hbase.client.RegionInfo hri,
       long flushSeqId, Map<byte[], List<Path>> committedFiles) {
     FlushDescriptor.Builder desc = FlushDescriptor.newBuilder()
         .setAction(action)
@@ -2125,7 +2127,7 @@ public final class ProtobufUtil {
   }
 
   public static RegionEventDescriptor toRegionEventDescriptor(
-      EventType eventType, HRegionInfo hri, long seqId, ServerName server,
+      EventType eventType, org.apache.hadoop.hbase.client.RegionInfo hri, long seqId, ServerName server,
       Map<byte[], List<Path>> storeFiles) {
     final byte[] tableNameAsBytes = hri.getTable().getName();
     final byte[] encodedNameAsBytes = hri.getEncodedNameAsBytes();
@@ -3315,7 +3317,7 @@ public final class ProtobufUtil {
    * @param info the RegionInfo to convert
    * @return the converted Proto RegionInfo
    */
-  public static HBaseProtos.RegionInfo toProtoRegionInfo(final org.apache.hadoop.hbase.client.RegionInfo info) {
+  public static HBaseProtos.RegionInfo toRegionInfo(final org.apache.hadoop.hbase.client.RegionInfo info) {
     if (info == null) return null;
     HBaseProtos.RegionInfo.Builder builder = HBaseProtos.RegionInfo.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));

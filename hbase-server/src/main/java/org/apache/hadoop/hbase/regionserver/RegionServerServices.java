@@ -23,20 +23,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 import com.google.protobuf.Service;
 
@@ -49,7 +49,7 @@ public interface RegionServerServices
 
   /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */
-  WAL getWAL(HRegionInfo regionInfo) throws IOException;
+  WAL getWAL(RegionInfo regionInfo) throws IOException;
 
   /** @return the List of WALs that are used by this server
    *  Doesn't include the meta WAL
@@ -127,11 +127,11 @@ public interface RegionServerServices
     private final TransitionCode code;
     private final long openSeqNum;
     private final long masterSystemTime;
-    private final HRegionInfo[] hris;
+    private final RegionInfo[] hris;
 
     @InterfaceAudience.Private
     public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
-        HRegionInfo... hris) {
+        RegionInfo... hris) {
       this.code = code;
       this.openSeqNum = openSeqNum;
       this.masterSystemTime = masterSystemTime;
@@ -146,7 +146,7 @@ public interface RegionServerServices
     public long getMasterSystemTime() {
       return masterSystemTime;
     }
-    public HRegionInfo[] getHris() {
+    public RegionInfo[] getHris() {
       return hris;
     }
   }
@@ -161,14 +161,14 @@ public interface RegionServerServices
    * @deprecated use {@link #reportRegionStateTransition(RegionStateTransitionContext)}
    */
   @Deprecated
-  boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris);
+  boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, RegionInfo... hris);
 
   /**
    * Notify master that a handler requests to change a region state
    * @deprecated use {@link #reportRegionStateTransition(RegionStateTransitionContext)}
    */
   @Deprecated
-  boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris);
+  boolean reportRegionStateTransition(TransitionCode code, RegionInfo... hris);
 
   /**
    * Returns a reference to the region server's RPC server
@@ -244,7 +244,7 @@ public interface RegionServerServices
   /**
    * Master based locks on namespaces/tables/regions.
    */
-  EntityLock regionLock(List<HRegionInfo> regionInfos, String description,
+  EntityLock regionLock(List<RegionInfo> regionInfos, String description,
       Abortable abort) throws IOException;
 
   /**

@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
 
 /**
  * A low level asynchronous table.
@@ -134,10 +133,10 @@ public interface RawAsyncTable extends AsyncTableBase {
    * As the locating itself also takes some time, the implementation may want to send rpc calls on
    * the fly, which means we do not know how many regions we have when we get the return value of
    * the rpc calls, so we need an {@link #onComplete()} which is used to tell you that we have
-   * passed all the return values to you(through the {@link #onRegionComplete(HRegionInfo, Object)}
-   * or {@link #onRegionError(HRegionInfo, Throwable)} calls), i.e, there will be no
-   * {@link #onRegionComplete(HRegionInfo, Object)} or
-   * {@link #onRegionError(HRegionInfo, Throwable)} calls in the future.
+   * passed all the return values to you(through the {@link #onRegionComplete(RegionInfo, Object)}
+   * or {@link #onRegionError(RegionInfo, Throwable)} calls), i.e, there will be no
+   * {@link #onRegionComplete(RegionInfo, Object)} or
+   * {@link #onRegionError(RegionInfo, Throwable)} calls in the future.
    * <p>
    * Here is a pseudo code to describe a typical implementation of a range coprocessor service
    * method to help you better understand how the {@link CoprocessorCallback} will be called. The
@@ -179,18 +178,18 @@ public interface RawAsyncTable extends AsyncTableBase {
      * @param region the region that the response belongs to
      * @param resp the response of the coprocessor call
      */
-    void onRegionComplete(HRegionInfo region, R resp);
+    void onRegionComplete(RegionInfo region, R resp);
 
     /**
      * @param region the region that the error belongs to
      * @param error the response error of the coprocessor call
      */
-    void onRegionError(HRegionInfo region, Throwable error);
+    void onRegionError(RegionInfo region, Throwable error);
 
     /**
      * Indicate that all responses of the regions have been notified by calling
-     * {@link #onRegionComplete(HRegionInfo, Object)} or
-     * {@link #onRegionError(HRegionInfo, Throwable)}.
+     * {@link #onRegionComplete(RegionInfo, Object)} or
+     * {@link #onRegionError(RegionInfo, Throwable)}.
      */
     void onComplete();
 

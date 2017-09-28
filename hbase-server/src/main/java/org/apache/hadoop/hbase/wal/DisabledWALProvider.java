@@ -32,14 +32,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-
-// imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+// imports for things that haven't moved from regionserver.wal yet.
 
 /**
  * No-op implementation of {@link WALProvider} used when the WAL is disabled.
@@ -109,7 +109,7 @@ class DisabledWALProvider implements WALProvider {
     public void registerWALActionsListener(final WALActionsListener listener) {
       listeners.add(listener);
     }
-    
+
     @Override
     public boolean unregisterWALActionsListener(final WALActionsListener listener) {
       return listeners.remove(listener);
@@ -161,7 +161,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long append(HRegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
+    public long append(RegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
         throws IOException {
       if (!this.listeners.isEmpty()) {
         final long start = System.nanoTime();

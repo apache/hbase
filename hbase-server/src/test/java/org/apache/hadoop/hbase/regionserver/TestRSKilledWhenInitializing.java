@@ -34,16 +34,14 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,6 +52,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
  * Tests that a regionserver that dies after reporting for duty gets removed
@@ -124,12 +124,12 @@ public class TestRSKilledWhenInitializing {
       // showing still. The downed RegionServer should still be showing as registered.
       assertTrue(master.getMaster().getServerManager().isServerOnline(killedRS.get()));
       // Find non-meta region (namespace?) and assign to the killed server. That'll trigger cleanup.
-      Map<HRegionInfo, ServerName> assignments = null;
+      Map<RegionInfo, ServerName> assignments = null;
       do {
         assignments = master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
       } while (assignments == null || assignments.size() < 2);
-      HRegionInfo hri = null;
-      for (Map.Entry<HRegionInfo, ServerName> e: assignments.entrySet()) {
+      RegionInfo hri = null;
+      for (Map.Entry<RegionInfo, ServerName> e: assignments.entrySet()) {
         if (e.getKey().isMetaRegion()) continue;
         hri = e.getKey();
         break;

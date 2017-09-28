@@ -20,29 +20,31 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.RegionCloseOperation;
-import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
+import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UnassignRegionStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 
 /**
  * Procedure that describes the unassignment of a single region.
@@ -90,12 +92,12 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     super();
   }
 
-  public UnassignProcedure(final HRegionInfo regionInfo,  final ServerName hostingServer,
+  public UnassignProcedure(final RegionInfo regionInfo,  final ServerName hostingServer,
                            final boolean force) {
     this(regionInfo, hostingServer, null, force);
   }
 
-  public UnassignProcedure(final HRegionInfo regionInfo,
+  public UnassignProcedure(final RegionInfo regionInfo,
       final ServerName hostingServer, final ServerName destinationServer, final boolean force) {
     super(regionInfo);
     this.hostingServer = hostingServer;
@@ -128,7 +130,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     UnassignRegionStateData.Builder state = UnassignRegionStateData.newBuilder()
         .setTransitionState(getTransitionState())
         .setHostingServer(ProtobufUtil.toServerName(this.hostingServer))
-        .setRegionInfo(HRegionInfo.convert(getRegionInfo()));
+        .setRegionInfo(ProtobufUtil.toRegionInfo(getRegionInfo()));
     if (this.destinationServer != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(destinationServer));
     }
@@ -144,7 +146,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
     final UnassignRegionStateData state =
         serializer.deserialize(UnassignRegionStateData.class);
     setTransitionState(state.getTransitionState());
-    setRegionInfo(HRegionInfo.convert(state.getRegionInfo()));
+    setRegionInfo(ProtobufUtil.toRegionInfo(state.getRegionInfo()));
     this.hostingServer = ProtobufUtil.toServerName(state.getHostingServer());
     force = state.getForce();
     if (state.hasDestinationServer()) {

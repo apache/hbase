@@ -22,23 +22,24 @@ import java.security.PrivilegedAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * Handles processing region merges. Put in a queue, owned by HRegionServer.
  */
-// UNUSED: REMOVE!!!
+// TODO:UNUSED: REMOVE!!!
 @InterfaceAudience.Private
 class RegionMergeRequest implements Runnable {
   private static final Log LOG = LogFactory.getLog(RegionMergeRequest.class);
-  private final HRegionInfo region_a;
-  private final HRegionInfo region_b;
+  private final RegionInfo region_a;
+  private final RegionInfo region_b;
   private final HRegionServer server;
   private final boolean forcible;
   private final User user;
@@ -84,7 +85,7 @@ class RegionMergeRequest implements Runnable {
     }
 
     // TODO: fake merged region for compat with the report protocol
-    final HRegionInfo merged = new HRegionInfo(table);
+    final RegionInfo merged = RegionInfoBuilder.newBuilder(table).build();
 
     // Send the split request to the master. the master will do the validation on the split-key.
     // The parent region will be unassigned and the two new regions will be assigned.

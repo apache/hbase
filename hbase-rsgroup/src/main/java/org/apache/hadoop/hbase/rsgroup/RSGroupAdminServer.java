@@ -31,11 +31,10 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -48,6 +47,8 @@ import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.LockType;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 
@@ -114,9 +115,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   /**
    * @return List of Regions associated with this <code>server</code>.
    */
-  private List<HRegionInfo> getRegions(final Address server) {
-    LinkedList<HRegionInfo> regions = new LinkedList<>();
-    for (Map.Entry<HRegionInfo, ServerName> el :
+  private List<RegionInfo> getRegions(final Address server) {
+    LinkedList<RegionInfo> regions = new LinkedList<>();
+    for (Map.Entry<RegionInfo, ServerName> el :
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
       if (el.getValue() == null) continue;
       if (el.getValue().getAddress().equals(server)) {
@@ -131,7 +132,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     return regions;
   }
 
-  private void addRegion(final LinkedList<HRegionInfo> regions, HRegionInfo hri) {
+  private void addRegion(final LinkedList<RegionInfo> regions, RegionInfo hri) {
     // If meta, move it last otherwise other unassigns fail because meta is not
     // online for them to update state in. This is dodgy. Needs to be made more
     // robust. See TODO below.
@@ -206,8 +207,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       for (Iterator<Address> iter = allSevers.iterator(); iter.hasNext();) {
         Address rs = iter.next();
         // Get regions that are associated with this server and filter regions by tables.
-        List<HRegionInfo> regions = new ArrayList<>();
-        for (HRegionInfo region : getRegions(rs)) {
+        List<RegionInfo> regions = new ArrayList<>();
+        for (RegionInfo region : getRegions(rs)) {
           if (!tables.contains(region.getTable())) {
             regions.add(region);
           }
@@ -216,7 +217,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.info("Unassigning " + regions.size() +
                 " region(s) from " + rs + " for server move to " + targetGroupName);
         if (!regions.isEmpty()) {
-          for (HRegionInfo region: regions) {
+          for (RegionInfo region: regions) {
             // Regions might get assigned from tables of target group so we need to filter
             if (!targetGrp.containsTable(region.getTable())) {
               this.master.getAssignmentManager().unassign(region);
@@ -259,7 +260,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         } catch (InterruptedException e) {
           throw new IOException("Interrupted when waiting for table lock", e);
         }
-        for (HRegionInfo region :
+        for (RegionInfo region :
                 master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
           ServerName sn = master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
           if (!servers.contains(sn.getAddress())) {
@@ -334,7 +335,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         for (Iterator<Address> iter = editableMovedServers.iterator(); iter.hasNext();) {
           Address rs = iter.next();
           // Get regions that are associated with this server.
-          List<HRegionInfo> regions = getRegions(rs);
+          List<RegionInfo> regions = getRegions(rs);
 
           // Unassign regions for a server
           // TODO: This is problematic especially if hbase:meta is in the mix.
@@ -345,7 +346,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
               " region(s) from " + rs + " for server move to " + targetGroupName);
           if (!regions.isEmpty()) {
             // TODO bulk unassign or throttled unassign?
-            for (HRegionInfo region: regions) {
+            for (RegionInfo region: regions) {
               // Regions might get assigned from tables of target group so we need to filter
               if (!targetGrp.containsTable(region.getTable())) {
                 this.master.getAssignmentManager().unassign(region);
@@ -426,7 +427,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         } catch (InterruptedException e) {
           throw new IOException("Interrupted when waiting for table lock", e);
         }
-        for (HRegionInfo region :
+        for (RegionInfo region :
             master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
           master.getAssignmentManager().unassign(region);
         }
@@ -517,7 +518,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
       //We balance per group instead of per table
       List<RegionPlan> plans = new ArrayList<>();
-      for(Map.Entry<TableName, Map<ServerName, List<HRegionInfo>>> tableMap:
+      for(Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> tableMap:
           getRSGroupAssignmentsByTable(groupName).entrySet()) {
         LOG.info("Creating partial plan for table " + tableMap.getKey() + ": "
             + tableMap.getValue());
@@ -599,7 +600,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     Map<String, RegionState> rit = Maps.newTreeMap();
     AssignmentManager am = master.getAssignmentManager();
     for(TableName tableName : getRSGroupInfo(groupName).getTables()) {
-      for(HRegionInfo regionInfo: am.getRegionStates().getRegionsOfTable(tableName)) {
+      for(RegionInfo regionInfo: am.getRegionStates().getRegionsOfTable(tableName)) {
         RegionState state = am.getRegionStates().getRegionTransitionState(regionInfo);
         if(state != null) {
           rit.put(regionInfo.getEncodedName(), state);
@@ -609,16 +610,16 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     return rit;
   }
 
-  private Map<TableName, Map<ServerName, List<HRegionInfo>>>
+  private Map<TableName, Map<ServerName, List<RegionInfo>>>
       getRSGroupAssignmentsByTable(String groupName) throws IOException {
-    Map<TableName, Map<ServerName, List<HRegionInfo>>> result = Maps.newHashMap();
+    Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    Map<TableName, Map<ServerName, List<HRegionInfo>>> assignments = Maps.newHashMap();
-    for(Map.Entry<HRegionInfo, ServerName> entry:
+    Map<TableName, Map<ServerName, List<RegionInfo>>> assignments = Maps.newHashMap();
+    for(Map.Entry<RegionInfo, ServerName> entry:
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
       TableName currTable = entry.getKey().getTable();
       ServerName currServer = entry.getValue();
-      HRegionInfo currRegion = entry.getKey();
+      RegionInfo currRegion = entry.getKey();
       if (rsGroupInfo.getTables().contains(currTable)) {
         assignments.putIfAbsent(currTable, new HashMap<>());
         assignments.get(currTable).putIfAbsent(currServer, new ArrayList<>());
@@ -626,7 +627,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
     }
 
-    Map<ServerName, List<HRegionInfo>> serverMap = Maps.newHashMap();
+    Map<ServerName, List<RegionInfo>> serverMap = Maps.newHashMap();
     for(ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
       if(rsGroupInfo.getServers().contains(serverName.getAddress())) {
         serverMap.put(serverName, Collections.emptyList());

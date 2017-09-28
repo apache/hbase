@@ -19,9 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -43,13 +40,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
@@ -207,7 +206,7 @@ public class HTableMultiplexer {
         LinkedBlockingQueue<PutStatus> queue = getQueue(loc);
 
         // Generate a MultiPutStatus object and offer it into the queue
-        PutStatus s = new PutStatus(loc.getRegionInfo(), put, maxAttempts);
+        PutStatus s = new PutStatus(loc.getRegion(), put, maxAttempts);
 
         return queue.offer(s);
       }
@@ -372,11 +371,11 @@ public class HTableMultiplexer {
 
   @VisibleForTesting
   static class PutStatus {
-    final HRegionInfo regionInfo;
+    final RegionInfo regionInfo;
     final Put put;
     final int maxAttempCount;
 
-    public PutStatus(HRegionInfo regionInfo, Put put, int maxAttempCount) {
+    public PutStatus(RegionInfo regionInfo, Put put, int maxAttempCount) {
       this.regionInfo = regionInfo;
       this.put = put;
       this.maxAttempCount = maxAttempCount;

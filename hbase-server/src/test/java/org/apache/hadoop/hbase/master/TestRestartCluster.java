@@ -29,22 +29,19 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.shaded.com.google.common.net.HostAndPort;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -78,7 +75,7 @@ public class TestRestartCluster {
       UTIL.waitTableEnabled(TABLE);
     }
 
-    List<HRegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
+    List<RegionInfo> allRegions = MetaTableAccessor.getAllRegions(UTIL.getConnection(), false);
     assertEquals(4, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
@@ -135,7 +132,7 @@ public class TestRestartCluster {
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
       master.getConnection());
     snapshot.initialize();
-    Map<HRegionInfo, ServerName> regionToRegionServerMap
+    Map<RegionInfo, ServerName> regionToRegionServerMap
       = snapshot.getRegionToRegionServerMap();
 
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -201,10 +198,10 @@ public class TestRestartCluster {
 
     snapshot = new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
-    Map<HRegionInfo, ServerName> newRegionToRegionServerMap =
+    Map<RegionInfo, ServerName> newRegionToRegionServerMap =
       snapshot.getRegionToRegionServerMap();
     assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
-    for (Map.Entry<HRegionInfo, ServerName> entry: newRegionToRegionServerMap.entrySet()) {
+    for (Map.Entry<RegionInfo, ServerName> entry: newRegionToRegionServerMap.entrySet()) {
       if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) continue;
       ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
       ServerName currentServer = entry.getValue();

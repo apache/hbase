@@ -40,31 +40,32 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MunkresAssignment;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 
 /**
  * A tool that is used for manipulating and viewing favored nodes information
@@ -197,12 +198,12 @@ public class RegionPlacementMaintainer {
       Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan plan,
       boolean munkresForSecondaryAndTertiary) throws IOException {
       // Get the all the regions for the current table
-      List<HRegionInfo> regions =
+      List<RegionInfo> regions =
         assignmentSnapshot.getTableToRegionMap().get(tableName);
       int numRegions = regions.size();
 
       // Get the current assignment map
-      Map<HRegionInfo, ServerName> currentAssignmentMap =
+      Map<RegionInfo, ServerName> currentAssignmentMap =
         assignmentSnapshot.getRegionToRegionServerMap();
 
       // Get the all the region servers
@@ -257,12 +258,12 @@ public class RegionPlacementMaintainer {
         // Compute the total rack locality for each region in each rack. The total
         // rack locality is the sum of the localities of a region on all servers in
         // a rack.
-        Map<String, Map<HRegionInfo, Float>> rackRegionLocality = new HashMap<>();
+        Map<String, Map<RegionInfo, Float>> rackRegionLocality = new HashMap<>();
         for (int i = 0; i < numRegions; i++) {
-          HRegionInfo region = regions.get(i);
+          RegionInfo region = regions.get(i);
           for (int j = 0; j < regionSlots; j += slotsPerServer) {
             String rack = rackManager.getRack(servers.get(j / slotsPerServer));
-            Map<HRegionInfo, Float> rackLocality = rackRegionLocality.get(rack);
+            Map<RegionInfo, Float> rackLocality = rackRegionLocality.get(rack);
             if (rackLocality == null) {
               rackLocality = new HashMap<>();
               rackRegionLocality.put(rack, rackLocality);
@@ -417,18 +418,18 @@ public class RegionPlacementMaintainer {
         LOG.info("Assignment plan for secondary and tertiary generated " +
             "using MunkresAssignment");
       } else {
-        Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<>();
+        Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>();
         for (int i = 0; i < numRegions; i++) {
           primaryRSMap.put(regions.get(i), servers.get(primaryAssignment[i] / slotsPerServer));
         }
         FavoredNodeAssignmentHelper favoredNodeHelper =
             new FavoredNodeAssignmentHelper(servers, conf);
         favoredNodeHelper.initialize();
-        Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap =
+        Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap =
             favoredNodeHelper.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap);
         for (int i = 0; i < numRegions; i++) {
           List<ServerName> favoredServers = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
-          HRegionInfo currentRegion = regions.get(i);
+          RegionInfo currentRegion = regions.get(i);
           ServerName s = primaryRSMap.get(currentRegion);
           favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
@@ -467,7 +468,7 @@ public class RegionPlacementMaintainer {
     FavoredNodesPlan plan = new FavoredNodesPlan();
 
     // Get the table to region mapping
-    Map<TableName, List<HRegionInfo>> tableToRegionMap =
+    Map<TableName, List<RegionInfo>> tableToRegionMap =
       assignmentSnapshot.getTableToRegionMap();
     LOG.info("Start to generate the new assignment plan for the " +
          + tableToRegionMap.keySet().size() + " tables" );
@@ -635,8 +636,8 @@ public class RegionPlacementMaintainer {
     try {
       LOG.info("Start to update the hbase:meta with the new assignment plan");
       Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
-      Map<HRegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
-      Map<String, HRegionInfo> regionToRegionInfoMap =
+      Map<RegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
+      Map<String, RegionInfo> regionToRegionInfoMap =
         getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap();
       for (Map.Entry<String, List<ServerName>> entry : assignmentMap.entrySet()) {
         planToUpdate.put(regionToRegionInfoMap.get(entry.getKey()), entry.getValue());
@@ -659,21 +660,21 @@ public class RegionPlacementMaintainer {
   throws IOException{
     LOG.info("Start to update the region servers with the new assignment plan");
     // Get the region to region server map
-    Map<ServerName, List<HRegionInfo>> currentAssignment =
+    Map<ServerName, List<RegionInfo>> currentAssignment =
       this.getRegionAssignmentSnapshot().getRegionServerToRegionMap();
 
     // track of the failed and succeeded updates
     int succeededNum = 0;
     Map<ServerName, Exception> failedUpdateMap = new HashMap<>();
 
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry :
+    for (Map.Entry<ServerName, List<RegionInfo>> entry :
       currentAssignment.entrySet()) {
-      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
+      List<Pair<RegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
       try {
         // Keep track of the favored updates for the current region server
         FavoredNodesPlan singleServerPlan = null;
         // Find out all the updates for the current region server
-        for (HRegionInfo region : entry.getValue()) {
+        for (RegionInfo region : entry.getValue()) {
           List<ServerName> favoredServerList = plan.getFavoredNodes(region);
           if (favoredServerList != null &&
               favoredServerList.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
@@ -746,7 +747,7 @@ public class RegionPlacementMaintainer {
       throws IOException {
     Map<TableName, Integer> movesPerTable = new HashMap<>();
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
-    Map<TableName, List<HRegionInfo>> tableToRegions = snapshot
+    Map<TableName, List<RegionInfo>> tableToRegions = snapshot
         .getTableToRegionMap();
     FavoredNodesPlan oldPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
@@ -756,8 +757,8 @@ public class RegionPlacementMaintainer {
           && !this.targetTableSet.contains(table)) {
         continue;
       }
-      List<HRegionInfo> regions = tableToRegions.get(table);
-      for (HRegionInfo region : regions) {
+      List<RegionInfo> regions = tableToRegions.get(table);
+      for (RegionInfo region : regions) {
         List<ServerName> oldServers = oldPlan.getFavoredNodes(region);
         List<ServerName> newServers = newPlan.getFavoredNodes(region);
         if (oldServers != null && newServers != null) {
@@ -789,7 +790,7 @@ public class RegionPlacementMaintainer {
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     FavoredNodesPlan oldPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
-    Map<TableName, List<HRegionInfo>> tableToRegionsMap = snapshot.getTableToRegionMap();
+    Map<TableName, List<RegionInfo>> tableToRegionsMap = snapshot.getTableToRegionMap();
     for (TableName table : tables) {
       float[] deltaLocality = new float[3];
       float[] locality = new float[3];
@@ -797,13 +798,13 @@ public class RegionPlacementMaintainer {
           && !this.targetTableSet.contains(table)) {
         continue;
       }
-      List<HRegionInfo> regions = tableToRegionsMap.get(table);
+      List<RegionInfo> regions = tableToRegionsMap.get(table);
       System.out.println("==================================================");
       System.out.println("Assignment Plan Projection Report For Table: " + table);
       System.out.println("\t Total regions: " + regions.size());
       System.out.println("\t" + movesPerTable.get(table)
           + " primaries will move due to their primary has changed");
-      for (HRegionInfo currentRegion : regions) {
+      for (RegionInfo currentRegion : regions) {
         Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
             .getEncodedName());
         if (regionLocality == null) {
@@ -881,7 +882,7 @@ public class RegionPlacementMaintainer {
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     FavoredNodesPlan assignmentPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
-    Map<TableName, List<HRegionInfo>> tableToRegionsMap = snapshot
+    Map<TableName, List<RegionInfo>> tableToRegionsMap = snapshot
         .getTableToRegionMap();
     for (TableName table : tables) {
       float[] locality = new float[3];
@@ -889,8 +890,8 @@ public class RegionPlacementMaintainer {
           && !this.targetTableSet.contains(table)) {
         continue;
       }
-      List<HRegionInfo> regions = tableToRegionsMap.get(table);
-      for (HRegionInfo currentRegion : regions) {
+      List<RegionInfo> regions = tableToRegionsMap.get(table);
+      for (RegionInfo currentRegion : regions) {
         Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
             .getEncodedName());
         if (regionLocality == null) {
@@ -1094,7 +1095,7 @@ public class RegionPlacementMaintainer {
         LOG.info("Going to update the region " + regionName + " with the new favored nodes " +
             favoredNodesStr);
         List<ServerName> favoredNodes = null;
-        HRegionInfo regionInfo =
+        RegionInfo regionInfo =
             rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap().get(regionName);
         if (regionInfo == null) {
           LOG.error("Cannot find the region " + regionName + " from the META");

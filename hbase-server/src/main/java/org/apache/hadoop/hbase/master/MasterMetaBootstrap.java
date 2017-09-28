@@ -25,10 +25,10 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -118,7 +119,7 @@ public class MasterMetaBootstrap {
     // TODO: Unimplemented
     // long timeout =
     //   master.getConfiguration().getLong("hbase.catalog.verification.timeout", 1000);
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
       status.setStatus("Assigning hbase:meta region");
     } else {
       status.setStatus("Assigning hbase:meta region, replicaId " + replicaId);
@@ -127,11 +128,11 @@ public class MasterMetaBootstrap {
     // Get current meta state from zk.
     RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper(), replicaId);
     LOG.debug("meta state from zookeeper: " + metaState);
-    HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
-      HRegionInfo.FIRST_META_REGIONINFO, replicaId);
+    RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
+        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
     assignmentManager.assignMeta(hri, metaState.getServerName());
 
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
       // TODO: should we prevent from using state manager before meta was initialized?
       // tableStateManager.start();
       master.getTableStateManager()
@@ -144,7 +145,7 @@ public class MasterMetaBootstrap {
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
     // No need to wait for meta is assigned = 0 when meta is just verified.
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableCrashedServerProcessing(false);
+    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) enableCrashedServerProcessing(false);
     LOG.info("hbase:meta with replicaId " + replicaId + ", location="
       + master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper(), replicaId));
     status.setStatus("META assigned.");

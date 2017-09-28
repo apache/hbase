@@ -24,10 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -36,6 +35,8 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
@@ -89,7 +90,7 @@ public abstract class RegionTransitionProcedure
 
   private RegionTransitionState transitionState =
       RegionTransitionState.REGION_TRANSITION_QUEUE;
-  private HRegionInfo regionInfo;
+  private RegionInfo regionInfo;
   private volatile boolean lock = false;
 
   public RegionTransitionProcedure() {
@@ -97,22 +98,22 @@ public abstract class RegionTransitionProcedure
     super();
   }
 
-  public RegionTransitionProcedure(final HRegionInfo regionInfo) {
+  public RegionTransitionProcedure(final RegionInfo regionInfo) {
     this.regionInfo = regionInfo;
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return regionInfo;
   }
 
-  protected void setRegionInfo(final HRegionInfo regionInfo) {
+  protected void setRegionInfo(final RegionInfo regionInfo) {
     // Setter is for deserialization.
     this.regionInfo = regionInfo;
   }
 
   @Override
   public TableName getTableName() {
-    HRegionInfo hri = getRegionInfo();
+    RegionInfo hri = getRegionInfo();
     return hri != null? hri.getTable(): null;
   }
 

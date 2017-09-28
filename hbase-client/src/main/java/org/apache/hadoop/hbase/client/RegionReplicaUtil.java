@@ -21,9 +21,8 @@ package org.apache.hadoop.hbase.client;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility methods which contain the logic for regions and replicas.
@@ -50,30 +49,6 @@ public class RegionReplicaUtil {
   static final int DEFAULT_REPLICA_ID = 0;
 
   /**
-   * Returns the HRegionInfo for the given replicaId. HRegionInfo's correspond to
-   * a range of a table, but more than one "instance" of the same range can be
-   * deployed which are differentiated by the replicaId.
-   * @param replicaId the replicaId to use
-   * @return an HRegionInfo object corresponding to the same range (table, start and
-   * end key), but for the given replicaId.
-   */
-  @Deprecated // Deprecated for HBase-2.0.0, use #getRegionInfoForReplica
-  public static HRegionInfo getRegionInfoForReplica(HRegionInfo regionInfo, int replicaId) {
-    if (regionInfo.getReplicaId() == replicaId) {
-      return regionInfo;
-    }
-    HRegionInfo replicaInfo;
-    if (regionInfo.isMetaRegion()) {
-      replicaInfo = new HRegionInfo(regionInfo.getRegionId(), regionInfo.getTable(), replicaId);
-    } else {
-      replicaInfo = new HRegionInfo(regionInfo.getTable(), regionInfo.getStartKey(),
-        regionInfo.getEndKey(), regionInfo.isSplit(), regionInfo.getRegionId(), replicaId);
-    }
-    replicaInfo.setOffline(regionInfo.isOffline());
-    return replicaInfo;
-  }
-
-  /**
    * Returns the RegionInfo for the given replicaId.
    * RegionInfo's correspond to a range of a table, but more than one
    * "instance" of the same range can be deployed which are differentiated by
@@ -87,31 +62,33 @@ public class RegionReplicaUtil {
     if (regionInfo.getReplicaId() == replicaId) {
       return regionInfo;
     }
-    RegionInfoBuilder replicaInfo;
-    RegionInfo ri;
+
     if (regionInfo.isMetaRegion()) {
-      ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
+          .setRegionId(regionInfo.getRegionId())
+          .setReplicaId(replicaId)
+          .setOffline(regionInfo.isOffline())
+          .build();
     } else {
-      replicaInfo = RegionInfoBuilder.newBuilder(regionInfo.getTable())
+      return RegionInfoBuilder.newBuilder(regionInfo.getTable())
               .setStartKey(regionInfo.getStartKey())
               .setEndKey(regionInfo.getEndKey())
               .setSplit(regionInfo.isSplit())
               .setRegionId(regionInfo.getRegionId())
-              .setReplicaId(replicaId);
-      replicaInfo.setOffline(regionInfo.isOffline());
-      ri = replicaInfo.build();
+              .setReplicaId(replicaId)
+              .setOffline(regionInfo.isOffline())
+              .build();
     }
-    return ri;
   }
 
   /**
-   * Returns the HRegionInfo for the default replicaId (0). HRegionInfo's correspond to
+   * Returns the RegionInfo for the default replicaId (0). RegionInfo's correspond to
    * a range of a table, but more than one "instance" of the same range can be
    * deployed which are differentiated by the replicaId.
-   * @return an HRegionInfo object corresponding to the same range (table, start and
+   * @return an RegionInfo object corresponding to the same range (table, start and
    * end key), but for the default replicaId.
    */
-  public static HRegionInfo getRegionInfoForDefaultReplica(HRegionInfo regionInfo) {
+  public static RegionInfo getRegionInfoForDefaultReplica(RegionInfo regionInfo) {
     return getRegionInfoForReplica(regionInfo, DEFAULT_REPLICA_ID);
   }
 
@@ -121,7 +98,7 @@ public class RegionReplicaUtil {
   }
 
   /** @return true if this region is a default replica for the region */
-  public static boolean isDefaultReplica(HRegionInfo hri) {
+  public static boolean isDefaultReplica(RegionInfo hri) {
     return  hri.getReplicaId() == DEFAULT_REPLICA_ID;
   }
 
@@ -129,22 +106,22 @@ public class RegionReplicaUtil {
    * Removes the non-default replicas from the passed regions collection
    * @param regions
    */
-  public static void removeNonDefaultRegions(Collection<HRegionInfo> regions) {
-    Iterator<HRegionInfo> iterator = regions.iterator();
+  public static void removeNonDefaultRegions(Collection<RegionInfo> regions) {
+    Iterator<RegionInfo> iterator = regions.iterator();
     while (iterator.hasNext()) {
-      HRegionInfo hri = iterator.next();
+      RegionInfo hri = iterator.next();
       if (!RegionReplicaUtil.isDefaultReplica(hri)) {
         iterator.remove();
       }
     }
   }
 
-  public static boolean isReplicasForSameRegion(HRegionInfo regionInfoA, HRegionInfo regionInfoB) {
+  public static boolean isReplicasForSameRegion(RegionInfo regionInfoA, RegionInfo regionInfoB) {
     return compareRegionInfosWithoutReplicaId(regionInfoA, regionInfoB) == 0;
   }
 
-  private static int compareRegionInfosWithoutReplicaId(HRegionInfo regionInfoA,
-      HRegionInfo regionInfoB) {
+  private static int compareRegionInfosWithoutReplicaId(RegionInfo regionInfoA,
+      RegionInfo regionInfoB) {
     int result = regionInfoA.getTable().compareTo(regionInfoB.getTable());
     if (result != 0) {
       return result;

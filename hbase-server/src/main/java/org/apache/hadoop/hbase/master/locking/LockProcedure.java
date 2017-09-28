@@ -19,12 +19,16 @@
 
 package org.apache.hadoop.hbase.master.locking;
 
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.LockType;
@@ -32,15 +36,12 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockProcedureData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
-
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Procedure to allow blessed clients and external admin tools to take our internal Schema locks
@@ -68,7 +69,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
 
   private String namespace;
   private TableName tableName;
-  private HRegionInfo[] regionInfos;
+  private RegionInfo[] regionInfos;
   private LockType type;
   // underlying namespace/table/region lock.
   private LockInterface lock;
@@ -160,12 +161,12 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    *                        Useful for locks acquired locally from master process.
    * @throws IllegalArgumentException if all regions are not from same table.
    */
-  public LockProcedure(final Configuration conf, final HRegionInfo[] regionInfos,
+  public LockProcedure(final Configuration conf, final RegionInfo[] regionInfos,
       final LockType type, final String description, final CountDownLatch lockAcquireLatch)
       throws IllegalArgumentException {
     this(conf, type, description, lockAcquireLatch);
 
-    // Build HRegionInfo from region names.
+    // Build RegionInfo from region names.
     if (regionInfos.length == 0) {
       throw new IllegalArgumentException("No regions specified for region lock");
     }
@@ -269,7 +270,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
           .setDescription(description);
     if (regionInfos != null) {
       for (int i = 0; i < regionInfos.length; ++i) {
-        builder.addRegionInfo(HRegionInfo.convert(regionInfos[i]));
+        builder.addRegionInfo(ProtobufUtil.toRegionInfo(regionInfos[i]));
       }
     } else if (namespace != null) {
       builder.setNamespace(namespace);
@@ -289,9 +290,9 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     type = LockType.valueOf(state.getLockType().name());
     description = state.getDescription();
     if (state.getRegionInfoCount() > 0) {
-      regionInfos = new HRegionInfo[state.getRegionInfoCount()];
+      regionInfos = new RegionInfo[state.getRegionInfoCount()];
       for (int i = 0; i < state.getRegionInfoCount(); ++i) {
-        regionInfos[i] = HRegionInfo.convert(state.getRegionInfo(i));
+        regionInfos[i] = ProtobufUtil.toRegionInfo(state.getRegionInfo(i));
       }
     } else if (state.hasNamespace()) {
       namespace = state.getNamespace();

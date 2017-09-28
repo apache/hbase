@@ -23,10 +23,10 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -75,7 +75,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "f");
     UTIL.getAdmin().disableTable(tableName);
 
@@ -118,7 +118,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
   }
 
   private void testSimpleDelete(final TableName tableName, byte[][] splitKeys) throws Exception {
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     UTIL.getAdmin().disableTable(tableName);
 
@@ -136,7 +136,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     // create the table
     byte[][] splitKeys = null;
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     UTIL.getAdmin().disableTable(tableName);
 

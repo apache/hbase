@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
@@ -61,7 +60,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.AdminRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.ServerRequestCallerBuilder;
@@ -78,6 +76,15 @@ import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
 import org.apache.hadoop.hbase.shaded.io.netty.util.TimerTask;
@@ -240,13 +247,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Remov
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
-import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
@@ -595,7 +595,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
                   int notDeployed = 0;
                   int regionCount = 0;
                   for (HRegionLocation location : locations) {
-                    HRegionInfo info = location.getRegionInfo();
+                    RegionInfo info = location.getRegionInfo();
                     if (location.getServerName() == null) {
                       if (LOG.isDebugEnabled()) {
                         LOG.debug("Table " + tableName + " has not deployed region "
@@ -739,10 +739,10 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<HRegionInfo>> getOnlineRegions(ServerName serverName) {
-    return this.<List<HRegionInfo>> newAdminCaller()
+  public CompletableFuture<List<RegionInfo>> getOnlineRegions(ServerName serverName) {
+    return this.<List<RegionInfo>> newAdminCaller()
         .action((controller, stub) -> this
-            .<GetOnlineRegionRequest, GetOnlineRegionResponse, List<HRegionInfo>> adminCall(
+            .<GetOnlineRegionRequest, GetOnlineRegionResponse, List<RegionInfo>> adminCall(
               controller, stub, RequestConverter.buildGetOnlineRegionRequest(),
               (s, c, req, done) -> s.getOnlineRegion(c, req, done),
               resp -> ProtobufUtil.getRegionInfos(resp)))
@@ -750,7 +750,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<HRegionInfo>> getTableRegions(TableName tableName) {
+  public CompletableFuture<List<RegionInfo>> getTableRegions(TableName tableName) {
     if (tableName.equals(META_TABLE_NAME)) {
       return connection.getLocator().getRegionLocation(tableName, null, null, operationTimeoutNs)
           .thenApply(loc -> Arrays.asList(loc.getRegionInfo()));
@@ -807,7 +807,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
           return;
         }
 
-        HRegionInfo regionInfo = location.getRegionInfo();
+        RegionInfo regionInfo = location.getRegionInfo();
         this.<Void> newAdminCaller()
             .serverName(serverName)
             .action(
@@ -973,7 +973,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   /**
    * Compact the region at specific region server.
    */
-  private CompletableFuture<Void> compact(final ServerName sn, final HRegionInfo hri,
+  private CompletableFuture<Void> compact(final ServerName sn, final RegionInfo hri,
       final boolean major, Optional<byte[]> columnFamily) {
     return this
         .<Void> newAdminCaller()
@@ -987,8 +987,8 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private byte[] toEncodeRegionName(byte[] regionName) {
     try {
-      return HRegionInfo.isEncodedRegionName(regionName) ? regionName
-          : Bytes.toBytes(HRegionInfo.encodeRegionName(regionName));
+      return RegionInfo.isEncodedRegionName(regionName) ? regionName
+          : Bytes.toBytes(RegionInfo.encodeRegionName(regionName));
     } catch (IOException e) {
       return regionName;
     }
@@ -1002,8 +1002,8 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
           result.completeExceptionally(err);
           return;
         }
-        HRegionInfo regionInfo = location.getRegionInfo();
-        if (regionInfo.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        RegionInfo regionInfo = location.getRegionInfo();
+        if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
           result.completeExceptionally(new IllegalArgumentException(
               "Can't invoke merge on non-default regions directly"));
           return;
@@ -1138,14 +1138,14 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
             if (results != null && !results.isEmpty()) {
               List<CompletableFuture<Void>> splitFutures = new ArrayList<>();
               for (Result r : results) {
-                if (r.isEmpty() || MetaTableAccessor.getHRegionInfo(r) == null) continue;
+                if (r.isEmpty() || MetaTableAccessor.getRegionInfo(r) == null) continue;
                 RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
                 if (rl != null) {
                   for (HRegionLocation h : rl.getRegionLocations()) {
                     if (h != null && h.getServerName() != null) {
-                      HRegionInfo hri = h.getRegionInfo();
+                      RegionInfo hri = h.getRegion();
                       if (hri == null || hri.isSplitParent()
-                          || hri.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
+                          || hri.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID)
                         continue;
                       splitFutures.add(split(hri, Optional.empty()));
                     }
@@ -1202,8 +1202,8 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> future = new CompletableFuture<>();
     getRegionLocation(regionName).whenComplete(
       (location, err) -> {
-        HRegionInfo regionInfo = location.getRegionInfo();
-        if (regionInfo.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        RegionInfo regionInfo = location.getRegionInfo();
+        if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
           future.completeExceptionally(new IllegalArgumentException(
               "Can't split replicas directly. "
                   + "Replicas are auto-split when their primary is split."));
@@ -1226,7 +1226,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private CompletableFuture<Void> split(final HRegionInfo hri,
+  private CompletableFuture<Void> split(final RegionInfo hri,
       Optional<byte[]> splitPoint) {
     if (hri.getStartKey() != null && splitPoint.isPresent()
         && Bytes.compareTo(hri.getStartKey(), splitPoint.get()) == 0) {
@@ -2051,7 +2051,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
     try {
       CompletableFuture<Optional<HRegionLocation>> future;
-      if (HRegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
+      if (RegionInfo.isEncodedRegionName(regionNameOrEncodedRegionName)) {
         future = AsyncMetaTableAccessor.getRegionLocationWithEncodedName(metaTable,
           regionNameOrEncodedRegionName);
       } else {
@@ -2087,19 +2087,19 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
    * @param regionNameOrEncodedRegionName
    * @return region info, wrapped by a {@link CompletableFuture}
    */
-  private CompletableFuture<HRegionInfo> getRegionInfo(byte[] regionNameOrEncodedRegionName) {
+  private CompletableFuture<RegionInfo> getRegionInfo(byte[] regionNameOrEncodedRegionName) {
     if (regionNameOrEncodedRegionName == null) {
       return failedFuture(new IllegalArgumentException("Passed region name can't be null"));
     }
 
     if (Bytes.equals(regionNameOrEncodedRegionName,
-      HRegionInfo.FIRST_META_REGIONINFO.getRegionName())
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName())
         || Bytes.equals(regionNameOrEncodedRegionName,
-          HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
-      return CompletableFuture.completedFuture(HRegionInfo.FIRST_META_REGIONINFO);
+        RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
+      return CompletableFuture.completedFuture(RegionInfoBuilder.FIRST_META_REGIONINFO);
     }
 
-    CompletableFuture<HRegionInfo> future = new CompletableFuture<>();
+    CompletableFuture<RegionInfo> future = new CompletableFuture<>();
     getRegionLocation(regionNameOrEncodedRegionName).whenComplete((location, err) -> {
       if (err != null) {
         future.completeExceptionally(err);

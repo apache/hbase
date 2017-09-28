@@ -30,9 +30,9 @@ AssignmentManager assignmentManager = null;
 </%args>
 <%import>
 java.util.*;
+org.apache.hadoop.hbase.client.RegionInfo;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
-org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
@@ -435,7 +435,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <%for HTableDescriptor htDesc : tables%>
     <%java>
       TableName tableName = htDesc.getTableName();
-      Map<RegionState.State, List<HRegionInfo>> tableRegions =
+      Map<RegionState.State, List<RegionInfo>> tableRegions =
           master.getAssignmentManager().getRegionStates()
             .getRegionByStateOfTable(tableName);
       int openRegionsCount = tableRegions.get(RegionState.State.OPEN).size();
@@ -444,7 +444,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
       int failedRegionsCount = tableRegions.get(RegionState.State.FAILED_OPEN).size()
              + tableRegions.get(RegionState.State.FAILED_CLOSE).size();
       int otherRegionsCount = 0;
-      for (List<HRegionInfo> list: tableRegions.values()) {
+      for (List<RegionInfo> list: tableRegions.values()) {
          otherRegionsCount += list.size();
       }
       // now subtract known states

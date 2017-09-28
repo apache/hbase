@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -38,9 +41,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
@@ -68,7 +68,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   }
 
   private void testSimpleCreate(final TableName tableName, byte[][] splitKeys) throws Exception {
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, F1, F2);
     MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
   }
@@ -83,7 +83,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     // disable sanity check
     builder.setValue("hbase.table.sanity.checks", Boolean.FALSE.toString());
     TableDescriptor htd = builder.build();
-    final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
+    final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
 
     long procId =
         ProcedureTestingUtility.submitAndWait(procExec,
@@ -100,7 +100,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
-    final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
+    final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
 
     // create the table
     long procId1 = procExec.submitProcedure(
@@ -129,7 +129,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     // Start the Create procedure && kill the executor
     byte[][] splitKeys = null;
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
-    HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
@@ -166,7 +166,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     };
     builder.setRegionReplication(3);
     TableDescriptor htd = builder.build();
-    HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
+    RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 

@@ -30,15 +30,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -59,13 +59,16 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MergeTableRegionsState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MergeTableRegionsState;
 
 /**
  * The procedure to Merge a region in a table.
@@ -79,8 +82,8 @@ public class MergeTableRegionsProcedure
   private Boolean traceEnabled;
   private volatile boolean lock = false;
   private ServerName regionLocation;
-  private HRegionInfo[] regionsToMerge;
-  private HRegionInfo mergedRegion;
+  private RegionInfo[] regionsToMerge;
+  private RegionInfo mergedRegion;
   private boolean forcible;
 
   public MergeTableRegionsProcedure() {
@@ -88,18 +91,18 @@ public class MergeTableRegionsProcedure
   }
 
   public MergeTableRegionsProcedure(final MasterProcedureEnv env,
-      final HRegionInfo regionToMergeA, final HRegionInfo regionToMergeB) throws IOException {
+      final RegionInfo regionToMergeA, final RegionInfo regionToMergeB) throws IOException {
     this(env, regionToMergeA, regionToMergeB, false);
   }
 
   public MergeTableRegionsProcedure(final MasterProcedureEnv env,
-      final HRegionInfo regionToMergeA, final HRegionInfo regionToMergeB,
+      final RegionInfo regionToMergeA, final RegionInfo regionToMergeB,
       final boolean forcible) throws MergeRegionException {
-    this(env, new HRegionInfo[] {regionToMergeA, regionToMergeB}, forcible);
+    this(env, new RegionInfo[] {regionToMergeA, regionToMergeB}, forcible);
   }
 
   public MergeTableRegionsProcedure(final MasterProcedureEnv env,
-      final HRegionInfo[] regionsToMerge, final boolean forcible)
+      final RegionInfo[] regionsToMerge, final boolean forcible)
       throws MergeRegionException {
     super(env);
 
@@ -117,7 +120,7 @@ public class MergeTableRegionsProcedure
     this.forcible = forcible;
   }
 
-  private static void checkRegionsToMerge(final HRegionInfo[] regionsToMerge,
+  private static void checkRegionsToMerge(final RegionInfo[] regionsToMerge,
       final boolean forcible) throws MergeRegionException {
     // For now, we only merge 2 regions.
     // It could be extended to more than 2 regions in the future.
@@ -129,19 +132,19 @@ public class MergeTableRegionsProcedure
     checkRegionsToMerge(regionsToMerge[0], regionsToMerge[1], forcible);
   }
 
-  private static void checkRegionsToMerge(final HRegionInfo regionToMergeA,
-      final HRegionInfo regionToMergeB, final boolean forcible) throws MergeRegionException {
+  private static void checkRegionsToMerge(final RegionInfo regionToMergeA,
+      final RegionInfo regionToMergeB, final boolean forcible) throws MergeRegionException {
     if (!regionToMergeA.getTable().equals(regionToMergeB.getTable())) {
       throw new MergeRegionException("Can't merge regions from two different tables: " +
         regionToMergeA + ", " + regionToMergeB);
     }
 
-    if (regionToMergeA.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
-        regionToMergeB.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+    if (regionToMergeA.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID ||
+        regionToMergeB.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       throw new MergeRegionException("Can't merge non-default replicas");
     }
 
-    if (!HRegionInfo.areAdjacent(regionToMergeA, regionToMergeB)) {
+    if (!RegionInfo.areAdjacent(regionToMergeA, regionToMergeB)) {
       String msg = "Unable to merge not adjacent regions " + regionToMergeA.getShortNameToLog() +
           ", " + regionToMergeB.getShortNameToLog() + " where forcible = " + forcible;
       LOG.warn(msg);
@@ -151,18 +154,18 @@ public class MergeTableRegionsProcedure
     }
   }
 
-  private static HRegionInfo createMergedRegionInfo(final HRegionInfo[] regionsToMerge) {
+  private static RegionInfo createMergedRegionInfo(final RegionInfo[] regionsToMerge) {
     return createMergedRegionInfo(regionsToMerge[0], regionsToMerge[1]);
   }
 
   /**
    * Create merged region info through the specified two regions
    */
-  private static HRegionInfo createMergedRegionInfo(final HRegionInfo regionToMergeA,
-      final HRegionInfo regionToMergeB) {
+  private static RegionInfo createMergedRegionInfo(final RegionInfo regionToMergeA,
+      final RegionInfo regionToMergeB) {
     // Choose the smaller as start key
     final byte[] startKey;
-    if (regionToMergeA.compareTo(regionToMergeB) <= 0) {
+    if (RegionInfo.COMPARATOR.compare(regionToMergeA, regionToMergeB) <= 0) {
       startKey = regionToMergeA.getStartKey();
     } else {
       startKey = regionToMergeB.getStartKey();
@@ -179,12 +182,16 @@ public class MergeTableRegionsProcedure
     }
 
     // Merged region is sorted between two merging regions in META
-    final long rid = getMergedRegionIdTimestamp(regionToMergeA, regionToMergeB);
-    return new HRegionInfo(regionToMergeA.getTable(), startKey, endKey, false, rid);
+    return RegionInfoBuilder.newBuilder(regionToMergeA.getTable())
+        .setStartKey(startKey)
+        .setEndKey(endKey)
+        .setSplit(false)
+        .setRegionId(getMergedRegionIdTimestamp(regionToMergeA, regionToMergeB))
+        .build();
   }
 
-  private static long getMergedRegionIdTimestamp(final HRegionInfo regionToMergeA,
-      final HRegionInfo regionToMergeB) {
+  private static long getMergedRegionIdTimestamp(final RegionInfo regionToMergeA,
+      final RegionInfo regionToMergeB) {
     long rid = EnvironmentEdgeManager.currentTime();
     // Regionid is timestamp. Merged region's id can't be less than that of
     // merging regions else will insert at wrong location in hbase:meta (See HBASE-710).
@@ -252,7 +259,7 @@ public class MergeTableRegionsProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Error trying to merge regions " + HRegionInfo.getShortNameToLog(regionsToMerge) +
+      LOG.warn("Error trying to merge regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
         " in the table " + getTableName() + " (in state=" + state + ")", e);
 
       setFailure("master-merge-regions", e);
@@ -305,7 +312,7 @@ public class MergeTableRegionsProcedure
       // This will be retried. Unless there is a bug in the code,
       // this should be just a "temporary error" (e.g. network down)
       LOG.warn("Failed rollback attempt step " + state + " for merging the regions "
-          + HRegionInfo.getShortNameToLog(regionsToMerge) + " in table " + getTableName(), e);
+          + RegionInfo.getShortNameToLog(regionsToMerge) + " in table " + getTableName(), e);
       throw e;
     }
   }
@@ -351,10 +358,10 @@ public class MergeTableRegionsProcedure
     final MasterProcedureProtos.MergeTableRegionsStateData.Builder mergeTableRegionsMsg =
         MasterProcedureProtos.MergeTableRegionsStateData.newBuilder()
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
-        .setMergedRegionInfo(HRegionInfo.convert(mergedRegion))
+        .setMergedRegionInfo(ProtobufUtil.toRegionInfo(mergedRegion))
         .setForcible(forcible);
     for (int i = 0; i < regionsToMerge.length; ++i) {
-      mergeTableRegionsMsg.addRegionInfo(HRegionInfo.convert(regionsToMerge[i]));
+      mergeTableRegionsMsg.addRegionInfo(ProtobufUtil.toRegionInfo(regionsToMerge[i]));
     }
     serializer.serialize(mergeTableRegionsMsg.build());
   }
@@ -369,12 +376,12 @@ public class MergeTableRegionsProcedure
     setUser(MasterProcedureUtil.toUserInfo(mergeTableRegionsMsg.getUserInfo()));
 
     assert(mergeTableRegionsMsg.getRegionInfoCount() == 2);
-    regionsToMerge = new HRegionInfo[mergeTableRegionsMsg.getRegionInfoCount()];
+    regionsToMerge = new RegionInfo[mergeTableRegionsMsg.getRegionInfoCount()];
     for (int i = 0; i < regionsToMerge.length; i++) {
-      regionsToMerge[i] = HRegionInfo.convert(mergeTableRegionsMsg.getRegionInfo(i));
+      regionsToMerge[i] = ProtobufUtil.toRegionInfo(mergeTableRegionsMsg.getRegionInfo(i));
     }
 
-    mergedRegion = HRegionInfo.convert(mergeTableRegionsMsg.getMergedRegionInfo());
+    mergedRegion = ProtobufUtil.toRegionInfo(mergeTableRegionsMsg.getMergedRegionInfo());
   }
 
   @Override
@@ -383,7 +390,7 @@ public class MergeTableRegionsProcedure
     sb.append(" table=");
     sb.append(getTableName());
     sb.append(", regions=");
-    sb.append(HRegionInfo.getShortNameToLog(regionsToMerge));
+    sb.append(RegionInfo.getShortNameToLog(regionsToMerge));
     sb.append(", forcibly=");
     sb.append(forcible);
   }
@@ -450,7 +457,7 @@ public class MergeTableRegionsProcedure
     boolean regionAHasMergeQualifier = !catalogJanitor.cleanMergeQualifier(regionsToMerge[0]);
     if (regionAHasMergeQualifier
         || !catalogJanitor.cleanMergeQualifier(regionsToMerge[1])) {
-      String msg = "Skip merging regions " + HRegionInfo.getShortNameToLog(regionsToMerge) +
+      String msg = "Skip merging regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
         ", because region "
         + (regionAHasMergeQualifier ? regionsToMerge[0].getEncodedName() : regionsToMerge[1]
               .getEncodedName()) + " has merge qualifier";
@@ -526,7 +533,7 @@ public class MergeTableRegionsProcedure
       boolean ret = cpHost.preMergeRegionsAction(regionsToMerge, getUser());
       if (ret) {
         throw new IOException(
-          "Coprocessor bypassing regions " + HRegionInfo.getShortNameToLog(regionsToMerge) +
+          "Coprocessor bypassing regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
           " merge.");
       }
     }
@@ -649,7 +656,7 @@ public class MergeTableRegionsProcedure
     int procsIdx = 0;
     for (int i = 0; i < regionsToMerge.length; ++i) {
       for (int j = 0; j < regionReplication; ++j) {
-        final HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(regionsToMerge[i], j);
+        final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(regionsToMerge[i], j);
         procs[procsIdx++] = env.getAssignmentManager().createAssignProcedure(hri, serverName);
       }
     }
@@ -663,7 +670,7 @@ public class MergeTableRegionsProcedure
     int procsIdx = 0;
     for (int i = 0; i < regionsToMerge.length; ++i) {
       for (int j = 0; j < regionReplication; ++j) {
-        final HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(regionsToMerge[i], j);
+        final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(regionsToMerge[i], j);
         procs[procsIdx++] = env.getAssignmentManager().createUnassignProcedure(hri,null,true);
       }
     }
@@ -675,7 +682,7 @@ public class MergeTableRegionsProcedure
     final ServerName targetServer = getServerName(env);
     final AssignProcedure[] procs = new AssignProcedure[regionReplication];
     for (int i = 0; i < procs.length; ++i) {
-      final HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(mergedRegion, i);
+      final RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(mergedRegion, i);
       procs[i] = env.getAssignmentManager().createAssignProcedure(hri, targetServer);
     }
     return procs;
@@ -699,12 +706,12 @@ public class MergeTableRegionsProcedure
 
       if (ret) {
         throw new IOException(
-          "Coprocessor bypassing regions " + HRegionInfo.getShortNameToLog(regionsToMerge) +
+          "Coprocessor bypassing regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
           " merge.");
       }
       try {
         for (Mutation p : metaEntries) {
-          HRegionInfo.parseRegionName(p.getRow());
+          RegionInfo.parseRegionName(p.getRow());
         }
       } catch (IOException e) {
         LOG.error("Row key of mutation from coprocessor is not parsable as region name."
@@ -780,7 +787,7 @@ public class MergeTableRegionsProcedure
    * @return The merged region. Maybe be null if called to early or we failed.
    */
   @VisibleForTesting
-  public HRegionInfo getMergedRegion() {
+  public RegionInfo getMergedRegion() {
     return this.mergedRegion;
   }
 }

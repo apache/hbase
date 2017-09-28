@@ -22,15 +22,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * Handles closing of a region on a region server.
@@ -45,7 +46,7 @@ public class CloseRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
   private final RegionServerServices rsServices;
-  private final HRegionInfo regionInfo;
+  private final RegionInfo regionInfo;
 
   // If true, the hosting server is aborting.  Region close process is different
   // when we are aborting.
@@ -62,14 +63,14 @@ public class CloseRegionHandler extends EventHandler {
    */
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
-      final HRegionInfo regionInfo, final boolean abort,
+      final RegionInfo regionInfo, final boolean abort,
       ServerName destination) {
     this(server, rsServices, regionInfo, abort,
       EventType.M_RS_CLOSE_REGION, destination);
   }
 
   protected CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      final RegionServerServices rsServices, RegionInfo regionInfo,
       boolean abort, EventType eventType, ServerName destination) {
     super(server, eventType);
     this.server = server;
@@ -79,7 +80,7 @@ public class CloseRegionHandler extends EventHandler {
     this.destination = destination;
   }
 
-  public HRegionInfo getRegionInfo() {
+  public RegionInfo getRegionInfo() {
     return regionInfo;
   }
 

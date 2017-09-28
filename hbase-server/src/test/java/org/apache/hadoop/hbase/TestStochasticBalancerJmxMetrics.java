@@ -20,6 +20,13 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
 
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectInstance;
+import javax.management.ObjectName;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -29,17 +36,10 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import javax.management.MBeanAttributeInfo;
-import javax.management.MBeanInfo;
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectInstance;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.balancer.BalancerTestBase;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
@@ -128,7 +128,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     loadBalancer.setConf(conf);
 
     TableName tableName = HConstants.ENSEMBLE_TABLE_NAME;
-    Map<ServerName, List<HRegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
+    Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_ensemble);
     loadBalancer.balanceCluster(tableName, clusterState);
 
     String[] tableNames = new String[] { tableName.getNameAsString() };
@@ -164,7 +164,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
     // table 1
     TableName tableName = TableName.valueOf(TABLE_NAME_1);
-    Map<ServerName, List<HRegionInfo>> clusterState = mockClusterServers(mockCluster_pertable_1);
+    Map<ServerName, List<RegionInfo>> clusterState = mockClusterServers(mockCluster_pertable_1);
     loadBalancer.balanceCluster(tableName, clusterState);
 
     // table 2
@@ -204,7 +204,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
   /**
    * Read the attributes from Hadoop->HBase->Master->Balancer in JMX
-   * @throws IOException 
+   * @throws IOException
    */
   private Set<String> readJmxMetrics() throws IOException {
     JMXConnector connector = null;

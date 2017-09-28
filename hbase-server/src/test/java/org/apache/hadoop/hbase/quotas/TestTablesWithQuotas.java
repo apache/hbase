@@ -32,10 +32,10 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore.TablesWithQuotas;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
@@ -176,7 +176,7 @@ public class TestTablesWithQuotas {
     when(admin.getTableRegions(missingTable)).thenReturn(null);
 
     QuotaObserverChore chore = mock(QuotaObserverChore.class);
-    Map<HRegionInfo,Long> regionUsage = new HashMap<>();
+    Map<RegionInfo,Long> regionUsage = new HashMap<>();
     TableQuotaSnapshotStore store = new TableQuotaSnapshotStore(conn, chore, regionUsage);
 
     // A super dirty hack to verify that, after getting no regions for our table,

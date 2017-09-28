@@ -30,10 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A Scanner which performs a scan over snapshot files. Using this class requires copying the
@@ -73,7 +72,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private Path rootDir;
   private Path restoreDir;
   private Scan scan;
-  private ArrayList<HRegionInfo> regions;
+  private ArrayList<RegionInfo> regions;
   private TableDescriptor htd;
 
   private ClientSideRegionScanner currentRegionScanner  = null;
@@ -121,11 +120,11 @@ public class TableSnapshotScanner extends AbstractClientScanner {
     final RestoreSnapshotHelper.RestoreMetaChanges meta =
       RestoreSnapshotHelper.copySnapshotForScanner(
         conf, fs, rootDir, restoreDir, snapshotName);
-    final List<HRegionInfo> restoredRegions = meta.getRegionsToAdd();
+    final List<RegionInfo> restoredRegions = meta.getRegionsToAdd();
 
     htd = meta.getTableDescriptor();
     regions = new ArrayList<>(restoredRegions.size());
-    for (HRegionInfo hri : restoredRegions) {
+    for (RegionInfo hri : restoredRegions) {
       if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
         continue;
       }
@@ -136,7 +135,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
     }
 
     // sort for regions according to startKey.
-    Collections.sort(regions);
+    Collections.sort(regions, RegionInfo.COMPARATOR);
     initScanMetrics(scan);
   }
 
@@ -150,7 +149,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
           return null;
         }
 
-        HRegionInfo hri = regions.get(currentRegion);
+        RegionInfo hri = regions.get(currentRegion);
         currentRegionScanner = new ClientSideRegionScanner(conf, fs,
           restoreDir, htd, hri, scan, scanMetrics);
         if (this.scanMetrics != null) {

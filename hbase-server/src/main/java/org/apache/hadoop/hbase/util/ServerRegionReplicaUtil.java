@@ -25,18 +25,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -82,9 +79,9 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
   /**
    * Returns the regionInfo object to use for interacting with the file system.
-   * @return An HRegionInfo object to interact with the filesystem
+   * @return An RegionInfo object to interact with the filesystem
    */
-  public static HRegionInfo getRegionInfoForFs(HRegionInfo regionInfo) {
+  public static RegionInfo getRegionInfoForFs(RegionInfo regionInfo) {
     if (regionInfo == null) {
       return null;
     }
@@ -121,11 +118,11 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @throws IOException
    */
   public static StoreFileInfo getStoreFileInfo(Configuration conf, FileSystem fs,
-      HRegionInfo regionInfo, HRegionInfo regionInfoForFs, String familyName, Path path)
+      RegionInfo regionInfo, RegionInfo regionInfoForFs, String familyName, Path path)
       throws IOException {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
-    if (regionInfo.equals(regionInfoForFs)) {
+    if (RegionInfo.COMPARATOR.compare(regionInfo, regionInfoForFs) == 0) {
       return new StoreFileInfo(conf, fs, path);
     }
 
