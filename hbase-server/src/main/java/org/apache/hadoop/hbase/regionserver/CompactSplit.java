@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.Store.NO_PRIORITY;
+import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -35,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
@@ -45,12 +47,14 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
  * Compact region on request and then run split if appropriate
@@ -195,7 +199,7 @@ public class CompactSplit implements PropagatingConfigurationObserver {
 
   public synchronized boolean requestSplit(final Region r) {
     // don't split regions that are blocking
-    if (shouldSplitRegion() && ((HRegion)r).getCompactPriority() >= Store.PRIORITY_USER) {
+    if (shouldSplitRegion() && ((HRegion)r).getCompactPriority() >= PRIORITY_USER) {
       byte[] midKey = ((HRegion)r).checkSplit();
       if (midKey != null) {
         requestSplit(r, midKey);
@@ -298,13 +302,13 @@ public class CompactSplit implements PropagatingConfigurationObserver {
   }
 
   public synchronized void requestSystemCompaction(HRegion region, String why) throws IOException {
-    requestCompactionInternal(region, why, Store.NO_PRIORITY, false,
+    requestCompactionInternal(region, why, NO_PRIORITY, false,
       CompactionLifeCycleTracker.DUMMY, null);
   }
 
   public synchronized void requestSystemCompaction(HRegion region, HStore store, String why)
       throws IOException {
-    requestCompactionInternal(region, store, why, Store.NO_PRIORITY, false,
+    requestCompactionInternal(region, store, why, NO_PRIORITY, false,
       CompactionLifeCycleTracker.DUMMY, null);
   }
 

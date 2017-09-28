@@ -56,7 +56,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
+  public boolean shouldUseScanner(Scan scan, HStore store, long oldestUnexpiredTS) {
     // No optimizations implemented by default.
     return true;
   }

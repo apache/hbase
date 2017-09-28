@@ -99,7 +99,7 @@ public class TestKeepDeletes {
     // keep 3 versions, rows do not expire
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, KeepDeletedCells.TRUE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
@@ -241,7 +241,7 @@ public class TestKeepDeletes {
     // KEEP_DELETED_CELLS is NOT enabled
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
@@ -408,7 +408,7 @@ public class TestKeepDeletes {
   public void testDeleteMarkerExpirationEmptyStore() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, KeepDeletedCells.TRUE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
 
@@ -451,7 +451,7 @@ public class TestKeepDeletes {
   public void testDeleteMarkerExpiration() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, KeepDeletedCells.TRUE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
 
@@ -514,7 +514,7 @@ public class TestKeepDeletes {
   public void testWithOldRow() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, KeepDeletedCells.TRUE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
 
@@ -674,7 +674,7 @@ public class TestKeepDeletes {
   public void testDeleteMarkerVersioning() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, KeepDeletedCells.TRUE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
@@ -818,7 +818,7 @@ public class TestKeepDeletes {
   public void testWithMinVersions() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.TRUE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past
 
@@ -897,7 +897,7 @@ public class TestKeepDeletes {
   public void testWithTTL() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, KeepDeletedCells.TTL);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past
 
@@ -945,7 +945,7 @@ public class TestKeepDeletes {
 
   }
 
-  private int countDeleteMarkers(Region region) throws IOException {
+  private int countDeleteMarkers(HRegion region) throws IOException {
     Scan s = new Scan();
     s.setRaw(true);
     // use max versions from the store(s)

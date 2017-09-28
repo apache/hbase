@@ -24,11 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -95,12 +92,11 @@ public class CompactedHFilesDischarger extends ScheduledChore {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Started compacted hfiles cleaner on " + region.getRegionInfo());
       }
-      for (Store store : region.getStores()) {
+      for (HStore store : ((HRegion) region).getStores()) {
         try {
           if (useExecutor && regionServerServices != null) {
             CompactedHFilesDischargeHandler handler = new CompactedHFilesDischargeHandler(
-                (Server) regionServerServices, EventType.RS_COMPACTED_FILES_DISCHARGER,
-                (HStore) store);
+                (Server) regionServerServices, EventType.RS_COMPACTED_FILES_DISCHARGER, store);
             regionServerServices.getExecutorService().submit(handler);
           } else {
             // call synchronously if the RegionServerServices are not

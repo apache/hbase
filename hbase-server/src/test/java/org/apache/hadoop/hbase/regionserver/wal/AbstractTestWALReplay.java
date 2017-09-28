@@ -242,10 +242,11 @@ public abstract class AbstractTestWALReplay {
     assertEquals(0, count);
 
     // flush region and make major compaction
-    Region region =  destServer.getOnlineRegion(destRegion.getRegionInfo().getRegionName());
+    HRegion region =
+        (HRegion) destServer.getOnlineRegion(destRegion.getRegionInfo().getRegionName());
     region.flush(true);
     // wait to complete major compaction
-    for (Store store : region.getStores()) {
+    for (HStore store : region.getStores()) {
       store.triggerMajorCompaction();
     }
     region.compact(true);

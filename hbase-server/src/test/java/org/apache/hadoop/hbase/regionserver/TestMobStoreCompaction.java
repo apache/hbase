@@ -298,7 +298,7 @@ public class TestMobStoreCompaction {
   }
 
   private int countStoreFiles() throws IOException {
-    Store store = region.getStore(COLUMN_FAMILY);
+    HStore store = region.getStore(COLUMN_FAMILY);
     return store.getStorefilesCount();
   }
 

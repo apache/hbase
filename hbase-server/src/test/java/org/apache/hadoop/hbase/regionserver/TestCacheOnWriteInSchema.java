@@ -208,7 +208,7 @@ public class TestCacheOnWriteInSchema {
   public void testCacheOnWriteInSchema() throws IOException {
     // Write some random data into the store
     StoreFileWriter writer = store.createWriterInTmp(Integer.MAX_VALUE,
-        HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false);
+        HFile.DEFAULT_COMPRESSION_ALGORITHM, false, true, false, false);
     writeStoreFile(writer);
     writer.close();
     // Verify the block types of interest were cached on write

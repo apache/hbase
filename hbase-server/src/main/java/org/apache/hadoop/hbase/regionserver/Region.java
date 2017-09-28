@@ -749,7 +749,7 @@ public interface Region extends ConfigurationObserver {
    * Trigger major compaction on all stores in the region.
    * <p>
    * Compaction will be performed asynchronously to this call by the RegionServer's
-   * CompactSplitThread. See also {@link Store#triggerMajorCompaction()}
+   * CompactSplitThread.
    * @throws IOException
    */
   void triggerMajorCompaction() throws IOException;

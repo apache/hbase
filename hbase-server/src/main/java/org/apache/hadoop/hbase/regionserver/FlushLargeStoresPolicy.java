@@ -78,11 +78,11 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
   }
 
   protected boolean shouldFlush(HStore store) {
-    if (store.getSizeOfMemStore().getDataSize() > this.flushSizeLowerBound) {
+    if (store.getMemStoreSize().getDataSize() > this.flushSizeLowerBound) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Flush Column Family " + store.getColumnFamilyName() + " of " +
             region.getRegionInfo().getEncodedName() + " because memstoreSize=" +
-            store.getSizeOfMemStore().getDataSize() + " > lower bound="
+            store.getMemStoreSize().getDataSize() + " > lower bound="
             + this.flushSizeLowerBound);
       }
       return true;

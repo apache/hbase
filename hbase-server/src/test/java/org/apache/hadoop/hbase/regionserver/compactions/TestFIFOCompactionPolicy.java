@@ -26,20 +26,21 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,32 +66,31 @@ public class TestFIFOCompactionPolicy {
 
   private final byte[] qualifier = Bytes.toBytes("q");
 
-  private Store getStoreWithName(TableName tableName) {
+  private HStore getStoreWithName(TableName tableName) {
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
       for (Region region : hrs.getRegions(tableName)) {
-        return region.getStores().iterator().next();
+        return ((HRegion) region).getStores().iterator().next();
       }
     }
     return null;
   }
 
-  private Store prepareData() throws IOException {
+  private HStore prepareData() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
     }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    colDesc.setTimeToLive(1); // 1 sec
-    desc.addFamily(colDesc);
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .build();
 
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -129,7 +129,7 @@ public class TestFIFOCompactionPolicy {
 
     TEST_UTIL.startMiniCluster(1);
     try {
-      Store store = prepareData();
+      HStore store = prepareData();
       assertEquals(10, store.getStorefilesCount());
       TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() > 1) {
@@ -141,9 +141,8 @@ public class TestFIFOCompactionPolicy {
     }
   }
   
-  @Test  
-  public void testSanityCheckTTL() throws Exception
-  {
+  @Test
+  public void testSanityCheckTTL() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
     TEST_UTIL.startMiniCluster(1);
@@ -154,25 +153,23 @@ public class TestFIFOCompactionPolicy {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
     }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    desc.addFamily(colDesc);
-    try{
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+    try {
       admin.createTable(desc);
       Assert.fail();
-    }catch(Exception e){      
-    }finally{
+    } catch (Exception e) {
+    } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
   }
 
-  @Test  
-  public void testSanityCheckMinVersion() throws Exception
-  {
+  @Test
+  public void testSanityCheckMinVersion() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
     TEST_UTIL.startMiniCluster(1);
@@ -183,27 +180,25 @@ public class TestFIFOCompactionPolicy {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
     }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    colDesc.setTimeToLive(1); // 1 sec
-    colDesc.setMinVersions(1);
-    desc.addFamily(colDesc);
-    try{
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
+            .setMinVersions(1).build())
+        .build();
+    try {
       admin.createTable(desc);
       Assert.fail();
-    }catch(Exception e){      
-    }finally{
+    } catch (Exception e) {
+    } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
   }
   
-  @Test  
-  public void testSanityCheckBlockingStoreFiles() throws Exception
-  {
+  @Test
+  public void testSanityCheckBlockingStoreFiles() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10);
     TEST_UTIL.startMiniCluster(1);
@@ -214,19 +209,18 @@ public class TestFIFOCompactionPolicy {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
     }
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setConfiguration(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY, 
-      FIFOCompactionPolicy.class.getName());
-    desc.setConfiguration(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, 
-      DisabledRegionSplitPolicy.class.getName());
-    HColumnDescriptor colDesc = new HColumnDescriptor(family);
-    colDesc.setTimeToLive(1); // 1 sec
-    desc.addFamily(colDesc);
-    try{
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          FIFOCompactionPolicy.class.getName())
+        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+          DisabledRegionSplitPolicy.class.getName())
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+        .build();
+    try {
       admin.createTable(desc);
       Assert.fail();
-    }catch(Exception e){      
-    }finally{
+    } catch (Exception e) {
+    } finally {
       TEST_UTIL.shutdownMiniCluster();
     }
   }

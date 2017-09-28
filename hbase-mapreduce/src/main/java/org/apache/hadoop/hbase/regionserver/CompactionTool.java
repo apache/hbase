@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
+
+import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -161,12 +162,12 @@ public class CompactionTool extends Configured implements Tool {
       }
       do {
         Optional<CompactionContext> compaction =
-            store.requestCompaction(Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
+            store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
         if (!compaction.isPresent()) {
           break;
         }
         List<HStoreFile> storeFiles =
-            store.compact(compaction.get(), NoLimitThroughputController.INSTANCE);
+            store.compact(compaction.get(), NoLimitThroughputController.INSTANCE, null);
         if (storeFiles != null && !storeFiles.isEmpty()) {
           if (keepCompactedFiles && deleteCompacted) {
             for (HStoreFile storeFile: storeFiles) {

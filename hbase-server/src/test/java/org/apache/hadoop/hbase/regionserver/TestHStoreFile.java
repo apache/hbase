@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -205,11 +207,10 @@ public class TestHStoreFile extends HBaseTestCase {
   @Test
   public void testEmptyStoreFileRestrictKeyRanges() throws Exception {
     StoreFileReader reader = mock(StoreFileReader.class);
-    Store store = mock(Store.class);
-    HColumnDescriptor hcd = mock(HColumnDescriptor.class);
+    HStore store = mock(HStore.class);
     byte[] cf = Bytes.toBytes("ty");
-    when(hcd.getName()).thenReturn(cf);
-    when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(cf);
+    when(store.getColumnFamilyDescriptor()).thenReturn(cfd);
     StoreFileScanner scanner =
         new StoreFileScanner(reader, mock(HFileScanner.class), false, false, 0, 0, true);
     Scan scan = new Scan();
@@ -526,10 +527,8 @@ public class TestHStoreFile extends HBaseTestCase {
 
       Scan scan = new Scan(row.getBytes(),row.getBytes());
       scan.addColumn("family".getBytes(), "family:col".getBytes());
-      Store store = mock(Store.class);
-      HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-      when(hcd.getName()).thenReturn(Bytes.toBytes("family"));
-      when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
+      HStore store = mock(HStore.class);
+      when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
       boolean exists = scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
@@ -713,10 +712,8 @@ public class TestHStoreFile extends HBaseTestCase {
       StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
       assertEquals(expKeys[x], reader.generalBloomFilter.getKeyCount());
 
-      Store store = mock(Store.class);
-      HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-      when(hcd.getName()).thenReturn(Bytes.toBytes("family"));
-      when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
+      HStore store = mock(HStore.class);
+      when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
       // check false positives rate
       int falsePos = 0;
       int falseNeg = 0;
@@ -857,10 +854,8 @@ public class TestHStoreFile extends HBaseTestCase {
 
     HStoreFile hsf = new HStoreFile(this.fs, writer.getPath(), conf, cacheConf,
       BloomType.NONE, true);
-    Store store = mock(Store.class);
-    HColumnDescriptor hcd = mock(HColumnDescriptor.class);
-    when(hcd.getName()).thenReturn(family);
-    when(store.getColumnFamilyDescriptor()).thenReturn(hcd);
+    HStore store = mock(HStore.class);
+    when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of(family));
     hsf.initReader();
     StoreFileReader reader = hsf.getReader();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);

@@ -145,7 +145,7 @@ public class TestIOFencing {
 
     public int countStoreFiles() {
       int count = 0;
-      for (Store store : stores.values()) {
+      for (HStore store : stores.values()) {
         count += store.getStorefilesCount();
       }
       return count;

@@ -1787,7 +1787,7 @@ public class HRegionServer extends HasThread implements
               // Queue a compaction. Will recognize if major is needed.
               this.instance.compactSplitThread.requestSystemCompaction(hr, s,
                 getName() + " requests compaction");
-            } else if (s.isMajorCompaction()) {
+            } else if (s.shouldPerformMajorCompaction()) {
               s.triggerMajorCompaction();
               if (majorCompactPriority == DEFAULT_PRIORITY ||
                   majorCompactPriority > hr.getCompactPriority()) {

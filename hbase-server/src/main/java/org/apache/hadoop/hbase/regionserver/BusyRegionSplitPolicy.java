@@ -105,7 +105,7 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
       return false;
     }
 
-    for (Store store: region.getStores()) {
+    for (HStore store: region.getStores()) {
       if (!store.canSplit()) {
         return false;
       }

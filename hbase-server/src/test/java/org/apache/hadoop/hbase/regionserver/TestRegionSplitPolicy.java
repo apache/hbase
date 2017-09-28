@@ -50,7 +50,7 @@ public class TestRegionSplitPolicy {
   private Configuration conf;
   private HTableDescriptor htd;
   private HRegion mockRegion;
-  private List<Store> stores;
+  private List<HStore> stores;
   private static final TableName TABLENAME = TableName.valueOf("t");
 
   @Rule

@@ -180,7 +180,7 @@ public class TestCompactionFileNotFound {
       // Refresh store files post compaction, this should not open already compacted files
       hr1.refreshStoreFiles(true);
       // Archive the store files and try another compaction to see if all is good
-      for (Store store : hr1.getStores()) {
+      for (HStore store : hr1.getStores()) {
         store.closeAndArchiveCompactedFiles();
       }
       try {

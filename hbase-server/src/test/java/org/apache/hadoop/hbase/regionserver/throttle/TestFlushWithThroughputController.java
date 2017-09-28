@@ -22,25 +22,26 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -73,13 +74,13 @@ public class TestFlushWithThroughputController {
     hbtu.shutdownMiniCluster();
   }
 
-  private Store getStoreWithName(TableName tableName) {
+  private HStore getStoreWithName(TableName tableName) {
     MiniHBaseCluster cluster = hbtu.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
       for (Region region : hrs.getRegions(tableName)) {
-        return region.getStores().iterator().next();
+        return ((HRegion) region).getStores().iterator().next();
       }
     }
     return null;
@@ -114,7 +115,7 @@ public class TestFlushWithThroughputController {
       hbtu.getAdmin().flush(tableName);
       duration += System.nanoTime() - startTime;
     }
-    Store store = getStoreWithName(tableName);
+    HStore store = getStoreWithName(tableName);
     assertEquals(NUM_FLUSHES, store.getStorefilesCount());
     double throughput = (double)store.getStorefilesSize()
         / TimeUnit.NANOSECONDS.toSeconds(duration);
@@ -157,10 +158,9 @@ public class TestFlushWithThroughputController {
       3000);
     hbtu.startMiniCluster(1);
     Connection conn = ConnectionFactory.createConnection(conf);
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(family));
-    htd.setCompactionEnabled(false);
-    hbtu.getAdmin().createTable(htd);
+    hbtu.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
+      .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+      .build());
     hbtu.waitTableAvailable(tableName);
     HRegionServer regionServer = hbtu.getRSForFirstRegionInTable(tableName);
     PressureAwareFlushThroughputController throughputController =
