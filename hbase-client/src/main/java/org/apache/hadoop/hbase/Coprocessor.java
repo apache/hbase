@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * the above mentioned 4 coprocessors, it'll fail to be loaded by any coprocessor host.
  *
  * Example:
- * Building a coprocessor to observer Master operations.
+ * Building a coprocessor to observe Master operations.
  * <pre>
  * class MyMasterCoprocessor implements MasterCoprocessor {
  *   &#64;Override
