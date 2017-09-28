@@ -25,14 +25,15 @@ import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -109,7 +110,7 @@ public class TestForceCacheImportantBlocks {
       setBloomFilterType(BLOOM_TYPE);
     hcd.setBlocksize(BLOCK_SIZE);
     hcd.setBlockCacheEnabled(cfCacheEnabled);
-    Region region = TEST_UTIL.createTestRegion(TABLE, hcd);
+    HRegion region = TEST_UTIL.createTestRegion(TABLE, hcd);
     BlockCache cache = region.getStore(hcd.getName()).getCacheConfig().getBlockCache();
     CacheStats stats = cache.getStats();
     writeTestData(region);

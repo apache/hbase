@@ -203,7 +203,7 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
     if (data == null) {
       return null;
     }
-    ScanInfo oldSI = store.getScanInfo();
+    ScanInfo oldSI = ((HStore) store).getScanInfo();
     if (oldSI.getTtl() == Long.MAX_VALUE) {
       return null;
     }

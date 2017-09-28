@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.OptionalLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -104,7 +105,7 @@ public class TestDateTieredCompactor {
     when(store.createWriterInTmp(anyLong(), any(Compression.Algorithm.class), anyBoolean(),
       anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
     when(store.getComparator()).thenReturn(CellComparator.COMPARATOR);
-    long maxSequenceId = StoreUtils.getMaxSequenceIdInList(storefiles);
+    OptionalLong maxSequenceId = StoreUtils.getMaxSequenceIdInList(storefiles);
     when(store.getMaxSequenceId()).thenReturn(maxSequenceId);
 
     return new DateTieredCompactor(conf, store) {

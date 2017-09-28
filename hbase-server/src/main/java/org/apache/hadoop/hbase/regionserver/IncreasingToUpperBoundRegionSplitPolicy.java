@@ -76,7 +76,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
     // Get size to check
     long sizeToCheck = getSizeToCheck(tableRegionsCount);
 
-    for (Store store : region.getStores()) {
+    for (HStore store : region.getStores()) {
       // If any of the stores is unable to split (eg they contain reference files)
       // then don't split
       if (!store.canSplit()) {

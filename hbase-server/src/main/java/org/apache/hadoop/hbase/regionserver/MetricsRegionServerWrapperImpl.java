@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalDouble;
+import java.util.OptionalLong;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +33,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.metrics2.MetricsExecutor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Impl for exposing HRegionServer Information through Hadoop's metrics 2 system.
@@ -765,21 +767,29 @@ class MetricsRegionServerWrapperImpl
           tempNumStores += storeList.size();
           for (Store store : storeList) {
             tempNumStoreFiles += store.getStorefilesCount();
-            tempMemstoreSize += store.getSizeOfMemStore().getDataSize();
+            tempMemstoreSize += store.getMemStoreSize().getDataSize();
             tempStoreFileSize += store.getStorefilesSize();
 
-            long storeMaxStoreFileAge = store.getMaxStoreFileAge();
-            tempMaxStoreFileAge = (storeMaxStoreFileAge > tempMaxStoreFileAge) ?
-              storeMaxStoreFileAge : tempMaxStoreFileAge;
+            OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
+            if (storeMaxStoreFileAge.isPresent() &&
+                storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge) {
+              tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
+            }
 
-            long storeMinStoreFileAge = store.getMinStoreFileAge();
-            tempMinStoreFileAge = (storeMinStoreFileAge < tempMinStoreFileAge) ?
-              storeMinStoreFileAge : tempMinStoreFileAge;
+            OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
+            if (storeMinStoreFileAge.isPresent() &&
+                storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge) {
+              tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
+            }
 
             long storeHFiles = store.getNumHFiles();
-            avgAgeNumerator += store.getAvgStoreFileAge() * storeHFiles;
             numHFiles += storeHFiles;
             tempNumReferenceFiles += store.getNumReferenceFiles();
+
+            OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
+            if (storeAvgStoreFileAge.isPresent()) {
+              avgAgeNumerator += storeAvgStoreFileAge.getAsDouble() * storeHFiles;
+            }
 
             tempStorefileIndexSize += store.getStorefilesIndexSize();
             tempTotalStaticBloomSize += store.getTotalStaticBloomSize();

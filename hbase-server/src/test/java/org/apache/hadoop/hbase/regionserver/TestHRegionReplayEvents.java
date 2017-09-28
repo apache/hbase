@@ -35,8 +35,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,23 +51,44 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
+import org.apache.hadoop.util.StringUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
@@ -81,24 +100,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescript
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
-import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 /**
  * Tests of HRegion methods for replaying flush, compaction, region open, etc events for secondary
@@ -127,7 +128,7 @@ public class TestHRegionReplayEvents {
 
   // per test fields
   private Path rootDir;
-  private HTableDescriptor htd;
+  private TableDescriptor htd;
   private long time;
   private RegionServerServices rss;
   private HRegionInfo primaryHri, secondaryHri;
@@ -146,11 +147,11 @@ public class TestHRegionReplayEvents {
     rootDir = new Path(dir + method);
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, rootDir.toString());
     method = name.getMethodName();
-
-    htd = new HTableDescriptor(TableName.valueOf(method));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(method));
     for (byte[] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
+    htd = builder.build();
 
     time = System.currentTimeMillis();
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
@@ -338,10 +339,10 @@ public class TestHRegionReplayEvents {
       if (flushDesc != null) {
         // first verify that everything is replayed and visible before flush event replay
         verifyData(secondaryRegion, 0, lastReplayed, cq, families);
-        Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-        long storeMemstoreSize = store.getMemStoreSize();
+        HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+        long storeMemstoreSize = store.getMemStoreSize().getHeapSize();
         long regionMemstoreSize = secondaryRegion.getMemstoreSize();
-        long storeFlushableSize = store.getFlushableSize();
+        long storeFlushableSize = store.getFlushableSize().getHeapSize();
         long storeSize = store.getSize();
         long storeSizeUncompressed = store.getStoreSizeUncompressed();
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
@@ -351,7 +352,7 @@ public class TestHRegionReplayEvents {
           assertEquals(result.flushOpSeqId, flushDesc.getFlushSequenceNumber());
 
           // assert that the store memstore is smaller now
-          long newStoreMemstoreSize = store.getMemStoreSize();
+          long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
           LOG.info("Memstore size reduced by:"
               + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
           assertTrue(storeMemstoreSize > newStoreMemstoreSize);
@@ -362,10 +363,10 @@ public class TestHRegionReplayEvents {
 
           // assert that the flush files are picked
           expectedStoreFileCount++;
-          for (Store s : secondaryRegion.getStores()) {
+          for (HStore s : secondaryRegion.getStores()) {
             assertEquals(expectedStoreFileCount, s.getStorefilesCount());
           }
-          long newFlushableSize = store.getFlushableSize();
+          long newFlushableSize = store.getFlushableSize().getHeapSize();
           assertTrue(storeFlushableSize > newFlushableSize);
 
           // assert that the region memstore is smaller now
@@ -383,7 +384,7 @@ public class TestHRegionReplayEvents {
         secondaryRegion.replayWALCompactionMarker(compactionDesc, true, false, Long.MAX_VALUE);
 
         // assert that the compaction is applied
-        for (Store store : secondaryRegion.getStores()) {
+        for (HStore store : secondaryRegion.getStores()) {
           if (store.getColumnFamilyName().equals("cf1")) {
             assertEquals(1, store.getStorefilesCount());
           } else {
@@ -401,7 +402,7 @@ public class TestHRegionReplayEvents {
 
     LOG.info("-- Verifying edits from primary. Ensuring that files are not deleted");
     verifyData(primaryRegion, 0, lastReplayed, cq, families);
-    for (Store store : primaryRegion.getStores()) {
+    for (HStore store : primaryRegion.getStores()) {
       if (store.getColumnFamilyName().equals("cf1")) {
         assertEquals(1, store.getStorefilesCount());
       } else {
@@ -437,10 +438,10 @@ public class TestHRegionReplayEvents {
       = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flushDesc != null) {
         // first verify that everything is replayed and visible before flush event replay
-        Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-        long storeMemstoreSize = store.getMemStoreSize();
+        HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+        long storeMemstoreSize = store.getMemStoreSize().getHeapSize();
         long regionMemstoreSize = secondaryRegion.getMemstoreSize();
-        long storeFlushableSize = store.getFlushableSize();
+        long storeFlushableSize = store.getFlushableSize().getHeapSize();
 
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           startFlushDesc = flushDesc;
@@ -452,7 +453,7 @@ public class TestHRegionReplayEvents {
           assertTrue(storeFlushableSize > 0);
 
           // assert that the store memstore is smaller now
-          long newStoreMemstoreSize = store.getMemStoreSize();
+          long newStoreMemstoreSize = store.getMemStoreSize().getHeapSize();
           LOG.info("Memstore size reduced by:"
               + StringUtils.humanReadableInt(newStoreMemstoreSize - storeMemstoreSize));
           assertTrue(storeMemstoreSize > newStoreMemstoreSize);
@@ -571,7 +572,7 @@ public class TestHRegionReplayEvents {
 
     // no store files in the region
     int expectedStoreFileCount = 0;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     long regionMemstoreSize = secondaryRegion.getMemstoreSize();
@@ -586,11 +587,11 @@ public class TestHRegionReplayEvents {
 
     // assert that the flush files are picked
     expectedStoreFileCount++;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize();
+    HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+    long newFlushableSize = store.getFlushableSize().getHeapSize();
     assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
 
     // assert that the region memstore is same as before
@@ -661,7 +662,7 @@ public class TestHRegionReplayEvents {
 
     // no store files in the region
     int expectedStoreFileCount = 0;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     long regionMemstoreSize = secondaryRegion.getMemstoreSize();
@@ -676,11 +677,11 @@ public class TestHRegionReplayEvents {
 
     // assert that the flush files are picked
     expectedStoreFileCount++;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize();
+    HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+    long newFlushableSize = store.getFlushableSize().getHeapSize();
     assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
 
     // assert that the region memstore is smaller than before, but not empty
@@ -762,7 +763,7 @@ public class TestHRegionReplayEvents {
 
     // no store files in the region
     int expectedStoreFileCount = 0;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     long regionMemstoreSize = secondaryRegion.getMemstoreSize();
@@ -772,8 +773,8 @@ public class TestHRegionReplayEvents {
     assertTrue(commitFlushDesc.getFlushSequenceNumber() > 0);
 
     // ensure all files are visible in secondary
-    for (Store store : secondaryRegion.getStores()) {
-      assertTrue(store.getMaxSequenceId() <= secondaryRegion.getReadPoint(null));
+    for (HStore store : secondaryRegion.getStores()) {
+      assertTrue(store.getMaxSequenceId().orElse(0L) <= secondaryRegion.getReadPoint(null));
     }
 
     LOG.info("-- Replaying flush commit in secondary" + commitFlushDesc);
@@ -781,11 +782,11 @@ public class TestHRegionReplayEvents {
 
     // assert that the flush files are picked
     expectedStoreFileCount++;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize();
+    HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+    long newFlushableSize = store.getFlushableSize().getHeapSize();
     if (droppableMemstore) {
       assertTrue(newFlushableSize == 0); // assert that the memstore is dropped
     } else {
@@ -860,7 +861,7 @@ public class TestHRegionReplayEvents {
 
     // no store files in the region
     int expectedStoreFileCount = 0;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     long regionMemstoreSize = secondaryRegion.getMemstoreSize();
@@ -872,11 +873,11 @@ public class TestHRegionReplayEvents {
 
     // assert that the flush files are picked
     expectedStoreFileCount++;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newFlushableSize = store.getFlushableSize();
+    HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+    long newFlushableSize = store.getFlushableSize().getHeapSize();
     assertTrue(newFlushableSize == 0);
 
     // assert that the region memstore is empty
@@ -941,7 +942,7 @@ public class TestHRegionReplayEvents {
 
     // no store files in the region
     int expectedStoreFileCount = 0;
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
 
@@ -951,11 +952,11 @@ public class TestHRegionReplayEvents {
 
     // assert that the flush files are picked
     expectedStoreFileCount = 2; // two flushes happened
-    for (Store s : secondaryRegion.getStores()) {
+    for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    MemstoreSize newSnapshotSize = store.getSizeOfSnapshot();
+    HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
+    MemstoreSize newSnapshotSize = store.getSnapshotSize();
     assertTrue(newSnapshotSize.getDataSize() == 0);
 
     // assert that the region memstore is empty

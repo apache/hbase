@@ -583,6 +583,11 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setValue(final String key, final String value) {
+    desc.setValue(key, value);
+    return this;
+  }
+
   /**
    * An ModifyableFamilyDescriptor contains information about a column family such as the
    * number of versions, compression settings, etc.

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -181,8 +182,8 @@ public class TestMajorCompaction {
 
   public void majorCompactionWithDataBlockEncoding(boolean inCacheOnly)
       throws Exception {
-    Map<Store, HFileDataBlockEncoder> replaceBlockCache = new HashMap<>();
-    for (Store store : r.getStores()) {
+    Map<HStore, HFileDataBlockEncoder> replaceBlockCache = new HashMap<>();
+    for (HStore store : r.getStores()) {
       HFileDataBlockEncoder blockEncoder = store.getDataBlockEncoder();
       replaceBlockCache.put(store, blockEncoder);
       final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
@@ -194,7 +195,7 @@ public class TestMajorCompaction {
     majorCompaction();
 
     // restore settings
-    for (Entry<Store, HFileDataBlockEncoder> entry : replaceBlockCache.entrySet()) {
+    for (Entry<HStore, HFileDataBlockEncoder> entry : replaceBlockCache.entrySet()) {
       ((HStore)entry.getKey()).setDataBlockEncoderInTest(entry.getValue());
     }
   }
@@ -211,11 +212,11 @@ public class TestMajorCompaction {
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
     //
     // Assert == 3 when we ask for versions.
-    Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
+    Result result = r.get(new Get(STARTROW).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertEquals(compactionThreshold, result.size());
 
     // see if CompactionProgress is in place but null
-    for (Store store : r.getStores()) {
+    for (HStore store : r.getStores()) {
       assertNull(store.getCompactionProgress());
     }
 
@@ -224,7 +225,7 @@ public class TestMajorCompaction {
 
     // see if CompactionProgress has done its thing on at least one store
     int storeCount = 0;
-    for (Store store : r.getStores()) {
+    for (HStore store : r.getStores()) {
       CompactionProgress progress = store.getCompactionProgress();
       if( progress != null ) {
         ++storeCount;
@@ -240,8 +241,7 @@ public class TestMajorCompaction {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
 
     // Always 3 versions if that is what max versions is.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).
-        setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     LOG.debug("Row " + Bytes.toStringBinary(secondRowBytes) + " after " +
         "initial compaction: " + result);
     assertEquals("Invalid number of versions of row "
@@ -260,26 +260,26 @@ public class TestMajorCompaction {
     r.delete(delete);
 
     // Assert deleted.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
     r.flush(true);
 
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
     // Add a bit of data and flush.  Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flush(true);
     // Assert that the second row is still deleted.
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
 
     // Force major compaction.
     r.compact(true);
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
 
-    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
+    result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
 
     // Make sure the store files do have some 'aaa' keys in them -- exactly 3.
@@ -290,8 +290,7 @@ public class TestMajorCompaction {
     // Multiple versions allowed for an entry, so the delete isn't enough
     // Lower TTL and expire to ensure that all our entries have been wiped
     final int ttl = 1000;
-    for (Store hstore : r.getStores()) {
-      HStore store = ((HStore) hstore);
+    for (HStore store : r.getStores()) {
       ScanInfo old = store.getScanInfo();
       ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
           old.getMaxVersions(), ttl, old.getKeepDeletedCells(), old.getPreadMaxBytes(), 0,
@@ -411,7 +410,7 @@ public class TestMajorCompaction {
    */
   @Test
   public void testNonUserMajorCompactionRequest() throws Exception {
-    Store store = r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
       createStoreFile(r);
@@ -431,14 +430,14 @@ public class TestMajorCompaction {
    */
   @Test
   public void testUserMajorCompactionRequest() throws IOException{
-    Store store = r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
     CompactionRequest request =
-        store.requestCompaction(Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get()
+        store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get()
             .getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(

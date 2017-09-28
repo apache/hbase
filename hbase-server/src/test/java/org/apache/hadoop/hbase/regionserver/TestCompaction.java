@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -182,7 +183,7 @@ public class TestCompaction {
       spyR.compactStores();
 
       // ensure that the compaction stopped, all old files are intact,
-      Store s = r.stores.get(COLUMN_FAMILY);
+      HStore s = r.getStore(COLUMN_FAMILY);
       assertEquals(compactionThreshold, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
@@ -210,8 +211,7 @@ public class TestCompaction {
       // Multiple versions allowed for an entry, so the delete isn't enough
       // Lower TTL and expire to ensure that all our entries have been wiped
       final int ttl = 1000;
-      for (Store hstore: this.r.stores.values()) {
-        HStore store = (HStore)hstore;
+      for (HStore store: this.r.stores.values()) {
         ScanInfo old = store.getScanInfo();
         ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
             old.getMaxVersions(), ttl, old.getKeepDeletedCells(), HConstants.DEFAULT_BLOCKSIZE, 0,
@@ -307,7 +307,7 @@ public class TestCompaction {
 
     CountDownLatch latch = new CountDownLatch(1);
     Tracker tracker = new Tracker(latch);
-    thread.requestCompaction(r, store, "test custom comapction", Store.PRIORITY_USER, tracker,
+    thread.requestCompaction(r, store, "test custom comapction", PRIORITY_USER, tracker,
       null);
     // wait for the latch to complete.
     latch.await();
@@ -340,7 +340,7 @@ public class TestCompaction {
 
     CountDownLatch latch = new CountDownLatch(1);
     Tracker tracker = new Tracker(latch);
-    thread.requestCompaction(mockRegion, store, "test custom comapction", Store.PRIORITY_USER,
+    thread.requestCompaction(mockRegion, store, "test custom comapction", PRIORITY_USER,
       tracker, null);
     // wait for the latch to complete.
     latch.await(120, TimeUnit.SECONDS);
@@ -380,7 +380,7 @@ public class TestCompaction {
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
-      thread.requestCompaction(r, store, "test mulitple custom comapctions", Store.PRIORITY_USER,
+      thread.requestCompaction(r, store, "test mulitple custom comapctions", PRIORITY_USER,
         tracker, null);
     }
     // wait for the latch to complete.

@@ -53,11 +53,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,9 +65,9 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
@@ -184,8 +184,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region = (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName)
+          .getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -274,8 +275,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -332,8 +334,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -393,7 +396,8 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -485,7 +489,8 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
@@ -568,8 +573,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setEvictOnClose(true);
       BlockCache cache = cacheConf.getBlockCache();
@@ -626,8 +632,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -708,7 +715,8 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
@@ -777,11 +785,11 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-  private BlockCache setCacheProperties(Region region) {
-    Iterator<? extends Store> strItr = region.getStores().iterator();
+  private BlockCache setCacheProperties(HRegion region) {
+    Iterator<HStore> strItr = region.getStores().iterator();
     BlockCache cache = null;
     while (strItr.hasNext()) {
-      Store store = strItr.next();
+      HStore store = strItr.next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -807,8 +815,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -872,8 +881,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -989,8 +999,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -1118,8 +1129,9 @@ public class TestBlockEvictionFromClient {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
-      Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      Store store = region.getStores().iterator().next();
+      HRegion region =
+          (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+      HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
@@ -1446,14 +1458,14 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-  private void waitForStoreFileCount(Store store, int count, int timeout)
+  private void waitForStoreFileCount(HStore store, int count, int timeout)
       throws InterruptedException {
     long start = System.currentTimeMillis();
     while (start + timeout > System.currentTimeMillis() && store.getStorefilesCount() != count) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur="
-        + store.getStorefilesCount());
+    System.out.println("start=" + start + ", now=" + System.currentTimeMillis() + ", cur=" +
+        store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
 

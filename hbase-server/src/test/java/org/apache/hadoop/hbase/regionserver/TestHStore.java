@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
@@ -60,19 +59,22 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -95,10 +97,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.util.Progressable;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -109,7 +113,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
- * Test class for the Store
+ * Test class for the HStore
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestHStore {
@@ -117,6 +121,7 @@ public class TestHStore {
   @Rule
   public TestName name = new TestName();
 
+  HRegion region;
   HStore store;
   byte [] table = Bytes.toBytes("table");
   byte [] family = Bytes.toBytes("family");
@@ -138,8 +143,8 @@ public class TestHStore {
   long id = System.currentTimeMillis();
   Get get = new Get(row);
 
-  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
 
 
   /**
@@ -164,55 +169,51 @@ public class TestHStore {
     init(methodName, TEST_UTIL.getConfiguration());
   }
 
-  private Store init(String methodName, Configuration conf) throws IOException {
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
+  private HStore init(String methodName, Configuration conf) throws IOException {
     // some of the tests write 4 versions and then flush
     // (with HBASE-4241, lower versions are collected on flush)
-    hcd.setMaxVersions(4);
-    return init(methodName, conf, hcd);
+    return init(methodName, conf,
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build());
   }
 
-  private HStore init(String methodName, Configuration conf, HColumnDescriptor hcd)
+  private HStore init(String methodName, Configuration conf, ColumnFamilyDescriptor hcd)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    return init(methodName, conf, htd, hcd);
+    return init(methodName, conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)), hcd);
   }
 
-  private HStore init(String methodName, Configuration conf, HTableDescriptor htd,
-      HColumnDescriptor hcd) throws IOException {
-    return init(methodName, conf, htd, hcd, null);
+  private HStore init(String methodName, Configuration conf, TableDescriptorBuilder builder,
+      ColumnFamilyDescriptor hcd) throws IOException {
+    return init(methodName, conf, builder, hcd, null);
   }
 
-  @SuppressWarnings("deprecation")
-  private HStore init(String methodName, Configuration conf, HTableDescriptor htd,
-      HColumnDescriptor hcd, MyStoreHook hook) throws IOException {
-    return init(methodName, conf, htd, hcd, hook, false);
+  private HStore init(String methodName, Configuration conf, TableDescriptorBuilder builder,
+      ColumnFamilyDescriptor hcd, MyStoreHook hook) throws IOException {
+    return init(methodName, conf, builder, hcd, hook, false);
   }
-  @SuppressWarnings("deprecation")
-  private HStore init(String methodName, Configuration conf, HTableDescriptor htd,
-      HColumnDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
-    //Setting up a Store
-    Path basedir = new Path(DIR+methodName);
+
+  private void initHRegion(String methodName, Configuration conf, TableDescriptorBuilder builder,
+      ColumnFamilyDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
+    TableDescriptor htd = builder.addColumnFamily(hcd).build();
+    Path basedir = new Path(DIR + methodName);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
     final Path logdir = new Path(basedir, AbstractFSWALProvider.getWALDirectoryName(methodName));
 
     FileSystem fs = FileSystem.get(conf);
 
     fs.delete(logdir, true);
-
-    if (htd.hasFamily(hcd.getName())) {
-      htd.modifyFamily(hcd);
-    } else {
-      htd.addFamily(hcd);
-    }
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false,
       MemStoreLABImpl.CHUNK_SIZE_DEFAULT, 1, 0, null);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    final Configuration walConf = new Configuration(conf);
+    Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
-    final WALFactory wals = new WALFactory(walConf, null, methodName);
-    HRegion region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes(),
-            info.getTable().getNamespace()), fs, conf, info, htd, null);
+    WALFactory wals = new WALFactory(walConf, null, methodName);
+    region = new HRegion(new HRegionFileSystem(conf, fs, tableDir, info),
+        wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), conf, htd, null);
+  }
+
+  private HStore init(String methodName, Configuration conf, TableDescriptorBuilder builder,
+      ColumnFamilyDescriptor hcd, MyStoreHook hook, boolean switchToPread) throws IOException {
+    initHRegion(methodName, conf, builder, hcd, hook, switchToPread);
     if (hook == null) {
       store = new HStore(region, hcd, conf);
     } else {
@@ -293,13 +294,14 @@ public class TestHStore {
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
 
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setCompressionType(Compression.Algorithm.GZ);
-    hcd.setDataBlockEncoding(DataBlockEncoding.DIFF);
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setCompressionType(Compression.Algorithm.GZ).setDataBlockEncoding(DataBlockEncoding.DIFF)
+        .build();
     init(name.getMethodName(), conf, hcd);
 
     // Test createWriterInTmp()
-    StoreFileWriter writer = store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false);
+    StoreFileWriter writer =
+        store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false, false);
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
@@ -335,10 +337,8 @@ public class TestHStore {
     // Set the compaction threshold higher to avoid normal compactions.
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 5);
 
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMinVersions(minVersions);
-    hcd.setTimeToLive(ttl);
-    init(name.getMethodName() + "-" + minVersions, conf, hcd);
+    init(name.getMethodName() + "-" + minVersions, conf, ColumnFamilyDescriptorBuilder
+        .newBuilder(family).setMinVersions(minVersions).setTimeToLive(ttl).build());
 
     long storeTtl = this.store.getScanInfo().getTtl();
     long sleepTime = storeTtl / storeFileNum;
@@ -599,6 +599,22 @@ public class TestHStore {
   @After
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
+    if (store != null) {
+      try {
+        store.close();
+      } catch (IOException e) {
+      }
+      store = null;
+    }
+    if (region != null) {
+      region.close();
+      region = null;
+    }
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws IOException {
+    TEST_UTIL.cleanupTestDir();
   }
 
   @Test
@@ -824,17 +840,19 @@ public class TestHStore {
 
     // HTD overrides XML.
     --anyValue;
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    htd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
-    init(name.getMethodName() + "-htd", conf, htd, hcd);
+    init(name.getMethodName() + "-htd", conf, TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(table)).setValue(CONFIG_KEY, Long.toString(anyValue)),
+      ColumnFamilyDescriptorBuilder.of(family));
     assertTrue(store.throttleCompaction(anyValue + 1));
     assertFalse(store.throttleCompaction(anyValue));
 
     // HCD overrides them both.
     --anyValue;
-    hcd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
-    init(name.getMethodName() + "-hcd", conf, htd, hcd);
+    init(name.getMethodName() + "-hcd", conf,
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setValue(CONFIG_KEY,
+        Long.toString(anyValue)),
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setValue(CONFIG_KEY, Long.toString(anyValue))
+          .build());
     assertTrue(store.throttleCompaction(anyValue + 1));
     assertFalse(store.throttleCompaction(anyValue));
   }
@@ -862,7 +880,7 @@ public class TestHStore {
   private void addStoreFile() throws IOException {
     HStoreFile f = this.store.getStorefiles().iterator().next();
     Path storedir = f.getPath().getParent();
-    long seqid = this.store.getMaxSequenceId();
+    long seqid = this.store.getMaxSequenceId().orElse(0L);
     Configuration c = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(c);
     HFileContext fileContext = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).build();
@@ -989,20 +1007,23 @@ public class TestHStore {
   public void testNumberOfMemStoreScannersAfterFlush() throws IOException {
     long seqId = 100;
     long timestamp = System.currentTimeMillis();
-    Cell cell0 = CellUtil.createCell(row, family, qf1, timestamp,
-            KeyValue.Type.Put.getCode(), qf1);
+    Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
+        .setQualifier(qf1).setTimestamp(timestamp).setType(KeyValue.Type.Put.getCode())
+        .setValue(qf1).build();
     CellUtil.setSequenceId(cell0, seqId);
-    testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.EMPTY_LIST);
+    testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.emptyList());
 
-    Cell cell1 = CellUtil.createCell(row, family, qf2, timestamp,
-            KeyValue.Type.Put.getCode(), qf1);
+    Cell cell1 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(KeyValue.Type.Put.getCode())
+        .setValue(qf1).build();
     CellUtil.setSequenceId(cell1, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
 
     seqId = 101;
     timestamp = System.currentTimeMillis();
-    Cell cell2 = CellUtil.createCell(row2, family, qf2, timestamp,
-            KeyValue.Type.Put.getCode(), qf1);
+    Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(KeyValue.Type.Put.getCode())
+        .setValue(qf1).build();
      CellUtil.setSequenceId(cell2, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1, cell2));
   }
@@ -1046,15 +1067,16 @@ public class TestHStore {
     }
   }
 
-  private Cell createCell(byte[] qualifier, long ts, long sequenceId, byte[] value) throws IOException {
-    Cell c = CellUtil.createCell(row, family, qualifier, ts, KeyValue.Type.Put.getCode(), value);
-    CellUtil.setSequenceId(c, sequenceId);
-    return c;
+  private Cell createCell(byte[] qualifier, long ts, long sequenceId, byte[] value)
+      throws IOException {
+    return createCell(row, qualifier, ts, sequenceId, value);
   }
 
   private Cell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId, byte[] value)
       throws IOException {
-    Cell c = CellUtil.createCell(row, family, qualifier, ts, KeyValue.Type.Put.getCode(), value);
+    Cell c = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
+        .setQualifier(qualifier).setTimestamp(ts).setType(KeyValue.Type.Put.getCode())
+        .setValue(value).build();
     CellUtil.setSequenceId(c, sequenceId);
     return c;
   }
@@ -1148,8 +1170,6 @@ public class TestHStore {
   private void testFlushBeforeCompletingScan(MyListHook hook, Filter filter, int expectedSize)
           throws IOException, InterruptedException {
     Configuration conf = HBaseConfiguration.create();
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMaxVersions(1);
     byte[] r0 = Bytes.toBytes("row0");
     byte[] r1 = Bytes.toBytes("row1");
     byte[] r2 = Bytes.toBytes("row2");
@@ -1159,12 +1179,14 @@ public class TestHStore {
     MemstoreSize memStoreSize = new MemstoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
-    init(name.getMethodName(), conf, new HTableDescriptor(TableName.valueOf(table)), hcd, new MyStoreHook() {
-      @Override
-      public long getSmallestReadPoint(HStore store) {
-        return seqId + 3;
-      }
-    });
+    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(1).build(),
+      new MyStoreHook() {
+        @Override
+        public long getSmallestReadPoint(HStore store) {
+          return seqId + 3;
+        }
+      });
     // The cells having the value0 won't be flushed to disk because the value of max version is 1
     store.add(createCell(r0, qf1, ts, seqId, value0), memStoreSize);
     store.add(createCell(r0, qf2, ts, seqId, value0), memStoreSize);
@@ -1210,9 +1232,8 @@ public class TestHStore {
   public void testCreateScannerAndSnapshotConcurrently() throws IOException, InterruptedException {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore.class.getName());
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
-    init(name.getMethodName(), conf, hcd);
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("value");
     MemstoreSize memStoreSize = new MemstoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
@@ -1402,9 +1423,8 @@ public class TestHStore {
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushSize));
     // Set the lower threshold to invoke the "MERGE" policy
     conf.set(MemStoreCompactor.COMPACTING_MEMSTORE_THRESHOLD_KEY, String.valueOf(0));
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
-    init(name.getMethodName(), conf, hcd);
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("thisisavarylargevalue");
     MemstoreSize memStoreSize = new MemstoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
@@ -1439,18 +1459,57 @@ public class TestHStore {
     storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
   }
 
-  private MyStore initMyStore(String methodName, Configuration conf, MyStoreHook hook)
-      throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMaxVersions(5);
-    return (MyStore) init(methodName, conf, htd, hcd, hook);
+  @Test
+  public void testAge() throws IOException {
+    long currentTime = System.currentTimeMillis();
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    edge.setValue(currentTime);
+    EnvironmentEdgeManager.injectEdge(edge);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(family);
+    initHRegion(name.getMethodName(), conf,
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)), hcd, null, false);
+    HStore store = new HStore(region, hcd, conf) {
+
+      @Override
+      protected StoreEngine<?, ?, ?, ?> createStoreEngine(HStore store, Configuration conf,
+          CellComparator kvComparator) throws IOException {
+        List<HStoreFile> storefiles =
+            Arrays.asList(mockStoreFile(currentTime - 10), mockStoreFile(currentTime - 100),
+              mockStoreFile(currentTime - 1000), mockStoreFile(currentTime - 10000));
+        StoreFileManager sfm = mock(StoreFileManager.class);
+        when(sfm.getStorefiles()).thenReturn(storefiles);
+        StoreEngine<?, ?, ?, ?> storeEngine = mock(StoreEngine.class);
+        when(storeEngine.getStoreFileManager()).thenReturn(sfm);
+        return storeEngine;
+      }
+    };
+    assertEquals(10L, store.getMinStoreFileAge().getAsLong());
+    assertEquals(10000L, store.getMaxStoreFileAge().getAsLong());
+    assertEquals((10 + 100 + 1000 + 10000) / 4.0, store.getAvgStoreFileAge().getAsDouble(), 1E-4);
   }
 
-  class MyStore extends HStore {
+  private HStoreFile mockStoreFile(long createdTime) {
+    StoreFileInfo info = mock(StoreFileInfo.class);
+    when(info.getCreatedTimestamp()).thenReturn(createdTime);
+    HStoreFile sf = mock(HStoreFile.class);
+    when(sf.getReader()).thenReturn(mock(StoreFileReader.class));
+    when(sf.isHFile()).thenReturn(true);
+    when(sf.getFileInfo()).thenReturn(info);
+    return sf;
+  }
+
+  private MyStore initMyStore(String methodName, Configuration conf, MyStoreHook hook)
+      throws IOException {
+    return (MyStore) init(methodName, conf,
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+      ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(5).build(), hook);
+  }
+
+  private class MyStore extends HStore {
     private final MyStoreHook hook;
 
-    MyStore(final HRegion region, final HColumnDescriptor family, final Configuration confParam,
+    MyStore(final HRegion region, final ColumnFamilyDescriptor family, final Configuration confParam,
         MyStoreHook hook, boolean switchToPread) throws IOException {
       super(region, family, confParam);
       this.hook = hook;
@@ -1473,8 +1532,10 @@ public class TestHStore {
   }
 
   private abstract class MyStoreHook {
+
     void getScanners(MyStore store) throws IOException {
     }
+
     long getSmallestReadPoint(HStore store) {
       return store.getHRegion().getSmallestReadPoint();
     }
@@ -1482,13 +1543,10 @@ public class TestHStore {
 
   @Test
   public void testSwitchingPreadtoStreamParallelyWithCompactionDischarger() throws Exception {
-    int flushSize = 500;
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.hstore.engine.class", DummyStoreEngine.class.getName());
     conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
     // Set the lower threshold to invoke the "MERGE" policy
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
     MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
     MemstoreSize memStoreSize = new MemstoreSize();
     long ts = System.currentTimeMillis();
@@ -1514,7 +1572,6 @@ public class TestHStore {
     flushStore(store, seqID);
 
     assertEquals(3, store.getStorefilesCount());
-    ScanInfo scanInfo = store.getScanInfo();
     Scan scan = new Scan();
     scan.addFamily(family);
     Collection<HStoreFile> storefiles2 = store.getStorefiles();
@@ -1541,7 +1598,6 @@ public class TestHStore {
     ArrayList<HStoreFile> actualStorefiles1 = Lists.newArrayList(storefiles2);
     actualStorefiles1.removeAll(actualStorefiles);
     // Do compaction
-    List<Exception> exceptions = new ArrayList<Exception>();
     MyThread thread = new MyThread(storeScanner);
     thread.start();
     store.replaceStoreFiles(actualStorefiles, actualStorefiles1);
@@ -1678,7 +1734,7 @@ public class TestHStore {
     public Object[] toArray() {return delegatee.toArray();}
 
     @Override
-    public <T> T[] toArray(T[] a) {return delegatee.toArray(a);}
+    public <R> R[] toArray(R[] a) {return delegatee.toArray(a);}
 
     @Override
     public boolean add(T e) {

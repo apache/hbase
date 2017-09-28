@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
+
 import java.io.IOException;
 import java.security.Key;
 import java.security.SecureRandom;
@@ -539,7 +541,7 @@ public class TestHMobStore {
     // Trigger major compaction
     this.store.triggerMajorCompaction();
     Optional<CompactionContext> requestCompaction =
-        this.store.requestCompaction(Store.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
+        this.store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
     this.store.compact(requestCompaction.get(), NoLimitThroughputController.INSTANCE, null);
     Assert.assertEquals(1, this.store.getStorefiles().size());
 

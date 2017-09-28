@@ -152,9 +152,9 @@ public class TestPerColumnFamilyFlush {
     long smallestSeqCF3 = region.getOldestSeqIdOfStore(FAMILY3);
 
     // Find the sizes of the memstores of each CF.
-    MemstoreSize cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
-    MemstoreSize cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
-    MemstoreSize cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
+    MemstoreSize cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
+    MemstoreSize cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
+    MemstoreSize cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
 
     // Get the overall smallest LSN in the region's memstores.
     long smallestSeqInRegionCurrentMemstore = getWAL(region)
@@ -184,9 +184,9 @@ public class TestPerColumnFamilyFlush {
     MemstoreSize oldCF3MemstoreSize = cf3MemstoreSize;
 
     // Recalculate everything
-    cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
-    cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
-    cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
+    cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
+    cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
+    cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemstoreSize();
     smallestSeqInRegionCurrentMemstore = getWAL(region)
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
@@ -216,15 +216,15 @@ public class TestPerColumnFamilyFlush {
     }
 
     // How much does the CF3 memstore occupy? Will be used later.
-    oldCF3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
+    oldCF3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
 
     // Flush again
     region.flush(false);
 
     // Recalculate everything
-    cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
-    cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
-    cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
+    cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
+    cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
+    cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemstoreSize();
     smallestSeqInRegionCurrentMemstore = getWAL(region)
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
@@ -288,9 +288,9 @@ public class TestPerColumnFamilyFlush {
     long totalMemstoreSize = region.getMemstoreSize();
 
     // Find the sizes of the memstores of each CF.
-    MemstoreSize cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
-    MemstoreSize cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
-    MemstoreSize cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
+    MemstoreSize cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
+    MemstoreSize cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
+    MemstoreSize cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
 
     // Some other sanity checks.
     assertTrue(cf1MemstoreSize.getDataSize() > 0);
@@ -305,9 +305,9 @@ public class TestPerColumnFamilyFlush {
     // Flush!
     region.flush(false);
 
-    cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
-    cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
-    cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
+    cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
+    cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
+    cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemstoreSize();
     long smallestSeqInRegionCurrentMemstore =
         region.getWAL().getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
@@ -380,9 +380,9 @@ public class TestPerColumnFamilyFlush {
       totalMemstoreSize = desiredRegion.getMemstoreSize();
 
       // Find the sizes of the memstores of each CF.
-      cf1MemstoreSize = desiredRegion.getStore(FAMILY1).getSizeOfMemStore().getDataSize();
-      cf2MemstoreSize = desiredRegion.getStore(FAMILY2).getSizeOfMemStore().getDataSize();
-      cf3MemstoreSize = desiredRegion.getStore(FAMILY3).getSizeOfMemStore().getDataSize();
+      cf1MemstoreSize = desiredRegion.getStore(FAMILY1).getMemStoreSize().getDataSize();
+      cf2MemstoreSize = desiredRegion.getStore(FAMILY2).getMemStoreSize().getDataSize();
+      cf3MemstoreSize = desiredRegion.getStore(FAMILY3).getMemStoreSize().getDataSize();
 
       // CF1 Should have been flushed
       assertEquals(0, cf1MemstoreSize);
@@ -500,9 +500,9 @@ public class TestPerColumnFamilyFlush {
         }
       }
       assertEquals(maxLogs, getNumRolledLogFiles(desiredRegion));
-      assertTrue(desiredRegion.getStore(FAMILY1).getMemStoreSize() > cfFlushSizeLowerBound);
-      assertTrue(desiredRegion.getStore(FAMILY2).getMemStoreSize() < cfFlushSizeLowerBound);
-      assertTrue(desiredRegion.getStore(FAMILY3).getMemStoreSize() < cfFlushSizeLowerBound);
+      assertTrue(desiredRegion.getStore(FAMILY1).getMemStoreSize().getHeapSize() > cfFlushSizeLowerBound);
+      assertTrue(desiredRegion.getStore(FAMILY2).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
+      assertTrue(desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
       table.put(createPut(1, 12345678));
       // Make numRolledLogFiles greater than maxLogs
       desiredRegionAndServer.getSecond().walRoller.requestRollAll();
@@ -525,9 +525,9 @@ public class TestPerColumnFamilyFlush {
       });
       LOG.info("Finished waiting on flush after too many WALs...");
       // Individual families should have been flushed.
-      assertEquals(0, desiredRegion.getStore(FAMILY1).getMemStoreSize());
-      assertEquals(0, desiredRegion.getStore(FAMILY2).getMemStoreSize());
-      assertEquals(0, desiredRegion.getStore(FAMILY3).getMemStoreSize());
+      assertEquals(0, desiredRegion.getStore(FAMILY1).getMemStoreSize().getHeapSize());
+      assertEquals(0, desiredRegion.getStore(FAMILY2).getMemStoreSize().getHeapSize());
+      assertEquals(0, desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize());
       // let WAL cleanOldLogs
       assertNull(getWAL(desiredRegion).rollWriter(true));
       assertTrue(getNumRolledLogFiles(desiredRegion) < maxLogs);

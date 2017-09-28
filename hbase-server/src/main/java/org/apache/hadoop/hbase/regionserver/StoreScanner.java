@@ -418,7 +418,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * Will be overridden by testcase so declared as protected.
    */
   @VisibleForTesting
-  protected List<KeyValueScanner> selectScannersFrom(Store store,
+  protected List<KeyValueScanner> selectScannersFrom(HStore store,
       List<? extends KeyValueScanner> allScanners) {
     boolean memOnly;
     boolean filesOnly;

@@ -99,7 +99,7 @@
 
        <h3>Column Family: <%= cf %></h2>
 
-       <h4>Memstore size (MB): <%= (int) (store.getMemStoreSize() / 1024 / 1024) %></h3>
+       <h4>Memstore size (MB): <%= (int) (store.getMemStoreSize().getHeapSize() / 1024 / 1024) %></h3>
 
        <h4>Store Files</h3>
 

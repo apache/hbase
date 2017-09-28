@@ -250,18 +250,19 @@ public class TestCoprocessorScanPolicy {
     public InternalScanner preFlushScannerOpen(
         final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
         List<KeyValueScanner> scanners, InternalScanner s, long readPoint) throws IOException {
+      HStore hs = (HStore) store;
       Long newTtl = ttls.get(store.getTableName());
       if (newTtl != null) {
         System.out.println("PreFlush:" + newTtl);
       }
       Integer newVersions = versions.get(store.getTableName());
-      ScanInfo oldSI = store.getScanInfo();
+      ScanInfo oldSI = hs.getScanInfo();
       ColumnFamilyDescriptor family = store.getColumnFamilyDescriptor();
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(), family.isNewVersionBehavior());
-      return new StoreScanner((HStore) store, scanInfo,
+      return new StoreScanner(hs, scanInfo,
           newVersions == null ? OptionalInt.empty() : OptionalInt.of(newVersions.intValue()),
           scanners, ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(),
           HConstants.OLDEST_TIMESTAMP);
@@ -272,16 +273,17 @@ public class TestCoprocessorScanPolicy {
         final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
         List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
         InternalScanner s,CompactionLifeCycleTracker tracker, long readPoint) throws IOException {
+      HStore hs = (HStore) store;
       Long newTtl = ttls.get(store.getTableName());
       Integer newVersions = versions.get(store.getTableName());
-      ScanInfo oldSI = store.getScanInfo();
+      ScanInfo oldSI = hs.getScanInfo();
       ColumnFamilyDescriptor family = store.getColumnFamilyDescriptor();
       ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
           family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(),
           family.isNewVersionBehavior());
-      return new StoreScanner((HStore) store, scanInfo,
+      return new StoreScanner(hs, scanInfo,
           newVersions == null ? OptionalInt.empty() : OptionalInt.of(newVersions.intValue()),
           scanners, scanType, store.getSmallestReadPoint(), earliestPutTs);
     }
@@ -292,16 +294,17 @@ public class TestCoprocessorScanPolicy {
         final NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt) throws IOException {
       TableName tn = store.getTableName();
       if (!tn.isSystemTable()) {
+        HStore hs = (HStore) store;
         Long newTtl = ttls.get(store.getTableName());
         Integer newVersions = versions.get(store.getTableName());
-        ScanInfo oldSI = store.getScanInfo();
+        ScanInfo oldSI = hs.getScanInfo();
         ColumnFamilyDescriptor family = store.getColumnFamilyDescriptor();
         ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(), family.getName(),
             family.getMinVersions(), newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
             family.getBlocksize(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator(),
             family.isNewVersionBehavior());
-        return new StoreScanner((HStore) store, scanInfo, scan, targetCols, readPt);
+        return new StoreScanner(hs, scanInfo, scan, targetCols, readPt);
       } else {
         return s;
       }

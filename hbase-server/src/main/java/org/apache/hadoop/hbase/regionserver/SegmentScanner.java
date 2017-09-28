@@ -279,7 +279,7 @@ public class SegmentScanner implements KeyValueScanner {
    * overridden method
    */
   @Override
-  public boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS) {
+  public boolean shouldUseScanner(Scan scan, HStore store, long oldestUnexpiredTS) {
     return getSegment().shouldSeek(scan.getColumnFamilyTimeRange()
             .getOrDefault(store.getColumnFamilyDescriptor().getName(), scan.getTimeRange()), oldestUnexpiredTS);
   }

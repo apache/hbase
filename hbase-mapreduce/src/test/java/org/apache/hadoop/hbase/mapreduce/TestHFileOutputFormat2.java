@@ -85,7 +85,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -1258,7 +1258,7 @@ public class TestHFileOutputFormat2  {
           public Boolean call() throws Exception {
             List<HRegion> regions = util.getMiniHBaseCluster().getRegions(TABLE_NAMES[0]);
             for (HRegion region : regions) {
-              for (Store store : region.getStores()) {
+              for (HStore store : region.getStores()) {
                 store.closeAndArchiveCompactedFiles();
               }
             }
@@ -1277,7 +1277,7 @@ public class TestHFileOutputFormat2  {
         public Boolean call() throws Exception {
           List<HRegion> regions = util.getMiniHBaseCluster().getRegions(TABLE_NAMES[0]);
           for (HRegion region : regions) {
-            for (Store store : region.getStores()) {
+            for (HStore store : region.getStores()) {
               store.closeAndArchiveCompactedFiles();
             }
           }

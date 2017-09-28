@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -79,22 +80,17 @@ public class StoreUtils {
    * Return the largest memstoreTS found across all storefiles in the given list. Store files that
    * were created by a mapreduce bulk load are ignored, as they do not correspond to any specific
    * put operation, and thus do not have a memstoreTS associated with them.
-   * @return 0 if no non-bulk-load files are provided or, this is Store that does not yet have any
-   *         store files.
    */
-  public static long getMaxMemstoreTSInList(Collection<HStoreFile> sfs) {
+  public static OptionalLong getMaxMemstoreTSInList(Collection<HStoreFile> sfs) {
     return sfs.stream().filter(sf -> !sf.isBulkLoadResult()).mapToLong(HStoreFile::getMaxMemstoreTS)
-        .max().orElse(0L);
+        .max();
   }
 
   /**
    * Return the highest sequence ID found across all storefiles in the given list.
-   * @param sfs
-   * @return 0 if no non-bulk-load files are provided or, this is Store that does not yet have any
-   *         store files.
    */
-  public static long getMaxSequenceIdInList(Collection<HStoreFile> sfs) {
-    return sfs.stream().mapToLong(HStoreFile::getMaxSequenceId).max().orElse(0L);
+  public static OptionalLong getMaxSequenceIdInList(Collection<HStoreFile> sfs) {
+    return sfs.stream().mapToLong(HStoreFile::getMaxSequenceId).max();
   }
 
   /**

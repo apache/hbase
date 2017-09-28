@@ -18,11 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.regionserver.Store.NO_PRIORITY;
+
 import java.util.Collection;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,7 +40,7 @@ public class CompactionRequest {
   private boolean isOffPeak = false;
   private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }
   private DisplayCompactionType isMajor = DisplayCompactionType.MINOR;
-  private int priority = Store.NO_PRIORITY;
+  private int priority = NO_PRIORITY;
   private Collection<HStoreFile> filesToCompact;
 
   // CompactRequest object creation time.

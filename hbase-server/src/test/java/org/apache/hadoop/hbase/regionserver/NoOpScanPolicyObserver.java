@@ -54,10 +54,11 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<KeyValueScanner> scanners, InternalScanner s, long readPoint)
       throws IOException {
-    ScanInfo oldSI = store.getScanInfo();
+    HStore hs = (HStore) store;
+    ScanInfo oldSI = hs.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
         oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-    return new StoreScanner((HStore) store, scanInfo, OptionalInt.empty(), scanners,
+    return new StoreScanner(hs, scanInfo, OptionalInt.empty(), scanners,
         ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
@@ -69,11 +70,12 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
       final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s, CompactionLifeCycleTracker tracker, long readPoint) throws IOException {
+    HStore hs = (HStore) store;
     // this demonstrates how to override the scanners default behavior
-    ScanInfo oldSI = store.getScanInfo();
+    ScanInfo oldSI = hs.getScanInfo();
     ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getColumnFamilyDescriptor(),
         oldSI.getTtl(), oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
-    return new StoreScanner((HStore) store, scanInfo, OptionalInt.empty(), scanners, scanType,
+    return new StoreScanner(hs, scanInfo, OptionalInt.empty(), scanners, scanType,
         store.getSmallestReadPoint(), earliestPutTs);
   }
 
@@ -81,11 +83,12 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
   public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPoint)
       throws IOException {
+    HStore hs = (HStore) store;
     Region r = c.getEnvironment().getRegion();
     return scan.isReversed()
-        ? new ReversedStoreScanner((HStore) store, store.getScanInfo(), scan, targetCols,
+        ? new ReversedStoreScanner(hs, hs.getScanInfo(), scan, targetCols,
             r.getReadPoint(scan.getIsolationLevel()))
-        : new StoreScanner((HStore) store, store.getScanInfo(), scan, targetCols,
+        : new StoreScanner(hs, hs.getScanInfo(), scan, targetCols,
             r.getReadPoint(scan.getIsolationLevel()));
   }
 }

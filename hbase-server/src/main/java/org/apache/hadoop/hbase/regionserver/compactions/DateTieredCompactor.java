@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.OptionalLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,7 +48,10 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
   private boolean needEmptyFile(CompactionRequest request) {
     // if we are going to compact the last N files, then we need to emit an empty file to retain the
     // maxSeqId if we haven't written out anything.
-    return StoreUtils.getMaxSequenceIdInList(request.getFiles()) == store.getMaxSequenceId();
+    OptionalLong maxSeqId = StoreUtils.getMaxSequenceIdInList(request.getFiles());
+    OptionalLong storeMaxSeqId = store.getMaxSequenceId();
+    return maxSeqId.isPresent() && storeMaxSeqId.isPresent() &&
+        maxSeqId.getAsLong() == storeMaxSeqId.getAsLong();
   }
 
   public List<Path> compact(final CompactionRequest request, final List<Long> lowerBoundaries,

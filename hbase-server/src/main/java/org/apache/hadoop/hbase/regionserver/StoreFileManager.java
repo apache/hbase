@@ -163,7 +163,7 @@ public interface StoreFileManager {
 
   /**
    * @return the compaction pressure used for compaction throughput tuning.
-   * @see Store#getCompactionPressure()
+   * @see HStore#getCompactionPressure()
    */
   double getCompactionPressure();
 

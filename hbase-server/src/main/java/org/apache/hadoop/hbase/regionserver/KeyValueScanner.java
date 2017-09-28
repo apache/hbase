@@ -95,7 +95,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
    *          this query, based on TTL
    * @return true if the scanner should be included in the query
    */
-  boolean shouldUseScanner(Scan scan, Store store, long oldestUnexpiredTS);
+  boolean shouldUseScanner(Scan scan, HStore store, long oldestUnexpiredTS);
 
   // "Lazy scanner" optimizations
 

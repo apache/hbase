@@ -284,7 +284,7 @@ public class TestHRegion {
   @Test
   public void testCloseCarryingSnapshot() throws IOException {
     HRegion region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);
-    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     // Get some random bytes.
     byte [] value = Bytes.toBytes(method);
     // Make a random put against our cf.
@@ -333,7 +333,7 @@ public class TestHRegion {
     HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, faultyLog,
         COLUMN_FAMILY_BYTES);
 
-    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     // Get some random bytes.
     byte [] value = Bytes.toBytes(method);
     faultyLog.setStoreFlushCtx(store.createFlushContext(12345));
@@ -350,7 +350,7 @@ public class TestHRegion {
     } finally {
       assertTrue("The regionserver should have thrown an exception", threwIOE);
     }
-    long sz = store.getSizeToFlush().getDataSize();
+    long sz = store.getFlushableSize().getDataSize();
     assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
@@ -382,7 +382,7 @@ public class TestHRegion {
     FSHLog hLog = new FSHLog(fs, rootDir, "testMemstoreSizeWithFlushCanceling", CONF);
     HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
-    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     assertEquals(0, region.getMemstoreSize());
 
     // Put some value and make sure flush could be completed normally
@@ -394,7 +394,7 @@ public class TestHRegion {
     assertTrue(onePutSize > 0);
     region.flush(true);
     assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize());
-    assertEquals("flushable size should be zero", 0, store.getSizeToFlush().getDataSize());
+    assertEquals("flushable size should be zero", 0, store.getFlushableSize().getDataSize());
 
     // save normalCPHost and replaced by mockedCPHost, which will cancel flush requests
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
@@ -406,13 +406,13 @@ public class TestHRegion {
     region.flush(true);
     assertEquals("memstoreSize should NOT be zero", onePutSize, region.getMemstoreSize());
     assertEquals("flushable size should NOT be zero", onePutSize,
-        store.getSizeToFlush().getDataSize());
+        store.getFlushableSize().getDataSize());
 
     // set normalCPHost and flush again, the snapshot will be flushed
     region.setCoprocessorHost(normalCPHost);
     region.flush(true);
     assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize());
-    assertEquals("flushable size should be zero", 0, store.getSizeToFlush().getDataSize());
+    assertEquals("flushable size should be zero", 0, store.getFlushableSize().getDataSize());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -424,7 +424,7 @@ public class TestHRegion {
     FSHLog hLog = new FSHLog(fs, rootDir, testName, CONF);
     HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
-    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     assertEquals(0, region.getMemstoreSize());
 
     // Put one value
@@ -450,7 +450,7 @@ public class TestHRegion {
     long expectedSize = onePutSize * 2;
     assertEquals("memstoreSize should be incremented", expectedSize, region.getMemstoreSize());
     assertEquals("flushable size should be incremented", expectedSize,
-        store.getSizeToFlush().getDataSize());
+        store.getFlushableSize().getDataSize());
 
     region.setCoprocessorHost(null);
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -565,7 +565,7 @@ public class TestHRegion {
           p1.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual1, 1, (byte[])null));
           region.put(p1);
           // Manufacture an outstanding snapshot -- fake a failed flush by doing prepare step only.
-          Store store = region.getStore(COLUMN_FAMILY_BYTES);
+          HStore store = region.getStore(COLUMN_FAMILY_BYTES);
           StoreFlushContext storeFlushCtx = store.createFlushContext(12345);
           storeFlushCtx.prepare();
           // Now add two entries to the foreground memstore.
@@ -699,7 +699,7 @@ public class TestHRegion {
       }
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for (Store store : region.getStores()) {
+      for (HStore store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
@@ -751,7 +751,7 @@ public class TestHRegion {
       long recoverSeqId = 1030;
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for (Store store : region.getStores()) {
+      for (HStore store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
@@ -796,7 +796,7 @@ public class TestHRegion {
       dos.close();
 
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for (Store store : region.getStores()) {
+      for (HStore store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, null);
@@ -854,7 +854,7 @@ public class TestHRegion {
       long recoverSeqId = 1030;
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       MonitoredTask status = TaskMonitor.get().createStatus(method);
-      for (Store store : region.getStores()) {
+      for (HStore store : region.getStores()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
@@ -3713,7 +3713,7 @@ public class TestHRegion {
 
         if (i != 0 && i % compactInterval == 0) {
           region.compact(true);
-          for (Store store : region.getStores()) {
+          for (HStore store : region.getStores()) {
             store.closeAndArchiveCompactedFiles();
           }
         }
@@ -3893,7 +3893,7 @@ public class TestHRegion {
           // Compact regularly to avoid creating too many files and exceeding
           // the ulimit.
           region.compact(false);
-          for (Store store : region.getStores()) {
+          for (HStore store : region.getStores()) {
             store.closeAndArchiveCompactedFiles();
           }
         }

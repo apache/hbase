@@ -125,7 +125,8 @@ public class TestRegionObserverScannerOpenHook {
         Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
         throws IOException {
       scan.setFilter(new NoDataFilter());
-      return new StoreScanner((HStore) store, store.getScanInfo(), scan, targetCols, readPt);
+      HStore hs = (HStore) store;
+      return new StoreScanner(hs, hs.getScanInfo(), scan, targetCols, readPt);
     }
   }
 
