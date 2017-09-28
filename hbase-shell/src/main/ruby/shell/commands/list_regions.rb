@@ -77,6 +77,7 @@ EOF
           raise "#{cols} must be an array of strings. Possible values are SERVER_NAME, REGION_NAME, START_KEY, END_KEY, SIZE, REQ, LOCALITY."
         end
 
+        error = false
         admin_instance = admin.instance_variable_get('@admin')
         conn_instance = admin_instance.getConnection
         cluster_status = admin_instance.getClusterStatus
@@ -104,6 +105,12 @@ EOF
             server_name = hregion.getServerName
             region_load_map = cluster_status.getLoad(server_name).getRegionsLoad
             region_load = region_load_map.get(hregion_info.getRegionName)
+
+            if region_load.nil?
+              puts "Can not find region: #{hregion_info.getRegionName} , it may be disabled or in transition\n"
+              error = true
+              break
+            end
 
             # Ignore regions which exceed our locality threshold
             next unless accept_region_for_locality? region_load.getDataLocality, locality_threshold
@@ -157,12 +164,14 @@ EOF
 
         @end_time = Time.now
 
+        return if error
+
         size_hash.each do |param, length|
           printf(" %#{length}s |", param)
         end
         printf("\n")
 
-        size_hash.each do |_param, length|
+        size_hash.each_value do |length|
           str = '-' * length
           printf(" %#{length}s |", str)
         end
