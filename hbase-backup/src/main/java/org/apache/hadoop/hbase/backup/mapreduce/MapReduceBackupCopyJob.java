@@ -142,7 +142,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
    * Only the argument "src1, [src2, [...]] dst" is supported,
    * no more DistCp options.
    */
-
   class BackupDistCp extends DistCp {
 
     private BackupInfo backupInfo;
@@ -154,7 +153,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       this.backupInfo = backupInfo;
       this.backupManager = backupManager;
     }
-
 
     @Override
     public Job execute() throws Exception {
@@ -251,7 +249,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         LOG.debug("Backup progress data updated to backup system table: \"Progress: "
             + newProgressStr + " - " + bytesCopied + " bytes copied.\"");
       } catch (Throwable t) {
-        LOG.error(t);
+        LOG.error("distcp " + job == null ? "" : job.getJobID() + " encountered error", t);
         throw t;
       } finally {
         if (!fieldSubmitted.getBoolean(this)) {
