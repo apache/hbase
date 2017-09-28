@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Collections;
 
 /**
  * Test implementation of a coprocessor endpoint exposing the
@@ -45,8 +45,8 @@ public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobu
   public ProtobufCoprocessorService() {}
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override

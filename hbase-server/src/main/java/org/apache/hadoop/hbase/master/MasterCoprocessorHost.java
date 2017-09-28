@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -126,7 +127,10 @@ public class MasterCoprocessorHost
   @Override
   public MasterEnvironment createEnvironment(final MasterCoprocessor instance, final int priority,
       final int seq, final Configuration conf) {
-    instance.getService().ifPresent(masterServices::registerService);
+    // If coprocessor exposes any services, register them.
+    for (Service service : instance.getServices()) {
+      masterServices.registerService(service);
+    }
     return new MasterEnvironment(instance, priority, seq, conf, masterServices);
   }
 

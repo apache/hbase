@@ -23,8 +23,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -124,8 +124,8 @@ public class TestServerCustomProtocol {
     }
 
     @Override
-    public Optional<Service> getService() {
-      return Optional.of(this);
+    public Iterable<Service> getServices() {
+      return Collections.singleton(this);
     }
   }
 

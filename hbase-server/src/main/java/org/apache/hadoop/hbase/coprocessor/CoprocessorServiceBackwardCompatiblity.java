@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.util.Optional;
+import java.util.Collections;
 
 /**
  * Classes to help maintain backward compatibility with now deprecated {@link CoprocessorService}
@@ -50,8 +50,8 @@ public class CoprocessorServiceBackwardCompatiblity {
     }
 
     @Override
-    public Optional<Service> getService() {
-      return Optional.of(service.getService());
+    public Iterable<Service> getServices() {
+      return Collections.singleton(service.getService());
     }
   }
 
@@ -64,8 +64,8 @@ public class CoprocessorServiceBackwardCompatiblity {
     }
 
     @Override
-    public Optional<Service> getService() {
-      return Optional.of(service.getService());
+    public Iterable<Service> getServices() {
+      return Collections.singleton(service.getService());
     }
   }
 
@@ -78,8 +78,8 @@ public class CoprocessorServiceBackwardCompatiblity {
     }
 
     @Override
-    public Optional<Service> getService() {
-      return Optional.of(service.getService());
+    public Iterable<Service> getServices() {
+      return Collections.singleton(service.getService());
     }
   }
 }

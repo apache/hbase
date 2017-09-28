@@ -20,14 +20,42 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Collections;
 
 import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Coprocessor interface.
+ * Base interface for the 4 coprocessors - MasterCoprocessor, RegionCoprocessor,
+ * RegionServerCoprocessor, and WALCoprocessor.
+ * Do NOT implement this interface directly. Unless an implementation implements one (or more) of
+ * the above mentioned 4 coprocessors, it'll fail to be loaded by any coprocessor host.
+ *
+ * Example:
+ * Building a coprocessor to observer Master operations.
+ * <pre>
+ * class MyMasterCoprocessor implements MasterCoprocessor {
+ *   &#64;Override
+ *   public Optional&lt;MasterObserver> getMasterObserver() {
+ *     return new MyMasterObserver();
+ *   }
+ * }
+ *
+ * class MyMasterObserver implements MasterObserver {
+ *   ....
+ * }
+ * </pre>
+ *
+ * Building a Service which can be loaded by both Master and RegionServer
+ * <pre>
+ * class MyCoprocessorService implements MasterCoprocessor, RegionServerCoprocessor {
+ *   &#64;Override
+ *   public Optional&lt;Service> getServices() {
+ *     return new ...;
+ *   }
+ * }
+ * </pre>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -70,7 +98,7 @@ public interface Coprocessor {
   /**
    * Coprocessor endpoints providing protobuf services should implement this interface.
    */
-  default Optional<Service> getService() {
-    return Optional.empty();
+  default Iterable<Service> getServices() {
+    return Collections.EMPTY_SET;
   }
 }

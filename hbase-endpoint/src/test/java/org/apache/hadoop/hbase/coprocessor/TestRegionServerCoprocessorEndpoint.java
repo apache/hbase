@@ -21,11 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Optional;
+import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
@@ -106,8 +104,8 @@ public class TestRegionServerCoprocessorEndpoint {
       implements RegionServerCoprocessor {
 
     @Override
-    public Optional<Service> getService() {
-      return Optional.of(this);
+    public Iterable<Service> getServices() {
+      return Collections.singleton(this);
     }
 
     @Override

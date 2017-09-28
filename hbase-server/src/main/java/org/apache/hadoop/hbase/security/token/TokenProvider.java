@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,8 +96,9 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
   // AuthenticationService implementation
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(AuthenticationProtos.AuthenticationService.newReflectiveService(this));
+  public Iterable<Service> getServices() {
+    return Collections.singleton(
+        AuthenticationProtos.AuthenticationService.newReflectiveService(this));
   }
 
   @Override

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,8 +51,8 @@ public class ColumnAggregationEndpointNullResponse
   private static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointNullResponse.class);
   private RegionCoprocessorEnvironment env = null;
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override

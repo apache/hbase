@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RefreshHFilesProtos;
 import org.apache.hadoop.hbase.regionserver.Store;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Collections;
 
 /**
  * Coprocessor endpoint to refresh HFiles on replica.
@@ -51,8 +51,8 @@ public class RefreshHFilesEndpoint extends RefreshHFilesProtos.RefreshHFilesServ
   }
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(this);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(this);
   }
 
   @Override

@@ -393,9 +393,10 @@ public class RegionCoprocessorHost
   @Override
   public RegionEnvironment createEnvironment(RegionCoprocessor instance, int priority, int seq,
       Configuration conf) {
-    // Due to current dynamic protocol design, Endpoint uses a different way to be registered and
-    // executed. It uses a visitor pattern to invoke registered Endpoint method.
-    instance.getService().ifPresent(region::registerService);
+    // If coprocessor exposes any services, register them.
+    for (Service service : instance.getServices()) {
+      region.registerService(service);
+    }
     ConcurrentMap<String, Object> classData;
     // make sure only one thread can add maps
     synchronized (SHARED_DATA_MAP) {

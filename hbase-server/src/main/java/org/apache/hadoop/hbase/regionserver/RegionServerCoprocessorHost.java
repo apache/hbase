@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -206,7 +207,10 @@ public class RegionServerCoprocessorHost extends
         final int seq, final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
       this.regionServerServices = services;
-      impl.getService().ifPresent(regionServerServices::registerService);
+      // If coprocessor exposes any services, register them.
+      for (Service service : impl.getServices()) {
+        regionServerServices.registerService(service);
+      }
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
     }

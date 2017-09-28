@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -95,8 +96,8 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   }
 
   @Override
-  public Optional<Service> getService() {
-    return Optional.of(groupAdminService);
+  public Iterable<Service> getServices() {
+    return Collections.singleton(groupAdminService);
   }
 
   @Override
