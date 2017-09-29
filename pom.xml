@@ -431,7 +431,7 @@
       <id>misty</id>
       <name>Misty Stanley-Jones</name>
       <email>misty@apache.org</email>
-      <timezone>+10</timezone>
+      <timezone>-8</timezone>
     </developer>
     <developer>
       <id>ndimiduk</id>
