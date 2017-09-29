@@ -278,6 +278,8 @@ public class MetricsConnection implements StatisticTrackable {
   @VisibleForTesting protected final RunnerStats runnerStats;
   @VisibleForTesting protected final Counter metaCacheNumClearServer;
   @VisibleForTesting protected final Counter metaCacheNumClearRegion;
+  @VisibleForTesting protected final Counter hedgedReadOps;
+  @VisibleForTesting protected final Counter hedgedReadWin;
 
   // dynamic metrics
 
@@ -336,6 +338,8 @@ public class MetricsConnection implements StatisticTrackable {
       "metaCacheNumClearServer", scope);
     this.metaCacheNumClearRegion = registry.newCounter(this.getClass(),
       "metaCacheNumClearRegion", scope);
+    this.hedgedReadOps = registry.newCounter(this.getClass(), "hedgedReadOps", scope);
+    this.hedgedReadWin = registry.newCounter(this.getClass(), "hedgedReadWin", scope);
     this.getTracker = new CallTracker(this.registry, "Get", scope);
     this.scanTracker = new CallTracker(this.registry, "Scan", scope);
     this.appendTracker = new CallTracker(this.registry, "Mutate", "Append", scope);
@@ -393,6 +397,16 @@ public class MetricsConnection implements StatisticTrackable {
   /** Increment the number of meta cache drops requested for individual region. */
   public void incrMetaCacheNumClearRegion() {
     metaCacheNumClearRegion.inc();
+  }
+
+  /** Increment the number of hedged read that have occurred. */
+  public void incrHedgedReadOps() {
+    hedgedReadOps.inc();
+  }
+
+  /** Increment the number of hedged read returned faster than the original read. */
+  public void incrHedgedReadWin() {
+    hedgedReadWin.inc();
   }
 
   /** Increment the number of normal runner counts. */
