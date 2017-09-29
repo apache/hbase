@@ -392,9 +392,7 @@ public class TestNamespaceAuditor {
     assertEquals(initialRegions, hris.size());
     Collections.sort(hris);
     // verify that we cannot split
-    HRegionInfo hriToSplit2 = hris.get(1);
-    ADMIN.split(tableTwo,
-      TableInputFormatBase.getSplitKey(hriToSplit2.getStartKey(), hriToSplit2.getEndKey(), true));
+    ADMIN.split(tableTwo, Bytes.toBytes("6"));
     waitForMergeToComplete(tableTwo, encodedRegionNamesToMerge);
     assertEquals(initialRegions, ADMIN.getTableRegions(tableTwo).size());
   }
