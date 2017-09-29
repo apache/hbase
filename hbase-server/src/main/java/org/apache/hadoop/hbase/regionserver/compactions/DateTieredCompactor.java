@@ -45,7 +45,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
     super(conf, store);
   }
 
-  private boolean needEmptyFile(CompactionRequest request) {
+  private boolean needEmptyFile(CompactionRequestImpl request) {
     // if we are going to compact the last N files, then we need to emit an empty file to retain the
     // maxSeqId if we haven't written out anything.
     OptionalLong maxSeqId = StoreUtils.getMaxSequenceIdInList(request.getFiles());
@@ -54,7 +54,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
         maxSeqId.getAsLong() == storeMaxSeqId.getAsLong();
   }
 
-  public List<Path> compact(final CompactionRequest request, final List<Long> lowerBoundaries,
+  public List<Path> compact(final CompactionRequestImpl request, final List<Long> lowerBoundaries,
       ThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Executing compaction with " + lowerBoundaries.size()
@@ -77,7 +77,7 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
   @Override
   protected List<Path> commitWriter(DateTieredMultiFileWriter writer, FileDetails fd,
-      CompactionRequest request) throws IOException {
+      CompactionRequestImpl request) throws IOException {
     return writer.commitWriters(fd.maxSeqId, request.isAllFiles());
   }
 }

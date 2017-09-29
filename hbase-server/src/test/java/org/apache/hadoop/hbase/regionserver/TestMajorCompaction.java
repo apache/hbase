@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -417,7 +417,7 @@ public class TestMajorCompaction {
     }
     store.triggerMajorCompaction();
 
-    CompactionRequest request = store.requestCompaction().get().getRequest();
+    CompactionRequestImpl request = store.requestCompaction().get().getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "System-requested major compaction should not occur if there are too many store files",
@@ -436,7 +436,7 @@ public class TestMajorCompaction {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequest request =
+    CompactionRequestImpl request =
         store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get()
             .getRequest();
     assertNotNull("Expected to receive a compaction request", request);

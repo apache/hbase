@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Compact passed set of files. Create an instance and then call
- * {@link #compact(CompactionRequest, ThroughputController, User)}
+ * {@link #compact(CompactionRequestImpl, ThroughputController, User)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor<StoreFileWriter> {
@@ -61,16 +61,16 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
-  public List<Path> compact(final CompactionRequest request,
+  public List<Path> compact(final CompactionRequestImpl request,
       ThroughputController throughputController, User user) throws IOException {
     return compact(request, defaultScannerFactory, writerFactory, throughputController, user);
   }
 
   /**
-   * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to
-   * {@link #compact(CompactionRequest, ThroughputController, User)};
+   * Compact a list of files for testing. Creates a fake {@link CompactionRequestImpl} to pass to
+   * {@link #compact(CompactionRequestImpl, ThroughputController, User)};
    * @param filesToCompact the files to compact. These are used as the compactionSelection for the
-   *          generated {@link CompactionRequest}.
+   *          generated {@link CompactionRequestImpl}.
    * @param isMajor true to major compact (prune all deletes, max versions, etc)
    * @return Product of compaction or an empty list if all cells expired or deleted and nothing \
    *         made it through the compaction.
@@ -78,14 +78,14 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
    */
   public List<Path> compactForTesting(Collection<HStoreFile> filesToCompact, boolean isMajor)
       throws IOException {
-    CompactionRequest cr = new CompactionRequest(filesToCompact);
+    CompactionRequestImpl cr = new CompactionRequestImpl(filesToCompact);
     cr.setIsMajor(isMajor, isMajor);
     return compact(cr, NoLimitThroughputController.INSTANCE, null);
   }
 
   @Override
   protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
-      CompactionRequest request) throws IOException {
+      CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
     writer.close();

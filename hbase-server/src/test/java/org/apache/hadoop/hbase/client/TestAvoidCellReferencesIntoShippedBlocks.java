@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -265,7 +266,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s, CompactionLifeCycleTracker request, long readPoint)
+        long earliestPutTs, InternalScanner s, CompactionLifeCycleTracker tracker,
+        CompactionRequest request, long readPoint)
         throws IOException {
       return createCompactorScanner((HStore) store, scanners, scanType, earliestPutTs);
     }

@@ -74,7 +74,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   }
 
   public StripeCompactionRequest createEmptyRequest(
-      StripeInformationProvider si, CompactionRequest request) {
+      StripeInformationProvider si, CompactionRequestImpl request) {
     // Treat as L0-ish compaction with fixed set of files, and hope for the best.
     if (si.getStripeCount() > 0) {
       return new BoundaryStripeCompactionRequest(request, si.getStripeBoundaries());
@@ -376,7 +376,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   /** Stripe compaction request wrapper. */
   public abstract static class StripeCompactionRequest {
-    protected CompactionRequest request;
+    protected CompactionRequestImpl request;
     protected byte[] majorRangeFromRow = null, majorRangeToRow = null;
 
     public List<Path> execute(StripeCompactor compactor,
@@ -392,7 +392,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     public abstract List<Path> execute(StripeCompactor compactor,
         ThroughputController throughputController, User user) throws IOException;
 
-    public StripeCompactionRequest(CompactionRequest request) {
+    public StripeCompactionRequest(CompactionRequestImpl request) {
       this.request = request;
     }
 
@@ -407,11 +407,11 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       this.majorRangeToRow = endRow;
     }
 
-    public CompactionRequest getRequest() {
+    public CompactionRequestImpl getRequest() {
       return this.request;
     }
 
-    public void setRequest(CompactionRequest request) {
+    public void setRequest(CompactionRequestImpl request) {
       assert request != null;
       this.request = request;
       this.majorRangeFromRow = this.majorRangeToRow = null;
@@ -429,7 +429,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      * @param request Original request.
      * @param targetBoundaries New files should be written with these boundaries.
      */
-    public BoundaryStripeCompactionRequest(CompactionRequest request,
+    public BoundaryStripeCompactionRequest(CompactionRequestImpl request,
         List<byte[]> targetBoundaries) {
       super(request);
       this.targetBoundaries = targetBoundaries;
@@ -437,7 +437,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     public BoundaryStripeCompactionRequest(Collection<HStoreFile> files,
         List<byte[]> targetBoundaries) {
-      this(new CompactionRequest(files), targetBoundaries);
+      this(new CompactionRequestImpl(files), targetBoundaries);
     }
 
     @Override
@@ -467,7 +467,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      * @param targetKvs The KV count of each segment. If targetKvs*targetCount is less than
      *                  total number of kvs, all the overflow data goes into the last stripe.
      */
-    public SplitStripeCompactionRequest(CompactionRequest request,
+    public SplitStripeCompactionRequest(CompactionRequestImpl request,
         byte[] startRow, byte[] endRow, int targetCount, long targetKvs) {
       super(request);
       this.startRow = startRow;
@@ -483,7 +483,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     public SplitStripeCompactionRequest(Collection<HStoreFile> files,
         byte[] startRow, byte[] endRow, int targetCount, long targetKvs) {
-      this(new CompactionRequest(files), startRow, endRow, targetCount, targetKvs);
+      this(new CompactionRequestImpl(files), startRow, endRow, targetCount, targetKvs);
     }
 
     @Override

@@ -71,8 +71,8 @@ public class TestCompactor {
     return sf;
   }
 
-  public static CompactionRequest createDummyRequest() throws Exception {
-    return new CompactionRequest(Arrays.asList(createDummyStoreFile(1L)));
+  public static CompactionRequestImpl createDummyRequest() throws Exception {
+    return new CompactionRequestImpl(Arrays.asList(createDummyStoreFile(1L)));
   }
 
   // StoreFile.Writer has private ctor and is unwieldy, so this has to be convoluted.

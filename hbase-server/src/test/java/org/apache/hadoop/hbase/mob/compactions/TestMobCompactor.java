@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -730,7 +731,8 @@ public class TestMobCompactor {
 
     @Override
     public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker,
+        CompactionRequest request)
         throws IOException {
       int count = candidates.size();
       if (count >= 2) {

@@ -230,7 +230,9 @@ public class TestStripeCompactionPolicy {
 
     assertTrue(policy.needsCompactions(si, al()));
     StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
-    assertEquals(si.getStorefiles(), scr.getRequest().getFiles());
+    // UnmodifiableCollection does not implement equals so we need to change it here to a
+    // collection that implements it.
+    assertEquals(si.getStorefiles(), new ArrayList<>(scr.getRequest().getFiles()));
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
       aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY),

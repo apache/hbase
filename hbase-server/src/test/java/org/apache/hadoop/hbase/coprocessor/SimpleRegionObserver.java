@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -202,20 +203,22 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   @Override
   public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
+      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
     ctPreCompactSelect.incrementAndGet();
   }
 
   @Override
   public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      ImmutableList<? extends StoreFile> selected, CompactionLifeCycleTracker tracker) {
+      ImmutableList<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) {
     ctPostCompactSelect.incrementAndGet();
   }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker)
-      throws IOException {
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
     ctPreCompact.incrementAndGet();
     return scanner;
   }
@@ -223,14 +226,16 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   @Override
   public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-      InternalScanner s, CompactionLifeCycleTracker tracker, long readPoint) throws IOException {
+      InternalScanner s, CompactionLifeCycleTracker tracker, CompactionRequest request,
+      long readPoint) throws IOException {
     ctPreCompactScanner.incrementAndGet();
     return s;
   }
 
   @Override
   public void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      StoreFile resultFile, CompactionLifeCycleTracker tracker) throws IOException {
+      StoreFile resultFile, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
     ctPostCompact.incrementAndGet();
   }
 

@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -76,7 +76,7 @@ public class TestStripeStoreEngine {
     StripeCompactor mockCompactor = mock(StripeCompactor.class);
     se.setCompactorOverride(mockCompactor);
     when(
-      mockCompactor.compact(any(CompactionRequest.class), anyInt(), anyLong(), any(byte[].class),
+      mockCompactor.compact(any(CompactionRequestImpl.class), anyInt(), anyLong(), any(byte[].class),
         any(byte[].class), any(byte[].class), any(byte[].class),
         any(ThroughputController.class), any(User.class)))
         .thenReturn(new ArrayList<>());
@@ -92,7 +92,7 @@ public class TestStripeStoreEngine {
     // Override the file list. Granted, overriding this compaction in this manner will
     // break things in real world, but we only want to verify the override.
     compactUs.remove(sf);
-    CompactionRequest req = new CompactionRequest(compactUs);
+    CompactionRequestImpl req = new CompactionRequestImpl(compactUs);
     compaction.forceSelect(req);
     assertEquals(2, compaction.getRequest().getFiles().size());
     assertFalse(compaction.getRequest().getFiles().contains(sf));

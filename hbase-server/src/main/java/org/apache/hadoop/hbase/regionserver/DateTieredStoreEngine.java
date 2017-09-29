@@ -23,9 +23,9 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactor;
@@ -81,7 +81,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
     }
 
     @Override
-    public void forceSelect(CompactionRequest request) {
+    public void forceSelect(CompactionRequestImpl request) {
       if (!(request instanceof DateTieredCompactionRequest)) {
         throw new IllegalArgumentException("DateTieredCompactionRequest is expected. Actual: "
             + request.getClass().getCanonicalName());

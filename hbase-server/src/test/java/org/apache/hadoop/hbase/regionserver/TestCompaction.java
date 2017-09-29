@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -415,7 +415,7 @@ public class TestCompaction {
       @Override
       public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
           boolean mayUseOffPeak, boolean forceMajor) throws IOException {
-        this.request = new CompactionRequest(selectedFiles);
+        this.request = new CompactionRequestImpl(selectedFiles);
         this.request.setPriority(getPriority());
         return true;
       }
@@ -496,7 +496,7 @@ public class TestCompaction {
       @Override
       public boolean select(List<HStoreFile> f, boolean i, boolean m, boolean e)
           throws IOException {
-        this.request = new CompactionRequest(new ArrayList<>());
+        this.request = new CompactionRequestImpl(new ArrayList<>());
         return true;
       }
     }
