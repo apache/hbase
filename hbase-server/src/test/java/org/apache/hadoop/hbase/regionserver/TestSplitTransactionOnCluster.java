@@ -617,15 +617,15 @@ public class TestSplitTransactionOnCluster {
       Assert.assertFalse(r.isStale());
       LOG.info("exists stale after flush done");
 
-      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       // This will succeed because in the previous GET we get the location of the replica
       r = t.get(g);
       Assert.assertTrue(r.isStale());
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
     } finally {
-      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.getPrimaryCdl().get().countDown();
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();

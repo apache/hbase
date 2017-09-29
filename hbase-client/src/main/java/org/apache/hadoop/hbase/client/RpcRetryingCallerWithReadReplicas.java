@@ -216,6 +216,9 @@ public class RpcRetryingCallerWithReadReplicas {
           if (f != null) {
             return f.get(); //great we got a response
           }
+          if (cConnection.getConnectionMetrics() != null) {
+            cConnection.getConnectionMetrics().incrHedgedReadOps();
+          }
         } catch (ExecutionException e) {
           // We ignore the ExecutionException and continue with the secondary replicas
           if (LOG.isDebugEnabled()) {
@@ -238,12 +241,16 @@ public class RpcRetryingCallerWithReadReplicas {
       addCallsForReplica(cs, rl, 1, rl.size() - 1);
     }
     try {
-      Future<Result> f = cs.pollForFirstSuccessfullyCompletedTask(operationTimeout,
-          TimeUnit.MILLISECONDS, startIndex, endIndex);
+      ResultBoundedCompletionService<Result>.QueueingFuture<Result> f =
+          cs.pollForFirstSuccessfullyCompletedTask(operationTimeout, TimeUnit.MILLISECONDS, startIndex, endIndex);
       if (f == null) {
         throw new RetriesExhaustedException("Timed out after " + operationTimeout +
             "ms. Get is sent to replicas with startIndex: " + startIndex +
             ", endIndex: " + endIndex + ", Locations: " + rl);
+      }
+      if (cConnection.getConnectionMetrics() != null && !isTargetReplicaSpecified &&
+          !skipPrimary && f.getReplicaId() != RegionReplicaUtil.DEFAULT_REPLICA_ID) {
+        cConnection.getConnectionMetrics().incrHedgedReadWin();
       }
       return f.get();
     } catch (ExecutionException e) {
