@@ -169,7 +169,7 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
   private List<HStoreFile> runIteration(List<HStoreFile> startingStoreFiles) throws IOException {
     List<HStoreFile> storeFiles = new ArrayList<>(startingStoreFiles);
-    CompactionRequest req = cp.selectCompaction(
+    CompactionRequestImpl req = cp.selectCompaction(
         storeFiles, new ArrayList<>(), false, false, false);
     long newFileSize = 0;
 

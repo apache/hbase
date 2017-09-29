@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -192,7 +192,7 @@ public class TestCompactionPolicy {
       long... expected) throws IOException {
     store.forceMajor = forcemajor;
     // Test Default compactions
-    CompactionRequest result =
+    CompactionRequestImpl result =
         ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy()).selectCompaction(
           candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
     List<HStoreFile> actual = new ArrayList<>(result.getFiles());

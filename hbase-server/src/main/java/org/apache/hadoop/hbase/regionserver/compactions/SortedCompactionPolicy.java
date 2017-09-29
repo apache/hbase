@@ -53,7 +53,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    *   on seqId for data consistency.
    * @return subset copy of candidate list that meets compaction criteria
    */
-  public CompactionRequest selectCompaction(Collection<HStoreFile> candidateFiles,
+  public CompactionRequestImpl selectCompaction(Collection<HStoreFile> candidateFiles,
       List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
       boolean forceMajor) throws IOException {
     // Preliminary compaction subject to filters
@@ -85,7 +85,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
     // Or, if there are any references among the candidates.
     boolean isAfterSplit = StoreUtils.hasReferences(candidateSelection);
 
-    CompactionRequest result = createCompactionRequest(candidateSelection,
+    CompactionRequestImpl result = createCompactionRequest(candidateSelection,
       isTryingMajor || isAfterSplit, mayUseOffPeak, mayBeStuck);
 
     ArrayList<HStoreFile> filesToCompact = Lists.newArrayList(result.getFiles());
@@ -99,7 +99,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
     return result;
   }
 
-  protected abstract CompactionRequest createCompactionRequest(
+  protected abstract CompactionRequestImpl createCompactionRequest(
       ArrayList<HStoreFile> candidateSelection, boolean tryingMajor, boolean mayUseOffPeak,
       boolean mayBeStuck) throws IOException;
 

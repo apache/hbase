@@ -55,7 +55,7 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   }
 
   @Override
-  public CompactionRequest selectCompaction(Collection<HStoreFile> candidateFiles,
+  public CompactionRequestImpl selectCompaction(Collection<HStoreFile> candidateFiles,
       List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
       boolean forceMajor) throws IOException {
     if(forceMajor){
@@ -67,10 +67,10 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
       return super.selectCompaction(candidateFiles, filesCompacting, isUserCompaction, 
         mayUseOffPeak, forceMajor);
     }
-    
+
     // Nothing to compact
     Collection<HStoreFile> toCompact = getExpiredStores(candidateFiles, filesCompacting);
-    CompactionRequest result = new CompactionRequest(toCompact);
+    CompactionRequestImpl result = new CompactionRequestImpl(toCompact);
     return result;
   }
 
@@ -123,7 +123,7 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
       if (maxTtl == Long.MAX_VALUE
           || (currentTime - maxTtl < maxTs)){
         continue; 
-      } else if(filesCompacting == null || filesCompacting.contains(sf) == false){
+      } else if(filesCompacting == null || !filesCompacting.contains(sf)){
         expiredStores.add(sf);
       }
     }

@@ -27,9 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -84,12 +84,12 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
       this.stripeRequest = compactionPolicy.selectCompaction(
           storeFileManager, filesCompacting, mayUseOffPeak);
       this.request = (this.stripeRequest == null)
-          ? new CompactionRequest(new ArrayList<>()) : this.stripeRequest.getRequest();
+          ? new CompactionRequestImpl(new ArrayList<>()) : this.stripeRequest.getRequest();
       return this.stripeRequest != null;
     }
 
     @Override
-    public void forceSelect(CompactionRequest request) {
+    public void forceSelect(CompactionRequestImpl request) {
       super.forceSelect(request);
       if (this.stripeRequest != null) {
         this.stripeRequest.setRequest(this.request);

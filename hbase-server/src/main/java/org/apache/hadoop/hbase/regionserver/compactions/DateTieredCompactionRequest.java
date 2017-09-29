@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS",
   justification="It is intended to use the same equal method as superclass")
-public class DateTieredCompactionRequest extends CompactionRequest {
+public class DateTieredCompactionRequest extends CompactionRequestImpl {
   private List<Long> boundaries;
 
   public DateTieredCompactionRequest(Collection<HStoreFile> files, List<Long> boundaryList) {

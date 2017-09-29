@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -393,7 +393,7 @@ public class CompactSplit implements PropagatingConfigurationObserver {
   private static final Comparator<Runnable> COMPARATOR =
       new Comparator<Runnable>() {
 
-    private int compare(CompactionRequest r1, CompactionRequest r2) {
+    private int compare(CompactionRequestImpl r1, CompactionRequestImpl r2) {
       if (r1 == r2) {
         return 0; //they are the same request
       }
@@ -402,7 +402,7 @@ public class CompactSplit implements PropagatingConfigurationObserver {
       if (cmp != 0) {
         return cmp;
       }
-      cmp = Long.compare(r1.getSelectionNanoTime(), r2.getSelectionNanoTime());
+      cmp = Long.compare(r1.getSelectionTime(), r2.getSelectionTime());
       if (cmp != 0) {
         return cmp;
       }

@@ -58,7 +58,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
     }
 
     @Override
-    public ScanType getScanType(CompactionRequest request) {
+    public ScanType getScanType(CompactionRequestImpl request) {
       // If majorRangeFromRow and majorRangeToRow are not null, then we will not use the return
       // value to create InternalScanner. See the createScanner method below. The return value is
       // also used when calling coprocessor hooks.
@@ -76,7 +76,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
     }
   }
 
-  public List<Path> compact(CompactionRequest request, final List<byte[]> targetBoundaries,
+  public List<Path> compact(CompactionRequestImpl request, final List<byte[]> targetBoundaries,
       final byte[] majorRangeFromRow, final byte[] majorRangeToRow,
       ThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -101,7 +101,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
       }, throughputController, user);
   }
 
-  public List<Path> compact(CompactionRequest request, final int targetCount, final long targetSize,
+  public List<Path> compact(CompactionRequestImpl request, final int targetCount, final long targetSize,
       final byte[] left, final byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow,
       ThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -125,7 +125,7 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
 
   @Override
   protected List<Path> commitWriter(StripeMultiFileWriter writer, FileDetails fd,
-      CompactionRequest request) throws IOException {
+      CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = writer.commitWriters(fd.maxSeqId, request.isMajor());
     assert !newFiles.isEmpty() : "Should have produced an empty file to preserve metadata.";
     return newFiles;

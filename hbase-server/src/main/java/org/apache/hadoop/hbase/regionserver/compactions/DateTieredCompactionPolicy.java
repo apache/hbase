@@ -186,9 +186,9 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   @Override
-  protected CompactionRequest createCompactionRequest(ArrayList<HStoreFile> candidateSelection,
+  protected CompactionRequestImpl createCompactionRequest(ArrayList<HStoreFile> candidateSelection,
     boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
-    CompactionRequest result = tryingMajor ? selectMajorCompaction(candidateSelection)
+    CompactionRequestImpl result = tryingMajor ? selectMajorCompaction(candidateSelection)
       : selectMinorCompaction(candidateSelection, mayUseOffPeak, mayBeStuck);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Generated compaction request: " + result);
@@ -196,7 +196,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     return result;
   }
 
-  public CompactionRequest selectMajorCompaction(ArrayList<HStoreFile> candidateSelection) {
+  public CompactionRequestImpl selectMajorCompaction(ArrayList<HStoreFile> candidateSelection) {
     long now = EnvironmentEdgeManager.currentTime();
     return new DateTieredCompactionRequest(candidateSelection,
       this.getCompactBoundariesForMajor(candidateSelection, now));
@@ -210,7 +210,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
    * by seqId and maxTimestamp in descending order and build the time windows. All the out-of-order
    * data into the same compaction windows, guaranteeing contiguous compaction based on sequence id.
    */
-  public CompactionRequest selectMinorCompaction(ArrayList<HStoreFile> candidateSelection,
+  public CompactionRequestImpl selectMinorCompaction(ArrayList<HStoreFile> candidateSelection,
       boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     long oldestToCompact = getOldestToCompact(comConf.getDateTieredMaxStoreFileAgeMillis(), now);
@@ -261,7 +261,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       }
     }
     // A non-null file list is expected by HStore
-    return new CompactionRequest(Collections.emptyList());
+    return new CompactionRequestImpl(Collections.emptyList());
   }
 
   private DateTieredCompactionRequest generateCompactionRequest(ArrayList<HStoreFile> storeFiles,

@@ -130,7 +130,7 @@ public class TestDateTieredCompactor {
     HStoreFile sf1 = createDummyStoreFile(1L);
     HStoreFile sf2 = createDummyStoreFile(2L);
     DateTieredCompactor dtc = createCompactor(writers, input, Arrays.asList(sf1, sf2));
-    List<Path> paths = dtc.compact(new CompactionRequest(Arrays.asList(sf1)),
+    List<Path> paths = dtc.compact(new CompactionRequestImpl(Arrays.asList(sf1)),
       boundaries.subList(0, boundaries.size() - 1), NoLimitThroughputController.INSTANCE, null);
     writers.verifyKvs(output, allFiles, boundaries);
     if (allFiles) {
@@ -156,7 +156,7 @@ public class TestDateTieredCompactor {
   @Test
   public void testEmptyOutputFile() throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
-    CompactionRequest request = createDummyRequest();
+    CompactionRequestImpl request = createDummyRequest();
     DateTieredCompactor dtc = createCompactor(writers, new KeyValue[0],
       new ArrayList<>(request.getFiles()));
     List<Path> paths = dtc.compact(request, Arrays.asList(Long.MIN_VALUE, Long.MAX_VALUE),

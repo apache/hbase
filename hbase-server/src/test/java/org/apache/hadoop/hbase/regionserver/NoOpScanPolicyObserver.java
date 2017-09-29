@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 /**
  * RegionObserver that just reimplements the default behavior,
@@ -69,7 +70,8 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
   public InternalScanner preCompactScannerOpen(
       final ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-      InternalScanner s, CompactionLifeCycleTracker tracker, long readPoint) throws IOException {
+      InternalScanner s, CompactionLifeCycleTracker tracker, CompactionRequest request,
+      long readPoint) throws IOException {
     HStore hs = (HStore) store;
     // this demonstrates how to override the scanners default behavior
     ScanInfo oldSI = hs.getScanInfo();

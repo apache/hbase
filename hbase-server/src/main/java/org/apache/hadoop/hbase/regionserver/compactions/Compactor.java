@@ -229,7 +229,7 @@ public abstract class Compactor<T extends CellSink> {
 
   protected interface InternalScannerFactory {
 
-    ScanType getScanType(CompactionRequest request);
+    ScanType getScanType(CompactionRequestImpl request);
 
     InternalScanner createScanner(List<StoreFileScanner> scanners, ScanType scanType,
         FileDetails fd, long smallestReadPoint) throws IOException;
@@ -238,7 +238,7 @@ public abstract class Compactor<T extends CellSink> {
   protected final InternalScannerFactory defaultScannerFactory = new InternalScannerFactory() {
 
     @Override
-    public ScanType getScanType(CompactionRequest request) {
+    public ScanType getScanType(CompactionRequestImpl request) {
       return request.isAllFiles() ? ScanType.COMPACT_DROP_DELETES
           : ScanType.COMPACT_RETAIN_DELETES;
     }
@@ -267,7 +267,7 @@ public abstract class Compactor<T extends CellSink> {
     /* includesTags = */fd.maxTagsLength > 0, shouldDropBehind);
   }
 
-  protected List<Path> compact(final CompactionRequest request,
+  protected List<Path> compact(final CompactionRequestImpl request,
       InternalScannerFactory scannerFactory, CellSinkFactory<T> sinkFactory,
       ThroughputController throughputController, User user) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
@@ -325,8 +325,8 @@ public abstract class Compactor<T extends CellSink> {
     return commitWriter(writer, fd, request);
   }
 
-  protected abstract List<Path> commitWriter(T writer, FileDetails fd, CompactionRequest request)
-      throws IOException;
+  protected abstract List<Path> commitWriter(T writer, FileDetails fd,
+      CompactionRequestImpl request) throws IOException;
 
   protected abstract void abortWriter(T writer) throws IOException;
 
@@ -340,14 +340,14 @@ public abstract class Compactor<T extends CellSink> {
    * @param readPoint the read point to help create scanner by Coprocessor if required.
    * @return Scanner override by coprocessor; null if not overriding.
    */
-  protected InternalScanner preCreateCoprocScanner(CompactionRequest request, ScanType scanType,
+  protected InternalScanner preCreateCoprocScanner(CompactionRequestImpl request, ScanType scanType,
       long earliestPutTs, List<StoreFileScanner> scanners, User user, long readPoint)
       throws IOException {
     if (store.getCoprocessorHost() == null) {
       return null;
     }
     return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
-      earliestPutTs, request.getTracker(), user, readPoint);
+      earliestPutTs, request.getTracker(), request, user, readPoint);
   }
 
   /**
@@ -357,13 +357,13 @@ public abstract class Compactor<T extends CellSink> {
    * @param scanner The default scanner created for compaction.
    * @return Scanner scanner to use (usually the default); null if compaction should not proceed.
    */
-  protected InternalScanner postCreateCoprocScanner(CompactionRequest request, ScanType scanType,
+  protected InternalScanner postCreateCoprocScanner(CompactionRequestImpl request, ScanType scanType,
       InternalScanner scanner, User user) throws IOException {
     if (store.getCoprocessorHost() == null) {
       return scanner;
     }
     return store.getCoprocessorHost().preCompact(store, scanner, scanType, request.getTracker(),
-      user);
+      request, user);
   }
 
   /**

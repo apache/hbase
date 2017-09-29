@@ -113,7 +113,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
   }
 
   @Override
-  protected CompactionRequest createCompactionRequest(ArrayList<HStoreFile>
+  protected CompactionRequestImpl createCompactionRequest(ArrayList<HStoreFile>
     candidateSelection, boolean tryingMajor, boolean mayUseOffPeak, boolean mayBeStuck)
     throws IOException {
     if (!tryingMajor) {
@@ -122,7 +122,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
       candidateSelection = checkMinFilesCriteria(candidateSelection,
         comConf.getMinFilesToCompact());
     }
-    return new CompactionRequest(candidateSelection);
+    return new CompactionRequestImpl(candidateSelection);
   }
 
   /**

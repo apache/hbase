@@ -36,7 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public abstract class CompactionContext {
-  protected CompactionRequest request = null;
+  protected CompactionRequestImpl request = null;
 
   /**
    * Called before coprocessor preCompactSelection and should filter the candidates
@@ -61,14 +61,14 @@ public abstract class CompactionContext {
    * Forces external selection to be applied for this compaction.
    * @param request The pre-cooked request with selection and other settings.
    */
-  public void forceSelect(CompactionRequest request) {
+  public void forceSelect(CompactionRequestImpl request) {
     this.request = request;
   }
 
   public abstract List<Path> compact(ThroughputController throughputController, User user)
       throws IOException;
 
-  public CompactionRequest getRequest() {
+  public CompactionRequestImpl getRequest() {
     assert hasSelection();
     return this.request;
   }

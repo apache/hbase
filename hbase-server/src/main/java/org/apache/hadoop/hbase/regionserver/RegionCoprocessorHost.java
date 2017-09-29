@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
@@ -544,11 +545,12 @@ public class RegionCoprocessorHost
   /**
    * See
    * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
-   *   InternalScanner, CompactionLifeCycleTracker, long)}
+   *   InternalScanner, CompactionLifeCycleTracker, CompactionRequest, long)}
    */
   public InternalScanner preCompactScannerOpen(final HStore store,
       final List<StoreFileScanner> scanners, final ScanType scanType, final long earliestPutTs,
-      final CompactionLifeCycleTracker tracker, final User user, final long readPoint)
+      final CompactionLifeCycleTracker tracker, final CompactionRequest request, final User user,
+      final long readPoint)
       throws IOException {
     return execOperationWithResult(null, coprocEnvironments.isEmpty() ? null :
         new ObserverOperationWithResult<RegionObserver, InternalScanner>(
@@ -556,7 +558,7 @@ public class RegionCoprocessorHost
           @Override
           public InternalScanner call(RegionObserver observer) throws IOException {
             return observer.preCompactScannerOpen(this, store, scanners, scanType,
-                earliestPutTs, getResult(), tracker, readPoint);
+                earliestPutTs, getResult(), tracker, request, readPoint);
           }
         });
   }
@@ -567,15 +569,18 @@ public class RegionCoprocessorHost
    * @param store The store where compaction is being requested
    * @param candidates The currently available store files
    * @param tracker used to track the life cycle of a compaction
+   * @param request the compaction request
+   * @param user the user
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
   public boolean preCompactSelection(final HStore store, final List<HStoreFile> candidates,
-      final CompactionLifeCycleTracker tracker, final User user) throws IOException {
+      final CompactionLifeCycleTracker tracker, final CompactionRequest request,
+      final User user) throws IOException {
     return execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation(user) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-        observer.preCompactSelection(this, store, candidates, tracker);
+        observer.preCompactSelection(this, store, candidates, tracker, request);
       }
     });
   }
@@ -586,13 +591,16 @@ public class RegionCoprocessorHost
    * @param store The store where compaction is being requested
    * @param selected The store files selected to compact
    * @param tracker used to track the life cycle of a compaction
+   * @param request the compaction request
+   * @param user the user
    */
   public void postCompactSelection(final HStore store, final ImmutableList<HStoreFile> selected,
-      final CompactionLifeCycleTracker tracker, final User user) throws IOException {
+      final CompactionLifeCycleTracker tracker, final CompactionRequest request,
+      final User user) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation(user) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-        observer.postCompactSelection(this, store, selected, tracker);
+        observer.postCompactSelection(this, store, selected, tracker, request);
       }
     });
   }
@@ -603,17 +611,19 @@ public class RegionCoprocessorHost
    * @param scanner the scanner used to read store data during compaction
    * @param scanType type of Scan
    * @param tracker used to track the life cycle of a compaction
+   * @param request the compaction request
+   * @param user the user
    * @throws IOException
    */
   public InternalScanner preCompact(final HStore store, final InternalScanner scanner,
-      final ScanType scanType, final CompactionLifeCycleTracker tracker, final User user)
-      throws IOException {
+      final ScanType scanType, final CompactionLifeCycleTracker tracker,
+      final CompactionRequest request, final User user) throws IOException {
     return execOperationWithResult(false, scanner, coprocEnvironments.isEmpty() ? null :
         new ObserverOperationWithResult<RegionObserver, InternalScanner>(
             regionObserverGetter, user) {
           @Override
           public InternalScanner call(RegionObserver observer) throws IOException {
-            return observer.preCompact(this, store, getResult(), scanType, tracker);
+            return observer.preCompact(this, store, getResult(), scanType, tracker, request);
           }
         });
   }
@@ -623,14 +633,17 @@ public class RegionCoprocessorHost
    * @param store the store being compacted
    * @param resultFile the new store file written during compaction
    * @param tracker used to track the life cycle of a compaction
+   * @param request the compaction request
+   * @param user the user
    * @throws IOException
    */
   public void postCompact(final HStore store, final HStoreFile resultFile,
-      final CompactionLifeCycleTracker tracker, final User user) throws IOException {
+      final CompactionLifeCycleTracker tracker, final CompactionRequest request, final User user)
+      throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation(user) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-        observer.postCompact(this, store, resultFile, tracker);
+        observer.postCompact(this, store, resultFile, tracker, request);
       }
     });
   }

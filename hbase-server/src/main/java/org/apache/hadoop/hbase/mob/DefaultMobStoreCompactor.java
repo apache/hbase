@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -41,17 +40,17 @@ import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Compact passed set of files in the mob-enabled column family.
@@ -66,7 +65,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   private final InternalScannerFactory scannerFactory = new InternalScannerFactory() {
 
     @Override
-    public ScanType getScanType(CompactionRequest request) {
+    public ScanType getScanType(CompactionRequestImpl request) {
       // retain the delete markers until they are expired.
       return ScanType.COMPACT_RETAIN_DELETES;
     }
@@ -105,7 +104,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   }
 
   @Override
-  public List<Path> compact(CompactionRequest request, ThroughputController throughputController,
+  public List<Path> compact(CompactionRequestImpl request, ThroughputController throughputController,
       User user) throws IOException {
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
