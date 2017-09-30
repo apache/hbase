@@ -319,11 +319,6 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<TableDescriptor> listTableDescriptors(String regex) throws IOException {
-    return listTableDescriptors(Pattern.compile(regex), false);
-  }
-
-  @Override
   public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables) throws IOException {
     return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
         getRpcControllerFactory()) {
@@ -335,11 +330,6 @@ public class HBaseAdmin implements Admin {
             req));
       }
     });
-  }
-
-  @Override
-  public List<TableDescriptor> listTableDescriptors(String regex, boolean includeSysTables) throws IOException {
-    return listTableDescriptors(Pattern.compile(regex), includeSysTables);
   }
 
   @Override

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -361,9 +362,10 @@ public class TestSnapshotCloneIndependence {
     admin.deleteSnapshot(snapshotName);
 
     // Wait for cleaner run and DFS heartbeats so that anything that is deletable is fully deleted
+    Pattern pattern = Pattern.compile(snapshotNameAsString);
     do {
       Thread.sleep(5000);
-    } while (!admin.listSnapshots(snapshotNameAsString).isEmpty());
+    } while (!admin.listSnapshots(pattern).isEmpty());
 
     try (Table original = UTIL.getConnection().getTable(originalTableName)) {
       try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
