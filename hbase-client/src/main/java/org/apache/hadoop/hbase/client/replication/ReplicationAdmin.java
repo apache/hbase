@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -375,7 +375,7 @@ public class ReplicationAdmin implements Closeable {
    */
   @Deprecated
   public boolean getPeerState(String id) throws ReplicationException, IOException {
-    List<ReplicationPeerDescription> peers = admin.listReplicationPeers(id);
+    List<ReplicationPeerDescription> peers = admin.listReplicationPeers(Pattern.compile(id));
     if (peers.isEmpty() || !id.equals(peers.get(0).getPeerId())) {
       throw new ReplicationPeerNotFoundException(id);
     }

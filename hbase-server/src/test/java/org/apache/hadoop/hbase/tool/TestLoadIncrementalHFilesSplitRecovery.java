@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.tool;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import org.apache.commons.logging.Log;
@@ -76,7 +78,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
@@ -248,8 +249,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * @throws IOException
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
-    List<TableDescriptor> htds = util.getAdmin().listTableDescriptors(table.getNameAsString());
-    assertEquals(htds.size(), 1);
+    TableDescriptor htd = util.getAdmin().getDescriptor(table);
+    assertNotNull(htd);
     try (Table t = util.getConnection().getTable(table);
         ResultScanner sr = t.getScanner(new Scan())) {
       int i = 0;
@@ -613,8 +614,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   void assertExpectedTable(final Connection connection, TableName table, int count, int value)
       throws IOException {
-    List<TableDescriptor> htds = util.getAdmin().listTableDescriptors(table.getNameAsString());
-    assertEquals(htds.size(), 1);
+    TableDescriptor htd = util.getAdmin().getDescriptor(table);
+    assertNotNull(htd);
     try (Table t = connection.getTable(table); ResultScanner sr = t.getScanner(new Scan())) {
       int i = 0;
       for (Result r; (r = sr.next()) != null;) {

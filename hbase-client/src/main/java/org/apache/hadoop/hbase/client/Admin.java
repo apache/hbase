@@ -142,22 +142,12 @@ public interface Admin extends Abortable, Closeable {
    * @param regex The regular expression to match against
    * @return a list of read-only HTableDescriptors
    * @throws IOException if a remote or network exception occurs
-   * @see #listTableDescriptors(java.lang.String)
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             Use {@link #listTableDescriptors(java.lang.String)}.
+   * @see #listTableDescriptors(Pattern)
+   * @deprecated since 2.0 version and will be removed in 3.0 version. Use
+   *             {@link #listTableDescriptors(Pattern)} instead.
    */
   @Deprecated
   HTableDescriptor[] listTables(String regex) throws IOException;
-
-  /**
-   * List all the userspace tables matching the given regular expression.
-   *
-   * @param regex The regular expression to match against.
-   * @return a list of TableDescriptors
-   * @throws IOException if a remote or network exception occurs
-   * @see #listTables(java.util.regex.Pattern)
-   */
-  List<TableDescriptor> listTableDescriptors(String regex) throws IOException;
 
   /**
    * List all the tables matching the given pattern.
@@ -196,22 +186,10 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @see #listTables(java.util.regex.Pattern, boolean)
    * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             Use {@link #listTableDescriptors(java.lang.String, boolean)}.
+   *             Use {@link #listTableDescriptors(Pattern, boolean)}.
    */
   @Deprecated
   HTableDescriptor[] listTables(String regex, boolean includeSysTables)
-      throws IOException;
-
-  /**
-   * List all the tables matching the given pattern.
-   *
-   * @param regex The regular expression to match against
-   * @param includeSysTables <code>false</code> to match only against userspace tables
-   * @return a list of TableDescriptors
-   * @throws IOException if a remote or network exception occurs
-   * @see #listTables(java.util.regex.Pattern, boolean)
-   */
-  List<TableDescriptor> listTableDescriptors(String regex, boolean includeSysTables)
       throws IOException;
 
   /**
@@ -235,7 +213,10 @@ public interface Admin extends Abortable, Closeable {
    * @param regex The regular expression to match against
    * @return TableName[] table names
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version. Use
+   *             {@link #listTableNames(Pattern)} instead.
    */
+  @Deprecated
   TableName[] listTableNames(String regex) throws IOException;
 
   /**
@@ -254,7 +235,10 @@ public interface Admin extends Abortable, Closeable {
    * @param includeSysTables <code>false</code> to match only against userspace tables
    * @return TableName[] table names
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version. Use
+   *             {@link #listTableNames(Pattern, boolean)} instead.
    */
+  @Deprecated
   TableName[] listTableNames(String regex, boolean includeSysTables)
       throws IOException;
 
@@ -374,7 +358,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Deletes tables matching the passed in pattern and wait on completion. Warning: Use this method
    * carefully, there is no prompting and the effect is immediate. Consider using {@link
-   * #listTableDescriptors(java.lang.String)}
+   * #listTableDescriptors(Pattern)}
    * and {@link #deleteTable(org.apache.hadoop.hbase.TableName)}
    *
    * @param regex The regular expression to match table names against
@@ -385,8 +369,8 @@ public interface Admin extends Abortable, Closeable {
    * @see #deleteTable(org.apache.hadoop.hbase.TableName)
    * @deprecated since 2.0 version and will be removed in 3.0 version
    *             This is just a trivial helper method without any magic.
-   *             Consider using {@link #listTableDescriptors(java.lang.String)}
-   *             and {@link #enableTable(org.apache.hadoop.hbase.TableName)}
+   *             Consider using {@link #listTableDescriptors(Pattern)}
+   *             and {@link #deleteTable(TableName)}
    */
   @Deprecated
   HTableDescriptor[] deleteTables(String regex) throws IOException;
@@ -404,7 +388,7 @@ public interface Admin extends Abortable, Closeable {
    * @deprecated since 2.0 version and will be removed in 3.0 version
    *             This is just a trivial helper method without any magic.
    *             Consider using {@link #listTableDescriptors(java.util.regex.Pattern)}
-   *             and {@link #enableTable(org.apache.hadoop.hbase.TableName)}
+   *             and {@link #deleteTable(TableName)}
    */
   @Deprecated
   HTableDescriptor[] deleteTables(Pattern pattern) throws IOException;
@@ -466,7 +450,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Enable tables matching the passed in pattern and wait on completion. Warning: Use this method
    * carefully, there is no prompting and the effect is immediate. Consider using {@link
-   * #listTableDescriptors(java.lang.String)} and {@link #enableTable(org.apache.hadoop.hbase.TableName)}
+   * #listTableDescriptors(Pattern)} and {@link #enableTable(org.apache.hadoop.hbase.TableName)}
    *
    * @param regex The regular expression to match table names against
    * @throws IOException
@@ -476,7 +460,7 @@ public interface Admin extends Abortable, Closeable {
    * @see #enableTable(org.apache.hadoop.hbase.TableName)
    * @deprecated since 2.0 version and will be removed in 3.0 version
    *             This is just a trivial helper method without any magic.
-   *             Consider using {@link #listTableDescriptors(java.lang.String)}
+   *             Consider using {@link #listTableDescriptors(Pattern)}
    *             and {@link #enableTable(org.apache.hadoop.hbase.TableName)}
    */
   @Deprecated
@@ -529,8 +513,7 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Disable tables matching the passed in pattern and wait on completion. Warning: Use this method
    * carefully, there is no prompting and the effect is immediate. Consider using {@link
-   * #listTableDescriptors(java.lang.String)}
-   * and {@link #disableTable(org.apache.hadoop.hbase.TableName)}
+   * #listTableDescriptors(Pattern)} and {@link #disableTable(org.apache.hadoop.hbase.TableName)}
    *
    * @param regex The regular expression to match table names against
    * @return Table descriptors for tables that couldn't be disabled
@@ -540,7 +523,7 @@ public interface Admin extends Abortable, Closeable {
    * @see #disableTable(org.apache.hadoop.hbase.TableName)
    * @deprecated since 2.0 version and will be removed in 3.0 version
    *             This is just a trivial helper method without any magic.
-   *             Consider using {@link #listTableDescriptors(java.lang.String)}
+   *             Consider using {@link #listTableDescriptors(Pattern)}
    *             and {@link #disableTable(org.apache.hadoop.hbase.TableName)}
    */
   @Deprecated
@@ -2032,7 +2015,10 @@ public interface Admin extends Abortable, Closeable {
    * @param regex The regular expression to match against
    * @return list of SnapshotDescription
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             Use {@link #listSnapshots(Pattern)} instead.
    */
+  @Deprecated
   List<SnapshotDescription> listSnapshots(String regex) throws IOException;
 
   /**
@@ -2051,7 +2037,10 @@ public interface Admin extends Abortable, Closeable {
    * @param snapshotNameRegex The snapshot name regular expression to match against
    * @return list of completed SnapshotDescription
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             Use {@link #listTableSnapshots(Pattern, Pattern)} instead.
    */
+  @Deprecated
   List<SnapshotDescription> listTableSnapshots(String tableNameRegex,
       String snapshotNameRegex) throws IOException;
 
@@ -2087,7 +2076,10 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param regex The regular expression to match against
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             Use {@link #deleteSnapshots(Pattern)} instead.
    */
+  @Deprecated
   void deleteSnapshots(String regex) throws IOException;
 
   /**
@@ -2104,7 +2096,10 @@ public interface Admin extends Abortable, Closeable {
    * @param tableNameRegex The table name regular expression to match against
    * @param snapshotNameRegex The snapshot name regular expression to match against
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             Use {@link #deleteTableSnapshots(Pattern, Pattern)} instead.
    */
+  @Deprecated
   void deleteTableSnapshots(String tableNameRegex, String snapshotNameRegex) throws IOException;
 
   /**
@@ -2411,7 +2406,10 @@ public interface Admin extends Abortable, Closeable {
    * @param regex The regular expression to match peer id
    * @return a list of replication peers description
    * @throws IOException
+   * @deprecated since 2.0 version and will be removed in 3.0 version. Use
+   *             {@link #listReplicationPeers(Pattern)} instead.
    */
+  @Deprecated
   default List<ReplicationPeerDescription> listReplicationPeers(String regex) throws IOException {
     return new ArrayList<>();
   }

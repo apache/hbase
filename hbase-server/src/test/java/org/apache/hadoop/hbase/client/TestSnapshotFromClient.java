@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,7 +54,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.junit.rules.TestName;
 
@@ -72,6 +72,7 @@ public class TestSnapshotFromClient {
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
   protected static final TableName TABLE_NAME =
       TableName.valueOf(STRING_TABLE_NAME);
+  private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
   @Rule
   public TestName name = new TestName();
@@ -181,7 +182,7 @@ public class TestSnapshotFromClient {
     LOG.debug(snapshot3 + " completed.");
 
     // delete the first two snapshots
-    admin.deleteSnapshots("TableSnapshot.*");
+    admin.deleteSnapshots(Pattern.compile("TableSnapshot.*"));
     List<SnapshotDescription> snapshots = admin.listSnapshots();
     assertEquals(1, snapshots.size());
     assertEquals(snapshots.get(0).getName(), snapshot3);
@@ -336,7 +337,8 @@ public class TestSnapshotFromClient {
       admin.snapshot(Bytes.toBytes(table2Snapshot1), tableName);
       LOG.debug(table2Snapshot1 + " completed.");
 
-      List<SnapshotDescription> listTableSnapshots = admin.listTableSnapshots("test.*", ".*");
+      List<SnapshotDescription> listTableSnapshots =
+          admin.listTableSnapshots(Pattern.compile("test.*"), MATCH_ALL);
       List<String> listTableSnapshotNames = new ArrayList<>();
       assertEquals(3, listTableSnapshots.size());
       for (SnapshotDescription s : listTableSnapshots) {
@@ -348,7 +350,7 @@ public class TestSnapshotFromClient {
     } finally {
       if (admin != null) {
         try {
-          admin.deleteSnapshots("Table.*");
+          admin.deleteSnapshots(Pattern.compile("Table.*"));
         } catch (SnapshotDoesNotExistException ignore) {
         }
         if (admin.tableExists(tableName)) {
@@ -378,7 +380,7 @@ public class TestSnapshotFromClient {
       LOG.debug(table2Snapshot1 + " completed.");
 
       List<SnapshotDescription> listTableSnapshots =
-          admin.listTableSnapshots("test.*", "Table1.*");
+          admin.listTableSnapshots(Pattern.compile("test.*"), Pattern.compile("Table1.*"));
       List<String> listTableSnapshotNames = new ArrayList<>();
       assertEquals(2, listTableSnapshots.size());
       for (SnapshotDescription s : listTableSnapshots) {
@@ -390,7 +392,7 @@ public class TestSnapshotFromClient {
     } finally {
       if (admin != null) {
         try {
-          admin.deleteSnapshots("Table.*");
+          admin.deleteSnapshots(Pattern.compile("Table.*"));
         } catch (SnapshotDoesNotExistException ignore) {
         }
         admin.close();
@@ -420,8 +422,9 @@ public class TestSnapshotFromClient {
       admin.snapshot(Bytes.toBytes(table2Snapshot1), tableName);
       LOG.debug(table2Snapshot1 + " completed.");
 
-      admin.deleteTableSnapshots("test.*", ".*");
-      assertEquals(0, admin.listTableSnapshots("test.*", ".*").size());
+      Pattern tableNamePattern = Pattern.compile("test.*");
+      admin.deleteTableSnapshots(tableNamePattern, MATCH_ALL);
+      assertEquals(0, admin.listTableSnapshots(tableNamePattern, MATCH_ALL).size());
     } finally {
       if (admin != null) {
         if (admin.tableExists(tableName)) {
@@ -435,6 +438,7 @@ public class TestSnapshotFromClient {
   @Test(timeout = 300000)
   public void testDeleteTableSnapshotsWithRegex() throws Exception {
     Admin admin = null;
+    Pattern tableNamePattern = Pattern.compile("test.*");
     try {
       admin = UTIL.getAdmin();
 
@@ -450,12 +454,12 @@ public class TestSnapshotFromClient {
       admin.snapshot(Bytes.toBytes(table2Snapshot1), TABLE_NAME);
       LOG.debug(table2Snapshot1 + " completed.");
 
-      admin.deleteTableSnapshots("test.*", "Table1.*");
-      assertEquals(1, admin.listTableSnapshots("test.*", ".*").size());
+      admin.deleteTableSnapshots(tableNamePattern, Pattern.compile("Table1.*"));
+      assertEquals(1, admin.listTableSnapshots(tableNamePattern, MATCH_ALL).size());
     } finally {
       if (admin != null) {
         try {
-          admin.deleteTableSnapshots("test.*", ".*");
+          admin.deleteTableSnapshots(tableNamePattern, MATCH_ALL);
         } catch (SnapshotDoesNotExistException ignore) {
         }
         admin.close();

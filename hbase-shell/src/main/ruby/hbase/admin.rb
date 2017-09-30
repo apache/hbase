@@ -19,6 +19,7 @@
 
 include Java
 java_import java.util.Arrays
+java_import java.util.regex.Pattern
 java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
@@ -45,7 +46,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = '.*')
-      @admin.listTableNames(regex).map(&:getNameAsString)
+      @admin.listTableNames(Pattern.compile(regex)).map(&:getNameAsString)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -269,7 +270,7 @@ module Hbase
     # Enables all tables matching the given regex
     def enable_all(regex)
       regex = regex.to_s
-      @admin.enableTables(regex)
+      @admin.enableTables(Pattern.compile(regex))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -283,8 +284,8 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Disables all tables matching the given regex
     def disable_all(regex)
-      regex = regex.to_s
-      @admin.disableTables(regex).map { |t| t.getTableName.getNameAsString }
+      pattern = Pattern.compile(regex.to_s)
+      @admin.disableTables(pattern).map { |t| t.getTableName.getNameAsString }
     end
 
     #---------------------------------------------------------------------------------------------
@@ -313,8 +314,8 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Drops a table
     def drop_all(regex)
-      regex = regex.to_s
-      failed = @admin.deleteTables(regex).map { |t| t.getTableName.getNameAsString }
+      pattern = Pattern.compile(regex.to_s)
+      failed = @admin.deleteTables(pattern).map { |t| t.getTableName.getNameAsString }
       failed
     end
 
@@ -1005,25 +1006,27 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Deletes the snapshots matching the given regex
     def delete_all_snapshot(regex)
-      @admin.deleteSnapshots(regex).to_a
+      @admin.deleteSnapshots(Pattern.compile(regex)).to_a
     end
 
     #----------------------------------------------------------------------------------------------
     # Deletes the table snapshots matching the given regex
     def delete_table_snapshots(tableNameRegex, snapshotNameRegex = '.*')
-      @admin.deleteTableSnapshots(tableNameRegex, snapshotNameRegex).to_a
+      @admin.deleteTableSnapshots(Pattern.compile(tableNameRegex),
+        Pattern.compile(snapshotNameRegex)).to_a
     end
 
     #----------------------------------------------------------------------------------------------
     # Returns a list of snapshots
     def list_snapshot(regex = '.*')
-      @admin.listSnapshots(regex).to_a
+      @admin.listSnapshots(Pattern.compile(regex)).to_a
     end
 
     #----------------------------------------------------------------------------------------------
     # Returns a list of table snapshots
     def list_table_snapshots(tableNameRegex, snapshotNameRegex = '.*')
-      @admin.listTableSnapshots(tableNameRegex, snapshotNameRegex).to_a
+      @admin.listTableSnapshots(Pattern.compile(tableNameRegex),
+        Pattern.compile(snapshotNameRegex)).to_a
     end
 
     #----------------------------------------------------------------------------------------------
