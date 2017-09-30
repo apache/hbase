@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatTestBase;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobClient;
@@ -138,20 +137,20 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Test
   @Override
   public void testWithMockedMapReduceMultiRegion() throws Exception {
-    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 1, 10);
+    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 10);
   }
 
   @Test
   @Override
   public void testWithMapReduceMultiRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 1, 10, false);
+    testWithMapReduce(UTIL, "testWithMapReduceMultiRegion", 10, 10, false);
   }
 
   @Test
   @Override
   // run the MR job while HBase is offline
   public void testWithMapReduceAndOfflineHBaseMultiRegion() throws Exception {
-    testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 1, 10, true);
+    testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 10, true);
   }
 
   @Override
@@ -165,7 +164,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Override
   protected void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
-      int numRegions, int numSplitsPerRegion, int expectedNumSplits) throws Exception {
+      int numRegions, int expectedNumSplits) throws Exception {
     setupCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
@@ -175,16 +174,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       JobConf job = new JobConf(util.getConfiguration());
       Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
 
-      if (numSplitsPerRegion > 1) {
-        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
-                COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, job, false, tmpTableDir, new RegionSplitter.UniformSplit(),
-                numSplitsPerRegion);
-      } else {
-        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
-                COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, job, false, tmpTableDir);
-      }
+      TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
+        COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
+        NullWritable.class, job, false, tmpTableDir);
 
       // mapred doesn't support start and end keys? o.O
       verifyWithMockedMapReduce(job, numRegions, expectedNumSplits, getStartRow(), getEndRow());
@@ -233,16 +225,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Override
   protected void testWithMapReduceImpl(HBaseTestingUtility util, TableName tableName,
-      String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion, int expectedNumSplits,
+      String snapshotName, Path tableDir, int numRegions, int expectedNumSplits,
       boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
-      numRegions, numSplitsPerRegion, expectedNumSplits, shutdownCluster);
+      numRegions, expectedNumSplits, shutdownCluster);
   }
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
   public static void doTestWithMapReduce(HBaseTestingUtility util, TableName tableName,
       String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
-      int numSplitsPerRegion,int expectedNumSplits, boolean shutdownCluster) throws Exception {
+      int expectedNumSplits, boolean shutdownCluster) throws Exception {
 
     //create the table and snapshot
     createTableAndSnapshot(util, tableName, snapshotName, startRow, endRow, numRegions);
@@ -259,16 +251,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJarsForClasses(jobConf,
         TestTableSnapshotInputFormat.class);
 
-      if(numSplitsPerRegion > 1) {
-        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
-                TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, jobConf, true, tableDir, new RegionSplitter.UniformSplit(),
-                numSplitsPerRegion);
-      } else {
-        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
-                TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, jobConf, true, tableDir);
-      }
+      TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
+        TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
+        NullWritable.class, jobConf, true, tableDir);
 
       jobConf.setReducerClass(TestTableSnapshotInputFormat.TestTableSnapshotReducer.class);
       jobConf.setNumReduceTasks(1);
