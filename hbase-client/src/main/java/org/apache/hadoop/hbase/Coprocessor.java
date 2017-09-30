@@ -96,7 +96,9 @@ public interface Coprocessor {
   default void stop(CoprocessorEnvironment env) throws IOException {}
 
   /**
-   * Coprocessor endpoints providing protobuf services should implement this interface.
+   * Coprocessor endpoints providing protobuf services should override this method.
+   * @return Iterable of {@link Service}s or empty collection. Implementations should never
+   * return null.
    */
   default Iterable<Service> getServices() {
     return Collections.EMPTY_SET;
