@@ -748,7 +748,7 @@ EOF
         end
       end
 
-      if kv.isDelete
+      if org.apache.hadoop.hbase.CellUtil.isDelete(kv)
         val = "timestamp=#{kv.getTimestamp}, type=#{org.apache.hadoop.hbase.KeyValue::Type.codeToType(kv.getType)}"
       else
         val = "timestamp=#{kv.getTimestamp}, value=#{convert(column, kv, converter_class, converter)}"
