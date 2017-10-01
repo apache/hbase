@@ -369,6 +369,7 @@ public class TestHeapSize  {
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
       ClassSize.estimateBase(TimeRangeTracker.class, true);
@@ -376,9 +377,28 @@ public class TestHeapSize  {
       assertEquals(expected, actual);
     }
 
-    // ImmutableSegment Deep overhead
+    // ImmutableSegments Deep overhead
     cl = ImmutableSegment.class;
-    actual = ImmutableSegment.DEEP_OVERHEAD_CSLM;
+    actual = ImmutableSegment.DEEP_OVERHEAD;
+    expected = ClassSize.estimateBase(cl, false);
+    expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
+    expected += ClassSize.estimateBase(AtomicReference.class, false);
+    expected += ClassSize.estimateBase(CellSet.class, false);
+    expected += ClassSize.estimateBase(TimeRangeTracker.class, false);
+    expected += ClassSize.estimateBase(TimeRange.class, false);
+    if (expected != actual) {
+      ClassSize.estimateBase(cl, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicReference.class, true);
+      ClassSize.estimateBase(CellSet.class, true);
+      ClassSize.estimateBase(TimeRangeTracker.class, true);
+      ClassSize.estimateBase(TimeRange.class, true);
+      assertEquals(expected, actual);
+    }
+
+    cl = CSLMImmutableSegment.class;
+    actual = CSLMImmutableSegment.DEEP_OVERHEAD_CSLM;
     expected = ClassSize.estimateBase(cl, false);
     expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(AtomicReference.class, false);
@@ -389,6 +409,7 @@ public class TestHeapSize  {
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(AtomicLong.class, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
       ClassSize.estimateBase(TimeRangeTracker.class, true);
@@ -396,7 +417,8 @@ public class TestHeapSize  {
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
       assertEquals(expected, actual);
     }
-    actual = ImmutableSegment.DEEP_OVERHEAD_CAM;
+    cl = CellArrayImmutableSegment.class;
+    actual = CellArrayImmutableSegment.DEEP_OVERHEAD_CAM;
     expected = ClassSize.estimateBase(cl, false);
     expected += 2 * ClassSize.estimateBase(AtomicLong.class, false);
     expected += ClassSize.estimateBase(AtomicReference.class, false);
@@ -406,6 +428,7 @@ public class TestHeapSize  {
     expected += ClassSize.estimateBase(CellArrayMap.class, false);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
+      ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);

@@ -314,7 +314,19 @@ public class CompactingMemStore extends AbstractMemStore {
    *           The flattening happens only if versions match.
    */
   public void flattenOneSegment(long requesterVersion) {
-    pipeline.flattenYoungestSegment(requesterVersion);
+    pipeline.flattenOneSegment(requesterVersion, indexType);
+  }
+
+  // setter is used only for testability
+  @VisibleForTesting
+  public void setIndexType() {
+    indexType = IndexType.valueOf(getConfiguration().get(
+        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
+        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_DEFAULT));
+  }
+
+  public IndexType getIndexType() {
+    return indexType;
   }
 
   public boolean hasImmutableSegments() {

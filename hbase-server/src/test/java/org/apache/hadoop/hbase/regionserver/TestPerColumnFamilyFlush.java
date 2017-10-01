@@ -194,7 +194,7 @@ public class TestPerColumnFamilyFlush {
     // We should have cleared out only CF1, since we chose the flush thresholds
     // and number of puts accordingly.
     assertEquals(0, cf1MemstoreSize.getDataSize());
-    assertEquals(0, cf1MemstoreSize.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize.getHeapSize());
     // Nothing should have happened to CF2, ...
     assertEquals(cf2MemstoreSize, oldCF2MemstoreSize);
     // ... or CF3
@@ -231,9 +231,9 @@ public class TestPerColumnFamilyFlush {
 
     // CF1 and CF2, both should be absent.
     assertEquals(0, cf1MemstoreSize.getDataSize());
-    assertEquals(0, cf1MemstoreSize.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize.getHeapSize());
     assertEquals(0, cf2MemstoreSize.getDataSize());
-    assertEquals(0, cf2MemstoreSize.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSize.getHeapSize());
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSize, oldCF3MemstoreSize);
     assertEquals(totalMemstoreSize, cf3MemstoreSize.getDataSize());
@@ -314,11 +314,11 @@ public class TestPerColumnFamilyFlush {
 
     // Everything should have been cleared
     assertEquals(0, cf1MemstoreSize.getDataSize());
-    assertEquals(0, cf1MemstoreSize.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize.getHeapSize());
     assertEquals(0, cf2MemstoreSize.getDataSize());
-    assertEquals(0, cf2MemstoreSize.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf2MemstoreSize.getHeapSize());
     assertEquals(0, cf3MemstoreSize.getDataSize());
-    assertEquals(0, cf3MemstoreSize.getHeapSize());
+    assertEquals(MutableSegment.DEEP_OVERHEAD, cf3MemstoreSize.getHeapSize());
     assertEquals(0, totalMemstoreSize);
     assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstore);
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -525,9 +525,12 @@ public class TestPerColumnFamilyFlush {
       });
       LOG.info("Finished waiting on flush after too many WALs...");
       // Individual families should have been flushed.
-      assertEquals(0, desiredRegion.getStore(FAMILY1).getMemStoreSize().getHeapSize());
-      assertEquals(0, desiredRegion.getStore(FAMILY2).getMemStoreSize().getHeapSize());
-      assertEquals(0, desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize());
+      assertEquals(MutableSegment.DEEP_OVERHEAD,
+        desiredRegion.getStore(FAMILY1).getMemStoreSize().getHeapSize());
+      assertEquals(MutableSegment.DEEP_OVERHEAD,
+        desiredRegion.getStore(FAMILY2).getMemStoreSize().getHeapSize());
+      assertEquals(MutableSegment.DEEP_OVERHEAD,
+        desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize());
       // let WAL cleanOldLogs
       assertNull(getWAL(desiredRegion).rollWriter(true));
       assertTrue(getNumRolledLogFiles(desiredRegion) < maxLogs);

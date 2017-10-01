@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -36,10 +35,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.HeapMemoryTuneObserver;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Does the management of memstoreLAB chunk creations. A monotonically incrementing id is associated
@@ -51,7 +51,14 @@ public class ChunkCreator {
   // monotonically increasing chunkid
   private AtomicInteger chunkID = new AtomicInteger(1);
   // maps the chunk against the monotonically increasing chunk id. We need to preserve the
-  // natural ordering of the key. It also helps to protect from GC.
+  // natural ordering of the key
+  // CellChunkMap creation should convert the weak ref to hard reference
+
+  // chunk id of each chunk is the first integer written on each chunk,
+  // the header size need to be changed in case chunk id size is changed
+  public static final int SIZEOF_CHUNK_HEADER = Bytes.SIZEOF_INT;
+
+  // mapping from chunk IDs to chunks
   private Map<Integer, Chunk> chunkIdMap = new ConcurrentHashMap<Integer, Chunk>();
 
   private final int chunkSize;
@@ -135,10 +142,6 @@ public class ChunkCreator {
     // else only the offset is set to the beginning of the chunk to accept allocations
     chunk.init();
     return chunk;
-  }
-
-  private Chunk createChunkForPool() {
-    return createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP);
   }
 
   /**
@@ -226,7 +229,8 @@ public class ChunkCreator {
       this.reclaimedChunks = new LinkedBlockingQueue<>();
       for (int i = 0; i < initialCount; i++) {
         // Chunks from pool are covered with strong references anyway
-        Chunk chunk = createChunkForPool();
+        // TODO: change to CHUNK_MAP if it is generally defined
+        Chunk chunk = createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP);
         chunk.init();
         reclaimedChunks.add(chunk);
       }
@@ -258,7 +262,8 @@ public class ChunkCreator {
           long created = this.chunkCount.get();
           if (created < this.maxCount) {
             if (this.chunkCount.compareAndSet(created, created + 1)) {
-              chunk = createChunkForPool();
+              // TODO: change to CHUNK_MAP if it is generally defined
+              chunk = createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP);
               break;
             }
           } else {

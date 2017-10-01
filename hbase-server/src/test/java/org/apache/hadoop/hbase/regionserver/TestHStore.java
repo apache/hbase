@@ -253,7 +253,9 @@ public class TestHStore {
         assertEquals(0, size.getDataSize());
         LOG.info("Adding some data");
         MemstoreSize kvSize = new MemstoreSize();
-        store.add(new KeyValue(row, family, qf1, 1, (byte[])null), kvSize);
+        store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), kvSize);
+        // add the heap size of active (mutable) segment
+        kvSize.incMemstoreSize(0, MutableSegment.DEEP_OVERHEAD);
         size = store.memstore.getFlushableSize();
         assertEquals(kvSize, size);
         // Flush.  Bug #1 from HBASE-10466.  Make sure size calculation on failed flush is right.
@@ -264,10 +266,14 @@ public class TestHStore {
         } catch (IOException ioe) {
           assertTrue(ioe.getMessage().contains("Fault injected"));
         }
+        // due to snapshot, change mutable to immutable segment
+        kvSize.incMemstoreSize(0,
+            CSLMImmutableSegment.DEEP_OVERHEAD_CSLM-MutableSegment.DEEP_OVERHEAD);
         size = store.memstore.getFlushableSize();
         assertEquals(kvSize, size);
         MemstoreSize kvSize2 = new MemstoreSize();
         store.add(new KeyValue(row, family, qf2, 2, (byte[])null), kvSize2);
+        kvSize2.incMemstoreSize(0, MutableSegment.DEEP_OVERHEAD);
         // Even though we add a new kv, we expect the flushable size to be 'same' since we have
         // not yet cleared the snapshot -- the above flush failed.
         assertEquals(kvSize, size);
@@ -279,7 +285,7 @@ public class TestHStore {
         flushStore(store, id++);
         size = store.memstore.getFlushableSize();
         assertEquals(0, size.getDataSize());
-        assertEquals(0, size.getHeapSize());
+        assertEquals(MutableSegment.DEEP_OVERHEAD, size.getHeapSize());
         return null;
       }
     });

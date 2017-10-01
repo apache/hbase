@@ -46,6 +46,15 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
   }
 
   @Override
+  // returning a new chunk, without replacing current chunk,
+  // the space on this chunk will be allocated externally
+  // use the first MemStoreLABImpl in the list
+  public Chunk getNewExternalChunk() {
+    MemStoreLAB mslab = this.mslabs.get(0);
+    return mslab.getNewExternalChunk();
+  }
+
+  @Override
   public void close() {
     // 'openScannerCount' here tracks the scanners opened on segments which directly refer to this
     // MSLAB. The individual MSLABs this refers also having its own 'openScannerCount'. The usage of
