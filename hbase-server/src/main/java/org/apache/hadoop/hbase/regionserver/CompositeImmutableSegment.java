@@ -18,18 +18,19 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
+
+import org.apache.commons.logging.Log;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The CompositeImmutableSegments is created as a collection of ImmutableSegments and supports
@@ -51,7 +52,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   public CompositeImmutableSegment(CellComparator comparator, List<ImmutableSegment> segments) {
     super(comparator);
     this.segments = segments;
-    this.timeRangeTracker = new TimeRangeTracker();
+    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
     for (ImmutableSegment s : segments) {
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMax());
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMin());

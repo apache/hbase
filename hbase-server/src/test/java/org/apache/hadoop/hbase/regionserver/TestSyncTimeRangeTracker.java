@@ -17,76 +17,27 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestTimeRangeTracker {
+public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
+
   private static final int NUM_KEYS = 10000000;
+  private static final int NUM_OF_THREADS = 20;
 
-  @Test
-  public void testExtreme() {
-    TimeRange tr = new TimeRange();
-    assertTrue(tr.includesTimeRange(new TimeRange()));
-    TimeRangeTracker trt = new TimeRangeTracker();
-    assertFalse(trt.includesTimeRange(new TimeRange()));
-    trt.includeTimestamp(1);
-    trt.includeTimestamp(10);
-    assertTrue(trt.includesTimeRange(new TimeRange()));
+  protected TimeRangeTracker getTimeRangeTracker() {
+    return TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
   }
 
-  @Test
-  public void testTimeRangeInitialized() {
-    TimeRangeTracker src = new TimeRangeTracker();
-    TimeRange tr = new TimeRange(System.currentTimeMillis());
-    assertFalse(src.includesTimeRange(tr));
-  }
-
-  @Test
-  public void testTimeRangeTrackerNullIsSameAsTimeRangeNull() throws IOException {
-    TimeRangeTracker src = new TimeRangeTracker(1, 2);
-    byte [] bytes = Writables.getBytes(src);
-    TimeRange tgt = TimeRangeTracker.getTimeRange(bytes);
-    assertEquals(src.getMin(), tgt.getMin());
-    assertEquals(src.getMax(), tgt.getMax());
-  }
-
-  @Test
-  public void testSerialization() throws IOException {
-    TimeRangeTracker src = new TimeRangeTracker(1, 2);
-    TimeRangeTracker tgt = new TimeRangeTracker();
-    Writables.copyWritable(src, tgt);
-    assertEquals(src.getMin(), tgt.getMin());
-    assertEquals(src.getMax(), tgt.getMax());
-  }
-
-  @Test
-  public void testAlwaysDecrementingSetsMaximum() {
-    TimeRangeTracker trr = new TimeRangeTracker();
-    trr.includeTimestamp(3);
-    trr.includeTimestamp(2);
-    trr.includeTimestamp(1);
-    assertTrue(trr.getMin() != TimeRangeTracker.INITIAL_MIN_TIMESTAMP);
-    assertTrue(trr.getMax() != -1 /*The initial max value*/);
-  }
-
-  @Test
-  public void testSimpleInRange() {
-    TimeRangeTracker trr = new TimeRangeTracker();
-    trr.includeTimestamp(0);
-    trr.includeTimestamp(2);
-    assertTrue(trr.includesTimeRange(new TimeRange(1)));
+  protected TimeRangeTracker getTimeRangeTracker(long min, long max) {
+    return TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, min, max);
   }
 
   /**
@@ -97,7 +48,7 @@ public class TestTimeRangeTracker {
    */
   @Test
   public void testArriveAtRightAnswer() throws InterruptedException {
-    final TimeRangeTracker trr = new TimeRangeTracker();
+    final TimeRangeTracker trr = getTimeRangeTracker();
     final int threadCount = 10;
     final int calls = 1000 * 1000;
     Thread [] threads = new Thread[threadCount];
@@ -125,41 +76,6 @@ public class TestTimeRangeTracker {
     assertTrue(trr.getMax() == calls * threadCount);
     assertTrue(trr.getMin() == 0);
   }
-
-  @Test
-  public void testRangeConstruction() throws IOException {
-    TimeRange defaultRange = new TimeRange();
-    assertEquals(0L, defaultRange.getMin());
-    assertEquals(Long.MAX_VALUE, defaultRange.getMax());
-    assertTrue(defaultRange.isAllTime());
-
-    TimeRange oneArgRange = new TimeRange(0L);
-    assertEquals(0L, oneArgRange.getMin());
-    assertEquals(Long.MAX_VALUE, oneArgRange.getMax());
-    assertTrue(oneArgRange.isAllTime());
-
-    TimeRange oneArgRange2 = new TimeRange(1);
-    assertEquals(1, oneArgRange2.getMin());
-    assertEquals(Long.MAX_VALUE, oneArgRange2.getMax());
-    assertFalse(oneArgRange2.isAllTime());
-
-    TimeRange twoArgRange = new TimeRange(0L, Long.MAX_VALUE);
-    assertEquals(0L, twoArgRange.getMin());
-    assertEquals(Long.MAX_VALUE, twoArgRange.getMax());
-    assertTrue(twoArgRange.isAllTime());
-
-    TimeRange twoArgRange2 = new TimeRange(0L, Long.MAX_VALUE - 1);
-    assertEquals(0L, twoArgRange2.getMin());
-    assertEquals(Long.MAX_VALUE - 1, twoArgRange2.getMax());
-    assertFalse(twoArgRange2.isAllTime());
-
-    TimeRange twoArgRange3 = new TimeRange(1, Long.MAX_VALUE);
-    assertEquals(1, twoArgRange3.getMin());
-    assertEquals(Long.MAX_VALUE, twoArgRange3.getMax());
-    assertFalse(twoArgRange3.isAllTime());
-  }
-
-  final static int NUM_OF_THREADS = 20;
 
   class RandomTestData {
     private long[] keys = new long[NUM_KEYS];
@@ -226,7 +142,7 @@ public class TestTimeRangeTracker {
       }
     }
 
-    TimeRangeTracker trt = new TimeRangeTracker();
+    TimeRangeTracker trt = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
 
     Thread[] t = new Thread[NUM_OF_THREADS];
     for (int i = 0; i < NUM_OF_THREADS; i++) {
@@ -244,33 +160,5 @@ public class TestTimeRangeTracker {
 
     assertTrue(min == trt.getMin());
     assertTrue(max == trt.getMax());
-  }
-
-  /**
-   * Bit of code to test concurrent access on this class.
-   * @param args
-   * @throws InterruptedException
-   */
-  public static void main(String[] args) throws InterruptedException {
-    long start = System.currentTimeMillis();
-    final TimeRangeTracker trr = new TimeRangeTracker();
-    final int threadCount = 5;
-    final int calls = 1024 * 1024 * 128;
-    Thread [] threads = new Thread[threadCount];
-    for (int i = 0; i < threads.length; i++) {
-      Thread t = new Thread("" + i) {
-        @Override
-        public void run() {
-          for (int i = 0; i < calls; i++) trr.includeTimestamp(i);
-        }
-      };
-      t.start();
-      threads[i] = t;
-    }
-    for (int i = 0; i < threads.length; i++) {
-      threads[i].join();
-    }
-    System.out.println(trr.getMin() + " " + trr.getMax() + " " +
-      (System.currentTimeMillis() - start));
   }
 }

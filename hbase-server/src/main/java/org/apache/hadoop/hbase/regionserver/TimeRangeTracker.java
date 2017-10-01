@@ -25,17 +25,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+
 /**
  * Stores minimum and maximum timestamp values, it is [minimumTimestamp, maximumTimestamp] in
  * interval notation.
  * Use this class at write-time ONLY. Too much synchronization to use at read time
- * (TODO: there are two scenarios writing, once when lots of concurrency as part of memstore
- * updates but then later we can make one as part of a compaction when there is only one thread
- * involved -- consider making different version, the synchronized and the unsynchronized).
  * Use {@link TimeRange} at read time instead of this. See toTimeRange() to make TimeRange to use.
  * MemStores use this class to track minimum and maximum timestamps. The TimeRangeTracker made by
  * the MemStore is passed to the StoreFile for it to write out as part a flush in the the file
@@ -44,33 +44,55 @@ import org.apache.hadoop.io.Writable;
  * at read time via an instance of {@link TimeRange} to test if Cells fit the StoreFile TimeRange.
  */
 @InterfaceAudience.Private
-public class TimeRangeTracker implements Writable {
+public abstract class TimeRangeTracker implements Writable {
+
+  public enum Type {
+    // thread-unsafe
+    NON_SYNC,
+    // thread-safe
+    SYNC
+  }
+
   static final long INITIAL_MIN_TIMESTAMP = Long.MAX_VALUE;
   static final long INITIAL_MAX_TIMESTAMP = -1L;
 
-  AtomicLong minimumTimestamp = new AtomicLong(INITIAL_MIN_TIMESTAMP);
-  AtomicLong maximumTimestamp = new AtomicLong(INITIAL_MAX_TIMESTAMP);
-
-  /**
-   * Default constructor.
-   * Initializes TimeRange to be null
-   */
-  public TimeRangeTracker() {}
-
-  /**
-   * Copy Constructor
-   * @param trt source TimeRangeTracker
-   */
-  public TimeRangeTracker(final TimeRangeTracker trt) {
-    minimumTimestamp.set(trt.getMin());
-    maximumTimestamp.set(trt.getMax());
+  public static TimeRangeTracker create(Type type) {
+    switch (type) {
+      case NON_SYNC:
+        return new NonSyncTimeRangeTracker();
+      case SYNC:
+        return new SyncTimeRangeTracker();
+      default:
+        throw new UnsupportedOperationException("The type:" + type + " is unsupported");
+    }
   }
 
-  public TimeRangeTracker(long minimumTimestamp, long maximumTimestamp) {
-    this.minimumTimestamp.set(minimumTimestamp);
-    this.maximumTimestamp.set(maximumTimestamp);
+  public static TimeRangeTracker create(Type type, TimeRangeTracker trt) {
+    switch (type) {
+      case NON_SYNC:
+        return new NonSyncTimeRangeTracker(trt);
+      case SYNC:
+        return new SyncTimeRangeTracker(trt);
+      default:
+        throw new UnsupportedOperationException("The type:" + type + " is unsupported");
+    }
   }
 
+  public static TimeRangeTracker create(Type type, long minimumTimestamp, long maximumTimestamp) {
+    switch (type) {
+      case NON_SYNC:
+        return new NonSyncTimeRangeTracker(minimumTimestamp, maximumTimestamp);
+      case SYNC:
+        return new SyncTimeRangeTracker(minimumTimestamp, maximumTimestamp);
+      default:
+        throw new UnsupportedOperationException("The type:" + type + " is unsupported");
+    }
+  }
+
+  protected abstract void setMax(long ts);
+  protected abstract void setMin(long ts);
+  protected abstract boolean compareAndSetMin(long expect, long update);
+  protected abstract boolean compareAndSetMax(long expect, long update);
   /**
    * Update the current TimestampRange to include the timestamp from <code>cell</code>.
    * If the Key is of type DeleteColumn or DeleteFamily, it includes the
@@ -91,12 +113,12 @@ public class TimeRangeTracker implements Writable {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
       justification="Intentional")
   void includeTimestamp(final long timestamp) {
-    long initialMinTimestamp = this.minimumTimestamp.get();
+    long initialMinTimestamp = getMin();
     if (timestamp < initialMinTimestamp) {
       long curMinTimestamp = initialMinTimestamp;
       while (timestamp < curMinTimestamp) {
-        if (!this.minimumTimestamp.compareAndSet(curMinTimestamp, timestamp)) {
-          curMinTimestamp = this.minimumTimestamp.get();
+        if (!compareAndSetMin(curMinTimestamp, timestamp)) {
+          curMinTimestamp = getMin();
         } else {
           // successfully set minimumTimestamp, break.
           break;
@@ -120,12 +142,12 @@ public class TimeRangeTracker implements Writable {
       }
     }
 
-    long curMaxTimestamp = this.maximumTimestamp.get();
+    long curMaxTimestamp = getMax();
 
     if (timestamp > curMaxTimestamp) {
       while (timestamp > curMaxTimestamp) {
-        if (!this.maximumTimestamp.compareAndSet(curMaxTimestamp, timestamp)) {
-          curMaxTimestamp = this.maximumTimestamp.get();
+        if (!compareAndSetMax(curMaxTimestamp, timestamp)) {
+          curMaxTimestamp = getMax();
         } else {
           // successfully set maximumTimestamp, break
           break;
@@ -140,48 +162,43 @@ public class TimeRangeTracker implements Writable {
    * @return True if there is overlap, false otherwise
    */
   public boolean includesTimeRange(final TimeRange tr) {
-    return (this.minimumTimestamp.get() < tr.getMax() && this.maximumTimestamp.get() >= tr.getMin());
+    return (getMin() < tr.getMax() && getMax() >= tr.getMin());
   }
 
   /**
    * @return the minimumTimestamp
    */
-  public long getMin() {
-    return minimumTimestamp.get();
-  }
+  public abstract long getMin();
 
   /**
    * @return the maximumTimestamp
    */
-  public long getMax() {
-    return maximumTimestamp.get();
-  }
+  public abstract long getMax();
 
   public void write(final DataOutput out) throws IOException {
-    out.writeLong(minimumTimestamp.get());
-    out.writeLong(maximumTimestamp.get());
+    out.writeLong(getMin());
+    out.writeLong(getMax());
   }
 
   public void readFields(final DataInput in) throws IOException {
-
-    this.minimumTimestamp.set(in.readLong());
-    this.maximumTimestamp.set(in.readLong());
+    setMin(in.readLong());
+    setMax(in.readLong());
   }
 
   @Override
   public String toString() {
-    return "[" + minimumTimestamp.get() + "," + maximumTimestamp.get() + "]";
+    return "[" + getMin() + "," + getMax() + "]";
   }
 
   /**
-   * @return An instance of TimeRangeTracker filled w/ the content of serialized
-   * TimeRangeTracker in <code>timeRangeTrackerBytes</code>.
+   * @return An instance of NonSyncTimeRangeTracker filled w/ the content of serialized
+   * NonSyncTimeRangeTracker in <code>timeRangeTrackerBytes</code>.
    * @throws IOException
    */
   public static TimeRangeTracker getTimeRangeTracker(final byte [] timeRangeTrackerBytes)
   throws IOException {
     if (timeRangeTrackerBytes == null) return null;
-    TimeRangeTracker trt = new TimeRangeTracker();
+    TimeRangeTracker trt = TimeRangeTracker.create(Type.NON_SYNC);
     Writables.copyWritable(timeRangeTrackerBytes, trt);
     return trt;
   }
@@ -210,5 +227,111 @@ public class TimeRangeTracker implements Writable {
       max = TimeRange.INITIAL_MAX_TIMESTAMP;
     }
     return new TimeRange(min, max);
+  }
+
+  private static class NonSyncTimeRangeTracker extends TimeRangeTracker {
+    private long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
+    private long maximumTimestamp = INITIAL_MAX_TIMESTAMP;
+
+    NonSyncTimeRangeTracker() {
+    }
+
+    NonSyncTimeRangeTracker(final TimeRangeTracker trt) {
+      this.minimumTimestamp = trt.getMin();
+      this.maximumTimestamp = trt.getMax();
+    }
+
+    NonSyncTimeRangeTracker(long minimumTimestamp, long maximumTimestamp) {
+      this.minimumTimestamp = minimumTimestamp;
+      this.maximumTimestamp = maximumTimestamp;
+    }
+
+    @Override
+    protected void setMax(long ts) {
+      maximumTimestamp = ts;
+    }
+
+    @Override
+    protected void setMin(long ts) {
+      minimumTimestamp = ts;
+    }
+
+    @Override
+    protected boolean compareAndSetMin(long expect, long update) {
+      if (minimumTimestamp != expect) {
+        return false;
+      }
+      minimumTimestamp = update;
+      return true;
+    }
+
+    @Override
+    protected boolean compareAndSetMax(long expect, long update) {
+      if (maximumTimestamp != expect) {
+        return false;
+      }
+      maximumTimestamp = update;
+      return true;
+    }
+
+    @Override
+    public long getMin() {
+      return minimumTimestamp;
+    }
+
+    @Override
+    public long getMax() {
+      return maximumTimestamp;
+    }
+  }
+
+  @VisibleForTesting
+  //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
+  public static class SyncTimeRangeTracker extends TimeRangeTracker {
+    private final AtomicLong minimumTimestamp = new AtomicLong(INITIAL_MIN_TIMESTAMP);
+    private final AtomicLong maximumTimestamp = new AtomicLong(INITIAL_MAX_TIMESTAMP);
+
+    private SyncTimeRangeTracker() {
+    }
+
+    SyncTimeRangeTracker(final TimeRangeTracker trt) {
+      this.minimumTimestamp.set(trt.getMin());
+      this.maximumTimestamp.set(trt.getMax());
+    }
+
+    SyncTimeRangeTracker(long minimumTimestamp, long maximumTimestamp) {
+      this.minimumTimestamp.set(minimumTimestamp);
+      this.maximumTimestamp.set(maximumTimestamp);
+    }
+
+    @Override
+    protected void setMax(long ts) {
+      maximumTimestamp.set(ts);
+    }
+
+    @Override
+    protected void setMin(long ts) {
+      minimumTimestamp.set(ts);
+    }
+
+    @Override
+    protected boolean compareAndSetMin(long expect, long update) {
+      return minimumTimestamp.compareAndSet(expect, update);
+    }
+
+    @Override
+    protected boolean compareAndSetMax(long expect, long update) {
+      return maximumTimestamp.compareAndSet(expect, update);
+    }
+
+    @Override
+    public long getMin() {
+      return minimumTimestamp.get();
+    }
+
+    @Override
+    public long getMax() {
+      return maximumTimestamp.get();
+    }
   }
 }

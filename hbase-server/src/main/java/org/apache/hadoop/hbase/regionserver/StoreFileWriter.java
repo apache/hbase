@@ -131,7 +131,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
     // it no longer writable.
     this.timeRangeTrackerSet = trt != null;
-    this.timeRangeTracker = this.timeRangeTrackerSet? trt: new TimeRangeTracker();
+    this.timeRangeTracker = this.timeRangeTrackerSet? trt: TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     // TODO : Change all writers to be specifically created for compaction context
     writer = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, path)
