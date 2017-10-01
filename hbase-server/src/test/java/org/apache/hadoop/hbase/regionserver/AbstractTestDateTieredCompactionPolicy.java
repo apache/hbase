@@ -49,7 +49,7 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     for (int i = 0; i < sizes.length; i++) {
       MockHStoreFile msf =
           new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i), false, i);
-      msf.setTimeRangeTracker(new TimeRangeTracker(minTimestamps[i], maxTimestamps[i]));
+      msf.setTimeRangeTracker(TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, minTimestamps[i], maxTimestamps[i]));
       ret.add(msf);
     }
     return ret;

@@ -399,7 +399,7 @@ public class TestHFileOutputFormat2  {
       assertNotNull(range);
 
       // unmarshall and check values.
-      TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
+      TimeRangeTracker timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
       Writables.copyWritable(range, timeRangeTracker);
       LOG.info(timeRangeTracker.getMin() +
           "...." + timeRangeTracker.getMax());

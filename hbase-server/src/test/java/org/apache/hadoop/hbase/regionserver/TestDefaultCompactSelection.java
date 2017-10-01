@@ -168,7 +168,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     for (HStoreFile file : candidates) {
       if (file instanceof MockHStoreFile) {
         MockHStoreFile mockFile = (MockHStoreFile) file;
-        mockFile.setTimeRangeTracker(new TimeRangeTracker(-1, -1));
+        mockFile.setTimeRangeTracker(TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, -1, -1));
         mockFile.setEntries(0);
       }
     }
