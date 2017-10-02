@@ -156,7 +156,7 @@ public class TestClientExponentialBackoff {
 
   private void update(ServerStatistics stats, int load) {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
-        .setMemstoreLoad
+        .setMemStoreLoad
             (load).build();
     stats.update(regionname, ProtobufUtil.createRegionLoadStats(stat));
   }
@@ -164,7 +164,7 @@ public class TestClientExponentialBackoff {
   private void update(ServerStatistics stats, int memstoreLoad, int heapOccupancy,
                       int compactionPressure) {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
-        .setMemstoreLoad(memstoreLoad)
+        .setMemStoreLoad(memstoreLoad)
         .setHeapOccupancy(heapOccupancy)
         .setCompactionPressure(compactionPressure)
             .build();

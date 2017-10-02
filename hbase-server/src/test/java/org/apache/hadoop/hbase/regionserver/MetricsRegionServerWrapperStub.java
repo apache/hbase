@@ -61,7 +61,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getMemstoreSize() {
+  public long getMemStoreSize() {
     return 1025;
   }
 
@@ -206,7 +206,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getMemstoreLimit() {
+  public long getMemStoreLimit() {
 	  return 419;
   }
 

@@ -94,7 +94,7 @@ message RegionLoad {
   optional uint32 storefile_size_MB = 5;
 
   /** the current size of the memstore for the region, in MB */
-  optional uint32 memstore_size_MB = 6;
+  optional uint32 mem_store_size_MB = 6;
 
   /**
    * The current total size of root-level store file indexes for the region,

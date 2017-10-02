@@ -43,7 +43,7 @@ public interface MetricsTableWrapperAggregate {
   /**
    * Get the memory store size against this table
    */
-  long getMemstoresSize(String table);
+  long getMemStoresSize(String table);
 
   /**
    * Get the store file size against this table

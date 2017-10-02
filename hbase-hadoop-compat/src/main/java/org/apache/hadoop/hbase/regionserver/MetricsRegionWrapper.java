@@ -57,7 +57,7 @@ public interface MetricsRegionWrapper {
   /**
    * Get the size of the memstore on this region server.
    */
-  long getMemstoreSize();
+  long getMemStoreSize();
 
   /**
    * Get the total size of the store files this region server is serving from.

@@ -110,7 +110,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
-  public long getMemstoreSize() {
+  public long getMemStoreSize() {
     return memstoreSize;
   }
 

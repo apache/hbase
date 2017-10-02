@@ -65,7 +65,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterators;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 @Category(LargeTests.class)
 public class TestEndToEndSplitTransaction {
@@ -316,7 +315,7 @@ public class TestEndToEndSplitTransaction {
     admin.flushRegion(regionName);
     log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
-    while (rs.getOnlineRegion(regionName).getMemstoreSize() > 0) {
+    while (rs.getOnlineRegion(regionName).getMemStoreSize() > 0) {
       Threads.sleep(50);
     }
   }

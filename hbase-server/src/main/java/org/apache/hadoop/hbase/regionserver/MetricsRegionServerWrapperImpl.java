@@ -284,8 +284,8 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getMemstoreLimit() {
-	  return this.regionServer.getRegionServerAccounting().getGlobalMemstoreLimit();
+  public long getMemStoreLimit() {
+    return this.regionServer.getRegionServerAccounting().getGlobalMemStoreLimit();
   }
 
   @Override
@@ -458,7 +458,7 @@ class MetricsRegionServerWrapperImpl
   public long getNumStores() {
     return numStores;
   }
-  
+
   @Override
   public long getNumWALFiles() {
     return numWALFiles;
@@ -473,7 +473,7 @@ class MetricsRegionServerWrapperImpl
   public long getNumWALSlowAppend() {
     return metricsWALSource.getSlowAppendCount();
   }
-  
+
   @Override
   public long getNumStoreFiles() {
     return numStoreFiles;
@@ -500,7 +500,7 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getMemstoreSize() {
+  public long getMemStoreSize() {
     return memstoreSize;
   }
 

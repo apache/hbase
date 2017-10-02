@@ -264,7 +264,7 @@ public class MetricsRegionServerSourceImpl
   }
 
   @Override
-  public void updateFlushMemstoreSize(long bytes) {
+  public void updateFlushMemStoreSize(long bytes) {
     flushMemstoreSizeHisto.add(bytes);
     flushedMemstoreBytes.incr(bytes);
   }
@@ -339,7 +339,7 @@ public class MetricsRegionServerSourceImpl
           .addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
           .addGauge(Interns.info(WALFILE_SIZE, WALFILE_SIZE_DESC), rsWrap.getWALFileSize())
           .addGauge(Interns.info(STOREFILE_COUNT, STOREFILE_COUNT_DESC), rsWrap.getNumStoreFiles())
-          .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemstoreSize())
+          .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
           .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
           .addGauge(Interns.info(MAX_STORE_FILE_AGE, MAX_STORE_FILE_AGE_DESC),
               rsWrap.getMaxStoreFileAge())

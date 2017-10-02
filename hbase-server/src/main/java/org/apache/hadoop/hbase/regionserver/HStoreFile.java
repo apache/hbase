@@ -159,7 +159,7 @@ public class HStoreFile implements StoreFile {
   }
 
   @Override
-  public long getMaxMemstoreTS() {
+  public long getMaxMemStoreTS() {
     return maxMemstoreTS;
   }
 

@@ -94,7 +94,7 @@ Arrays.sort(serverNames);
     if (!masterVersion.equals(version)) {
         inconsistentNodeNum ++;
     }
-    
+
     double requestsPerSecond = 0.0;
     int numRegionsOnline = 0;
     long lastContact = 0;
@@ -158,7 +158,7 @@ for (ServerName serverName: serverNames) {
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
     <td><% TraditionalBinaryPrefix.long2String(sl.getMaxHeapMB()
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
-    <td><% TraditionalBinaryPrefix.long2String(sl.getMemstoreSizeMB()
+    <td><% TraditionalBinaryPrefix.long2String(sl.getMemStoreSizeMB()
       * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
 
 </tr>

@@ -81,8 +81,8 @@ public class StoreUtils {
    * were created by a mapreduce bulk load are ignored, as they do not correspond to any specific
    * put operation, and thus do not have a memstoreTS associated with them.
    */
-  public static OptionalLong getMaxMemstoreTSInList(Collection<HStoreFile> sfs) {
-    return sfs.stream().filter(sf -> !sf.isBulkLoadResult()).mapToLong(HStoreFile::getMaxMemstoreTS)
+  public static OptionalLong getMaxMemStoreTSInList(Collection<HStoreFile> sfs) {
+    return sfs.stream().filter(sf -> !sf.isBulkLoadResult()).mapToLong(HStoreFile::getMaxMemStoreTS)
         .max();
   }
 

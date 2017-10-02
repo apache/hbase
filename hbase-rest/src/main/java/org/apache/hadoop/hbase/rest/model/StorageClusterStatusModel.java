@@ -203,7 +203,7 @@ public class StorageClusterStatusModel
        * @return memstore size, in MB
        */
       @XmlAttribute
-      public int getMemstoreSizeMB() {
+      public int getMemStoreSizeMB() {
         return memstoreSizeMB;
       }
 
@@ -356,7 +356,7 @@ public class StorageClusterStatusModel
       /**
        * @param memstoreSizeMB memstore size, in MB
        */
-      public void setMemstoreSizeMB(int memstoreSizeMB) {
+      public void setMemStoreSizeMB(int memstoreSizeMB) {
         this.memstoreSizeMB = memstoreSizeMB;
       }
 
@@ -728,7 +728,7 @@ public class StorageClusterStatusModel
         regionBuilder.setStores(region.stores);
         regionBuilder.setStorefiles(region.storefiles);
         regionBuilder.setStorefileSizeMB(region.storefileSizeMB);
-        regionBuilder.setMemstoreSizeMB(region.memstoreSizeMB);
+        regionBuilder.setMemStoreSizeMB(region.memstoreSizeMB);
         regionBuilder.setStorefileIndexSizeKB(region.storefileIndexSizeKB);
         regionBuilder.setReadRequestsCount(region.readRequestsCount);
         regionBuilder.setWriteRequestsCount(region.writeRequestsCount);
@@ -774,7 +774,7 @@ public class StorageClusterStatusModel
           region.getStores(),
           region.getStorefiles(),
           region.getStorefileSizeMB(),
-          region.getMemstoreSizeMB(),
+          region.getMemStoreSizeMB(),
           region.getStorefileIndexSizeKB(),
           region.getReadRequestsCount(),
           region.getWriteRequestsCount(),

@@ -103,10 +103,10 @@ public class DefaultMemStore extends AbstractMemStore {
    * @return size of data that is going to be flushed from active set
    */
   @Override
-  public MemstoreSize getFlushableSize() {
-    MemstoreSize snapshotSize = getSnapshotSize();
+  public MemStoreSize getFlushableSize() {
+    MemStoreSize snapshotSize = getSnapshotSize();
     return snapshotSize.getDataSize() > 0 ? snapshotSize
-        : new MemstoreSize(keySize(), heapSize());
+        : new MemStoreSize(keySize(), heapSize());
   }
 
   @Override
@@ -154,8 +154,8 @@ public class DefaultMemStore extends AbstractMemStore {
   }
 
   @Override
-  public MemstoreSize size() {
-    return new MemstoreSize(this.active.keySize(), this.active.heapSize());
+  public MemStoreSize size() {
+    return new MemStoreSize(this.active.keySize(), this.active.heapSize());
   }
 
   /**
@@ -194,7 +194,7 @@ public class DefaultMemStore extends AbstractMemStore {
     byte [] fam = Bytes.toBytes("col");
     byte [] qf = Bytes.toBytes("umn");
     byte [] empty = new byte[0];
-    MemstoreSize memstoreSize = new MemstoreSize();
+    MemStoreSize memstoreSize = new MemStoreSize();
     for (int i = 0; i < count; i++) {
       // Give each its own ts
       memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
@@ -208,7 +208,7 @@ public class DefaultMemStore extends AbstractMemStore {
         + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
     // Make a variably sized memstore.
     DefaultMemStore memstore2 = new DefaultMemStore();
-    memstoreSize = new MemstoreSize();
+    memstoreSize = new MemStoreSize();
     for (int i = 0; i < count; i++) {
       memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memstoreSize);
     }

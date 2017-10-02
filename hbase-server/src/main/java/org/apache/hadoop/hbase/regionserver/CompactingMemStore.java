@@ -124,7 +124,7 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   private void initInmemoryFlushSize(Configuration conf) {
-    long memstoreFlushSize = getRegionServices().getMemstoreFlushSize();
+    long memstoreFlushSize = getRegionServices().getMemStoreFlushSize();
     int numStores = getRegionServices().getNumStores();
     if (numStores <= 1) {
       // Family number might also be zero in some of our unit test case
@@ -145,11 +145,11 @@ public class CompactingMemStore extends AbstractMemStore {
    *         caller to make sure this doesn't happen.
    */
   @Override
-  public MemstoreSize size() {
-    MemstoreSize memstoreSize = new MemstoreSize();
-    memstoreSize.incMemstoreSize(this.active.keySize(), this.active.heapSize());
+  public MemStoreSize size() {
+    MemStoreSize memstoreSize = new MemStoreSize();
+    memstoreSize.incMemStoreSize(this.active.keySize(), this.active.heapSize());
     for (Segment item : pipeline.getSegments()) {
-      memstoreSize.incMemstoreSize(item.keySize(), item.heapSize());
+      memstoreSize.incMemStoreSize(item.keySize(), item.heapSize());
     }
     return memstoreSize;
   }
@@ -214,19 +214,19 @@ public class CompactingMemStore extends AbstractMemStore {
    * @return size of data that is going to be flushed
    */
   @Override
-  public MemstoreSize getFlushableSize() {
-    MemstoreSize snapshotSize = getSnapshotSize();
+  public MemStoreSize getFlushableSize() {
+    MemStoreSize snapshotSize = getSnapshotSize();
     if (snapshotSize.getDataSize() == 0) {
       // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
       if (compositeSnapshot) {
         snapshotSize = pipeline.getPipelineSize();
-        snapshotSize.incMemstoreSize(this.active.keySize(), this.active.heapSize());
+        snapshotSize.incMemStoreSize(this.active.keySize(), this.active.heapSize());
       } else {
         snapshotSize = pipeline.getTailSize();
       }
     }
     return snapshotSize.getDataSize() > 0 ? snapshotSize
-        : new MemstoreSize(this.active.keySize(), this.active.heapSize());
+        : new MemStoreSize(this.active.keySize(), this.active.heapSize());
   }
 
   @Override

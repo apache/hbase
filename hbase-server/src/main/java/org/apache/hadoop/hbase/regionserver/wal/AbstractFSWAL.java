@@ -302,7 +302,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   private int calculateMaxLogFiles(Configuration conf, long logRollSize) {
-    Pair<Long, MemoryType> globalMemstoreSize = MemorySizeUtil.getGlobalMemstoreSize(conf);
+    Pair<Long, MemoryType> globalMemstoreSize = MemorySizeUtil.getGlobalMemStoreSize(conf);
     return (int) ((globalMemstoreSize.getFirst() * 2) / logRollSize);
   }
 
@@ -468,13 +468,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   @Override
-  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
+  public long getEarliestMemStoreSeqNum(byte[] encodedRegionName) {
     // Used by tests. Deprecated as too subtle for general usage.
     return this.sequenceIdAccounting.getLowestSequenceId(encodedRegionName);
   }
 
   @Override
-  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
+  public long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
     // This method is used by tests and for figuring if we should flush or not because our
     // sequenceids are too old. It is also used reporting the master our oldest sequenceid for use
     // figuring what edits can be skipped during log recovery. getEarliestMemStoreSequenceId
@@ -924,7 +924,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     assert highestUnsyncedTxid < entry.getTxid();
     highestUnsyncedTxid = entry.getTxid();
     sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
-      entry.isInMemstore());
+      entry.isInMemStore());
     coprocessorHost.postWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     // Update metrics.
     postAppend(entry, EnvironmentEdgeManager.currentTime() - start);

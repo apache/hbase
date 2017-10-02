@@ -51,11 +51,11 @@ public class MutableSegment extends Segment {
    * @param mslabUsed whether using MSLAB
    * @param memstoreSize
    */
-  public void add(Cell cell, boolean mslabUsed, MemstoreSize memstoreSize) {
+  public void add(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
     internalAdd(cell, mslabUsed, memstoreSize);
   }
 
-  public void upsert(Cell cell, long readpoint, MemstoreSize memstoreSize) {
+  public void upsert(Cell cell, long readpoint, MemStoreSize memstoreSize) {
     internalAdd(cell, false, memstoreSize);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
@@ -89,7 +89,7 @@ public class MutableSegment extends Segment {
             long heapSize = heapSizeChange(cur, true);
             this.incSize(-cellLen, -heapSize);
             if (memstoreSize != null) {
-              memstoreSize.decMemstoreSize(cellLen, heapSize);
+              memstoreSize.decMemStoreSize(cellLen, heapSize);
             }
             it.remove();
           } else {

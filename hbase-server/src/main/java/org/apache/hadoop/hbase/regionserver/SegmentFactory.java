@@ -95,7 +95,7 @@ public final class SegmentFactory {
   // create flat immutable segment from non-flat immutable segment
   // for flattening
   public ImmutableSegment createImmutableSegmentByFlattening(
-      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType, MemstoreSize memstoreSize) {
+      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType, MemStoreSize memstoreSize) {
     ImmutableSegment res = null;
     switch (idxType) {
     case CHUNK_MAP:

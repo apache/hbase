@@ -167,7 +167,7 @@ public class MetricsConnection implements StatisticTrackable {
     }
 
     public void update(RegionLoadStats regionStatistics) {
-      this.memstoreLoadHist.update(regionStatistics.getMemstoreLoad());
+      this.memstoreLoadHist.update(regionStatistics.getMemStoreLoad());
       this.heapOccupancyHist.update(regionStatistics.getHeapOccupancy());
     }
   }

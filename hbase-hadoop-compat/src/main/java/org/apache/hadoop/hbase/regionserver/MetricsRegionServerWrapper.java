@@ -71,7 +71,7 @@ public interface MetricsRegionServerWrapper {
    * Get the number of WAL files of this region server.
    */
   long getNumWALFiles();
-  
+
   /**
    * Get the size of WAL files of this region server.
    */
@@ -90,7 +90,7 @@ public interface MetricsRegionServerWrapper {
   /**
    * Get the size of the memstore on this region server.
    */
-  long getMemstoreSize();
+  long getMemStoreSize();
 
   /**
    * Get the total size of the store files this region server is serving from.
@@ -207,7 +207,7 @@ public interface MetricsRegionServerWrapper {
    */
   int getFlushQueueSize();
 
-  public long getMemstoreLimit();
+  public long getMemStoreLimit();
   /**
    * Get the size (in bytes) of the block cache that is free.
    */

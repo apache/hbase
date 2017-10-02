@@ -1388,7 +1388,7 @@ public class HFileBlock implements Cacheable {
     /** Get the default decoder for blocks from this file. */
     HFileBlockDecodingContext getDefaultBlockDecodingContext();
 
-    void setIncludesMemstoreTS(boolean includesMemstoreTS);
+    void setIncludesMemStoreTS(boolean includesMemstoreTS);
     void setDataBlockEncoder(HFileDataBlockEncoder encoder);
 
     /**
@@ -1810,7 +1810,7 @@ public class HFileBlock implements Cacheable {
     }
 
     @Override
-    public void setIncludesMemstoreTS(boolean includesMemstoreTS) {
+    public void setIncludesMemStoreTS(boolean includesMemstoreTS) {
       this.fileContext.setIncludesMvcc(includesMemstoreTS);
     }
 

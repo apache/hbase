@@ -489,9 +489,9 @@ public class HFile {
 
     boolean isPrimaryReplicaReader();
 
-    boolean shouldIncludeMemstoreTS();
+    boolean shouldIncludeMemStoreTS();
 
-    boolean isDecodeMemstoreTS();
+    boolean isDecodeMemStoreTS();
 
     DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
 

@@ -949,7 +949,7 @@ public class HRegionServer extends HasThread implements
     // Background thread to check for compactions; needed if region has not gotten updates
     // in a while. It will take care of not checking too frequently on store-by-store basis.
     this.compactionChecker = new CompactionChecker(this, this.threadWakeFrequency, this);
-    this.periodicFlusher = new PeriodicMemstoreFlusher(this.threadWakeFrequency, this);
+    this.periodicFlusher = new PeriodicMemStoreFlusher(this.threadWakeFrequency, this);
     this.leases = new Leases(this.threadWakeFrequency);
 
     // Create the thread to clean the moved regions list
@@ -1622,7 +1622,7 @@ public class HRegionServer extends HasThread implements
       // MSLAB is enabled. So initialize MemStoreChunkPool
       // By this time, the MemstoreFlusher is already initialized. We can get the global limits from
       // it.
-      Pair<Long, MemoryType> pair = MemorySizeUtil.getGlobalMemstoreSize(conf);
+      Pair<Long, MemoryType> pair = MemorySizeUtil.getGlobalMemStoreSize(conf);
       long globalMemStoreSize = pair.getFirst();
       boolean offheap = this.regionServerAccounting.isOffheap();
       // When off heap memstore in use, take full area for chunk pool.
@@ -1679,7 +1679,7 @@ public class HRegionServer extends HasThread implements
     int storefiles = 0;
     int storeUncompressedSizeMB = 0;
     int storefileSizeMB = 0;
-    int memstoreSizeMB = (int) (r.getMemstoreSize() / 1024 / 1024);
+    int memstoreSizeMB = (int) (r.getMemStoreSize() / 1024 / 1024);
     long storefileIndexSizeKB = 0;
     int rootIndexSizeKB = 0;
     int totalStaticIndexSizeKB = 0;
@@ -1718,7 +1718,7 @@ public class HRegionServer extends HasThread implements
       .setStorefiles(storefiles)
       .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
       .setStorefileSizeMB(storefileSizeMB)
-      .setMemstoreSizeMB(memstoreSizeMB)
+      .setMemStoreSizeMB(memstoreSizeMB)
       .setStorefileIndexSizeKB(storefileIndexSizeKB)
       .setRootIndexSizeKB(rootIndexSizeKB)
       .setTotalStaticIndexSizeKB(totalStaticIndexSizeKB)
@@ -1809,11 +1809,11 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  static class PeriodicMemstoreFlusher extends ScheduledChore {
+  static class PeriodicMemStoreFlusher extends ScheduledChore {
     final HRegionServer server;
     final static int RANGE_OF_DELAY = 5 * 60 * 1000; // 5 min in milliseconds
     final static int MIN_DELAY_TIME = 0; // millisec
-    public PeriodicMemstoreFlusher(int cacheFlushInterval, final HRegionServer server) {
+    public PeriodicMemStoreFlusher(int cacheFlushInterval, final HRegionServer server) {
       super("MemstoreFlusherChore", server, cacheFlushInterval);
       this.server = server;
     }
@@ -2778,7 +2778,7 @@ public class HRegionServer extends HasThread implements
         });
     // Copy over all regions. Regions are sorted by size with biggest first.
     for (Region region : this.onlineRegions.values()) {
-      sortedRegions.put(region.getMemstoreSize(), region);
+      sortedRegions.put(region.getMemStoreSize(), region);
     }
     return sortedRegions;
   }

@@ -249,13 +249,13 @@ public class TestHStore {
         // Initialize region
         init(name.getMethodName(), conf);
 
-        MemstoreSize size = store.memstore.getFlushableSize();
+        MemStoreSize size = store.memstore.getFlushableSize();
         assertEquals(0, size.getDataSize());
         LOG.info("Adding some data");
-        MemstoreSize kvSize = new MemstoreSize();
+        MemStoreSize kvSize = new MemStoreSize();
         store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), kvSize);
         // add the heap size of active (mutable) segment
-        kvSize.incMemstoreSize(0, MutableSegment.DEEP_OVERHEAD);
+        kvSize.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD);
         size = store.memstore.getFlushableSize();
         assertEquals(kvSize, size);
         // Flush.  Bug #1 from HBASE-10466.  Make sure size calculation on failed flush is right.
@@ -267,13 +267,13 @@ public class TestHStore {
           assertTrue(ioe.getMessage().contains("Fault injected"));
         }
         // due to snapshot, change mutable to immutable segment
-        kvSize.incMemstoreSize(0,
+        kvSize.incMemStoreSize(0,
             CSLMImmutableSegment.DEEP_OVERHEAD_CSLM-MutableSegment.DEEP_OVERHEAD);
         size = store.memstore.getFlushableSize();
         assertEquals(kvSize, size);
-        MemstoreSize kvSize2 = new MemstoreSize();
+        MemStoreSize kvSize2 = new MemStoreSize();
         store.add(new KeyValue(row, family, qf2, 2, (byte[])null), kvSize2);
-        kvSize2.incMemstoreSize(0, MutableSegment.DEEP_OVERHEAD);
+        kvSize2.incMemStoreSize(0, MutableSegment.DEEP_OVERHEAD);
         // Even though we add a new kv, we expect the flushable size to be 'same' since we have
         // not yet cleared the snapshot -- the above flush failed.
         assertEquals(kvSize, size);
@@ -1182,7 +1182,7 @@ public class TestHStore {
     byte[] value0 = Bytes.toBytes("value0");
     byte[] value1 = Bytes.toBytes("value1");
     byte[] value2 = Bytes.toBytes("value2");
-    MemstoreSize memStoreSize = new MemstoreSize();
+    MemStoreSize memStoreSize = new MemStoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
@@ -1241,7 +1241,7 @@ public class TestHStore {
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
         .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("value");
-    MemstoreSize memStoreSize = new MemstoreSize();
+    MemStoreSize memStoreSize = new MemStoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     // older data whihc shouldn't be "seen" by client
@@ -1319,7 +1319,7 @@ public class TestHStore {
     });
     byte[] oldValue = Bytes.toBytes("oldValue");
     byte[] currentValue = Bytes.toBytes("currentValue");
-    MemstoreSize memStoreSize = new MemstoreSize();
+    MemStoreSize memStoreSize = new MemStoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     // older data whihc shouldn't be "seen" by client
@@ -1432,7 +1432,7 @@ public class TestHStore {
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
         .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("thisisavarylargevalue");
-    MemstoreSize memStoreSize = new MemstoreSize();
+    MemStoreSize memStoreSize = new MemStoreSize();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
     // older data whihc shouldn't be "seen" by client
@@ -1554,7 +1554,7 @@ public class TestHStore {
     conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
     // Set the lower threshold to invoke the "MERGE" policy
     MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
-    MemstoreSize memStoreSize = new MemstoreSize();
+    MemStoreSize memStoreSize = new MemStoreSize();
     long ts = System.currentTimeMillis();
     long seqID = 1l;
     // Add some data to the region and do some flushes

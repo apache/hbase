@@ -379,8 +379,8 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  public TableDescriptorBuilder setRegionMemstoreReplication(boolean memstoreReplication) {
-    desc.setRegionMemstoreReplication(memstoreReplication);
+  public TableDescriptorBuilder setRegionMemStoreReplication(boolean memstoreReplication) {
+    desc.setRegionMemStoreReplication(memstoreReplication);
     return this;
   }
 
@@ -1067,7 +1067,7 @@ public class TableDescriptorBuilder {
      * @return true if the read-replicas memstore replication is enabled.
      */
     @Override
-    public boolean hasRegionMemstoreReplication() {
+    public boolean hasRegionMemStoreReplication() {
       return getOrDefault(REGION_MEMSTORE_REPLICATION_KEY, Boolean::valueOf, DEFAULT_REGION_MEMSTORE_REPLICATION);
     }
 
@@ -1081,7 +1081,7 @@ public class TableDescriptorBuilder {
      * have new data only when the primary flushes the memstore.
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
+    public ModifyableTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
       setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
       // If the memstore replication is setup, we do not have to wait for observing a flush event
       // from primary before starting to serve reads, because gaps from replication is not applicable

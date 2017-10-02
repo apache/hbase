@@ -72,9 +72,9 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         for (Store store : r.getStores()) {
           tempStorefilesSize += store.getStorefilesSize();
         }
-        metricsTable.setMemstoresSize(metricsTable.getMemstoresSize() + r.getMemstoreSize());
+        metricsTable.setMemStoresSize(metricsTable.getMemStoresSize() + r.getMemStoreSize());
         metricsTable.setStoreFilesSize(metricsTable.getStoreFilesSize() + tempStorefilesSize);
-        metricsTable.setTableSize(metricsTable.getMemstoresSize() + metricsTable.getStoreFilesSize());
+        metricsTable.setTableSize(metricsTable.getMemStoresSize() + metricsTable.getStoreFilesSize());
         metricsTable.setReadRequestsCount(metricsTable.getReadRequestsCount() + r.getReadRequestsCount());
         metricsTable.setWriteRequestsCount(metricsTable.getWriteRequestsCount() + r.getWriteRequestsCount());
         metricsTable.setTotalRequestsCount(metricsTable.getReadRequestsCount() + metricsTable.getWriteRequestsCount());
@@ -133,12 +133,12 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
-  public long getMemstoresSize(String table) {
+  public long getMemStoresSize(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null)
       return 0;
     else
-      return metricsTable.getMemstoresSize();
+      return metricsTable.getMemStoresSize();
   }
 
   @Override
@@ -197,11 +197,11 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       this.writeRequestsCount = writeRequestsCount;
     }
 
-    public long getMemstoresSize() {
+    public long getMemStoresSize() {
       return memstoresSize;
     }
 
-    public void setMemstoresSize(long memstoresSize) {
+    public void setMemStoresSize(long memstoresSize) {
       this.memstoresSize = memstoresSize;
     }
 

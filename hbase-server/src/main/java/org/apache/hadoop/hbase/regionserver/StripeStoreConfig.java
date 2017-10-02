@@ -96,7 +96,7 @@ public class StripeStoreConfig {
     this.splitPartCount = splitPartCount;
     // Arbitrary default split size - 4 times the size of one L0 compaction.
     // If we flush into L0 there's no split compaction, but for default value it is ok.
-    double flushSize = sci.getMemstoreFlushSize();
+    double flushSize = sci.getMemStoreFlushSize();
     if (flushSize == 0) {
       flushSize = 128 * 1024 * 1024;
     }

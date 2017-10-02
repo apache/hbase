@@ -36,9 +36,9 @@ public class TestRegionServerAccounting {
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.2f);
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
-    MemstoreSize memstoreSize =
-        new MemstoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
-    regionServerAccounting.incGlobalMemstoreSize(memstoreSize);
+    MemStoreSize memstoreSize =
+        new MemStoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
+    regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK,
       regionServerAccounting.isAboveHighWaterMark());
   }
@@ -49,9 +49,9 @@ public class TestRegionServerAccounting {
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.2f);
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
-    MemstoreSize memstoreSize =
-        new MemstoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
-    regionServerAccounting.incGlobalMemstoreSize(memstoreSize);
+    MemStoreSize memstoreSize =
+        new MemStoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
+    regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK,
       regionServerAccounting.isAboveLowWaterMark());
   }
@@ -64,9 +64,9 @@ public class TestRegionServerAccounting {
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach offheap limit as data size is higher and not due to heap size
-    MemstoreSize memstoreSize =
-        new MemstoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
-    regionServerAccounting.incGlobalMemstoreSize(memstoreSize);
+    MemStoreSize memstoreSize =
+        new MemStoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
+    regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_OFFHEAP_HIGHER_MARK,
       regionServerAccounting.isAboveHighWaterMark());
   }
@@ -80,9 +80,9 @@ public class TestRegionServerAccounting {
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach higher limit as heap size is higher and not due to offheap size
-    MemstoreSize memstoreSize =
-        new MemstoreSize((long) (3l * 1024l * 1024l), (long) (2l * 1024l * 1024l * 1024l));
-    regionServerAccounting.incGlobalMemstoreSize(memstoreSize);
+    MemStoreSize memstoreSize =
+        new MemStoreSize((long) (3l * 1024l * 1024l), (long) (2l * 1024l * 1024l * 1024l));
+    regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_HIGHER_MARK,
       regionServerAccounting.isAboveHighWaterMark());
   }
@@ -95,9 +95,9 @@ public class TestRegionServerAccounting {
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach offheap limit as data size is higher and not due to heap size
-    MemstoreSize memstoreSize =
-        new MemstoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
-    regionServerAccounting.incGlobalMemstoreSize(memstoreSize);
+    MemStoreSize memstoreSize =
+        new MemStoreSize((long) (3l * 1024l * 1024l * 1024l), (long) (1l * 1024l * 1024l * 1024l));
+    regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_OFFHEAP_LOWER_MARK,
       regionServerAccounting.isAboveLowWaterMark());
   }
@@ -111,9 +111,9 @@ public class TestRegionServerAccounting {
     // try for default cases
     RegionServerAccounting regionServerAccounting = new RegionServerAccounting(conf);
     // this will breach higher limit as heap size is higher and not due to offheap size
-    MemstoreSize memstoreSize =
-        new MemstoreSize((long) (3l * 1024l * 1024l), (long) (2l * 1024l * 1024l * 1024l));
-    regionServerAccounting.incGlobalMemstoreSize(memstoreSize);
+    MemStoreSize memstoreSize =
+        new MemStoreSize((long) (3l * 1024l * 1024l), (long) (2l * 1024l * 1024l * 1024l));
+    regionServerAccounting.incGlobalMemStoreSize(memstoreSize);
     assertEquals(FlushType.ABOVE_ONHEAP_LOWER_MARK,
       regionServerAccounting.isAboveLowWaterMark());
   }

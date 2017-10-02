@@ -824,7 +824,7 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public void setGlobalMemstoreLimit(long globalMemStoreSize) {
+    public void setGlobalMemStoreLimit(long globalMemStoreSize) {
       this.memstoreSize = globalMemStoreSize;
     }
   }
@@ -917,7 +917,7 @@ public class TestHeapMemoryManager {
     public TunerResult tune(TunerContext context) {
       TunerResult result = new TunerResult(true);
       result.setBlockCacheSize(blockCacheSize);
-      result.setMemstoreSize(memstoreSize);
+      result.setMemStoreSize(memstoreSize);
       return result;
     }
   }
@@ -937,12 +937,12 @@ public class TestHeapMemoryManager {
     private long testMemstoreSize = 0;
 
     @Override
-    public long getGlobalMemstoreDataSize() {
+    public long getGlobalMemStoreDataSize() {
       return testMemstoreSize;
     }
 
     @Override
-    public long getGlobalMemstoreHeapSize() {
+    public long getGlobalMemStoreHeapSize() {
       return testMemstoreSize;
     }
 

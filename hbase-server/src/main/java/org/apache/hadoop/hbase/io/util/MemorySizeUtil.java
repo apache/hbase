@@ -159,7 +159,7 @@ public class MemorySizeUtil {
   /**
    * @return Pair of global memstore size and memory type(ie. on heap or off heap).
    */
-  public static Pair<Long, MemoryType> getGlobalMemstoreSize(Configuration conf) {
+  public static Pair<Long, MemoryType> getGlobalMemStoreSize(Configuration conf) {
     long offheapMSGlobal = conf.getLong(OFFHEAP_MEMSTORE_SIZE_KEY, 0);// Size in MBs
     if (offheapMSGlobal > 0) {
       // Off heap memstore size has not relevance when MSLAB is turned OFF. We will go with making
@@ -178,7 +178,7 @@ public class MemorySizeUtil {
             + " Going with on heap global memstore size ('" + MEMSTORE_SIZE_KEY + "')");
       }
     }
-    return new Pair<>(getOnheapGlobalMemstoreSize(conf), MemoryType.HEAP);
+    return new Pair<>(getOnheapGlobalMemStoreSize(conf), MemoryType.HEAP);
   }
 
   /**
@@ -187,7 +187,7 @@ public class MemorySizeUtil {
    * @param conf
    * @return the onheap global memstore limt
    */
-  public static long getOnheapGlobalMemstoreSize(Configuration conf) {
+  public static long getOnheapGlobalMemStoreSize(Configuration conf) {
     long max = -1L;
     final MemoryUsage usage = safeGetHeapMemoryUsage();
     if (usage != null) {

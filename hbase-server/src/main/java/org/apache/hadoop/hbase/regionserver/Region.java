@@ -211,7 +211,7 @@ public interface Region extends ConfigurationObserver {
    *         the memstores of this Region. Means size in bytes for key, value and tags within Cells.
    *         It wont consider any java heap overhead for the cell objects or any other.
    */
-  long getMemstoreSize();
+  long getMemStoreSize();
 
   /** @return store services for this region, to access services required by store level needs */
   RegionServicesForStores getRegionServicesForStores();

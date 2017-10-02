@@ -46,7 +46,7 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
     int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
     // For multiple families, lower bound is the "average flush size" by default
     // unless setting in configuration is larger.
-    long flushSizeLowerBound = region.getMemstoreFlushSize() / familyNumber;
+    long flushSizeLowerBound = region.getMemStoreFlushSize() / familyNumber;
     long minimumLowerBound =
         getConf().getLong(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
           DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN);

@@ -129,10 +129,10 @@ MetricsRegionServerWrapper mWrap;
         <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemorySize(), "B", 1) %>
     </td>
     <td>
-        <% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreSize(), "B", 1) %>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreSize(), "B", 1) %>
     </td>
     <td>
-        <% TraditionalBinaryPrefix.long2String(mWrap.getMemstoreLimit(), "B", 1) %>
+        <% TraditionalBinaryPrefix.long2String(mWrap.getMemStoreLimit(), "B", 1) %>
     </td>
 </tr>
 </table>

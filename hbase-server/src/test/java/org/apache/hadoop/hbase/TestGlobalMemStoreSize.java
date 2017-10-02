@@ -95,9 +95,9 @@ public class TestGlobalMemStoreSize {
       long globalMemStoreSize = 0;
       for (RegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
-        globalMemStoreSize += server.getRegion(regionInfo.getEncodedName()).getMemstoreSize();
+        globalMemStoreSize += server.getRegion(regionInfo.getEncodedName()).getMemStoreSize();
       }
-      assertEquals(server.getRegionServerAccounting().getGlobalMemstoreDataSize(),
+      assertEquals(server.getRegionServerAccounting().getGlobalMemStoreDataSize(),
         globalMemStoreSize);
     }
 
@@ -105,7 +105,7 @@ public class TestGlobalMemStoreSize {
     int i = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
       LOG.info("Starting flushes on " + server.getServerName() +
-        ", size=" + server.getRegionServerAccounting().getGlobalMemstoreDataSize());
+        ", size=" + server.getRegionServerAccounting().getGlobalMemStoreDataSize());
 
       for (RegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
@@ -115,18 +115,18 @@ public class TestGlobalMemStoreSize {
       LOG.info("Post flush on " + server.getServerName());
       long now = System.currentTimeMillis();
       long timeout = now + 1000;
-      while(server.getRegionServerAccounting().getGlobalMemstoreDataSize() != 0 &&
+      while(server.getRegionServerAccounting().getGlobalMemStoreDataSize() != 0 &&
           timeout < System.currentTimeMillis()) {
         Threads.sleep(10);
       }
-      long size = server.getRegionServerAccounting().getGlobalMemstoreDataSize();
+      long size = server.getRegionServerAccounting().getGlobalMemStoreDataSize();
       if (size > 0) {
         // If size > 0, see if its because the meta region got edits while
         // our test was running....
         for (RegionInfo regionInfo :
             ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
           Region r = server.getRegion(regionInfo.getEncodedName());
-          long l = r.getMemstoreSize();
+          long l = r.getMemStoreSize();
           if (l > 0) {
             // Only meta could have edits at this stage.  Give it another flush
             // clear them.
@@ -136,7 +136,7 @@ public class TestGlobalMemStoreSize {
           }
         }
       }
-      size = server.getRegionServerAccounting().getGlobalMemstoreDataSize();
+      size = server.getRegionServerAccounting().getGlobalMemStoreDataSize();
       assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0, size);
     }
 
@@ -154,7 +154,7 @@ public class TestGlobalMemStoreSize {
   throws IOException {
     LOG.info("Flush " + r.toString() + " on " + server.getServerName() +
       ", " +  r.flush(true) + ", size=" +
-      server.getRegionServerAccounting().getGlobalMemstoreDataSize());
+      server.getRegionServerAccounting().getGlobalMemStoreDataSize());
   }
 
   private List<HRegionServer> getOnlineRegionServers() {

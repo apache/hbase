@@ -148,7 +148,7 @@ public class MetricsRegionServer {
 
   public void updateFlush(long t, long memstoreSize, long fileSize) {
     serverSource.updateFlushTime(t);
-    serverSource.updateFlushMemstoreSize(memstoreSize);
+    serverSource.updateFlushMemStoreSize(memstoreSize);
     serverSource.updateFlushOutputSize(fileSize);
   }
 
