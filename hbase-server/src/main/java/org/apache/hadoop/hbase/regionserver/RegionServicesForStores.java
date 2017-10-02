@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+
 /**
  * Services a Store needs from a Region.
  * RegionServicesForStores class is the interface through which memstore access services at the
@@ -63,8 +65,8 @@ public class RegionServicesForStores {
     region.unblockUpdates();
   }
 
-  public void addMemstoreSize(MemstoreSize size) {
-    region.addAndGetMemstoreSize(size);
+  public void addMemStoreSize(MemStoreSize size) {
+    region.addAndGetMemStoreSize(size);
   }
 
   public RegionInfo getRegionInfo() {
@@ -77,16 +79,16 @@ public class RegionServicesForStores {
 
   public ThreadPoolExecutor getInMemoryCompactionPool() { return INMEMORY_COMPACTION_POOL; }
 
-  public long getMemstoreFlushSize() {
-    return region.getMemstoreFlushSize();
+  public long getMemStoreFlushSize() {
+    return region.getMemStoreFlushSize();
   }
 
   public int getNumStores() {
     return region.getTableDescriptor().getColumnFamilyCount();
   }
 
-  // methods for tests
-  long getMemstoreSize() {
-    return region.getMemstoreSize();
+  @VisibleForTesting
+  long getMemStoreSize() {
+    return region.getMemStoreSize();
   }
 }

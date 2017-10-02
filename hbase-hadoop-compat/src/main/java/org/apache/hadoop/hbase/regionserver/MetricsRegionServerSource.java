@@ -175,7 +175,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
    * Update the flush memstore size histogram
    * @param bytes the number of bytes in the memstore
    */
-  void updateFlushMemstoreSize(long bytes);
+  void updateFlushMemStoreSize(long bytes);
 
   /**
    * Update the flush output file size histogram

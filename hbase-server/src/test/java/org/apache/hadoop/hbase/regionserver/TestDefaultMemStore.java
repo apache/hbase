@@ -126,9 +126,9 @@ public class TestDefaultMemStore {
   public void testPutSameCell() {
     byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    MemstoreSize sizeChangeForFirstCell = new MemstoreSize();
+    MemStoreSize sizeChangeForFirstCell = new MemStoreSize();
     this.memstore.add(kv, sizeChangeForFirstCell);
-    MemstoreSize sizeChangeForSecondCell = new MemstoreSize();
+    MemStoreSize sizeChangeForSecondCell = new MemStoreSize();
     this.memstore.add(kv, sizeChangeForSecondCell);
     // make sure memstore size increase won't double-count MSLAB chunk size
     assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getDataSize());
@@ -826,7 +826,7 @@ public class TestDefaultMemStore {
   public void testUpsertMemstoreSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     memstore = new DefaultMemStore(conf, CellComparator.COMPARATOR);
-    MemstoreSize oldSize = memstore.size();
+    MemStoreSize oldSize = memstore.size();
 
     List<Cell> l = new ArrayList<>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
@@ -837,7 +837,7 @@ public class TestDefaultMemStore {
     l.add(kv1); l.add(kv2); l.add(kv3);
 
     this.memstore.upsert(l, 2, null);// readpoint is 2
-    MemstoreSize newSize = this.memstore.size();
+    MemStoreSize newSize = this.memstore.size();
     assert (newSize.getDataSize() > oldSize.getDataSize());
     //The kv1 should be removed.
     assert(memstore.getActive().getCellsCount() == 2);

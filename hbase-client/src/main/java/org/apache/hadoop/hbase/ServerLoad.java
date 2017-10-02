@@ -65,7 +65,7 @@ public class ServerLoad {
       storefiles += rl.getStorefiles();
       storeUncompressedSizeMB += rl.getStoreUncompressedSizeMB();
       storefileSizeMB += rl.getStorefileSizeMB();
-      memstoreSizeMB += rl.getMemstoreSizeMB();
+      memstoreSizeMB += rl.getMemStoreSizeMB();
       storefileIndexSizeKB += rl.getStorefileIndexSizeKB();
       readRequestsCount += rl.getReadRequestsCount();
       filteredReadRequestsCount += rl.getFilteredReadRequestsCount();
@@ -147,14 +147,14 @@ public class ServerLoad {
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   * Use {@link #getMemstoreSizeMB()} instead.
+   * Use {@link #getMemStoreSizeMB()} instead.
    */
   @Deprecated
   public int getMemstoreSizeInMB() {
     return memstoreSizeMB;
   }
 
-  public int getMemstoreSizeMB() {
+  public int getMemStoreSizeMB() {
     return memstoreSizeMB;
   }
 

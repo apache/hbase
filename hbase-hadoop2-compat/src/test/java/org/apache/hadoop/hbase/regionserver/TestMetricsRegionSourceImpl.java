@@ -92,7 +92,7 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
-    public long getMemstoreSize() {
+    public long getMemStoreSize() {
       return 0;
     }
 

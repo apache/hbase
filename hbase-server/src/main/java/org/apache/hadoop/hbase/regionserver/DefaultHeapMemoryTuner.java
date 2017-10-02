@@ -142,7 +142,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     long blockedFlushCount = context.getBlockedFlushCount();
     long unblockedFlushCount = context.getUnblockedFlushCount();
     long totalOnheapFlushCount = blockedFlushCount + unblockedFlushCount;
-    boolean offheapMemstore = context.isOffheapMemstore();
+    boolean offheapMemstore = context.isOffheapMemStore();
     float newMemstoreSize;
     float newBlockCacheSize;
 
@@ -223,7 +223,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
       newBlockCacheSize = blockCachePercentMinRange;
     }
     TUNER_RESULT.setBlockCacheSize(newBlockCacheSize);
-    TUNER_RESULT.setMemstoreSize(newMemstoreSize);
+    TUNER_RESULT.setMemStoreSize(newMemstoreSize);
     prevTuneDirection = newTuneDirection;
     return TUNER_RESULT;
   }

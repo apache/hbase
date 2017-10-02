@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.MemstoreSize;
+import org.apache.hadoop.hbase.regionserver.MemStoreSize;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,9 +38,9 @@ import org.junit.experimental.categories.Category;
  * simulate this we call flush from the coprocessor itself
  */
 @Category(LargeTests.class)
-public class TestNegativeMemstoreSizeWithSlowCoprocessor {
+public class TestNegativeMemStoreSizeWithSlowCoprocessor {
 
-  static final Log LOG = LogFactory.getLog(TestNegativeMemstoreSizeWithSlowCoprocessor.class);
+  static final Log LOG = LogFactory.getLog(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] tableName = Bytes.toBytes("test_table");
   private static final byte[] family = Bytes.toBytes("f");
@@ -97,7 +97,7 @@ public class TestNegativeMemstoreSizeWithSlowCoprocessor {
 
       if (Bytes.equals(put.getRow(), Bytes.toBytes("row2"))) {
         region.flush(false);
-        Assert.assertTrue(region.addAndGetMemstoreSize(new MemstoreSize()) >= 0);
+        Assert.assertTrue(region.addAndGetMemStoreSize(new MemStoreSize()) >= 0);
       }
     }
   }

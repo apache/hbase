@@ -59,7 +59,7 @@ public interface StoreFile {
   /**
    * Get max of the MemstoreTS in the KV's in this store file.
    */
-  long getMaxMemstoreTS();
+  long getMaxMemStoreTS();
 
   /**
    * @return Path or null if this StoreFile was made with a Stream.

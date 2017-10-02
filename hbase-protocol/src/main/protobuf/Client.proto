@@ -102,7 +102,7 @@ message Result {
   //  in the query.
   optional bool exists = 3;
 
-  // Whether or not the results are coming from possibly stale data 
+  // Whether or not the results are coming from possibly stale data
   optional bool stale = 4 [default = false];
 
   // Whether or not the entire result could be returned. Results will be split when
@@ -452,7 +452,7 @@ message RegionAction {
 */
 message RegionLoadStats {
   // Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
-  optional int32 memstoreLoad = 1 [default = 0];
+  optional int32 memStoreLoad = 1 [default = 0];
   // Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
   // We can move this to "ServerLoadStats" should we develop them.
   optional int32 heapOccupancy = 2 [default = 0];
@@ -533,7 +533,7 @@ service ClientService {
 
   rpc ExecService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
-    
+
   rpc ExecRegionServerService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 

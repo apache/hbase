@@ -42,7 +42,7 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
-  public long getMemstoresSize(String table) {
+  public long getMemStoresSize(String table) {
     return 1000;
   }
 

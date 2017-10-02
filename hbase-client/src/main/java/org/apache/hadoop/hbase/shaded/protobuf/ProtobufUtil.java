@@ -3155,7 +3155,7 @@ public final class ProtobufUtil {
   }
 
   public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {
-    return new RegionLoadStats(stats.getMemstoreLoad(), stats.getHeapOccupancy(),
+    return new RegionLoadStats(stats.getMemStoreLoad(), stats.getHeapOccupancy(),
         stats.getCompactionPressure());
   }
 

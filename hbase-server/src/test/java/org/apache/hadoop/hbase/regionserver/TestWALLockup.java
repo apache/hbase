@@ -258,8 +258,8 @@ public class TestWALLockup {
       Thread t = new Thread ("Flusher") {
         public void run() {
           try {
-            if (region.getMemstoreSize() <= 0) {
-              throw new IOException("memstore size=" + region.getMemstoreSize());
+            if (region.getMemStoreSize() <= 0) {
+              throw new IOException("memstore size=" + region.getMemStoreSize());
             }
             region.flush(false);
           } catch (IOException e) {
@@ -272,7 +272,7 @@ public class TestWALLockup {
       };
       t.setDaemon(true);
       t.start();
-      // Wait until 
+      // Wait until
       while (dodgyWAL.latch.getCount() > 0) Threads.sleep(1);
       // Now assert I got a new WAL file put in place even though loads of errors above.
       assertTrue(originalWAL != dodgyWAL.getCurrentFileName());

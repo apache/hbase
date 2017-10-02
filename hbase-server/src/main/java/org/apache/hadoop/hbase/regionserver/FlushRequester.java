@@ -65,5 +65,5 @@ public interface FlushRequester {
    *
    * @param globalMemStoreSize
    */
-  public void setGlobalMemstoreLimit(long globalMemStoreSize);
+  public void setGlobalMemStoreLimit(long globalMemStoreSize);
 }

@@ -107,10 +107,10 @@ class MemStoreFlusher implements FlushRequester {
     this.flushHandlers = new FlushHandler[handlerCount];
     LOG.info("globalMemStoreLimit="
         + TraditionalBinaryPrefix
-            .long2String(this.server.getRegionServerAccounting().getGlobalMemstoreLimit(), "", 1)
+            .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
         + ", globalMemStoreLimitLowMark="
         + TraditionalBinaryPrefix.long2String(
-          this.server.getRegionServerAccounting().getGlobalMemstoreLimitLowMark(), "", 1)
+          this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
         + ", Offheap="
         + (this.server.getRegionServerAccounting().isOffheap()));
   }
@@ -136,12 +136,12 @@ class MemStoreFlusher implements FlushRequester {
     while (!flushedOne) {
       // Find the biggest region that doesn't have too many storefiles
       // (might be null!)
-      Region bestFlushableRegion = getBiggestMemstoreRegion(regionsBySize, excludedRegions, true);
+      Region bestFlushableRegion = getBiggestMemStoreRegion(regionsBySize, excludedRegions, true);
       // Find the biggest region, total, even if it might have too many flushes.
-      Region bestAnyRegion = getBiggestMemstoreRegion(
+      Region bestAnyRegion = getBiggestMemStoreRegion(
           regionsBySize, excludedRegions, false);
       // Find the biggest region that is a secondary region
-      Region bestRegionReplica = getBiggestMemstoreOfRegionReplica(regionsBySize,
+      Region bestRegionReplica = getBiggestMemStoreOfRegionReplica(regionsBySize,
         excludedRegions);
 
       if (bestAnyRegion == null && bestRegionReplica == null) {
@@ -151,7 +151,7 @@ class MemStoreFlusher implements FlushRequester {
 
       Region regionToFlush;
       if (bestFlushableRegion != null &&
-          bestAnyRegion.getMemstoreSize() > 2 * bestFlushableRegion.getMemstoreSize()) {
+          bestAnyRegion.getMemStoreSize() > 2 * bestFlushableRegion.getMemStoreSize()) {
         // Even if it's not supposed to be flushed, pick a region if it's more than twice
         // as big as the best flushable one - otherwise when we're under pressure we make
         // lots of little flushes and cause lots of compactions, etc, which just makes
@@ -160,9 +160,9 @@ class MemStoreFlusher implements FlushRequester {
           LOG.debug("Under global heap pressure: " + "Region "
               + bestAnyRegion.getRegionInfo().getRegionNameAsString()
               + " has too many " + "store files, but is "
-              + TraditionalBinaryPrefix.long2String(bestAnyRegion.getMemstoreSize(), "", 1)
+              + TraditionalBinaryPrefix.long2String(bestAnyRegion.getMemStoreSize(), "", 1)
               + " vs best flushable region's "
-              + TraditionalBinaryPrefix.long2String(bestFlushableRegion.getMemstoreSize(), "", 1)
+              + TraditionalBinaryPrefix.long2String(bestFlushableRegion.getMemStoreSize(), "", 1)
               + ". Choosing the bigger.");
         }
         regionToFlush = bestAnyRegion;
@@ -175,20 +175,20 @@ class MemStoreFlusher implements FlushRequester {
       }
 
       Preconditions.checkState(
-        (regionToFlush != null && regionToFlush.getMemstoreSize() > 0) ||
-        (bestRegionReplica != null && bestRegionReplica.getMemstoreSize() > 0));
+        (regionToFlush != null && regionToFlush.getMemStoreSize() > 0) ||
+        (bestRegionReplica != null && bestRegionReplica.getMemStoreSize() > 0));
 
       if (regionToFlush == null ||
           (bestRegionReplica != null &&
            ServerRegionReplicaUtil.isRegionReplicaStoreFileRefreshEnabled(conf) &&
-           (bestRegionReplica.getMemstoreSize()
-               > secondaryMultiplier * regionToFlush.getMemstoreSize()))) {
+           (bestRegionReplica.getMemStoreSize()
+               > secondaryMultiplier * regionToFlush.getMemStoreSize()))) {
         LOG.info("Refreshing storefiles of region " + bestRegionReplica
             + " due to global heap pressure. Total memstore datasize="
             + StringUtils
-                .humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreDataSize())
+                .humanReadableInt(server.getRegionServerAccounting().getGlobalMemStoreDataSize())
             + " memstore heap size=" + StringUtils.humanReadableInt(
-                server.getRegionServerAccounting().getGlobalMemstoreHeapSize()));
+                server.getRegionServerAccounting().getGlobalMemStoreHeapSize()));
         flushedOne = refreshStoreFilesAndReclaimMemory(bestRegionReplica);
         if (!flushedOne) {
           LOG.info("Excluding secondary region " + bestRegionReplica +
@@ -198,9 +198,9 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. "
             + "Total Memstore size="
-            + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreDataSize())
+            + humanReadableInt(server.getRegionServerAccounting().getGlobalMemStoreDataSize())
             + ", Region memstore size="
-            + humanReadableInt(regionToFlush.getMemstoreSize()));
+            + humanReadableInt(regionToFlush.getMemStoreSize()));
         flushedOne = flushRegion(regionToFlush, true, false);
 
         if (!flushedOne) {
@@ -231,7 +231,7 @@ class MemStoreFlusher implements FlushRequester {
             if (type != FlushType.NORMAL) {
               LOG.debug("Flush thread woke up because memory above low water="
                   + TraditionalBinaryPrefix.long2String(
-                    server.getRegionServerAccounting().getGlobalMemstoreLimitLowMark(), "", 1));
+                    server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1));
               // For offheap memstore, even if the lower water mark was breached due to heap overhead
               // we still select the regions based on the region's memstore data size.
               // TODO : If we want to decide based on heap over head it can be done without tracking
@@ -283,7 +283,7 @@ class MemStoreFlusher implements FlushRequester {
     }
   }
 
-  private Region getBiggestMemstoreRegion(
+  private Region getBiggestMemStoreRegion(
       SortedMap<Long, Region> regionsBySize,
       Set<Region> excludedRegions,
       boolean checkStoreFileCount) {
@@ -307,7 +307,7 @@ class MemStoreFlusher implements FlushRequester {
     return null;
   }
 
-  private Region getBiggestMemstoreOfRegionReplica(SortedMap<Long, Region> regionsBySize,
+  private Region getBiggestMemStoreOfRegionReplica(SortedMap<Long, Region> regionsBySize,
       Set<Region> excludedRegions) {
     synchronized (regionsInQueue) {
       for (Region region : regionsBySize.values()) {
@@ -588,19 +588,19 @@ class MemStoreFlusher implements FlushRequester {
               startTime = EnvironmentEdgeManager.currentTime();
               if (!server.getRegionServerAccounting().isOffheap()) {
                 logMsg("global memstore heapsize",
-                    server.getRegionServerAccounting().getGlobalMemstoreHeapSize(),
-                    server.getRegionServerAccounting().getGlobalMemstoreLimit());
+                    server.getRegionServerAccounting().getGlobalMemStoreHeapSize(),
+                    server.getRegionServerAccounting().getGlobalMemStoreLimit());
               } else {
                 switch (flushType) {
                 case ABOVE_OFFHEAP_HIGHER_MARK:
                   logMsg("the global offheap memstore datasize",
-                      server.getRegionServerAccounting().getGlobalMemstoreDataSize(),
-                      server.getRegionServerAccounting().getGlobalMemstoreLimit());
+                      server.getRegionServerAccounting().getGlobalMemStoreDataSize(),
+                      server.getRegionServerAccounting().getGlobalMemStoreLimit());
                   break;
                 case ABOVE_ONHEAP_HIGHER_MARK:
                   logMsg("global memstore heapsize",
-                      server.getRegionServerAccounting().getGlobalMemstoreHeapSize(),
-                      server.getRegionServerAccounting().getGlobalOnHeapMemstoreLimit());
+                      server.getRegionServerAccounting().getGlobalMemStoreHeapSize(),
+                      server.getRegionServerAccounting().getGlobalOnHeapMemStoreLimit());
                   break;
                 default:
                   break;
@@ -691,8 +691,8 @@ class MemStoreFlusher implements FlushRequester {
    * @param globalMemStoreSize
    */
   @Override
-  public void setGlobalMemstoreLimit(long globalMemStoreSize) {
-    this.server.getRegionServerAccounting().setGlobalMemstoreLimits(globalMemStoreSize);
+  public void setGlobalMemStoreLimit(long globalMemStoreSize) {
+    this.server.getRegionServerAccounting().setGlobalMemStoreLimits(globalMemStoreSize);
     reclaimMemStoreMemory();
   }
 

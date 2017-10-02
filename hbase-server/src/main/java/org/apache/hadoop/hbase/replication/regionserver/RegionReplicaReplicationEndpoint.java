@@ -400,7 +400,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         // check if the table requires memstore replication
         // some unit-test drop the table, so we should do a bypass check and always replicate.
         TableDescriptor htd = tableDescriptors.get(tableName);
-        requiresReplication = htd == null || htd.hasRegionMemstoreReplication();
+        requiresReplication = htd == null || htd.hasRegionMemStoreReplication();
         memstoreReplicationEnabled.put(tableName, requiresReplication);
       }
 

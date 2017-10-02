@@ -28,14 +28,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.AsyncProcessTask;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ExponentialClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.MemstoreSize;
+import org.apache.hadoop.hbase.regionserver.MemStoreSize;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,7 +105,7 @@ public class TestClientPushback {
     mutator.flush();
 
     // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
-    int load = (int) ((((HRegion) region).addAndGetMemstoreSize(new MemstoreSize(0, 0)) * 100)
+    int load = (int) ((((HRegion) region).addAndGetMemStoreSize(new MemStoreSize(0, 0)) * 100)
         / flushSizeBytes);
     LOG.debug("Done writing some data to "+tableName);
 
@@ -114,7 +113,7 @@ public class TestClientPushback {
     ClientBackoffPolicy backoffPolicy = conn.getBackoffPolicy();
     assertTrue("Backoff policy is not correctly configured",
       backoffPolicy instanceof ExponentialClientBackoffPolicy);
-    
+
     ServerStatisticTracker stats = conn.getStatisticsTracker();
     assertNotNull( "No stats configured for the client!", stats);
     // get the names so we can query the stats
@@ -125,7 +124,7 @@ public class TestClientPushback {
     ServerStatistics serverStats = stats.getServerStatsForTesting(server);
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
     assertEquals("We did not find some load on the memstore", load,
-      regionStats.getMemstoreLoadPercent());
+      regionStats.getMemStoreLoadPercent());
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
     assertNotEquals("Reported load does not produce a backoff", backoffTime, 0);
@@ -163,7 +162,7 @@ public class TestClientPushback {
     assertEquals(rsStats.heapOccupancyHist.getSnapshot().getMean(),
         (double)regionStats.getHeapOccupancyPercent(), 0.1 );
     assertEquals(rsStats.memstoreLoadHist.getSnapshot().getMean(),
-        (double)regionStats.getMemstoreLoadPercent(), 0.1);
+        (double)regionStats.getMemStoreLoadPercent(), 0.1);
 
     MetricsConnection.RunnerStats runnerStats = conn.getConnectionMetrics().runnerStats;
 
@@ -202,6 +201,6 @@ public class TestClientPushback {
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
 
     assertNotNull(regionStats);
-    assertTrue(regionStats.getMemstoreLoadPercent() > 0);
+    assertTrue(regionStats.getMemStoreLoadPercent() > 0);
     }
 }

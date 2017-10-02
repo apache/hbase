@@ -78,12 +78,11 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
-import org.apache.hadoop.hbase.regionserver.MemstoreSize;
+import org.apache.hadoop.hbase.regionserver.MemStoreSize;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -544,7 +543,7 @@ public abstract class AbstractTestWALReplay {
         final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
         HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, htd, null) {
           @Override
-          protected void restoreEdit(HStore s, Cell cell, MemstoreSize memstoreSize) {
+          protected void restoreEdit(HStore s, Cell cell, MemStoreSize memstoreSize) {
             super.restoreEdit(s, cell, memstoreSize);
             countOfRestoredEdits.incrementAndGet();
           }
@@ -1143,7 +1142,7 @@ public abstract class AbstractTestWALReplay {
     }
 
     @Override
-    public void setGlobalMemstoreLimit(long globalMemStoreSize) {
+    public void setGlobalMemStoreLimit(long globalMemStoreSize) {
 
     }
   }

@@ -393,18 +393,18 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   @Override
-  public long getMemstoreFlushSize() {
+  public long getMemStoreFlushSize() {
     // TODO: Why is this in here?  The flushsize of the region rather than the store?  St.Ack
     return this.region.memstoreFlushSize;
   }
 
   @Override
-  public MemstoreSize getFlushableSize() {
+  public MemStoreSize getFlushableSize() {
     return this.memstore.getFlushableSize();
   }
 
   @Override
-  public MemstoreSize getSnapshotSize() {
+  public MemStoreSize getSnapshotSize() {
     return this.memstore.getSnapshotSize();
   }
 
@@ -461,8 +461,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   @Override
-  public OptionalLong getMaxMemstoreTS() {
-    return StoreUtils.getMaxMemstoreTSInList(this.getStorefiles());
+  public OptionalLong getMaxMemStoreTS() {
+    return StoreUtils.getMaxMemStoreTSInList(this.getStorefiles());
   }
 
   /**
@@ -684,7 +684,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @param cell
    * @param memstoreSize
    */
-  public void add(final Cell cell, MemstoreSize memstoreSize) {
+  public void add(final Cell cell, MemStoreSize memstoreSize) {
     lock.readLock().lock();
     try {
        this.memstore.add(cell, memstoreSize);
@@ -698,7 +698,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @param cells
    * @param memstoreSize
    */
-  public void add(final Iterable<Cell> cells, MemstoreSize memstoreSize) {
+  public void add(final Iterable<Cell> cells, MemStoreSize memstoreSize) {
     lock.readLock().lock();
     try {
       memstore.add(cells, memstoreSize);
@@ -2115,7 +2115,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   @Override
-  public MemstoreSize getMemStoreSize() {
+  public MemStoreSize getMemStoreSize() {
     return this.memstore.size();
   }
 
@@ -2169,7 +2169,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @param memstoreSize
    * @throws IOException
    */
-  public void upsert(Iterable<Cell> cells, long readpoint, MemstoreSize memstoreSize)
+  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSize memstoreSize)
       throws IOException {
     this.lock.readLock().lock();
     try {
@@ -2343,7 +2343,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public long heapSize() {
-    MemstoreSize memstoreSize = this.memstore.size();
+    MemStoreSize memstoreSize = this.memstore.size();
     return DEEP_OVERHEAD + memstoreSize.getHeapSize();
   }
 
@@ -2578,7 +2578,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   @Override
-  public boolean isSloppyMemstore() {
+  public boolean isSloppyMemStore() {
     return this.memstore.isSloppy();
   }
 

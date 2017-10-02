@@ -275,13 +275,13 @@ public abstract class Segment {
     return comparator;
   }
 
-  protected void internalAdd(Cell cell, boolean mslabUsed, MemstoreSize memstoreSize) {
+  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
     boolean succ = getCellSet().add(cell);
     updateMetaInfo(cell, succ, mslabUsed, memstoreSize);
   }
 
   protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
-      MemstoreSize memstoreSize) {
+      MemStoreSize memstoreSize) {
     long cellSize = 0;
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
@@ -292,7 +292,7 @@ public abstract class Segment {
     long heapSize = heapSizeChange(cellToAdd, succ);
     incSize(cellSize, heapSize);
     if (memstoreSize != null) {
-      memstoreSize.incMemstoreSize(cellSize, heapSize);
+      memstoreSize.incMemStoreSize(cellSize, heapSize);
     }
     getTimeRangeTracker().includeTimestamp(cellToAdd);
     minSequenceId = Math.min(minSequenceId, cellToAdd.getSequenceId());
@@ -305,7 +305,7 @@ public abstract class Segment {
     }
   }
 
-  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemstoreSize memstoreSize) {
+  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemStoreSize memstoreSize) {
     updateMetaInfo(cellToAdd, succ, (getMemStoreLAB()!=null), memstoreSize);
   }
 

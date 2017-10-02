@@ -97,19 +97,19 @@ public interface Store {
   /**
    * @return The size of this store's memstore.
    */
-  MemstoreSize getMemStoreSize();
+  MemStoreSize getMemStoreSize();
 
   /**
    * @return The amount of memory we could flush from this memstore; usually this is equal to
    * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
    * outstanding snapshots.
    */
-  MemstoreSize getFlushableSize();
+  MemStoreSize getFlushableSize();
 
   /**
    * @return size of the memstore snapshot
    */
-  MemstoreSize getSnapshotSize();
+  MemStoreSize getSnapshotSize();
 
   ColumnFamilyDescriptor getColumnFamilyDescriptor();
 
@@ -121,7 +121,7 @@ public interface Store {
   /**
    * @return The maximum memstoreTS in all store files.
    */
-  OptionalLong getMaxMemstoreTS();
+  OptionalLong getMaxMemStoreTS();
 
   /** @return aggregate size of all HStores used in the last compaction */
   long getLastCompactSize();
@@ -289,5 +289,5 @@ public interface Store {
   /**
    * @return true if the memstore may need some extra memory space
    */
-  boolean isSloppyMemstore();
+  boolean isSloppyMemStore();
 }

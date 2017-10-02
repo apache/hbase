@@ -64,7 +64,7 @@ public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
     }
 
     // Factor in memstore load
-    double percent = regionStats.getMemstoreLoadPercent() / 100.0;
+    double percent = regionStats.getMemStoreLoadPercent() / 100.0;
 
     // Factor in heap occupancy
     float heapOccupancy = regionStats.getHeapOccupancyPercent() / 100.0f;

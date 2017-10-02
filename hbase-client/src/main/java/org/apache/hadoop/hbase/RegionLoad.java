@@ -80,7 +80,7 @@ public class RegionLoad {
    * @return the memstore size, in MB
    */
   public int getMemStoreSizeMB() {
-    return regionLoadPB.getMemstoreSizeMB();
+    return regionLoadPB.getMemStoreSizeMB();
   }
 
   /**

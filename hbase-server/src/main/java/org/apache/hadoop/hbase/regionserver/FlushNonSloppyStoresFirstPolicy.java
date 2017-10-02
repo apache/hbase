@@ -65,7 +65,7 @@ public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
     super.configureForRegion(region);
     this.flushSizeLowerBound = getFlushSizeLowerBound(region);
     for (HStore store : region.stores.values()) {
-      if (store.isSloppyMemstore()) {
+      if (store.isSloppyMemStore()) {
         sloppyStores.add(store);
       } else {
         regularStores.add(store);

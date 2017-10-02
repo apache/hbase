@@ -220,12 +220,12 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
+    public long getEarliestMemStoreSeqNum(byte[] encodedRegionName) {
       return HConstants.NO_SEQNUM;
     }
 
     @Override
-    public long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
+    public long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
       return HConstants.NO_SEQNUM;
     }
 

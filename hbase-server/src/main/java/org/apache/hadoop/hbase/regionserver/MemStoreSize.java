@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Wraps the data size part and total heap space occupied by the memstore.
  */
 @InterfaceAudience.Private
-public class MemstoreSize {
+public class MemStoreSize {
 
   // 'dataSize' tracks the Cell's data bytes size alone (Key bytes, value bytes). A cell's data can
   // be in on heap or off heap area depending on the MSLAB and its configuration to be using on heap
@@ -34,13 +34,13 @@ public class MemstoreSize {
   private long heapSize;
   final private boolean isEmpty;
 
-  public MemstoreSize() {
+  public MemStoreSize() {
     dataSize = 0;
     heapSize = 0;
     isEmpty = false;
   }
 
-  public MemstoreSize(boolean isEmpty) {
+  public MemStoreSize(boolean isEmpty) {
     dataSize = 0;
     heapSize = 0;
     this.isEmpty = isEmpty;
@@ -50,28 +50,28 @@ public class MemstoreSize {
     return isEmpty;
   }
 
-  public MemstoreSize(long dataSize, long heapSize) {
+  public MemStoreSize(long dataSize, long heapSize) {
     this.dataSize = dataSize;
     this.heapSize = heapSize;
     this.isEmpty = false;
   }
 
-  public void incMemstoreSize(long dataSizeDelta, long heapSizeDelta) {
+  public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
     this.dataSize += dataSizeDelta;
     this.heapSize += heapSizeDelta;
   }
 
-  public void incMemstoreSize(MemstoreSize delta) {
+  public void incMemStoreSize(MemStoreSize delta) {
     this.dataSize += delta.dataSize;
     this.heapSize += delta.heapSize;
   }
 
-  public void decMemstoreSize(long dataSizeDelta, long heapSizeDelta) {
+  public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
     this.dataSize -= dataSizeDelta;
     this.heapSize -= heapSizeDelta;
   }
 
-  public void decMemstoreSize(MemstoreSize delta) {
+  public void decMemStoreSize(MemStoreSize delta) {
     this.dataSize -= delta.dataSize;
     this.heapSize -= delta.heapSize;
   }
@@ -86,10 +86,10 @@ public class MemstoreSize {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof MemstoreSize)) {
+    if (obj == null || !(obj instanceof MemStoreSize)) {
       return false;
     }
-    MemstoreSize other = (MemstoreSize) obj;
+    MemStoreSize other = (MemStoreSize) obj;
     return this.dataSize == other.dataSize && this.heapSize == other.heapSize;
   }
 

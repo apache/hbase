@@ -563,11 +563,29 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #hasRegionMemStoreReplication()} instead
+   */
+  @Deprecated
+  public boolean hasRegionMemstoreReplication() {
+    return hasRegionMemStoreReplication();
+  }
+
+  /**
    * @return true if the read-replicas memstore replication is enabled.
    */
   @Override
-  public boolean hasRegionMemstoreReplication() {
-    return delegatee.hasRegionMemstoreReplication();
+  public boolean hasRegionMemStoreReplication() {
+    return delegatee.hasRegionMemStoreReplication();
+  }
+
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setRegionMemStoreReplication(boolean)} instead
+   */
+  @Deprecated
+  public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
+    return setRegionMemStoreReplication(memstoreReplication);
   }
 
   /**
@@ -579,8 +597,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    *                            false if the secondaries can tollerate to have new
    *                                  data only when the primary flushes the memstore.
    */
-  public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
-    getDelegateeForModification().setRegionMemstoreReplication(memstoreReplication);
+  public HTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
+    getDelegateeForModification().setRegionMemStoreReplication(memstoreReplication);
     return this;
   }
 

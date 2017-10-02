@@ -115,10 +115,10 @@ public class CompactionConfiguration {
     this.storeConfigInfo = storeConfigInfo;
 
     maxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY, Long.MAX_VALUE);
-    offPeakMaxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY, 
-      maxCompactSize);      
+    offPeakMaxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY,
+      maxCompactSize);
     minCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY,
-        storeConfigInfo.getMemstoreFlushSize());
+        storeConfigInfo.getMemStoreFlushSize());
     minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
     maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);
@@ -126,7 +126,7 @@ public class CompactionConfiguration {
     offPeakCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
 
     throttlePoint = conf.getLong("hbase.regionserver.thread.compaction.throttle",
-          2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
+          2 * maxFilesToCompact * storeConfigInfo.getMemStoreFlushSize());
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
     // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);

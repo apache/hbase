@@ -77,7 +77,7 @@ public abstract class Compactor<T extends CellSink> {
   protected final int compactionKVMax;
   protected final Compression.Algorithm compactionCompression;
 
-  /** specify how many days to keep MVCC values during major compaction **/ 
+  /** specify how many days to keep MVCC values during major compaction **/
   protected int keepSeqIdPeriod;
 
   // Configs that drive whether we drop page cache behind compactions
@@ -141,15 +141,15 @@ public abstract class Compactor<T extends CellSink> {
   protected FileDetails getFileDetails(
       Collection<HStoreFile> filesToCompact, boolean allFiles) throws IOException {
     FileDetails fd = new FileDetails();
-    long oldestHFileTimeStampToKeepMVCC = System.currentTimeMillis() - 
-      (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);  
+    long oldestHFileTimeStampToKeepMVCC = System.currentTimeMillis() -
+      (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);
 
     for (HStoreFile file : filesToCompact) {
       if(allFiles && (file.getModificationTimeStamp() < oldestHFileTimeStampToKeepMVCC)) {
-        // when isAllFiles is true, all files are compacted so we can calculate the smallest 
+        // when isAllFiles is true, all files are compacted so we can calculate the smallest
         // MVCC value to keep
-        if(fd.minSeqIdToKeep < file.getMaxMemstoreTS()) {
-          fd.minSeqIdToKeep = file.getMaxMemstoreTS();
+        if(fd.minSeqIdToKeep < file.getMaxMemStoreTS()) {
+          fd.minSeqIdToKeep = file.getMaxMemStoreTS();
         }
       }
       long seqNum = file.getMaxSequenceId();

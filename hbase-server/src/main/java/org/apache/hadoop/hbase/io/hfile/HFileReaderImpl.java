@@ -236,7 +236,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
     includesMemstoreTS = keyValueFormatVersion != null &&
         Bytes.toInt(keyValueFormatVersion) == HFileWriterImpl.KEY_VALUE_VER_WITH_MEMSTORE;
-    fsBlockReader.setIncludesMemstoreTS(includesMemstoreTS);
+    fsBlockReader.setIncludesMemStoreTS(includesMemstoreTS);
     if (includesMemstoreTS) {
       decodeMemstoreTS = Bytes.toLong(fileInfo.get(HFileWriterImpl.MAX_MEMSTORE_TS_KEY)) > 0;
     }
@@ -645,8 +645,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      */
     protected void readMvccVersion(final int offsetFromPos) {
       // See if we even need to decode mvcc.
-      if (!this.reader.shouldIncludeMemstoreTS()) return;
-      if (!this.reader.isDecodeMemstoreTS()) {
+      if (!this.reader.shouldIncludeMemStoreTS()) return;
+      if (!this.reader.isDecodeMemStoreTS()) {
         currMemstoreTS = 0;
         currMemstoreTSLen = 1;
         return;
@@ -741,7 +741,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           // add the two bytes read for the tags.
           offsetFromPos += tlen + (Bytes.SIZEOF_SHORT);
         }
-        if (this.reader.shouldIncludeMemstoreTS()) {
+        if (this.reader.shouldIncludeMemStoreTS()) {
           // Directly read the mvcc based on current position
           readMvccVersion(offsetFromPos);
         }
@@ -873,7 +873,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           return false;
         }
 
-        // The first key in the current block 'seekToBlock' is greater than the given 
+        // The first key in the current block 'seekToBlock' is greater than the given
         // seekBefore key. We will go ahead by reading the next block that satisfies the
         // given key. Return the current block before reading the next one.
         reader.returnBlock(seekToBlock);
@@ -945,7 +945,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       Cell ret;
       int cellBufSize = getKVBufSize();
       long seqId = 0l;
-      if (this.reader.shouldIncludeMemstoreTS()) {
+      if (this.reader.shouldIncludeMemStoreTS()) {
         seqId = currMemstoreTS;
       }
       if (blockBuffer.hasArray()) {
@@ -987,7 +987,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             + keyPair.getSecond(), currKeyLen);
       } else {
         // Better to do a copy here instead of holding on to this BB so that
-        // we could release the blocks referring to this key. This key is specifically used 
+        // we could release the blocks referring to this key. This key is specifically used
         // in HalfStoreFileReader to get the firstkey and lastkey by creating a new scanner
         // every time. So holding onto the BB (incase of DBB) is not advised here.
         byte[] key = new byte[currKeyLen];
@@ -1275,11 +1275,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   protected boolean decodeMemstoreTS = false;
 
 
-  public boolean isDecodeMemstoreTS() {
+  public boolean isDecodeMemStoreTS() {
     return this.decodeMemstoreTS;
   }
 
-  public boolean shouldIncludeMemstoreTS() {
+  public boolean shouldIncludeMemStoreTS() {
     return includesMemstoreTS;
   }
 
@@ -1783,7 +1783,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   protected HFileContext createHFileContext(FSDataInputStreamWrapper fsdis, long fileSize,
       HFileSystem hfs, Path path, FixedFileTrailer trailer) throws IOException {
     HFileContextBuilder builder = new HFileContextBuilder()
-      .withIncludesMvcc(shouldIncludeMemstoreTS())
+      .withIncludesMvcc(shouldIncludeMemStoreTS())
       .withHBaseCheckSum(true)
       .withHFileName(this.getName())
       .withCompression(this.compressAlgo);

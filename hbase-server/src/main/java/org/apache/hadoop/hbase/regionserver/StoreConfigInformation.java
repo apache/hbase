@@ -35,7 +35,7 @@ public interface StoreConfigInformation {
    */
   // TODO: Why is this in here?  It should be in Store and it should return the Store flush size,
   // not the Regions.  St.Ack
-  long getMemstoreFlushSize();
+  long getMemStoreFlushSize();
 
   /**
    * @return Gets the cf-specific time-to-live for store files.

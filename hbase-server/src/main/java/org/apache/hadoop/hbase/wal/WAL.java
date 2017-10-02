@@ -190,11 +190,11 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param encodedRegionName The region to get the number for.
    * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
    * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
-   * workings. Use {@link #getEarliestMemstoreSeqNum(byte[], byte[])}
+   * workings. Use {@link #getEarliestMemStoreSeqNum(byte[], byte[])}
    */
   @VisibleForTesting
   @Deprecated
-  long getEarliestMemstoreSeqNum(byte[] encodedRegionName);
+  long getEarliestMemStoreSeqNum(byte[] encodedRegionName);
 
   /**
    * Gets the earliest unflushed sequence id in the memstore for the store.
@@ -202,7 +202,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param familyName The family to get the number for.
    * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
    */
-  long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName);
+  long getEarliestMemStoreSeqNum(byte[] encodedRegionName, byte[] familyName);
 
   /**
    * Human readable identifying information about the state of this WAL.

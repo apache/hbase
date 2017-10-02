@@ -216,7 +216,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       mrb.addGauge(Interns.info(
               regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
               MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
-          this.regionWrapper.getMemstoreSize());
+          this.regionWrapper.getMemStoreSize());
       mrb.addGauge(Interns.info(
         regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
         MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),

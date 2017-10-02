@@ -255,7 +255,7 @@
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% TraditionalBinaryPrefix.long2String(
-                load.getMemstoreSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
+                load.getMemStoreSizeMB() * TraditionalBinaryPrefix.MEGA.value, "B", 1) %></td>
             </%if>
         </tr>
         </%for>

@@ -59,12 +59,12 @@ public class ServerStatistics {
     private int compactionPressure = 0;
 
     public void update(RegionLoadStats currentStats) {
-      this.memstoreLoad = currentStats.getMemstoreLoad();
+      this.memstoreLoad = currentStats.getMemStoreLoad();
       this.heapOccupancy = currentStats.getHeapOccupancy();
       this.compactionPressure = currentStats.getCompactionPressure();
     }
 
-    public int getMemstoreLoadPercent(){
+    public int getMemStoreLoadPercent(){
       return this.memstoreLoad;
     }
 

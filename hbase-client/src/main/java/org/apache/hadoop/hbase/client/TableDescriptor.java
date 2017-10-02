@@ -220,7 +220,7 @@ public interface TableDescriptor {
   /**
    * @return true if the read-replicas memstore replication is enabled.
    */
-  boolean hasRegionMemstoreReplication();
+  boolean hasRegionMemStoreReplication();
 
   /**
    * @return true if there are at least one cf whose replication scope is

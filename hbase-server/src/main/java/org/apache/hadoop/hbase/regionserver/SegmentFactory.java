@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -96,7 +95,7 @@ public final class SegmentFactory {
   // create flat immutable segment from non-flat immutable segment
   // for flattening
   public ImmutableSegment createImmutableSegmentByFlattening(
-      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType, MemstoreSize memstoreSize) {
+      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType, MemStoreSize memstoreSize) {
     ImmutableSegment res = null;
     switch (idxType) {
     case CHUNK_MAP:

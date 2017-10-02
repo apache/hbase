@@ -343,7 +343,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testCostFromArray() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFromRegionLoadFunction
-        costFunction = new StochasticLoadBalancer.MemstoreSizeCostFunction(conf);
+        costFunction = new StochasticLoadBalancer.MemStoreSizeCostFunction(conf);
     costFunction.init(mockCluster(new int[]{0, 0, 0, 0, 1}));
 
     double[] statOne = new double[100];
