@@ -1362,11 +1362,10 @@
     <httpclient.version>4.5.3</httpclient.version>
     <httpcore.version>4.4.6</httpcore.version>
     <metrics-core.version>3.2.1</metrics-core.version>
-    <jackson.version>2.23.2</jackson.version>
+    <jackson.version>2.9.1</jackson.version>
     <jaxb-api.version>2.2.12</jaxb-api.version>
     <jetty.version>9.4.6.v20170531</jetty.version>
     <jetty-jsp.version>9.2.19.v20160908</jetty-jsp.version>
-    <jackson1.version>1.9.13</jackson1.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.0.1</wx.rs.api.version>
     <jersey.version>2.25.1</jersey.version>
@@ -1827,28 +1826,15 @@
         <artifactId>joni</artifactId>
         <version>${joni.version}</version>
       </dependency>
-      <!-- While jackson is also a dependency of jersey it
-           can bring in jars from different, incompatible versions. We force
-           the same version with these dependencies -->
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-core-asl</artifactId>
-        <version>${jackson1.version}</version>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-mapper-asl</artifactId>
-        <version>${jackson1.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-jaxrs</artifactId>
-        <version>${jackson1.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-xc</artifactId>
-        <version>${jackson1.version}</version>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jamon</groupId>
@@ -1936,11 +1922,6 @@
         <groupId>org.glassfish.jersey.core</groupId>
         <artifactId>jersey-client</artifactId>
         <version>${jersey.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey.media</groupId>
-        <artifactId>jersey-media-json-jackson1</artifactId>
-        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <!--This lib has JspC in it. Needed precompiling jsps in hbase-rest, etc.-->
@@ -2365,6 +2346,14 @@
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -2423,6 +2412,14 @@
                 <groupId>xerces</groupId>
                 <artifactId>xercesImpl</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
             </exclusions>
             <version>${hadoop-two.version}</version>
           </dependency>
@@ -2452,6 +2449,14 @@
               <exclusion>
                 <groupId>xerces</groupId>
                 <artifactId>xercesImpl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -2493,6 +2498,14 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
               </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -2579,6 +2592,14 @@
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2625,6 +2646,14 @@
                <groupId>xerces</groupId>
                <artifactId>xercesImpl</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
            </exclusions>
            <version>${hadoop-three.version}</version>
          </dependency>
@@ -2650,6 +2679,14 @@
              <exclusion>
                <groupId>xerces</groupId>
                <artifactId>xercesImpl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2696,6 +2733,14 @@
              <exclusion>
                <groupId>junit</groupId>
                <artifactId>junit</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehause.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehause.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
            </exclusions>
          </dependency>

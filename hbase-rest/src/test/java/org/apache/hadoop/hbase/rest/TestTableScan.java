@@ -43,6 +43,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.stream.XMLStreamException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -61,11 +63,6 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -73,8 +70,15 @@ import org.junit.experimental.categories.Category;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+
 @Category({RestTests.class, MediumTests.class})
 public class TestTableScan {
+  private static final Log LOG = LogFactory.getLog(TestTableScan.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScanResource");
   private static final String CFA = "a";
@@ -201,7 +205,7 @@ public class TestTableScan {
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
-    builder.append(Constants.SCAN_LIMIT + "=20");
+    builder.append(Constants.SCAN_LIMIT + "=2");
     Response response = client.get("/" + TABLE + builder.toString(),
       Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
@@ -210,7 +214,7 @@ public class TestTableScan {
         .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
     CellSetModel model = mapper.readValue(response.getStream(), CellSetModel.class);
     int count = TestScannerResource.countCellSet(model);
-    assertEquals(20, count);
+    assertEquals(2, count);
     checkRowsNotNull(model);
 
     //Test scanning with no limit.
@@ -305,40 +309,8 @@ public class TestTableScan {
 
   @Test
   public void testStreamingJSON() throws Exception {
-    // Test scanning particular columns with limit.
-    StringBuilder builder = new StringBuilder();
-    builder.append("/*");
-    builder.append("?");
-    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
-    builder.append("&");
-    builder.append(Constants.SCAN_LIMIT + "=20");
-    Response response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_JSON);
-    assertEquals(200, response.getCode());
-    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
-    CellSetModel model = mapper.readValue(response.getStream(), CellSetModel.class);
-    int count = TestScannerResource.countCellSet(model);
-    assertEquals(20, count);
-    checkRowsNotNull(model);
-
-    //Test scanning with no limit.
-    builder = new StringBuilder();
-    builder.append("/*");
-    builder.append("?");
-    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_2);
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_JSON);
-    assertEquals(200, response.getCode());
-    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    model = mapper.readValue(response.getStream(), CellSetModel.class);
-    count = TestScannerResource.countCellSet(model);
-    assertEquals(expectedRows2, count);
-    checkRowsNotNull(model);
-
     //Test with start row and end row.
-    builder = new StringBuilder();
+    StringBuilder builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
@@ -346,11 +318,13 @@ public class TestTableScan {
     builder.append(Constants.SCAN_START_ROW + "=aaa");
     builder.append("&");
     builder.append(Constants.SCAN_END_ROW + "=aay");
-    response = client.get("/" + TABLE + builder.toString(),
+    Response response = client.get("/" + TABLE + builder.toString(),
       Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
 
-    count = 0;
+    int count = 0;
+    ObjectMapper mapper = new JacksonJaxbJsonProvider()
+        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
     JsonFactory jfactory = new JsonFactory(mapper);
     JsonParser jParser = jfactory.createJsonParser(response.getStream());
     boolean found = false;
@@ -390,7 +364,7 @@ public class TestTableScan {
     int rowCount = readProtobufStream(response.getStream());
     assertEquals(15, rowCount);
 
-  //Test with start row and end row.
+    //Test with start row and end row.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");

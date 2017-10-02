@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.rest.model.TestNamespacesInstanceModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import static org.junit.Assert.*;
 
@@ -57,6 +55,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestNamespacesInstanceResource {
@@ -265,11 +266,11 @@ public class TestNamespacesInstanceResource {
 
     // Try REST post and puts with invalid content.
     response = client.post(namespacePath1, Constants.MIMETYPE_JSON, toXML(model1));
-    assertEquals(400, response.getCode());
+    assertEquals(500, response.getCode());
     String jsonString = jsonMapper.writeValueAsString(model2);
     response = client.put(namespacePath2, Constants.MIMETYPE_XML, Bytes.toBytes(jsonString));
     assertEquals(400, response.getCode());
-    response = client.post(namespacePath3, Constants.MIMETYPE_PROTOBUF, toXML(model1));
+    response = client.post(namespacePath3, Constants.MIMETYPE_PROTOBUF, toXML(model3));
     assertEquals(500, response.getCode());
 
     NamespaceDescriptor nd1 = findNamespace(admin, NAMESPACE1);

@@ -33,7 +33,7 @@ public class TestDeleteRow extends RowResourceBase {
   @Test
   public void testDeleteNonExistentColumn() throws Exception {
     Response response = putValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
 
     response = checkAndDeleteJson(TABLE, ROW_1, COLUMN_1, VALUE_2);
     assertEquals(304, response.getCode());

@@ -23,6 +23,8 @@ import java.util.Iterator;
 
 import javax.xml.bind.JAXBContext;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 
@@ -30,6 +32,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
+  private static final Log LOG = LogFactory.getLog(TestTableSchemaModel.class);
 
   public static final String TABLE_NAME = "testTable";
   private static final boolean IS_META = false;

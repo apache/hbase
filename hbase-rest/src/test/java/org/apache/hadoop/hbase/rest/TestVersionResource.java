@@ -36,9 +36,10 @@ import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.glassfish.jersey.servlet.ServletContainer;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 import static org.junit.Assert.*;
 
@@ -99,7 +100,7 @@ public class TestVersionResource {
   @Test
   public void testGetStargateVersionText() throws IOException {
     Response response = client.get("/version", Constants.MIMETYPE_TEXT);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
     String body = Bytes.toString(response.getBody());
     assertTrue(body.length() > 0);
@@ -117,7 +118,7 @@ public class TestVersionResource {
   @Test
   public void testGetStargateVersionXML() throws IOException, JAXBException {
     Response response = client.get("/version", Constants.MIMETYPE_XML);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     VersionModel model = (VersionModel)
       context.createUnmarshaller().unmarshal(
@@ -129,7 +130,7 @@ public class TestVersionResource {
   @Test
   public void testGetStargateVersionJSON() throws IOException {
     Response response = client.get("/version", Constants.MIMETYPE_JSON);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     ObjectMapper mapper = new JacksonJaxbJsonProvider()
             .locateMapper(VersionModel.class, MediaType.APPLICATION_JSON_TYPE);
@@ -142,13 +143,13 @@ public class TestVersionResource {
   @Test
   public void testGetStargateVersionPB() throws IOException {
     Response response = client.get("/version", Constants.MIMETYPE_PROTOBUF);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     VersionModel model = new VersionModel();
     model.getObjectFromMessage(response.getBody());
     validate(model);
     response = client.get("/version", Constants.MIMETYPE_PROTOBUF_IETF);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new VersionModel();
     model.getObjectFromMessage(response.getBody());
@@ -158,7 +159,7 @@ public class TestVersionResource {
   @Test
   public void testGetStorageClusterVersionText() throws IOException {
     Response response = client.get("/version/cluster", Constants.MIMETYPE_TEXT);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
   }
 
@@ -166,7 +167,7 @@ public class TestVersionResource {
   public void testGetStorageClusterVersionXML() throws IOException,
       JAXBException {
     Response response = client.get("/version/cluster",Constants.MIMETYPE_XML);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     StorageClusterVersionModel clusterVersionModel = 
       (StorageClusterVersionModel)
@@ -180,7 +181,7 @@ public class TestVersionResource {
   @Test
   public void testGetStorageClusterVersionJSON() throws IOException {
     Response response = client.get("/version/cluster", Constants.MIMETYPE_JSON);
-    assertTrue(response.getCode() == 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     ObjectMapper mapper = new JacksonJaxbJsonProvider()
             .locateMapper(StorageClusterVersionModel.class, MediaType.APPLICATION_JSON_TYPE);

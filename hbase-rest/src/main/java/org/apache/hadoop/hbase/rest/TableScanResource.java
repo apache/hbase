@@ -23,15 +23,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -47,13 +45,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @InterfaceAudience.Private
 public class TableScanResource  extends ResourceBase {
-
   private static final Log LOG = LogFactory.getLog(TableScanResource.class);
+
   TableResource tableResource;
   ResultScanner results;
   int userRequestedLimit;
@@ -75,23 +74,14 @@ public class TableScanResource  extends ResourceBase {
     servlet.getMetrics().incrementSucessfulScanRequests(1);
     final Iterator<Result> itr = results.iterator();
     return new CellSetModelStream(new ArrayList<RowModel>() {
+      @Override
       public Iterator<RowModel> iterator() {
         return new Iterator<RowModel>() {
           int count = rowsToSend;
 
           @Override
           public boolean hasNext() {
-            if (count > 0) {
-              return itr.hasNext();
-            } else {
-              return false;
-            }
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException(
-                "Remove method cannot be used in CellSetModelStream");
+            return count > 0 && itr.hasNext();
           }
 
           @Override
@@ -127,7 +117,7 @@ public class TableScanResource  extends ResourceBase {
     servlet.getMetrics().incrementRequests(1);
     try {
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
-      ProtobufStreamingUtil stream = new ProtobufStreamingUtil(this.results, contentType,
+      StreamingOutput stream = new ProtobufStreamingOutput(this.results, contentType,
           userRequestedLimit, fetchSize);
       servlet.getMetrics().incrementSucessfulScanRequests(1);
       ResponseBuilder response = Response.ok(stream);

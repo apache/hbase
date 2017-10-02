@@ -24,9 +24,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
 import org.apache.hadoop.hbase.util.Base64;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 import org.junit.experimental.categories.Category;
 
 import javax.ws.rs.core.MediaType;
@@ -35,6 +32,9 @@ import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 @Category({RestTests.class, SmallTests.class})
 public abstract class TestModelBase<T> extends TestCase {
