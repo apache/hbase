@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import junit.framework.TestCase;
 
@@ -103,6 +104,23 @@ public class TestResult extends TestCase {
       assertEquals(1, ks.size());
       assertTrue(CellUtil.matchingQualifier(ks.get(0), qf));
       assertEquals(ks.get(0), r.getColumnLatestCell(family, qf));
+    }
+  }
+
+  public void testCurrentOnEmptyCell() throws IOException {
+    Result r = Result.create(new Cell[0]);
+    assertFalse(r.advance());
+    assertNull(r.current());
+  }
+
+  public void testAdvanceTwiceOnEmptyCell() throws IOException {
+    Result r = Result.create(new Cell[0]);
+    assertFalse(r.advance());
+    try {
+      r.advance();
+      fail("NoSuchElementException should have been thrown!");
+    } catch (NoSuchElementException ex) {
+      LOG.debug("As expected: " + ex.getMessage());
     }
   }
 

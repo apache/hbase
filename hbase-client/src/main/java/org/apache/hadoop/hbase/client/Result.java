@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
@@ -883,14 +884,23 @@ public class Result implements CellScannable, CellScanner {
 
   @Override
   public Cell current() {
-    if (cells == null) return null;
-    return (cellScannerIndex < 0)? null: this.cells[cellScannerIndex];
+    if (cells == null
+            || cellScannerIndex == INITIAL_CELLSCANNER_INDEX
+            || cellScannerIndex >= cells.length)
+      return null;
+    return this.cells[cellScannerIndex];
   }
 
   @Override
   public boolean advance() {
     if (cells == null) return false;
-    return ++cellScannerIndex < this.cells.length;
+    cellScannerIndex++;
+    if (cellScannerIndex < this.cells.length) {
+      return true;
+    } else if (cellScannerIndex == this.cells.length) {
+      return false;
+    }
+    throw new NoSuchElementException("Cannot advance beyond the last cell");
   }
 
   public Boolean getExists() {
