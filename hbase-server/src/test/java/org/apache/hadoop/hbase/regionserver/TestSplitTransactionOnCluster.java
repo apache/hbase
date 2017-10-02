@@ -283,7 +283,7 @@ public class TestSplitTransactionOnCluster {
     }
 
     @Override
-    public void preSplitRegionBeforePONRAction(
+    public void preSplitRegionBeforeMETAAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final byte[] splitKey,
         final List<Mutation> metaEntries) throws IOException {

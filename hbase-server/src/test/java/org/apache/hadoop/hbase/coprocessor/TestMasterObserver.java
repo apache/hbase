@@ -1430,14 +1430,14 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preSplitRegionBeforePONRAction(
+    public void preSplitRegionBeforeMETAAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final byte[] splitKey,
         final List<Mutation> metaEntries) throws IOException {
     }
 
     @Override
-    public void preSplitRegionAfterPONRAction(
+    public void preSplitRegionAfterMETAAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
     }
 
