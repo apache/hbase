@@ -415,6 +415,39 @@ public class TestSplitTableRegionProcedure {
     assertEquals(splitFailedCount, splitProcMetrics.getFailedCounter().getCount());
   }
 
+  @Test
+  public void testSplitWithoutPONR() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    RegionInfo [] regions = MasterProcedureTestingUtility.createTable(
+        procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
+    insertData(tableName);
+    int splitRowNum = startRowNum + rowCount / 2;
+    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
+
+    assertTrue("not able to find a splittable region", regions != null);
+    assertTrue("not able to find a splittable region", regions.length == 1);
+    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+
+    // Split region of the table
+    long procId = procExec.submitProcedure(
+        new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
+
+    // Execute until step 7 of split procedure
+    // NOTE: the 7 (number after SPLIT_TABLE_REGION_UPDATE_META step)
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 7, false);
+
+    // Unset Toggle Kill and make ProcExec work correctly
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+    MasterProcedureTestingUtility.restartMasterProcedureExecutor(procExec);
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+
+    // Even split failed after step 4, it should still works fine
+    verify(tableName, splitRowNum);
+  }
+
   private void insertData(final TableName tableName) throws IOException, InterruptedException {
     Table t = UTIL.getConnection().getTable(tableName);
     Put p;

@@ -754,7 +754,6 @@ public class AssignmentManager implements ServerListener {
                 transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM);
             break;
           case READY_TO_SPLIT:
-          case SPLIT_PONR:
           case SPLIT:
           case SPLIT_REVERTED:
             assert transition.getRegionInfoCount() == 3 : transition;
@@ -765,7 +764,6 @@ public class AssignmentManager implements ServerListener {
               parent, splitA, splitB);
             break;
           case READY_TO_MERGE:
-          case MERGE_PONR:
           case MERGED:
           case MERGE_REVERTED:
             assert transition.getRegionInfoCount() == 3 : transition;

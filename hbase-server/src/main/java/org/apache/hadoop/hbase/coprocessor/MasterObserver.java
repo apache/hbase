@@ -696,25 +696,25 @@ public interface MasterObserver {
       final RegionInfo regionInfoB) throws IOException {}
 
   /**
-   * This will be called before PONR step as part of split transaction. Calling
+   * This will be called before update META step as part of split transaction. Calling
    * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the split
    * @param ctx the environment to interact with the framework and master
    * @param splitKey
    * @param metaEntries
    */
-  default void preSplitRegionBeforePONRAction(
+  default void preSplitRegionBeforeMETAAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] splitKey,
       final List<Mutation> metaEntries) throws IOException {}
 
 
   /**
-   * This will be called after PONR step as part of split transaction
+   * This will be called after update META step as part of split transaction
    * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
    * effect in this hook.
    * @param ctx the environment to interact with the framework and master
    */
-  default void preSplitRegionAfterPONRAction(
+  default void preSplitRegionAfterMETAAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {}
 
@@ -745,7 +745,7 @@ public interface MasterObserver {
       final RegionInfo mergedRegion) throws IOException {}
 
   /**
-   * This will be called before PONR step as part of regions merge transaction. Calling
+   * This will be called before update META step as part of regions merge transaction. Calling
    * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the merge
    * @param ctx the environment to interact with the framework and master
    * @param metaEntries mutations to execute on hbase:meta atomically with regions merge updates.
@@ -757,7 +757,7 @@ public interface MasterObserver {
       @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException {}
 
   /**
-   * This will be called after PONR step as part of regions merge transaction.
+   * This will be called after META step as part of regions merge transaction.
    * @param ctx the environment to interact with the framework and master
    */
   default void postMergeRegionsCommitAction(

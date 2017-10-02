@@ -366,7 +366,7 @@ public class MasterProcedureTestingUtility {
    * finish.
    * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long)
    */
-  private static void testRecoveryAndDoubleExecution(
+  public static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
       final int numSteps, final boolean expectExecRunning) throws Exception {
     ProcedureTestingUtility.waitProcedure(procExec, procId);

@@ -874,34 +874,34 @@ public class MasterCoprocessorHost
   }
 
   /**
-   * This will be called before PONR step as part of split table region procedure.
+   * This will be called before update META step as part of split table region procedure.
    * @param splitKey
    * @param metaEntries
    * @param user the user
    * @throws IOException
    */
-  public boolean preSplitBeforePONRAction(
+  public boolean preSplitBeforeMETAAction(
       final byte[] splitKey,
       final List<Mutation> metaEntries,
       final User user) throws IOException {
     return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preSplitRegionBeforePONRAction(this, splitKey, metaEntries);
+        observer.preSplitRegionBeforeMETAAction(this, splitKey, metaEntries);
       }
     });
   }
 
   /**
-   * This will be called after PONR step as part of split table region procedure.
+   * This will be called after update META step as part of split table region procedure.
    * @param user the user
    * @throws IOException
    */
-  public void preSplitAfterPONRAction(final User user) throws IOException {
+  public void preSplitAfterMETAAction(final User user) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preSplitRegionAfterPONRAction(this);
+        observer.preSplitRegionAfterMETAAction(this);
       }
     });
   }

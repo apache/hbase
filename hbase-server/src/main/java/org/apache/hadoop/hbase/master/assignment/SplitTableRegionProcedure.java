@@ -164,7 +164,8 @@ public class SplitTableRegionProcedure
     }
 
     if(bestSplitRow == null || bestSplitRow.length == 0) {
-      throw new DoNotRetryIOException("Region not splittable because bestSplitPoint = null");
+      throw new DoNotRetryIOException("Region not splittable because bestSplitPoint = null, "
+          + "maybe table is too small for auto split. For force split, try specifying split row");
     }
 
     if (Bytes.equals(regionToSplit.getStartKey(), bestSplitRow)) {
@@ -223,18 +224,18 @@ public class SplitTableRegionProcedure
         break;
       case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
         createDaughterRegions(env);
-        setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR);
+        setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_META);
         break;
-      case SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR:
-        preSplitRegionBeforePONR(env);
+      case SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_META:
+        preSplitRegionBeforeMETA(env);
         setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_UPDATE_META);
         break;
       case SPLIT_TABLE_REGION_UPDATE_META:
         updateMetaForDaughterRegions(env);
-        setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR);
+        setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META);
         break;
-      case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR:
-        preSplitRegionAfterPONR(env);
+      case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META:
+        preSplitRegionAfterMETA(env);
         setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS);
         break;
       case SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS:
@@ -273,11 +274,11 @@ public class SplitTableRegionProcedure
       switch (state) {
       case SPLIT_TABLE_REGION_POST_OPERATION:
       case SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS:
-      case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR:
+      case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META:
       case SPLIT_TABLE_REGION_UPDATE_META:
         // PONR
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
-      case SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR:
+      case SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_META:
         break;
       case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
         // Doing nothing, as re-open parent region would clean up daughter region directories.
@@ -311,7 +312,7 @@ public class SplitTableRegionProcedure
     switch (state) {
       case SPLIT_TABLE_REGION_POST_OPERATION:
       case SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS:
-      case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR:
+      case SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_META:
       case SPLIT_TABLE_REGION_UPDATE_META:
         // It is not safe to rollback if we reach to these states.
         return false;
@@ -703,12 +704,12 @@ public class SplitTableRegionProcedure
    * Post split region actions before the Point-of-No-Return step
    * @param env MasterProcedureEnv
    **/
-  private void preSplitRegionBeforePONR(final MasterProcedureEnv env)
+  private void preSplitRegionBeforeMETA(final MasterProcedureEnv env)
       throws IOException, InterruptedException {
     final List<Mutation> metaEntries = new ArrayList<Mutation>();
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      if (cpHost.preSplitBeforePONRAction(getSplitRow(), metaEntries, getUser())) {
+      if (cpHost.preSplitBeforeMETAAction(getSplitRow(), metaEntries, getUser())) {
         throw new IOException("Coprocessor bypassing region " +
             getParentRegion().getRegionNameAsString() + " split.");
       }
@@ -739,11 +740,11 @@ public class SplitTableRegionProcedure
    * Pre split region actions after the Point-of-No-Return step
    * @param env MasterProcedureEnv
    **/
-  private void preSplitRegionAfterPONR(final MasterProcedureEnv env)
+  private void preSplitRegionAfterMETA(final MasterProcedureEnv env)
       throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      cpHost.preSplitAfterPONRAction(getUser());
+      cpHost.preSplitAfterMETAAction(getUser());
     }
   }
 
