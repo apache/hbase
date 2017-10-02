@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,9 +45,10 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 import static org.junit.Assert.assertEquals;
 
@@ -202,7 +201,7 @@ public class TestMultiRowResource {
     assertEquals(response.getCode(), 200);
     ObjectMapper mapper =
         new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
-    CellSetModel cellSet = (CellSetModel) mapper.readValue(response.getBody(), CellSetModel.class);
+    CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
     assertEquals(2, cellSet.getRows().size());
     assertEquals(ROW_1, Bytes.toString(cellSet.getRows().get(0).getKey()));
     assertEquals(VALUE_1, Bytes.toString(cellSet.getRows().get(0).getCells().get(0).getValue()));

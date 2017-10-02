@@ -29,7 +29,7 @@
   import="java.lang.management.GarbageCollectorMXBean"
   import="org.apache.hadoop.hbase.util.JSONMetricUtil"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
-  import="org.codehaus.jackson.JsonNode"
+  import="com.fasterxml.jackson.databind.JsonNode"
 %>
 <%
 RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();

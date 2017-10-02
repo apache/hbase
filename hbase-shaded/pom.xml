@@ -176,6 +176,10 @@
                                         <pattern>com.dropwizard</pattern>
                                         <shadedPattern>org.apache.hadoop.hbase.shaded.com.dropwizard</shadedPattern>
                                     </relocation>
+                                    <relocation>
+                                        <pattern>com.fasterxml</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.fasterxml</shadedPattern>
+                                    </relocation>
 
                                     <!-- top level io -->
                                     <relocation>

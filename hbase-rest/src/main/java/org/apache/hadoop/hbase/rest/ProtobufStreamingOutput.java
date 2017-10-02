@@ -35,23 +35,22 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
+public class ProtobufStreamingOutput implements StreamingOutput {
+  private static final Log LOG = LogFactory.getLog(ProtobufStreamingOutput.class);
 
-public class ProtobufStreamingUtil implements StreamingOutput {
-
-  private static final Log LOG = LogFactory.getLog(ProtobufStreamingUtil.class);
   private String contentType;
   private ResultScanner resultScanner;
   private int limit;
   private int fetchSize;
 
-  protected ProtobufStreamingUtil(ResultScanner scanner, String type, int limit, int fetchSize) {
+  protected ProtobufStreamingOutput(ResultScanner scanner, String type, int limit, int fetchSize) {
     this.resultScanner = scanner;
     this.contentType = type;
     this.limit = limit;
     this.fetchSize = fetchSize;
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Created ScanStreamingUtil with content type = " + this.contentType
-        + " user limit : " + this.limit + " scan fetch size : " + this.fetchSize);
+      LOG.trace("Created StreamingOutput with content type = " + this.contentType
+          + " user limit : " + this.limit + " scan fetch size : " + this.fetchSize);
     }
   }
 

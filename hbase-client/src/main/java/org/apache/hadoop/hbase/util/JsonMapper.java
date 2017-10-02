@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * Utility class for converting objects to JSON

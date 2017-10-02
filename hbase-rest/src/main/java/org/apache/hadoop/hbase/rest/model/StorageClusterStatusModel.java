@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Representation of the status of a storage cluster:
  * <p>
@@ -561,6 +563,8 @@ public class StorageClusterStatusModel
    */
   @XmlElement(name = "Node")
   @XmlElementWrapper(name = "LiveNodes")
+  // workaround https://github.com/FasterXML/jackson-dataformat-xml/issues/192
+  @JsonProperty("LiveNodes")
   public List<Node> getLiveNodes() {
     return liveNodes;
   }
@@ -570,6 +574,8 @@ public class StorageClusterStatusModel
    */
   @XmlElement(name = "Node")
   @XmlElementWrapper(name = "DeadNodes")
+  // workaround https://github.com/FasterXML/jackson-dataformat-xml/issues/192
+  @JsonProperty("DeadNodes")
   public List<String> getDeadNodes() {
     return deadNodes;
   }

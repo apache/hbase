@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.codehaus.jackson.map.SerializationConfig.Feature.SORT_PROPERTIES_ALPHABETICALLY;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -71,8 +69,6 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -85,7 +81,6 @@ import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.regionserver.TestHRegionFileSystem;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.*;
@@ -98,7 +93,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -108,6 +102,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.UniformReservoir;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.MapperFeature;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -133,7 +129,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
-    MAPPER.configure(SORT_PROPERTIES_ALPHABETICALLY, true);
+    MAPPER.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
   }
 
   public static final String TABLE_NAME = "TestTable";

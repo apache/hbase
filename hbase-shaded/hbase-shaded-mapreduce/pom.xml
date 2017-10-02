@@ -145,10 +145,6 @@
                 <groupId>org.glassfish.jersey.containers</groupId>
                 <artifactId>jersey-container-servlet-core</artifactId>
               </exclusion>
-              <exclusion>
-                <groupId>org.glassfish.jersey.media</groupId>
-                <artifactId>jersey-media-json-jackson1</artifactId>
-              </exclusion>
             </exclusions>
         </dependency>
     </dependencies>

@@ -62,14 +62,14 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
   }
 
   protected void checkModel(ColumnSchemaModel model) {
-    assertEquals(model.getName(), COLUMN_NAME);
-    assertEquals(model.__getBlockcache(), BLOCKCACHE);
-    assertEquals(model.__getBlocksize(), BLOCKSIZE);
-    assertEquals(model.__getBloomfilter(), BLOOMFILTER);
-    assertTrue(model.__getCompression().equalsIgnoreCase(COMPRESSION));
-    assertEquals(model.__getInMemory(), IN_MEMORY);
-    assertEquals(model.__getTTL(), TTL);
-    assertEquals(model.__getVersions(), VERSIONS);
+    assertEquals("name", COLUMN_NAME, model.getName());
+    assertEquals("block cache", BLOCKCACHE, model.__getBlockcache());
+    assertEquals("block size", BLOCKSIZE, model.__getBlocksize());
+    assertEquals("bloomfilter", BLOOMFILTER, model.__getBloomfilter());
+    assertTrue("compression", model.__getCompression().equalsIgnoreCase(COMPRESSION));
+    assertEquals("in memory", IN_MEMORY, model.__getInMemory());
+    assertEquals("ttl", TTL, model.__getTTL());
+    assertEquals("versions", VERSIONS, model.__getVersions());
   }
 
   public void testFromPB() throws Exception {

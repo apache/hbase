@@ -37,9 +37,6 @@ import org.apache.hadoop.hbase.PerformanceEvaluation.RandomReadTest;
 import org.apache.hadoop.hbase.PerformanceEvaluation.TestOptions;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,6 +44,9 @@ import org.junit.experimental.categories.Category;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.UniformReservoir;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestPerformanceEvaluation {
