@@ -722,7 +722,7 @@ EOF
 
     # Returns family and (when has it) qualifier for a column name
     def parse_column_name(column)
-      split = org.apache.hadoop.hbase.KeyValue.parseColumn(column.to_java_bytes)
+      split = org.apache.hadoop.hbase.CellUtil.parseColumn(column.to_java_bytes)
       set_converter(split) if split.length > 1
       [split[0], split.length > 1 ? split[1] : nil]
     end
@@ -793,7 +793,7 @@ EOF
     # 2. register the CONVERTER information based on column spec - "cf:qualifier"
     def set_converter(column)
       family = String.from_java_bytes(column[0])
-      parts = org.apache.hadoop.hbase.KeyValue.parseColumn(column[1])
+      parts = org.apache.hadoop.hbase.CellUtil.parseColumn(column[1])
       if parts.length > 1
         @converters["#{family}:#{String.from_java_bytes(parts[0])}"] = String.from_java_bytes(parts[1])
         column[1] = parts[0]
