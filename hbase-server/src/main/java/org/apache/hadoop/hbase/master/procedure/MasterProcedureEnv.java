@@ -110,11 +110,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   }
 
   public User getRequestUser() {
-    User user = RpcServer.getRequestUser();
-    if (user == null) {
-      user = Superusers.getSystemUser();
-    }
-    return user;
+    return RpcServer.getRequestUser().orElse(Superusers.getSystemUser());
   }
 
   public MasterServices getMasterServices() {

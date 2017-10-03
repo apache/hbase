@@ -453,10 +453,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     }
 
     private static User getActiveUser(final UserProvider userProvider, final Token userToken) throws IOException {
-      User user = RpcServer.getRequestUser();
-      if (user == null) {
-        user = userProvider.getCurrent();
-      }
+      User user = RpcServer.getRequestUser().orElse(userProvider.getCurrent());
       if (user == null && userToken != null) {
         LOG.warn("No found of user credentials, but a token was got from user request");
       } else if (user != null && userToken != null) {

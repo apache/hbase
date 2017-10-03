@@ -549,7 +549,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     ObserverGetter<C, O> observerGetter;
 
     ObserverOperation(ObserverGetter<C, O> observerGetter) {
-      this(observerGetter, RpcServer.getRequestUser());
+      this(observerGetter, RpcServer.getRequestUser().orElse(null));
     }
 
     ObserverOperation(ObserverGetter<C, O> observerGetter, User user) {

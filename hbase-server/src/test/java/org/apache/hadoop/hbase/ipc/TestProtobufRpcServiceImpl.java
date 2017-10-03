@@ -114,7 +114,7 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
   @Override
   public AddrResponseProto addr(RpcController controller, EmptyRequestProto request)
       throws ServiceException {
-    return AddrResponseProto.newBuilder().setAddr(RpcServer.getRemoteAddress().getHostAddress())
-        .build();
+    return AddrResponseProto.newBuilder()
+        .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build();
   }
 }

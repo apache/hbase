@@ -79,8 +79,8 @@ public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobu
   @Override
   public void addr(RpcController controller, EmptyRequestProto request,
       RpcCallback<AddrResponseProto> done) {
-    done.run(AddrResponseProto.newBuilder().setAddr(RpcServer.getRemoteAddress().getHostAddress())
-        .build());
+    done.run(AddrResponseProto.newBuilder()
+        .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build());
   }
 
   @Override

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import java.util.Optional;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Carries the execution state for a given invocation of an Observer coprocessor
@@ -43,8 +43,9 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
   private E env;
   private boolean bypass;
   private boolean complete;
-  private User caller;
+  private final User caller;
 
+  @InterfaceAudience.Private
   public ObserverContext(User caller) {
     this.caller = caller;
   }
@@ -53,6 +54,7 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
     return env;
   }
 
+  @InterfaceAudience.Private
   public void prepare(E env) {
     this.env = env;
   }
@@ -97,58 +99,30 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
   }
 
   /**
-   * Returns the active user for the coprocessor call.
-   * If an explicit {@code User} instance was provided to the constructor, that will be returned,
-   * otherwise if we are in the context of an RPC call, the remote user is used.  May return null
-   * if the execution is outside of an RPC context.
+   * Returns the active user for the coprocessor call. If an explicit {@code User} instance was
+   * provided to the constructor, that will be returned, otherwise if we are in the context of an
+   * RPC call, the remote user is used. May not be present if the execution is outside of an RPC
+   * context.
    */
-  @Nullable
-  public User getCaller() {
-    return caller;
+  public Optional<User> getCaller() {
+    return Optional.ofNullable(caller);
   }
 
   /**
-   * Instantiates a new ObserverContext instance if the passed reference is
-   * <code>null</code> and sets the environment in the new or existing instance.
-   * This allows deferring the instantiation of a ObserverContext until it is
-   * actually needed.
-   *
-   * @param env The coprocessor environment to set
-   * @param context An existing ObserverContext instance to use, or <code>null</code>
-   *     to create a new instance
+   * Instantiates a new ObserverContext instance if the passed reference is <code>null</code> and
+   * sets the environment in the new or existing instance. This allows deferring the instantiation
+   * of a ObserverContext until it is actually needed.
    * @param <E> The environment type for the context
+   * @param env The coprocessor environment to set
    * @return An instance of <code>ObserverContext</code> with the environment set
    */
   @Deprecated
+  @InterfaceAudience.Private
+  @VisibleForTesting
   // TODO: Remove this method, ObserverContext should not depend on RpcServer
-  public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(
-      E env, ObserverContext< E> context) {
-    if (context == null) {
-      context = new ObserverContext<>(RpcServer.getRequestUser());
-    }
-    context.prepare(env);
-    return context;
-  }
-
-  /**
-   * Instantiates a new ObserverContext instance if the passed reference is
-   * <code>null</code> and sets the environment in the new or existing instance.
-   * This allows deferring the instantiation of a ObserverContext until it is
-   * actually needed.
-   *
-   * @param env The coprocessor environment to set
-   * @param context An existing ObserverContext instance to use, or <code>null</code>
-   *     to create a new instance
-   * @param user The requesting caller for the execution context
-   * @param <E> The environment type for the context
-   * @return An instance of <code>ObserverContext</code> with the environment set
-   */
-  public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(
-      E env, ObserverContext<E> context, User user) {
-    if (context == null) {
-      context = new ObserverContext<>(user);
-    }
-    context.prepare(env);
-    return context;
+  public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(E env) {
+    ObserverContext<E> ctx = new ObserverContext<>(RpcServer.getRequestUser().orElse(null));
+    ctx.prepare(env);
+    return ctx;
   }
 }

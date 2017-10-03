@@ -483,7 +483,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd,
+        ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV), htd,
           null);
         return null;
       }
@@ -496,7 +496,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY2));
-        ACCESS_CONTROLLER.preModifyTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preModifyTable(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName(), htd);
         return null;
       }
@@ -506,7 +506,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteTable(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName());
         return null;
       }
@@ -516,7 +516,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preTruncateTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preTruncateTable(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName());
         return null;
       }
@@ -527,7 +527,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-        ACCESS_CONTROLLER.preAddColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preAddColumnFamily(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName(), hcd);
         return null;
       }
@@ -538,7 +538,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-        ACCESS_CONTROLLER.preModifyColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preModifyColumnFamily(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName(), hcd);
         return null;
       }
@@ -548,7 +548,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteColumnFamily(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName(), TEST_FAMILY2);
         return null;
       }
@@ -558,7 +558,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preEnableTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preEnableTable(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName());
         return null;
       }
@@ -568,7 +568,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName());
         return null;
       }
@@ -581,7 +581,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
         HRegionInfo region = new HRegionInfo(TEST_TABLE.getTableName());
         ServerName srcServer = ServerName.valueOf("1.1.1.1", 1, 0);
         ServerName destServer = ServerName.valueOf("2.2.2.2", 2, 0);
-        ACCESS_CONTROLLER.preMove(ObserverContext.createAndPrepare(CP_ENV, null), region,
+        ACCESS_CONTROLLER.preMove(ObserverContext.createAndPrepare(CP_ENV), region,
           srcServer, destServer);
         return null;
       }
@@ -592,7 +592,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         HRegionInfo region = new HRegionInfo(TEST_TABLE.getTableName());
-        ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV, null), region);
+        ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV), region);
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -602,7 +602,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         HRegionInfo region = new HRegionInfo(TEST_TABLE.getTableName());
-        ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV, null), region,
+        ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV), region,
           true);
         return null;
       }
@@ -612,7 +612,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBalance(ObserverContext.createAndPrepare(CP_ENV, null));
+        ACCESS_CONTROLLER.preBalance(ObserverContext.createAndPrepare(CP_ENV));
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -621,7 +621,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBalanceSwitch(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preBalanceSwitch(ObserverContext.createAndPrepare(CP_ENV),
           true);
         return null;
       }
@@ -633,7 +633,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-        ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -644,7 +644,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
-        ACCESS_CONTROLLER.preListSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preListSnapshot(ObserverContext.createAndPrepare(CP_ENV),
           snapshot);
         return null;
       }
@@ -656,7 +656,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -668,7 +668,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
-        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV),
           snapshot, htd);
         return null;
       }
@@ -679,7 +679,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         SnapshotDescription snapshot = new SnapshotDescription("foo");
-        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV),
           snapshot);
         return null;
       }
@@ -692,7 +692,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
         List<TableName> tableNamesList = Lists.newArrayList();
         tableNamesList.add(TEST_TABLE.getTableName());
         List<TableDescriptor> descriptors = Lists.newArrayList();
-        ACCESS_CONTROLLER.preGetTableDescriptors(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preGetTableDescriptors(ObserverContext.createAndPrepare(CP_ENV),
           tableNamesList, descriptors, ".+");
         return null;
       }
@@ -703,7 +703,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         List<TableDescriptor> descriptors = Lists.newArrayList();
-        ACCESS_CONTROLLER.preGetTableNames(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preGetTableNames(ObserverContext.createAndPrepare(CP_ENV),
           descriptors, ".+");
         return null;
       }
@@ -714,7 +714,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         NamespaceDescriptor ns = NamespaceDescriptor.create("test").build();
-        ACCESS_CONTROLLER.preCreateNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preCreateNamespace(ObserverContext.createAndPrepare(CP_ENV),
           ns);
         return null;
       }
@@ -724,7 +724,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteNamespace(ObserverContext.createAndPrepare(CP_ENV),
           "test");
         return null;
       }
@@ -735,7 +735,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         NamespaceDescriptor ns = NamespaceDescriptor.create("test").build();
-        ACCESS_CONTROLLER.preModifyNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preModifyNamespace(ObserverContext.createAndPrepare(CP_ENV),
           ns);
         return null;
       }
@@ -745,8 +745,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContext.createAndPrepare(CP_ENV,
-            null),
+        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContext.createAndPrepare(CP_ENV),
           "test");
         return null;
       }
@@ -757,8 +756,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         List<NamespaceDescriptor> descriptors = Lists.newArrayList();
-        ACCESS_CONTROLLER.preListNamespaceDescriptors(ObserverContext.createAndPrepare(CP_ENV,
-            null),
+        ACCESS_CONTROLLER.preListNamespaceDescriptors(ObserverContext.createAndPrepare(CP_ENV),
           descriptors);
         return null;
       }
@@ -769,7 +767,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSplitRegion(
-          ObserverContext.createAndPrepare(CP_ENV, null),
+          ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName(),
           Bytes.toBytes("ss"));
         return null;
@@ -780,7 +778,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV),
           "testuser", null);
         return null;
       }
@@ -790,7 +788,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetTableQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetTableQuota(ObserverContext.createAndPrepare(CP_ENV),
           TEST_TABLE.getTableName(), null);
         return null;
       }
@@ -800,7 +798,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSetNamespaceQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preSetNamespaceQuota(ObserverContext.createAndPrepare(CP_ENV),
           "test", null);
         return null;
       }
@@ -815,7 +813,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preStopRegionServer(ObserverContext.createAndPrepare(RSCP_ENV, null));
+        ACCESS_CONTROLLER.preStopRegionServer(ObserverContext.createAndPrepare(RSCP_ENV));
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -824,8 +822,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRollWALWriterRequest(ObserverContext.createAndPrepare(RSCP_ENV,
-          null));
+        ACCESS_CONTROLLER.preRollWALWriterRequest(ObserverContext.createAndPrepare(RSCP_ENV));
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -840,7 +837,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preOpen(ObserverContext.createAndPrepare(RCP_ENV, null));
+        ACCESS_CONTROLLER.preOpen(ObserverContext.createAndPrepare(RCP_ENV));
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -849,7 +846,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preFlush(ObserverContext.createAndPrepare(RCP_ENV, null));
+        ACCESS_CONTROLLER.preFlush(ObserverContext.createAndPrepare(RCP_ENV));
         return null;
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
@@ -859,7 +856,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         List<Cell> cells = Lists.newArrayList();
-        ACCESS_CONTROLLER.preGetOp(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preGetOp(ObserverContext.createAndPrepare(RCP_ENV),
           new Get(TEST_ROW), cells);
         return null;
       }
@@ -869,7 +866,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preExists(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preExists(ObserverContext.createAndPrepare(RCP_ENV),
           new Get(TEST_ROW), true);
         return null;
       }
@@ -879,7 +876,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.prePut(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.prePut(ObserverContext.createAndPrepare(RCP_ENV),
           new Put(TEST_ROW), new WALEdit(), Durability.USE_DEFAULT);
         return null;
       }
@@ -889,7 +886,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDelete(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preDelete(ObserverContext.createAndPrepare(RCP_ENV),
           new Delete(TEST_ROW), new WALEdit(), Durability.USE_DEFAULT);
         return null;
       }
@@ -899,7 +896,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preBatchMutate(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preBatchMutate(ObserverContext.createAndPrepare(RCP_ENV),
           new MiniBatchOperationInProgress<>(null, null, null, 0, 0));
         return null;
       }
@@ -909,7 +906,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCheckAndPut(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preCheckAndPut(ObserverContext.createAndPrepare(RCP_ENV),
           TEST_ROW, TEST_FAMILY, TEST_Q1, CompareOperator.EQUAL,
           new BinaryComparator("foo".getBytes()), new Put(TEST_ROW), true);
         return null;
@@ -920,7 +917,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCheckAndDelete(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preCheckAndDelete(ObserverContext.createAndPrepare(RCP_ENV),
           TEST_ROW, TEST_FAMILY, TEST_Q1, CompareOperator.EQUAL,
           new BinaryComparator("foo".getBytes()), new Delete(TEST_ROW), true);
         return null;
@@ -931,7 +928,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAppend(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preAppend(ObserverContext.createAndPrepare(RCP_ENV),
           new Append(TEST_ROW));
         return null;
       }
@@ -941,7 +938,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preIncrement(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preIncrement(ObserverContext.createAndPrepare(RCP_ENV),
           new Increment(TEST_ROW));
         return null;
       }
@@ -951,7 +948,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preScannerOpen(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preScannerOpen(ObserverContext.createAndPrepare(RCP_ENV),
           new Scan(), mock(RegionScanner.class));
         return null;
       }
@@ -962,7 +959,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         List<Pair<byte[], String>> paths = Lists.newArrayList();
-        ACCESS_CONTROLLER.preBulkLoadHFile(ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preBulkLoadHFile(ObserverContext.createAndPrepare(RCP_ENV),
           paths);
         return null;
       }

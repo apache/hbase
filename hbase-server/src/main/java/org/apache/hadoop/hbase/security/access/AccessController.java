@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
@@ -34,10 +39,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -121,13 +122,6 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -137,6 +131,14 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -404,13 +406,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   private void logResult(AuthResult result) {
     if (AUDITLOG.isTraceEnabled()) {
-      InetAddress remoteAddr = RpcServer.getRemoteAddress();
-      AUDITLOG.trace("Access " + (result.isAllowed() ? "allowed" : "denied") +
-          " for user " + (result.getUser() != null ? result.getUser().getShortName() : "UNKNOWN") +
-          "; reason: " + result.getReason() +
-          "; remote address: " + (remoteAddr != null ? remoteAddr : "") +
-          "; request: " + result.getRequest() +
-          "; context: " + result.toContextString());
+      AUDITLOG.trace("Access " + (result.isAllowed() ? "allowed" : "denied") + " for user " +
+          (result.getUser() != null ? result.getUser().getShortName() : "UNKNOWN") + "; reason: " +
+          result.getReason() + "; remote address: " +
+          RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("") + "; request: " +
+          result.getRequest() + "; context: " + result.toContextString());
     }
   }
 
@@ -419,13 +419,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
    * If we are in the context of an RPC call, the remote user is used,
    * otherwise the currently logged in user is used.
    */
-  private User getActiveUser(ObserverContext ctx) throws IOException {
-    User user = ctx.getCaller();
-    if (user == null) {
-      // for non-rpc handling, fallback to system user
-      user = userProvider.getCurrent();
-    }
-    return user;
+  private User getActiveUser(ObserverContext<?> ctx) throws IOException {
+    // for non-rpc handling, fallback to system user
+    return ctx.getCaller().orElse(userProvider.getCurrent());
   }
 
   /**
@@ -2165,9 +2161,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
    * the checks performed in preScannerOpen()
    */
   private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
-    if (!RpcServer.isInRpcCallContext())
+    if (!RpcServer.isInRpcCallContext()) {
       return;
-    String requestUserName = RpcServer.getRequestUserName();
+    }
+    String requestUserName = RpcServer.getRequestUserName().orElse(null);
     String owner = scannerOwners.get(s);
     if (authorizationEnabled && owner != null && !owner.equals(requestUserName)) {
       throw new AccessDeniedException("User '"+ requestUserName +"' is not the scanner owner!");
@@ -2257,7 +2254,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received request to grant access permission " + perm.toString());
         }
-        User caller = RpcServer.getRequestUser();
+        User caller = RpcServer.getRequestUser().orElse(null);
 
         switch(request.getUserPermission().getPermission().getType()) {
           case Global :
@@ -2310,7 +2307,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         if (LOG.isDebugEnabled()) {
           LOG.debug("Received request to revoke access permission " + perm.toString());
         }
-        User caller = RpcServer.getRequestUser();
+        User caller = RpcServer.getRequestUser().orElse(null);
 
         switch(request.getUserPermission().getPermission().getType()) {
           case Global :
@@ -2359,7 +2356,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         if (!initialized) {
           throw new CoprocessorException("AccessController not yet initialized");
         }
-        User caller = RpcServer.getRequestUser();
+        User caller = RpcServer.getRequestUser().orElse(null);
 
         List<UserPermission> perms = null;
         if (request.getType() == AccessControlProtos.Permission.Type.Table) {
@@ -2420,7 +2417,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
     AccessControlProtos.CheckPermissionsResponse response = null;
     try {
-      User user = RpcServer.getRequestUser();
+      User user = RpcServer.getRequestUser().orElse(null);
       TableName tableName = regionEnv.getRegion().getTableDescriptor().getTableName();
       for (Permission permission : permissions) {
         if (permission instanceof TablePermission) {

@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -169,6 +170,7 @@ public class TestSimpleRpcScheduler {
     ServerCall call = mock(ServerCall.class);
     CallRunner task = mock(CallRunner.class);
     when(task.getRpcCall()).thenReturn(call);
+    when(call.getRequestUser()).thenReturn(Optional.empty());
     return task;
   }
 
@@ -198,18 +200,21 @@ public class TestSimpleRpcScheduler {
       RequestHeader smallHead = RequestHeader.newBuilder().setCallId(1).build();
       when(smallCallTask.getRpcCall()).thenReturn(smallCall);
       when(smallCall.getHeader()).thenReturn(smallHead);
+      when(smallCall.getRequestUser()).thenReturn(Optional.empty());
 
       CallRunner largeCallTask = mock(CallRunner.class);
       ServerCall largeCall = mock(ServerCall.class);
       RequestHeader largeHead = RequestHeader.newBuilder().setCallId(50).build();
       when(largeCallTask.getRpcCall()).thenReturn(largeCall);
       when(largeCall.getHeader()).thenReturn(largeHead);
+      when(largeCall.getRequestUser()).thenReturn(Optional.empty());
 
       CallRunner hugeCallTask = mock(CallRunner.class);
       ServerCall hugeCall = mock(ServerCall.class);
       RequestHeader hugeHead = RequestHeader.newBuilder().setCallId(100).build();
       when(hugeCallTask.getRpcCall()).thenReturn(hugeCall);
       when(hugeCall.getHeader()).thenReturn(hugeHead);
+      when(hugeCall.getRequestUser()).thenReturn(Optional.empty());
 
       when(priority.getDeadline(eq(smallHead), any(Message.class))).thenReturn(0L);
       when(priority.getDeadline(eq(largeHead), any(Message.class))).thenReturn(50L);
@@ -296,12 +301,14 @@ public class TestSimpleRpcScheduler {
       when(putCallTask.getRpcCall()).thenReturn(putCall);
       when(putCall.getHeader()).thenReturn(putHead);
       when(putCall.getParam()).thenReturn(putCall.param);
+      when(putCall.getRequestUser()).thenReturn(Optional.empty());
 
       CallRunner getCallTask = mock(CallRunner.class);
       ServerCall getCall = mock(ServerCall.class);
       RequestHeader getHead = RequestHeader.newBuilder().setMethodName("get").build();
       when(getCallTask.getRpcCall()).thenReturn(getCall);
       when(getCall.getHeader()).thenReturn(getHead);
+      when(getCall.getRequestUser()).thenReturn(Optional.empty());
 
       CallRunner scanCallTask = mock(CallRunner.class);
       ServerCall scanCall = mock(ServerCall.class);
@@ -310,6 +317,7 @@ public class TestSimpleRpcScheduler {
       when(scanCallTask.getRpcCall()).thenReturn(scanCall);
       when(scanCall.getHeader()).thenReturn(scanHead);
       when(scanCall.getParam()).thenReturn(scanCall.param);
+      when(scanCall.getRequestUser()).thenReturn(Optional.empty());
 
       ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(putCallTask, work, 1, 1000);
@@ -387,6 +395,7 @@ public class TestSimpleRpcScheduler {
       RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
       when(putCallTask.getRpcCall()).thenReturn(putCall);
       when(putCall.getHeader()).thenReturn(putHead);
+      when(putCall.getRequestUser()).thenReturn(Optional.empty());
 
       assertTrue(scheduler.dispatch(putCallTask));
 
@@ -415,7 +424,7 @@ public class TestSimpleRpcScheduler {
       for (String threadNamePrefix : threadNamePrefixs) {
         String threadName = Thread.currentThread().getName();
         if (threadName.startsWith(threadNamePrefix)) {
-          return timeQ.poll().longValue() + offset; 
+          return timeQ.poll().longValue() + offset;
         }
       }
       return System.currentTimeMillis();
