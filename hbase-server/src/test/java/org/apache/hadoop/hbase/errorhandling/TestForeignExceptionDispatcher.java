@@ -96,8 +96,8 @@ public class TestForeignExceptionDispatcher {
     assertTrue("Monitor didn't get timeout", monitor.hasException());
 
     // verify that that we propagated the error
-    Mockito.verify(listener1).receive(Mockito.any(ForeignException.class));
-    Mockito.verify(listener2).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener1).receive(Mockito.any());
+    Mockito.verify(listener2).receive(Mockito.any());
   }
 
   /**
@@ -118,7 +118,7 @@ public class TestForeignExceptionDispatcher {
     timer.start();
     timer.trigger();
     // make sure that we got the timer error
-    Mockito.verify(listener1, Mockito.times(1)).receive(Mockito.any(ForeignException.class));
-    Mockito.verify(listener2, Mockito.times(1)).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener1, Mockito.times(1)).receive(Mockito.any());
+    Mockito.verify(listener2, Mockito.times(1)).receive(Mockito.any());
   }
 }

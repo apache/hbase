@@ -675,13 +675,13 @@ public class TestImportExport {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        ImmutableBytesWritable writer = invocation.getArgument(0);
+        KeyValue key = invocation.getArgument(1);
         assertEquals("Key", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(ctx).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+    }).when(ctx).write(any(), any());
 
     importer.setup(ctx);
     Result value = mock(Result.class);

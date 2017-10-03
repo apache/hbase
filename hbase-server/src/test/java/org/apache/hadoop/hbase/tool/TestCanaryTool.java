@@ -45,12 +45,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static org.junit.Assert.assertNotEquals;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
-import static org.mockito.Matchers.argThat;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 @Category({MediumTests.class})
@@ -151,14 +155,14 @@ public class TestCanaryTool {
     // One table's timeout is set for 0 ms and thus, should lead to an error.
     verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
-      public boolean matches(Object argument) {
+      public boolean matches(LoggingEvent argument) {
         return ((LoggingEvent) argument).getRenderedMessage().contains("exceeded the configured read timeout.");
       }
     }));
     verify(mockAppender, times(2)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
-      public boolean matches(Object argument) {
-        return ((LoggingEvent) argument).getRenderedMessage().contains("The configured read timeout was");
+      public boolean matches(LoggingEvent argument) {
+        return argument.getRenderedMessage().contains("The configured read timeout was");
       }
     }));
   }
@@ -173,12 +177,13 @@ public class TestCanaryTool {
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
     assertNotEquals("verify non-zero write latency", 0L, sink.getWriteLatency());
-    verify(mockAppender, times(1)).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
-      @Override
-      public boolean matches(Object argument) {
-        return ((LoggingEvent) argument).getRenderedMessage().contains("The configured write timeout was");
-      }
-    }));
+    verify(mockAppender, times(1)).doAppend(argThat(
+        new ArgumentMatcher<LoggingEvent>() {
+          @Override
+          public boolean matches(LoggingEvent argument) {
+            return argument.getRenderedMessage().contains("The configured write timeout was");
+          }
+        }));
   }
 
   //no table created, so there should be no regions
@@ -187,8 +192,8 @@ public class TestCanaryTool {
     runRegionserverCanary();
     verify(mockAppender).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
-      public boolean matches(Object argument) {
-        return ((LoggingEvent) argument).getRenderedMessage().contains("Regionserver not serving any regions");
+      public boolean matches(LoggingEvent argument) {
+        return argument.getRenderedMessage().contains("Regionserver not serving any regions");
       }
     }));
   }
@@ -201,8 +206,8 @@ public class TestCanaryTool {
     runRegionserverCanary();
     verify(mockAppender, never()).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
       @Override
-      public boolean matches(Object argument) {
-        return ((LoggingEvent) argument).getRenderedMessage().contains("Regionserver not serving any regions");
+      public boolean matches(LoggingEvent argument) {
+        return argument.getRenderedMessage().contains("Regionserver not serving any regions");
       }
     }));
   }

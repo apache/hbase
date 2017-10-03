@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,10 +51,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 
 /**
  * Tests logic of {@link SimpleRegionNormalizer}.
@@ -353,9 +351,9 @@ public class TestSimpleRegionNormalizer {
     // for simplicity all regions are assumed to be on one server; doesn't matter to us
     ServerName sn = ServerName.valueOf("localhost", 0, 1L);
     when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionsOfTable(any(TableName.class))).thenReturn(RegionInfo);
+      getRegionsOfTable(any())).thenReturn(RegionInfo);
     when(masterServices.getAssignmentManager().getRegionStates().
-      getRegionServerOfRegion(any(RegionInfo.class))).thenReturn(sn);
+      getRegionServerOfRegion(any())).thenReturn(sn);
 
     for (Map.Entry<byte[], Integer> region : regionSizes.entrySet()) {
       RegionLoad regionLoad = Mockito.mock(RegionLoad.class);
@@ -366,8 +364,8 @@ public class TestSimpleRegionNormalizer {
         getRegionsLoad().get(region.getKey())).thenReturn(regionLoad);
     }
     try {
-      when(masterRpcServices.isSplitOrMergeEnabled(any(RpcController.class),
-        any(IsSplitOrMergeEnabledRequest.class))).thenReturn(
+      when(masterRpcServices.isSplitOrMergeEnabled(any(),
+        any())).thenReturn(
           IsSplitOrMergeEnabledResponse.newBuilder().setEnabled(true).build());
     } catch (ServiceException se) {
       LOG.debug("error setting isSplitOrMergeEnabled switch", se);

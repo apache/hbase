@@ -145,7 +145,7 @@ public class TestSplitLogManager {
 
     // By default, we let the test manage the error as before, so the server
     // does not appear as dead from the master point of view, only from the split log pov.
-    Mockito.when(sm.isServerOnline(Mockito.any(ServerName.class))).thenReturn(true);
+    Mockito.when(sm.isServerOnline(Mockito.any())).thenReturn(true);
 
     to = 12000;
     conf.setInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT, to);

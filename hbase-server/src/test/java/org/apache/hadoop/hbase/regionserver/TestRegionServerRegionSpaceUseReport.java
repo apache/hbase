@@ -69,8 +69,8 @@ public class TestRegionServerRegionSpaceUseReport {
 
     // Call the real method to convert the map into a protobuf
     HRegionServer rs = mock(HRegionServer.class);
-    doCallRealMethod().when(rs).buildRegionSpaceUseReportRequest(any(Map.class));
-    doCallRealMethod().when(rs).convertRegionSize(any(RegionInfo.class), anyLong());
+    doCallRealMethod().when(rs).buildRegionSpaceUseReportRequest(any());
+    doCallRealMethod().when(rs).convertRegionSize(any(), anyLong());
 
     RegionSpaceUseReportRequest requests = rs.buildRegionSpaceUseReportRequest(sizes);
     assertEquals(sizes.size(), requests.getSpaceUseCount());
@@ -87,8 +87,8 @@ public class TestRegionServerRegionSpaceUseReport {
   public void testNullMap() {
     // Call the real method to convert the map into a protobuf
     HRegionServer rs = mock(HRegionServer.class);
-    doCallRealMethod().when(rs).buildRegionSpaceUseReportRequest(any(Map.class));
-    doCallRealMethod().when(rs).convertRegionSize(any(RegionInfo.class), anyLong());
+    doCallRealMethod().when(rs).buildRegionSpaceUseReportRequest(any());
+    doCallRealMethod().when(rs).convertRegionSize(any(), anyLong());
 
     rs.buildRegionSpaceUseReportRequest(null);
   }
@@ -105,8 +105,8 @@ public class TestRegionServerRegionSpaceUseReport {
 
     // Call the real method to convert the map into a protobuf
     HRegionServer rs = mock(HRegionServer.class);
-    doCallRealMethod().when(rs).buildRegionSpaceUseReportRequest(any(Map.class));
-    doCallRealMethod().when(rs).convertRegionSize(any(RegionInfo.class), anyLong());
+    doCallRealMethod().when(rs).buildRegionSpaceUseReportRequest(any());
+    doCallRealMethod().when(rs).convertRegionSize(any(), anyLong());
 
     rs.buildRegionSpaceUseReportRequest(sizes);
   }

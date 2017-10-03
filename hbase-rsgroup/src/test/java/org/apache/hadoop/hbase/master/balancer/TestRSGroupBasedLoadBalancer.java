@@ -582,11 +582,11 @@ public class TestRSGroupBasedLoadBalancer {
     Mockito.when(gm.listRSGroups()).thenReturn(
         Lists.newLinkedList(groupMap.values()));
     Mockito.when(gm.isOnline()).thenReturn(true);
-    Mockito.when(gm.getRSGroupOfTable(Mockito.any(TableName.class)))
+    Mockito.when(gm.getRSGroupOfTable(Mockito.any()))
         .thenAnswer(new Answer<String>() {
           @Override
           public String answer(InvocationOnMock invocation) throws Throwable {
-            return tableMap.get(invocation.getArguments()[0]);
+            return tableMap.get(invocation.getArgument(0));
           }
         });
     return gm;

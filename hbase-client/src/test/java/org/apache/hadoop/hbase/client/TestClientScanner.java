@@ -138,13 +138,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-            ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-                ScannerCallableWithReplicas.class);
+            ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -176,7 +175,7 @@ public class TestClientScanner {
       // One for fetching the results
       // One for fetching empty results and quit as we do not have moreResults hint.
       inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -199,13 +198,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-          ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-              ScannerCallableWithReplicas.class);
+          ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -235,7 +233,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(1)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -260,13 +258,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-          ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-              ScannerCallableWithReplicas.class);
+          ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -296,7 +293,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(1)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(3, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -333,13 +330,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
       Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
         private int count = 0;
         @Override
         public Result[] answer(InvocationOnMock invocation) throws Throwable {
-          ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-              ScannerCallableWithReplicas.class);
+          ScannerCallableWithReplicas callable = invocation.getArgument(0);
           switch (count) {
             case 0: // initialize
               count++;
@@ -369,7 +365,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(1)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
       Result r = scanner.cache.poll();
@@ -398,13 +394,12 @@ public class TestClientScanner {
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
 
     Mockito.when(rpcFactory.<Result[]> newCaller()).thenReturn(caller);
-    Mockito.when(caller.callWithoutRetries(Mockito.any(RetryingCallable.class),
+    Mockito.when(caller.callWithoutRetries(Mockito.any(),
         Mockito.anyInt())).thenAnswer(new Answer<Result[]>() {
           private int count = 0;
           @Override
           public Result[] answer(InvocationOnMock invocation) throws Throwable {
-            ScannerCallableWithReplicas callable = invocation.getArgumentAt(0,
-                ScannerCallableWithReplicas.class);
+            ScannerCallableWithReplicas callable = invocation.getArgument(0);
             switch (count) {
               case 0: // initialize
                 count++;
@@ -436,7 +431,7 @@ public class TestClientScanner {
       scanner.loadCache();
 
       inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
+          Mockito.any(), Mockito.anyInt());
 
       assertEquals(2, scanner.cache.size());
       Result r = scanner.cache.poll();

@@ -51,7 +51,7 @@ public class TestMasterSpaceQuotaObserverWithMocks {
     conf = HBaseConfiguration.create();
     master = mock(HMaster.class);
     doCallRealMethod().when(master).updateConfigurationForSpaceQuotaObserver(
-        any(Configuration.class));
+        any());
   }
 
   @Test

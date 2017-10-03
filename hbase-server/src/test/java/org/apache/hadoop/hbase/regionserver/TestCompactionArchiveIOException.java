@@ -186,7 +186,7 @@ public class TestCompactionArchiveIOException {
     // none of the other files are cleared from the compactedfiles list.
     // Simulate this condition with a dummy file
     doThrow(new IOException("Error for test"))
-        .when(errFS).rename(eq(new Path(storeDir, ERROR_FILE)), any(Path.class));
+        .when(errFS).rename(eq(new Path(storeDir, ERROR_FILE)), any());
 
     HRegionFileSystem fs = new HRegionFileSystem(conf, errFS, tableDir, info);
     final Configuration walConf = new Configuration(conf);

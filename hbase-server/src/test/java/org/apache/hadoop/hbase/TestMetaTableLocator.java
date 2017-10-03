@@ -250,7 +250,7 @@ public class TestMetaTableLocator {
       Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
     Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
       (GetRegionInfoRequest)Mockito.any())).thenThrow(connectException);
-    Mockito.when(connection.getAdmin(Mockito.any(ServerName.class))).
+    Mockito.when(connection.getAdmin(Mockito.any())).
       thenReturn(implementation);
         RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
         Mockito.when(controllerFactory.newController()).thenReturn(
@@ -325,12 +325,12 @@ public class TestMetaTableLocator {
       thenReturn(anyLocation);
     if (admin != null) {
       // If a call to getHRegionConnection, return this implementation.
-      Mockito.when(connection.getAdmin(Mockito.any(ServerName.class))).
+      Mockito.when(connection.getAdmin(Mockito.any())).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this implementation.
-      Mockito.when(connection.getClient(Mockito.any(ServerName.class))).
+      Mockito.when(connection.getClient(Mockito.any())).
         thenReturn(client);
     }
     return connection;

@@ -362,7 +362,7 @@ public class TestZooKeeperTableArchiveClient {
       public Iterable<FileStatus> answer(InvocationOnMock invocation) throws Throwable {
         counter[0]++;
         LOG.debug(counter[0] + "/ " + expected + ") Wrapping call to getDeletableFiles for files: "
-            + invocation.getArguments()[0]);
+            + invocation.getArgument(0));
 
         @SuppressWarnings("unchecked")
         Iterable<FileStatus> ret = (Iterable<FileStatus>) invocation.callRealMethod();

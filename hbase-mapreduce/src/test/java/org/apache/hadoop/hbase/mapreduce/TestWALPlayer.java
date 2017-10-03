@@ -184,13 +184,13 @@ public class TestWALPlayer {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        ImmutableBytesWritable writer = invocation.getArgument(0);
+        KeyValue key = invocation.getArgument(1);
         assertEquals("row", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(context).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+    }).when(context).write(any(), any());
 
     mapper.map(key, value, context);
 

@@ -1008,7 +1008,7 @@ public class TestWALSplit {
                 Thread.currentThread().interrupt();
               }
             }
-            Entry entry = (Entry) invocation.getArguments()[0];
+            Entry entry = (Entry) invocation.getArgument(0);
             WALEdit edit = entry.getEdit();
             List<Cell> cells = edit.getCells();
             assertEquals(1, cells.size());

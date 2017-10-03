@@ -77,8 +77,8 @@ public class TestSpaceQuotaViolationPolicyRefresherChore {
     when(chore.getConnection()).thenReturn(conn);
     when(chore.getManager()).thenReturn(manager);
     doCallRealMethod().when(chore).chore();
-    when(chore.isInViolation(any(SpaceQuotaSnapshot.class))).thenCallRealMethod();
-    doCallRealMethod().when(chore).extractQuotaSnapshot(any(Result.class), any(Map.class));
+    when(chore.isInViolation(any())).thenCallRealMethod();
+    doCallRealMethod().when(chore).extractQuotaSnapshot(any(), any());
   }
 
   @Test

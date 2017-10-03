@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -997,7 +998,7 @@ public abstract class AbstractTestWALReplay {
             }
             return b;
           }
-        }).when(spyIn).read(any(byte[].class), any(int.class), any(int.class));
+        }).when(spyIn).read(any(byte[].class), anyInt(), anyInt());
         doAnswer(new Answer<Void>() {
 
           @Override

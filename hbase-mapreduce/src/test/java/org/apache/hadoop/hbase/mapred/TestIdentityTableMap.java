@@ -55,7 +55,7 @@ public class TestIdentityTableMap {
             reporterMock);
 
       verify(outputCollectorMock, times(recordNumber)).collect(
-          Mockito.any(ImmutableBytesWritable.class), Mockito.any(Result.class));
+          Mockito.any(), Mockito.any());
     } finally {
       if (identityTableMap != null)
         identityTableMap.close();

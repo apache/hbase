@@ -1104,19 +1104,19 @@ public class TestHRegion {
     }
   }
 
-  class IsFlushWALMarker extends ArgumentMatcher<WALEdit> {
+  class IsFlushWALMarker implements ArgumentMatcher<WALEdit> {
     volatile FlushAction[] actions;
     public IsFlushWALMarker(FlushAction... actions) {
       this.actions = actions;
     }
     @Override
-    public boolean matches(Object edit) {
-      List<Cell> cells = ((WALEdit)edit).getCells();
+    public boolean matches(WALEdit edit) {
+      List<Cell> cells = edit.getCells();
       if (cells.isEmpty()) {
         return false;
       }
       if (WALEdit.isMetaEditFamily(cells.get(0))) {
-        FlushDescriptor desc = null;
+        FlushDescriptor desc;
         try {
           desc = WALEdit.getFlushDescriptor(cells.get(0));
         } catch (IOException e) {
@@ -2441,8 +2441,7 @@ public class TestHRegion {
     Mockito.doAnswer(new Answer() {
       @Override
       public Object answer(InvocationOnMock invocation) throws Throwable {
-        MiniBatchOperationInProgress<Mutation> mb = invocation.getArgumentAt(0,
-                MiniBatchOperationInProgress.class);
+        MiniBatchOperationInProgress<Mutation> mb = invocation.getArgument(0);
         mb.addOperationsFromCP(0, new Mutation[]{addPut});
         return null;
       }
@@ -5960,7 +5959,7 @@ public class TestHRegion {
       thenAnswer(new Answer<Long>() {
         @Override
         public Long answer(InvocationOnMock invocation) throws Throwable {
-          WALKey key = invocation.getArgumentAt(1, WALKey.class);
+          WALKey key = invocation.getArgument(1);
           MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin();
           key.setWriteEntry(we);
           return 1L;

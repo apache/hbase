@@ -45,7 +45,7 @@ public class TestTimeoutExceptionInjector {
     TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.start();
     timer.trigger();
-    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.any());
   }
 
   /**
@@ -58,7 +58,7 @@ public class TestTimeoutExceptionInjector {
     TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.start();
     timer.trigger();
-    Mockito.verify(listener).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener).receive(Mockito.any());
   }
 
   /**
@@ -98,7 +98,7 @@ public class TestTimeoutExceptionInjector {
       LOG.debug("Correctly failed timer: " + e.getMessage());
     }
     Thread.sleep(time * 2);
-    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.any(ForeignException.class));
+    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.any());
     Mockito.verifyNoMoreInteractions(listener);
   }
 }

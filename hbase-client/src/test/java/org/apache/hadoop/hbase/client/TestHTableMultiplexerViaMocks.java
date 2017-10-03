@@ -44,7 +44,7 @@ public class TestHTableMultiplexerViaMocks {
     mockConnection = mock(ClusterConnection.class);
 
     // Call the real put(TableName, Put, int) method
-    when(mockMultiplexer.put(any(TableName.class), any(Put.class), anyInt())).thenCallRealMethod();
+    when(mockMultiplexer.put(any(TableName.class), any(), anyInt())).thenCallRealMethod();
 
     // Return the mocked ClusterConnection
     when(mockMultiplexer.getConnection()).thenReturn(mockConnection);

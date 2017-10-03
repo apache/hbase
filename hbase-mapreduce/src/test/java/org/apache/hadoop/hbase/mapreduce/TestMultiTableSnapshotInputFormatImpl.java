@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -68,8 +67,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
     // probably be the more "pure"
     // way of doing things. This is the lesser of two evils, perhaps?
     doNothing().when(this.subject).
-        restoreSnapshot(any(Configuration.class), any(String.class), any(Path.class),
-            any(Path.class), any(FileSystem.class));
+        restoreSnapshot(any(), any(), any(),
+            any(), any());
 
     this.conf = new Configuration();
     this.rootDir = new Path("file:///test-root-dir");
@@ -180,7 +179,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     for (Map.Entry<String, Path> entry : snapshotDirs.entrySet()) {
       verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir),
-          eq(entry.getValue()), any(FileSystem.class));
+          eq(entry.getValue()), any());
     }
   }
 }

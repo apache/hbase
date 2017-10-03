@@ -41,18 +41,16 @@ import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.InOrder;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Test Procedure coordinator operation.
@@ -106,7 +104,7 @@ public class TestProcedureCoordinator {
     Procedure proc2 = new Procedure(coordinator,  monitor,
         WAKE_FREQUENCY, TIMEOUT, procName +"2", procData, expected);
     Procedure procSpy2 = spy(proc2);
-    when(coordinator.createProcedure(any(ForeignExceptionDispatcher.class), eq(procName), eq(procData), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
     .thenReturn(procSpy, procSpy2);
 
     coordinator.startProcedure(procSpy.getErrorMonitor(), procName, procData, expected);
@@ -127,7 +125,7 @@ public class TestProcedureCoordinator {
         TIMEOUT, procName, procData, expected);
     final Procedure procSpy = spy(proc);
 
-    when(coordinator.createProcedure(any(ForeignExceptionDispatcher.class), eq(procName), eq(procData), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
         .thenReturn(procSpy);
 
     // use the passed controller responses
@@ -139,10 +137,10 @@ public class TestProcedureCoordinator {
     proc = coordinator.startProcedure(proc.getErrorMonitor(), procName, procData, expected);
     // and wait for it to finish
     while(!proc.completedLatch.await(WAKE_FREQUENCY, TimeUnit.MILLISECONDS));
-    verify(procSpy, atLeastOnce()).receive(any(ForeignException.class));
+    verify(procSpy, atLeastOnce()).receive(any());
     verify(coordinator, times(1)).rpcConnectionFailure(anyString(), eq(cause));
     verify(controller, times(1)).sendGlobalBarrierAcquire(procSpy, procData, expected);
-    verify(controller, never()).sendGlobalBarrierReached(any(Procedure.class),
+    verify(controller, never()).sendGlobalBarrierReached(any(),
         anyListOf(String.class));
   }
 
@@ -158,7 +156,7 @@ public class TestProcedureCoordinator {
     final Procedure spy = spy(new Procedure(coordinator,
         WAKE_FREQUENCY, TIMEOUT, procName, procData, expected));
 
-    when(coordinator.createProcedure(any(ForeignExceptionDispatcher.class), eq(procName), eq(procData), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
     .thenReturn(spy);
 
     // use the passed controller responses
@@ -171,11 +169,11 @@ public class TestProcedureCoordinator {
     Procedure task = coordinator.startProcedure(spy.getErrorMonitor(), procName, procData, expected);
     // and wait for it to finish
     while(!task.completedLatch.await(WAKE_FREQUENCY, TimeUnit.MILLISECONDS));
-    verify(spy, atLeastOnce()).receive(any(ForeignException.class));
+    verify(spy, atLeastOnce()).receive(any());
     verify(coordinator, times(1)).rpcConnectionFailure(anyString(), eq(cause));
     verify(controller, times(1)).sendGlobalBarrierAcquire(eq(spy),
         eq(procData), anyListOf(String.class));
-    verify(controller, times(1)).sendGlobalBarrierReached(any(Procedure.class),
+    verify(controller, times(1)).sendGlobalBarrierReached(any(),
         anyListOf(String.class));
   }
 
@@ -267,7 +265,7 @@ public class TestProcedureCoordinator {
   public void runCoordinatedOperation(Procedure spy, AcquireBarrierAnswer prepareOperation,
       BarrierAnswer commitOperation, String... cohort) throws Exception {
     List<String> expected = Arrays.asList(cohort);
-    when(coordinator.createProcedure(any(ForeignExceptionDispatcher.class), eq(procName), eq(procData), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(procName), eq(procData), anyListOf(String.class)))
       .thenReturn(spy);
 
     // use the passed controller responses

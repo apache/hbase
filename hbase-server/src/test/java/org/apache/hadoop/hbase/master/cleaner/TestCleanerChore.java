@@ -145,7 +145,7 @@ public class TestCleanerChore {
     // touch a new file
     fs.create(file).close();
     assertTrue("Test file didn't get created.", fs.exists(file));
-    
+
     FileStatus fStat = fs.getFileStatus(parent);
     chore.chore();
     // make sure we never checked the directory
@@ -216,7 +216,7 @@ public class TestCleanerChore {
         FSUtils.logFileSystemState(fs, testDir, LOG);
         return (Boolean) invocation.callRealMethod();
       }
-    }).when(spy).isFileDeletable(Mockito.any(FileStatus.class));
+    }).when(spy).isFileDeletable(Mockito.any());
 
     // run the chore
     chore.chore();
@@ -225,7 +225,7 @@ public class TestCleanerChore {
     assertTrue("Added file unexpectedly deleted", fs.exists(addedFile));
     assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
     assertFalse("Original file unexpectedly retained", fs.exists(file));
-    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(FileStatus.class));
+    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any());
     Mockito.reset(spy);
   }
 
@@ -274,7 +274,7 @@ public class TestCleanerChore {
         FSUtils.logFileSystemState(fs, testDir, LOG);
         return (Boolean) invocation.callRealMethod();
       }
-    }).when(spy).isFileDeletable(Mockito.any(FileStatus.class));
+    }).when(spy).isFileDeletable(Mockito.any());
 
     // attempt to delete the directory, which
     if (chore.checkAndDeleteDirectory(parent)) {
@@ -286,7 +286,7 @@ public class TestCleanerChore {
     assertTrue("Added file unexpectedly deleted", fs.exists(racyFile));
     assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
     assertFalse("Original file unexpectedly retained", fs.exists(file));
-    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(FileStatus.class));
+    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any());
   }
 
   @Test

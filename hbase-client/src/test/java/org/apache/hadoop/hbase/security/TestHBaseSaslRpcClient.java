@@ -113,8 +113,8 @@ public class TestHBaseSaslRpcClient {
     final SaslClientCallbackHandler saslClCallbackHandler = new SaslClientCallbackHandler(token);
     saslClCallbackHandler.handle(callbackArray);
     verify(nameCallback).setName(anyString());
-    verify(realmCallback).setText(anyString());
-    verify(passwordCallback).setPassword(any(char[].class));
+    verify(realmCallback).setText(any());
+    verify(passwordCallback).setPassword(any());
   }
 
   @Test
