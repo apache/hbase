@@ -26,7 +26,7 @@ class IndividualBytesFieldCellBuilder extends ExtendedCellBuilderImpl {
     return new IndividualBytesFieldCell(row, rOffset, rLength,
             family, fOffset, fLength,
             qualifier, qOffset, qLength,
-            timestamp, KeyValue.Type.codeToType(type), seqId,
+            timestamp, type, seqId,
             value, vOffset, vLength,
             tags, tagsOffset, tagsLength);
   }

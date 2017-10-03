@@ -47,6 +47,8 @@ public interface ExtendedCellBuilder extends CellBuilder {
   ExtendedCellBuilder setTimestamp(final long timestamp);
 
   @Override
+  ExtendedCellBuilder setType(final DataType type);
+
   ExtendedCellBuilder setType(final byte type);
 
   @Override

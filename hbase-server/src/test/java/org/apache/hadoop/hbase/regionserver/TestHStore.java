@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
@@ -1014,13 +1015,13 @@ public class TestHStore {
     long seqId = 100;
     long timestamp = System.currentTimeMillis();
     Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qf1).setTimestamp(timestamp).setType(KeyValue.Type.Put.getCode())
+        .setQualifier(qf1).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
         .setValue(qf1).build();
     CellUtil.setSequenceId(cell0, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.emptyList());
 
     Cell cell1 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qf2).setTimestamp(timestamp).setType(KeyValue.Type.Put.getCode())
+        .setQualifier(qf2).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
         .setValue(qf1).build();
     CellUtil.setSequenceId(cell1, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
@@ -1028,7 +1029,7 @@ public class TestHStore {
     seqId = 101;
     timestamp = System.currentTimeMillis();
     Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
-        .setQualifier(qf2).setTimestamp(timestamp).setType(KeyValue.Type.Put.getCode())
+        .setQualifier(qf2).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
         .setValue(qf1).build();
      CellUtil.setSequenceId(cell2, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1, cell2));
@@ -1081,7 +1082,7 @@ public class TestHStore {
   private Cell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId, byte[] value)
       throws IOException {
     Cell c = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qualifier).setTimestamp(ts).setType(KeyValue.Type.Put.getCode())
+        .setQualifier(qualifier).setTimestamp(ts).setType(CellBuilder.DataType.Put)
         .setValue(value).build();
     CellUtil.setSequenceId(c, sequenceId);
     return c;
