@@ -21,9 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -54,6 +54,6 @@ public class TestPBCell {
     pbr.setPosition(0);
     decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
-    assertTrue(CellUtil.equals(cell, ProtobufUtil.toCell(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
+    assertTrue(CellUtil.equals(cell, ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
   }
 }

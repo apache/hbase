@@ -372,7 +372,7 @@ public final class CellUtil {
   @Deprecated
   public static Cell createCell(final byte [] row, final byte [] family, final byte [] qualifier,
       final long timestamp, final byte type, final byte [] value) {
-    return CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
             .setRow(row)
             .setFamily(family)
             .setQualifier(qualifier)
@@ -392,7 +392,7 @@ public final class CellUtil {
       final byte [] familyArray, final int familyOffset, final int familyLength,
       final byte [] qualifierArray, final int qualifierOffset, final int qualifierLength) {
     // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
-    return CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
             .setRow(rowArray, rowOffset, rowLength)
             .setFamily(familyArray, familyOffset, familyLength)
             .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
@@ -2381,7 +2381,7 @@ public final class CellUtil {
     }
     return new FirstOnRowCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
-  
+
   public static Cell createFirstOnRow(final byte [] row, int roffset, short rlength) {
     return new FirstOnRowCell(row, roffset, rlength);
   }

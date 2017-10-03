@@ -1493,7 +1493,7 @@ public final class ProtobufUtil {
     }
 
     List<Cell> cells = new ArrayList<>(values.size());
-    CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (CellProtos.Cell c : values) {
       cells.add(toCell(builder, c));
     }
@@ -1536,7 +1536,7 @@ public final class ProtobufUtil {
 
     if (!values.isEmpty()){
       if (cells == null) cells = new ArrayList<>(values.size());
-      CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+      ExtendedCellBuilder builder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (CellProtos.Cell c: values) {
         cells.add(toCell(builder, c));
       }
@@ -2043,7 +2043,7 @@ public final class ProtobufUtil {
     return UnsafeByteOperations.unsafeWrap(dup);
   }
 
-  public static Cell toCell(CellBuilder cellBuilder, final CellProtos.Cell cell) {
+  public static Cell toCell(ExtendedCellBuilder cellBuilder, final CellProtos.Cell cell) {
     return cellBuilder.clear()
             .setRow(cell.getRow().toByteArray())
             .setFamily(cell.getFamily().toByteArray())

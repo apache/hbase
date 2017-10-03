@@ -32,7 +32,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   protected int qOffset = 0;
   protected int qLength = 0;
   protected long timestamp = HConstants.LATEST_TIMESTAMP;
-  protected Byte type = null;
+  protected KeyValue.Type type = null;
   protected byte[] value = null;
   protected int vOffset = 0;
   protected int vLength = 0;
@@ -87,8 +87,14 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   }
 
   @Override
+  public ExtendedCellBuilder setType(final DataType type) {
+    this.type = toKeyValueType(type);
+    return this;
+  }
+
+  @Override
   public ExtendedCellBuilder setType(final byte type) {
-    this.type = type;
+    this.type = KeyValue.Type.codeToType(type);
     return this;
   }
 
@@ -159,5 +165,16 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
     tagsOffset = 0;
     tagsLength = 0;
     return this;
+  }
+
+  private static KeyValue.Type toKeyValueType(DataType type) {
+    switch (type) {
+      case Put: return KeyValue.Type.Put;
+      case Delete: return KeyValue.Type.Delete;
+      case DeleteColumn: return KeyValue.Type.DeleteColumn;
+      case DeleteFamilyVersion: return KeyValue.Type.DeleteFamilyVersion;
+      case DeleteFamily: return KeyValue.Type.DeleteFamily;
+      default: throw new UnsupportedOperationException("Unsupported data type:" + type);
+    }
   }
 }
