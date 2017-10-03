@@ -43,9 +43,19 @@ public class TestCoprocessorServiceBackwardCompatibility {
   private static HBaseTestingUtility TEST_UTIL = null;
   private static Configuration CONF = null;
 
+  private static final long MASTER = 1;
+  private static final long REGIONSERVER = 2;
+  private static final long REGION = 3;
+
   public static class DummyCoprocessorService extends DummyService
       implements CoprocessorService, SingletonCoprocessorService {
-    static int numCalls = 0;
+    // depending on the value passed thru DummyRequest, the following fields would be incremented
+    // value == MASTER
+    static int numMaster = 0;
+    // value == REGIONSERVER
+    static int numRegionServer = 0;
+    // value == REGION
+    static int numRegion = 0;
 
     @Override
     public Service getService() {
@@ -56,7 +66,13 @@ public class TestCoprocessorServiceBackwardCompatibility {
     public void dummyCall(RpcController controller, DummyRequest request,
         RpcCallback<DummyResponse> callback) {
       callback.run(DummyResponse.newBuilder().setValue("").build());
-      numCalls++;
+      if (request.getValue() == MASTER) {
+        numMaster += request.getValue();
+      } else if (request.getValue() == REGIONSERVER) {
+        numRegionServer += request.getValue();
+      } else if (request.getValue() == REGION) {
+        numRegion += request.getValue();
+      }
     }
 
     @Override
@@ -69,48 +85,38 @@ public class TestCoprocessorServiceBackwardCompatibility {
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
-    DummyCoprocessorService.numCalls = 0;
+    CONF.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+        DummyCoprocessorService.class.getName());
+    CONF.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+        DummyCoprocessorService.class.getName());
+    CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        DummyCoprocessorService.class.getName());
+    TEST_UTIL.startMiniCluster();
   }
 
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfter() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testCoprocessorServiceLoadedByMaster() throws Exception {
-    CONF.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        DummyCoprocessorService.class.getName());
-    TEST_UTIL.startMiniCluster();
-
+  public void testCoprocessorServiceLoadedByMaster() throws Throwable {
     TEST_UTIL.getAdmin().coprocessorService().callBlockingMethod(
             DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"), null,
-        DummyRequest.getDefaultInstance(), DummyResponse.getDefaultInstance());
+            DummyRequest.newBuilder().setValue(MASTER).build(), DummyResponse.getDefaultInstance());
+    assertEquals(MASTER, DummyCoprocessorService.numMaster);
 
-    assertEquals(1, DummyCoprocessorService.numCalls);
-  }
-
-  @Test
-  public void testCoprocessorServiceLoadedByRegionServer() throws Exception {
-    CONF.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        DummyCoprocessorService.class.getName());
-    TEST_UTIL.startMiniCluster();
     TEST_UTIL.getAdmin().coprocessorService(
         TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName()).callBlockingMethod(
             DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"), null,
-        DummyRequest.getDefaultInstance(), DummyResponse.getDefaultInstance());
-    assertEquals(1, DummyCoprocessorService.numCalls);
-  }
+            DummyRequest.newBuilder().setValue(REGIONSERVER).build(),
+            DummyResponse.getDefaultInstance());
+    assertEquals(REGIONSERVER, DummyCoprocessorService.numRegionServer);
 
-  @Test
-  public void testCoprocessorServiceLoadedByRegion() throws Throwable {
-    CONF.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        DummyCoprocessorService.class.getName());
-    TEST_UTIL.startMiniCluster();
     TEST_UTIL.getConnection().getTable(TableName.valueOf("hbase:meta")).batchCoprocessorService(
-            DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"),
-        DummyRequest.getDefaultInstance(), Bytes.toBytes(""), Bytes.toBytes(""),
+        DummyCoprocessorService.getDescriptor().findMethodByName("dummyCall"),
+        DummyRequest.newBuilder().setValue(REGION).build(), Bytes.toBytes(""), Bytes.toBytes(""),
         DummyResponse.getDefaultInstance());
-    assertEquals(1, DummyCoprocessorService.numCalls);
+    assertEquals(REGION, DummyCoprocessorService.numRegion);
   }
 }
