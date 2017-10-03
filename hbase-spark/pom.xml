@@ -568,6 +568,9 @@
           <junitxml>.</junitxml>
           <filereports>WDF TestSuite.txt</filereports>
           <parallel>false</parallel>
+          <systemProperties>
+            <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
+          </systemProperties>
         </configuration>
         <executions>
           <execution>
