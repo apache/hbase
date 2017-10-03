@@ -34,6 +34,8 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
 
 import java.io.IOException;
 import java.net.URI;
@@ -383,7 +385,7 @@ public final class BackupCommands {
       options.addOption(OPTION_SET, true, OPTION_SET_BACKUP_DESC);
       options.addOption(OPTION_TABLE, true, OPTION_TABLE_LIST_DESC);
       options.addOption(OPTION_YARN_QUEUE_NAME, true, OPTION_YARN_QUEUE_NAME_DESC);
-
+      options.addOption(OPTION_DEBUG, false, OPTION_DEBUG_DESC);
 
       HelpFormatter helpFormatter = new HelpFormatter();
       helpFormatter.setLeftPadding(2);
