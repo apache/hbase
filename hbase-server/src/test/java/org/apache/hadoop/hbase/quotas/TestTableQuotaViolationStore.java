@@ -165,7 +165,7 @@ public class TestTableQuotaViolationStore {
   @Test
   public void testGetSpaceQuota() throws Exception {
     TableQuotaSnapshotStore mockStore = mock(TableQuotaSnapshotStore.class);
-    when(mockStore.getSpaceQuota(any(TableName.class))).thenCallRealMethod();
+    when(mockStore.getSpaceQuota(any())).thenCallRealMethod();
 
     Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
         SpaceQuota.newBuilder()
@@ -176,7 +176,7 @@ public class TestTableQuotaViolationStore {
     Quotas quotaWithoutSpace = Quotas.newBuilder().build();
 
     AtomicReference<Quotas> quotaRef = new AtomicReference<>();
-    when(mockStore.getQuotaForTable(any(TableName.class))).then(new Answer<Quotas>() {
+    when(mockStore.getQuotaForTable(any())).then(new Answer<Quotas>() {
       @Override
       public Quotas answer(InvocationOnMock invocation) throws Throwable {
         return quotaRef.get();

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -32,6 +33,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -48,6 +50,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -89,9 +93,6 @@ import org.eclipse.jetty.webapp.WebAppContext;
 
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -160,6 +161,11 @@ public class HttpServer implements FilterContainer {
   }
 
   private final List<ListenerInfo> listeners = Lists.newArrayList();
+
+  @VisibleForTesting
+  public List<ServerConnector> getServerConnectors() {
+    return listeners.stream().map(info -> info.listener).collect(Collectors.toList());
+  }
 
   protected final WebAppContext webAppContext;
   protected final boolean findPort;
@@ -1011,6 +1017,7 @@ public class HttpServer implements FilterContainer {
    * Open the main listener for the server
    * @throws Exception
    */
+  @VisibleForTesting
   void openListeners() throws Exception {
     for (ListenerInfo li : listeners) {
       ServerConnector listener = li.listener;

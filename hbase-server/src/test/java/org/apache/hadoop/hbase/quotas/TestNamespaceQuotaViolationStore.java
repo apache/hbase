@@ -73,7 +73,7 @@ public class TestNamespaceQuotaViolationStore {
   @Test
   public void testGetSpaceQuota() throws Exception {
     NamespaceQuotaSnapshotStore mockStore = mock(NamespaceQuotaSnapshotStore.class);
-    when(mockStore.getSpaceQuota(any(String.class))).thenCallRealMethod();
+    when(mockStore.getSpaceQuota(any())).thenCallRealMethod();
 
     Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
         SpaceQuota.newBuilder()
@@ -84,7 +84,7 @@ public class TestNamespaceQuotaViolationStore {
     Quotas quotaWithoutSpace = Quotas.newBuilder().build();
 
     AtomicReference<Quotas> quotaRef = new AtomicReference<>();
-    when(mockStore.getQuotaForNamespace(any(String.class))).then(new Answer<Quotas>() {
+    when(mockStore.getQuotaForNamespace(any())).then(new Answer<Quotas>() {
       @Override
       public Quotas answer(InvocationOnMock invocation) throws Throwable {
         return quotaRef.get();

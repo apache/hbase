@@ -124,7 +124,7 @@ public class TestProcedure {
     proc.completedProcedure.await();
     verify(procspy).sendGlobalBarrierReached();
     verify(procspy).sendGlobalBarrierComplete();
-    verify(procspy, never()).receive(any(ForeignException.class));
+    verify(procspy, never()).receive(any());
   }
 
   @Test(timeout = 60000)
@@ -176,7 +176,7 @@ public class TestProcedure {
     procspy.completedProcedure.await();
     verify(procspy).sendGlobalBarrierReached();
     verify(procspy).sendGlobalBarrierComplete();
-    verify(procspy, never()).receive(any(ForeignException.class));
+    verify(procspy, never()).receive(any());
   }
 
   @Test(timeout = 60000)

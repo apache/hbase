@@ -36,6 +36,6 @@ public class TestDriver {
     ProgramDriver programDriverMock = mock(ProgramDriver.class);
     Driver.setProgramDriver(programDriverMock);
     Driver.main(new String[]{});
-    verify(programDriverMock).driver(Mockito.any(String[].class));
+    verify(programDriverMock).driver(Mockito.any());
   }
 }

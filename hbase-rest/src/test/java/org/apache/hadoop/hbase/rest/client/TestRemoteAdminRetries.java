@@ -49,9 +49,9 @@ public class TestRemoteAdminRetries {
   private static final int SLEEP_TIME = 50;
   private static final int RETRIES = 3;
   private static final long MAX_TIME = SLEEP_TIME * (RETRIES - 1);
-  
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  
+
   private RemoteAdmin remoteAdmin;
   private Client client;
 
@@ -61,8 +61,8 @@ public class TestRemoteAdminRetries {
     Response response = new Response(509);
     when(client.get(anyString(), anyString())).thenReturn(response);
     when(client.delete(anyString())).thenReturn(response);
-    when(client.put(anyString(), anyString(), any(byte[].class))).thenReturn(response);
-    when(client.post(anyString(), anyString(), any(byte[].class))).thenReturn(response);
+    when(client.put(anyString(), anyString(), any())).thenReturn(response);
+    when(client.post(anyString(), anyString(), any())).thenReturn(response);
     Configuration configuration = TEST_UTIL.getConfiguration();
 
     configuration.setInt("hbase.rest.client.max.retries", RETRIES);
@@ -80,7 +80,7 @@ public class TestRemoteAdminRetries {
       }
     });
   }
-  
+
   @Test
   public void testFailingGetClusterStatus() throws Exception  {
     testTimedOutGetCall(new CallExecutor() {
@@ -120,7 +120,7 @@ public class TestRemoteAdminRetries {
         remoteAdmin.createTable(new HTableDescriptor(TableName.valueOf("TestTable")));
       }
     });
-    verify(client, times(RETRIES)).put(anyString(), anyString(), any(byte[].class));
+    verify(client, times(RETRIES)).put(anyString(), anyString(), any());
   }
 
   @Test
@@ -143,12 +143,12 @@ public class TestRemoteAdminRetries {
       }
     });
   }
-  
+
   private void testTimedOutGetCall(CallExecutor callExecutor) throws Exception {
     testTimedOutCall(callExecutor);
     verify(client, times(RETRIES)).get(anyString(), anyString());
   }
-  
+
   private void testTimedOutCall(CallExecutor callExecutor) throws Exception {
     long start = System.currentTimeMillis();
     try {
@@ -163,5 +163,5 @@ public class TestRemoteAdminRetries {
   private static interface CallExecutor {
     void run() throws Exception;
   }
-  
+
 }

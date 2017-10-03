@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.mockito.ArgumentMatchers.any;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,23 +57,21 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.security.Superusers;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 
 /**
  * A mocked master services.
@@ -136,17 +136,15 @@ public class MockMasterServices extends MockNoopMasterServices {
     MutateResponse.Builder builder = MutateResponse.newBuilder();
     builder.setProcessed(true);
     try {
-      Mockito.when(ri.mutate((RpcController)Mockito.any(), (MutateRequest)Mockito.any())).
-        thenReturn(builder.build());
+      Mockito.when(ri.mutate(any(), any())).thenReturn(builder.build());
     } catch (ServiceException se) {
       throw ProtobufUtil.handleRemoteException(se);
     }
     try {
-      Mockito.when(ri.multi((RpcController)Mockito.any(), (MultiRequest)Mockito.any())).
-        thenAnswer(new Answer<MultiResponse>() {
+      Mockito.when(ri.multi(any(), any())).thenAnswer(new Answer<MultiResponse>() {
           @Override
           public MultiResponse answer(InvocationOnMock invocation) throws Throwable {
-            return buildMultiResponse( (MultiRequest)invocation.getArguments()[1]);
+            return buildMultiResponse(invocation.getArgument(1));
           }
         });
     } catch (ServiceException se) {

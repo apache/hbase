@@ -387,7 +387,7 @@ public class TestCompaction {
     thread.interruptIfNecessary();
   }
 
-  private class StoreMockMaker extends StatefulStoreMockMaker {
+  class StoreMockMaker extends StatefulStoreMockMaker {
     public ArrayList<HStoreFile> compacting = new ArrayList<>();
     public ArrayList<HStoreFile> notCompacting = new ArrayList<>();
     private ArrayList<Integer> results;
@@ -556,20 +556,19 @@ public class TestCompaction {
     // Set up the region mock that redirects compactions.
     HRegion r = mock(HRegion.class);
     when(
-      r.compact(any(CompactionContext.class), any(HStore.class),
-        any(ThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
-      @Override
-      public Boolean answer(InvocationOnMock invocation) throws Throwable {
-        invocation.getArgumentAt(0, CompactionContext.class).compact(
-          invocation.getArgumentAt(2, ThroughputController.class), null);
-        return true;
-      }
+      r.compact(any(), any(), any(), any())).then(new Answer<Boolean>() {
+        @Override
+        public Boolean answer(InvocationOnMock invocation) throws Throwable {
+          invocation.<CompactionContext>getArgument(0).compact(invocation.getArgument(2), null);
+          return true;
+        }
     });
 
     // Set up store mocks for 2 "real" stores and the one we use for blocking CST.
     ArrayList<Integer> results = new ArrayList<>();
     StoreMockMaker sm = new StoreMockMaker(results), sm2 = new StoreMockMaker(results);
-    HStore store = sm.createStoreMock("store1"), store2 = sm2.createStoreMock("store2");
+    HStore store = sm.createStoreMock("store1");
+    HStore store2 = sm2.createStoreMock("store2");
     BlockingStoreMockMaker blocker = new BlockingStoreMockMaker();
 
     // First, block the compaction thread so that we could muck with queue.

@@ -31,7 +31,6 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -131,10 +130,10 @@ public class TestZKProcedureControllers {
     LOG.debug("Commit node:" + commit + ", exists:" + ZKUtil.checkExists(watcher, commit));
     committed.await();
 
-    verify(monitor, never()).receive(Mockito.any(ForeignException.class));
+    verify(monitor, never()).receive(Mockito.any());
     // XXX: broken due to composition.
 //    verify(member, never()).getManager().controllerConnectionFailure(Mockito.anyString(),
-//      Mockito.any(IOException.class));
+//      Mockito.any());
     // cleanup after the test
     ZKUtil.deleteNodeRecursively(watcher, controller.getZkController().getBaseZnode());
     assertEquals("Didn't delete prepare node", -1, ZKUtil.checkExists(watcher, prepare));
@@ -363,7 +362,7 @@ public class TestZKProcedureControllers {
 //    verify(member, Mockito.times(cohortSize)).submitSubprocedure(Mockito.eq(operationName),
 //      (byte[]) Mockito.argThat(new ArrayEquals(data)));
     Mockito.verify(member,
-      Mockito.atLeast(cohortSize)).submitSubprocedure(Mockito.any(Subprocedure.class));
+      Mockito.atLeast(cohortSize)).submitSubprocedure(Mockito.any());
 
   }
 

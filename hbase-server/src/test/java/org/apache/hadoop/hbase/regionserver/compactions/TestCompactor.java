@@ -93,22 +93,22 @@ public class TestCompactor {
       StoreFileWriter writer = mock(StoreFileWriter.class);
       doAnswer(new Answer<Object>() {
         public Object answer(InvocationOnMock invocation) {
-          return realWriter.kvs.add((KeyValue) invocation.getArguments()[0]);
+          return realWriter.kvs.add((KeyValue) invocation.getArgument(0));
         }
-      }).when(writer).append(any(KeyValue.class));
+      }).when(writer).append(any());
       doAnswer(new Answer<Object>() {
         public Object answer(InvocationOnMock invocation) {
           Object[] args = invocation.getArguments();
           return realWriter.data.put((byte[]) args[0], (byte[]) args[1]);
         }
-      }).when(writer).appendFileInfo(any(byte[].class), any(byte[].class));
+      }).when(writer).appendFileInfo(any(), any());
       doAnswer(new Answer<Void>() {
         @Override
         public Void answer(InvocationOnMock invocation) throws Throwable {
           realWriter.hasMetadata = true;
           return null;
         }
-      }).when(writer).appendMetadata(any(long.class), any(boolean.class));
+      }).when(writer).appendMetadata(anyLong(), anyBoolean());
       doAnswer(new Answer<Path>() {
         @Override
         public Path answer(InvocationOnMock invocation) throws Throwable {

@@ -107,7 +107,7 @@ public class TestGroupingTableMap {
       gTableMap.map(null, result, outputCollectorMock, reporter);
       verify(result).listCells();
       verify(outputCollectorMock, times(1))
-        .collect(any(ImmutableBytesWritable.class), any(Result.class));
+        .collect(any(), any());
       verifyNoMoreInteractions(outputCollectorMock);
     } finally {
       if (gTableMap != null)

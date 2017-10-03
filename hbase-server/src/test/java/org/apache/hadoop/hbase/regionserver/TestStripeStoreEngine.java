@@ -41,8 +41,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
-import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -76,9 +74,9 @@ public class TestStripeStoreEngine {
     StripeCompactor mockCompactor = mock(StripeCompactor.class);
     se.setCompactorOverride(mockCompactor);
     when(
-      mockCompactor.compact(any(CompactionRequestImpl.class), anyInt(), anyLong(), any(byte[].class),
-        any(byte[].class), any(byte[].class), any(byte[].class),
-        any(ThroughputController.class), any(User.class)))
+      mockCompactor.compact(any(), anyInt(), anyLong(), any(),
+        any(), any(), any(),
+        any(), any()))
         .thenReturn(new ArrayList<>());
 
     // Produce 3 L0 files.
@@ -105,7 +103,7 @@ public class TestStripeStoreEngine {
 
   private static HStoreFile createFile() throws Exception {
     HStoreFile sf = mock(HStoreFile.class);
-    when(sf.getMetadataValue(any(byte[].class)))
+    when(sf.getMetadataValue(any()))
       .thenReturn(StripeStoreFileManager.INVALID_KEY);
     when(sf.getReader()).thenReturn(mock(StoreFileReader.class));
     when(sf.getPath()).thenReturn(new Path("moo"));

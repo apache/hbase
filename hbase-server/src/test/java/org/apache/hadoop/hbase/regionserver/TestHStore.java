@@ -1026,7 +1026,7 @@ public class TestHStore {
     // call first time after files changed
     spiedStore.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
-    verify(spiedStore, times(1)).replaceStoreFiles(any(Collection.class), any(Collection.class));
+    verify(spiedStore, times(1)).replaceStoreFiles(any(), any());
 
     // call second time
     spiedStore.refreshStoreFiles();

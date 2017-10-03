@@ -50,7 +50,7 @@ public class TestGroupingTableMapper {
     @SuppressWarnings("unchecked")
     Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Result>.Context context =
         mock(Mapper.Context.class);
-    context.write(any(ImmutableBytesWritable.class), any(Result.class));
+    context.write(any(), any());
     List<Cell> keyValue = new ArrayList<>();
     byte[] row = {};
     keyValue.add(new KeyValue(row, Bytes.toBytes("family2"), Bytes.toBytes("clm"), Bytes

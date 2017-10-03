@@ -77,22 +77,13 @@ public class TestTableSpaceQuotaViolationNotifier {
 
     notifier.transitionTable(tn, snapshot);
 
-    verify(quotaTable).put(argThat(new SingleCellPutMatcher(expectedPut)));
-  }
-
-  /**
-   * Parameterized for Puts.
-   */
-  private static class SingleCellPutMatcher extends SingleCellMutationMatcher<Put> {
-    private SingleCellPutMatcher(Put expected) {
-      super(expected);
-    }
+    verify(quotaTable).put(argThat(new SingleCellMutationMatcher<Put>(expectedPut)));
   }
 
   /**
    * Quick hack to verify a Mutation with one column.
    */
-  private static class SingleCellMutationMatcher<T> extends ArgumentMatcher<T> {
+  final private static class SingleCellMutationMatcher<T> implements ArgumentMatcher<T> {
     private final Mutation expected;
 
     private SingleCellMutationMatcher(Mutation expected) {
@@ -100,7 +91,7 @@ public class TestTableSpaceQuotaViolationNotifier {
     }
 
     @Override
-    public boolean matches(Object argument) {
+    public boolean matches(T argument) {
       if (!expected.getClass().isAssignableFrom(argument.getClass())) {
         return false;
       }

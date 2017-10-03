@@ -55,7 +55,7 @@ public class TestRemoteHTableRetries {
   private static final long MAX_TIME = SLEEP_TIME * (RETRIES - 1);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  
+
   private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN_1 = Bytes.toBytes("a");
   private static final byte[] QUALIFIER_1 = Bytes.toBytes("1");
@@ -63,16 +63,16 @@ public class TestRemoteHTableRetries {
 
   private Client client;
   private RemoteHTable remoteTable;
-  
+
   @Before
   public void setup() throws Exception {
     client = mock(Client.class);
     Response response = new Response(509);
     when(client.get(anyString(), anyString())).thenReturn(response);
     when(client.delete(anyString())).thenReturn(response);
-    when(client.put(anyString(), anyString(), any(byte[].class))).thenReturn(
+    when(client.put(anyString(), anyString(), any())).thenReturn(
         response);
-    when(client.post(anyString(), anyString(), any(byte[].class))).thenReturn(
+    when(client.post(anyString(), anyString(), any())).thenReturn(
         response);
 
     Configuration configuration = TEST_UTIL.getConfiguration();
@@ -87,7 +87,7 @@ public class TestRemoteHTableRetries {
   public void tearDownAfterClass() throws Exception {
     remoteTable.close();
   }
-  
+
   @Test
   public void testDelete() throws Exception {
     testTimedOutCall(new CallExecutor() {
@@ -99,7 +99,7 @@ public class TestRemoteHTableRetries {
     });
     verify(client, times(RETRIES)).delete(anyString());
   }
-  
+
   @Test
   public void testGet() throws Exception {
     testTimedOutGetCall(new CallExecutor() {
@@ -118,9 +118,9 @@ public class TestRemoteHTableRetries {
         remoteTable.put(new Put(Bytes.toBytes("Row")));
       }
     });
-    verify(client, times(RETRIES)).put(anyString(), anyString(), any(byte[].class));
+    verify(client, times(RETRIES)).put(anyString(), anyString(), any());
   }
-  
+
   @Test
   public void testMultiRowPut() throws Exception {
     testTimedOutCall(new CallExecutor() {
@@ -131,7 +131,7 @@ public class TestRemoteHTableRetries {
         remoteTable.put(Arrays.asList(puts));
       }
     });
-    verify(client, times(RETRIES)).put(anyString(), anyString(), any(byte[].class));
+    verify(client, times(RETRIES)).put(anyString(), anyString(), any());
   }
 
   @Test
@@ -142,9 +142,9 @@ public class TestRemoteHTableRetries {
         remoteTable.getScanner(new Scan());
       }
     });
-    verify(client, times(RETRIES)).post(anyString(), anyString(), any(byte[].class));
+    verify(client, times(RETRIES)).post(anyString(), anyString(), any());
   }
-  
+
   @Test
   public void testCheckAndPut() throws Exception {
     testTimedOutCall(new CallExecutor() {
@@ -155,7 +155,7 @@ public class TestRemoteHTableRetries {
         remoteTable.checkAndPut(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1, put );
       }
     });
-    verify(client, times(RETRIES)).put(anyString(), anyString(), any(byte[].class));
+    verify(client, times(RETRIES)).put(anyString(), anyString(), any());
   }
 
   @Test
@@ -170,12 +170,12 @@ public class TestRemoteHTableRetries {
       }
     });
   }
-  
+
   private void testTimedOutGetCall(CallExecutor callExecutor) throws Exception {
     testTimedOutCall(callExecutor);
     verify(client, times(RETRIES)).get(anyString(), anyString());
   }
-  
+
   private void testTimedOutCall(CallExecutor callExecutor) throws Exception {
     long start = System.currentTimeMillis();
     try {

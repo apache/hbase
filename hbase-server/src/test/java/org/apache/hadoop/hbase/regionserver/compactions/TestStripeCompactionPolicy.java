@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -71,7 +70,6 @@ import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy.StripeInformationProvider;
 import org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.StoreFileWritersCapture;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -197,7 +195,7 @@ public class TestStripeCompactionPolicy {
     si = createStripesWithSizes(0, 0,
         new Long[] { 5L }, new Long[] { 3L, 2L, 2L, 1L }, new Long[] { 3L, 2L, 2L });
     verifySingleStripeCompaction(policy, si, 1, null);
-    // Or with smallest files, if the count is the same 
+    // Or with smallest files, if the count is the same
     si = createStripesWithSizes(0, 0,
         new Long[] { 3L, 3L, 3L }, new Long[] { 3L, 1L, 2L }, new Long[] { 3L, 2L, 2L });
     verifySingleStripeCompaction(policy, si, 1, null);
@@ -237,7 +235,7 @@ public class TestStripeCompactionPolicy {
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
       aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY),
-      any(NoLimitThroughputController.class), any(User.class));
+      any(), any());
   }
 
   @Test
@@ -551,9 +549,8 @@ public class TestStripeCompactionPolicy {
     scr.execute(sc, NoLimitThroughputController.INSTANCE, null);
     verify(sc, times(1)).compact(eq(scr.getRequest()), argThat(new ArgumentMatcher<List<byte[]>>() {
       @Override
-      public boolean matches(Object argument) {
-        @SuppressWarnings("unchecked")
-        List<byte[]> other = (List<byte[]>) argument;
+      public boolean matches(List<byte[]> argument) {
+        List<byte[]> other = argument;
         if (other.size() != boundaries.size()) return false;
         for (int i = 0; i < other.size(); ++i) {
           if (!Bytes.equals(other.get(i), boundaries.get(i))) return false;
@@ -562,7 +559,7 @@ public class TestStripeCompactionPolicy {
       }
     }), dropDeletesFrom == null ? isNull(byte[].class) : aryEq(dropDeletesFrom),
       dropDeletesTo == null ? isNull(byte[].class) : aryEq(dropDeletesTo),
-      any(NoLimitThroughputController.class), any(User.class));
+      any(), any());
   }
 
   /**
@@ -574,7 +571,7 @@ public class TestStripeCompactionPolicy {
    * @param count Expected # of resulting stripes, null if not checked.
    * @param size Expected target stripe size, null if not checked.
    * @param start Left boundary of the compaction.
-   * @param righr Right boundary of the compaction.
+   * @param end Right boundary of the compaction.
    */
   private void verifyCompaction(StripeCompactionPolicy policy, StripeInformationProvider si,
       Collection<HStoreFile> sfs, Boolean dropDeletes, Integer count, Long size,
@@ -588,7 +585,7 @@ public class TestStripeCompactionPolicy {
       count == null ? anyInt() : eq(count.intValue()),
       size == null ? anyLong() : eq(size.longValue()), aryEq(start), aryEq(end),
       dropDeletesMatcher(dropDeletes, start), dropDeletesMatcher(dropDeletes, end),
-      any(NoLimitThroughputController.class), any(User.class));
+      any(), any());
   }
 
   /** Verify arbitrary flush. */
@@ -612,7 +609,7 @@ public class TestStripeCompactionPolicy {
 
 
   private byte[] dropDeletesMatcher(Boolean dropDeletes, byte[] value) {
-    return dropDeletes == null ? any(byte[].class)
+    return dropDeletes == null ? any()
             : (dropDeletes.booleanValue() ? aryEq(value) : isNull(byte[].class));
   }
 
@@ -780,7 +777,7 @@ public class TestStripeCompactionPolicy {
     when(store.getColumnFamilyDescriptor()).thenReturn(col);
     when(store.getRegionInfo()).thenReturn(info);
     when(
-      store.createWriterInTmp(anyLong(), any(Compression.Algorithm.class), anyBoolean(),
+      store.createWriterInTmp(anyLong(), any(), anyBoolean(),
         anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
 
     Configuration conf = HBaseConfiguration.create();

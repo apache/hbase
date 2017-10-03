@@ -67,7 +67,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
@@ -557,10 +556,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServer server = createServer(host, port);
     try {
       // not bound, ephemeral should return requested port (0 for ephemeral)
-      List<?> listeners = (List<?>) Whitebox.getInternalState(server,
-          "listeners");
-      ServerConnector listener = (ServerConnector) Whitebox.getInternalState(
-          listeners.get(0), "listener");
+      ServerConnector listener = server.getServerConnectors().get(0);
 
       assertEquals(port, listener.getPort());
       // verify hostname is what was given

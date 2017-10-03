@@ -165,7 +165,7 @@ public class TestMetaTableAccessorNoCluster {
           .thenThrow(new ServiceException("Server not running (3 of 3)"))
           .thenAnswer(new Answer<ScanResponse>() {
             public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
-              ((HBaseRpcController) invocation.getArguments()[0]).setCellScanner(CellUtil
+              ((HBaseRpcController) invocation.getArgument(0)).setCellScanner(CellUtil
                   .createCellScanner(cellScannables));
               return builder.setScannerId(1234567890L).setMoreResults(false).build();
             }
@@ -189,7 +189,7 @@ public class TestMetaTableAccessorNoCluster {
 
       // Now shove our HRI implementation into the spied-upon connection.
       Mockito.doReturn(implementation).
-        when(connection).getClient(Mockito.any(ServerName.class));
+        when(connection).getClient(Mockito.any());
 
       // Scan meta for user tables and verify we got back expected answer.
       NavigableMap<RegionInfo, Result> hris =

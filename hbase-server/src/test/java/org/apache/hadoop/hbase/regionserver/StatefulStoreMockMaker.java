@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,8 +27,6 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.security.User;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -42,37 +40,23 @@ public class StatefulStoreMockMaker {
     return Optional.empty();
   }
 
-  public void cancelCompaction(Object originalContext) {
-  }
+  public void cancelCompaction(Object originalContext) {}
 
   public int getPriority() {
     return 0;
   }
-
-  private class SelectAnswer implements Answer<Optional<CompactionContext>> {
-    public Optional<CompactionContext> answer(InvocationOnMock invocation) throws Throwable {
-      return selectCompaction();
-    }
-  }
-
-  private class PriorityAnswer implements Answer<Integer> {
-    public Integer answer(InvocationOnMock invocation) throws Throwable {
-      return getPriority();
-    }
-  }
   private class CancelAnswer implements Answer<Object> {
     public CompactionContext answer(InvocationOnMock invocation) throws Throwable {
-      cancelCompaction(invocation.getArguments()[0]); return null;
+      cancelCompaction(invocation.getArgument(0));
+      return null;
     }
   }
 
   public HStore createStoreMock(String name) throws Exception {
     HStore store = mock(HStore.class, name);
-    when(store.requestCompaction(anyInt(), any(CompactionLifeCycleTracker.class), any(User.class)))
-        .then(new SelectAnswer());
-    when(store.getCompactPriority()).then(new PriorityAnswer());
-    doAnswer(new CancelAnswer()).when(store)
-        .cancelRequestedCompaction(any(CompactionContext.class));
+    when(store.requestCompaction(anyInt(), any(), any())).then(inv -> selectCompaction());
+    when(store.getCompactPriority()).then(inv -> getPriority());
+    doAnswer(new CancelAnswer()).when(store).cancelRequestedCompaction(any());
     return store;
   }
 }

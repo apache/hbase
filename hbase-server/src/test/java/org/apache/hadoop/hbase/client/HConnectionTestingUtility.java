@@ -116,12 +116,12 @@ public class HConnectionTestingUtility {
         .thenReturn(new RegionLocations(loc));
     if (admin != null) {
       // If a call to getAdmin, return this implementation.
-      Mockito.when(c.getAdmin(Mockito.any(ServerName.class))).
+      Mockito.when(c.getAdmin(Mockito.any())).
         thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this client.
-      Mockito.when(c.getClient(Mockito.any(ServerName.class))).
+      Mockito.when(c.getClient(Mockito.any())).
         thenReturn(client);
     }
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);

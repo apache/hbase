@@ -117,7 +117,7 @@ public class TestProcedureMember {
         member.receivedReachedGlobalBarrier(op);
         return null;
       }
-    }).when(mockMemberComms).sendMemberAcquired(any(Subprocedure.class));
+    }).when(mockMemberComms).sendMemberAcquired(any());
   }
 
   /**
@@ -147,7 +147,7 @@ public class TestProcedureMember {
     order.verify(spy).insideBarrier();
     order.verify(mockMemberComms).sendMemberCompleted(eq(spy), eq(data));
     order.verify(mockMemberComms, never()).sendMemberAborted(eq(spy),
-        any(ForeignException.class));
+        any());
   }
 
   /**
@@ -182,8 +182,8 @@ public class TestProcedureMember {
     order.verify(spySub, never()).insideBarrier();
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -200,7 +200,7 @@ public class TestProcedureMember {
           public Void answer(InvocationOnMock invocation) throws Throwable {
             throw new IOException("Forced IOException in memeber prepare");
           }
-        }).when(mockMemberComms).sendMemberAcquired(any(Subprocedure.class));
+        }).when(mockMemberComms).sendMemberAcquired(any());
 
     // run the operation
     // build a new operation
@@ -218,8 +218,8 @@ public class TestProcedureMember {
     order.verify(spySub, never()).insideBarrier();
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -261,8 +261,8 @@ public class TestProcedureMember {
     order.verify(spySub, never()).insideBarrier();
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -302,8 +302,8 @@ public class TestProcedureMember {
     // Later phases not run
     order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -328,7 +328,7 @@ public class TestProcedureMember {
             Thread.sleep(WAKE_FREQUENCY);
             return null;
           }
-        }).when(mockMemberComms).sendMemberCompleted(any(Subprocedure.class), eq(data));
+        }).when(mockMemberComms).sendMemberCompleted(any(), eq(data));
 
     // run the operation
     // build a new operation
@@ -344,8 +344,8 @@ public class TestProcedureMember {
     order.verify(spySub).insideBarrier();
     order.verify(mockMemberComms).sendMemberCompleted(eq(spySub), eq(data));
     // error recovery path exercised
-    order.verify(spySub).cancel(anyString(), any(Exception.class));
-    order.verify(spySub).cleanup(any(Exception.class));
+    order.verify(spySub).cancel(anyString(), any());
+    order.verify(spySub).cleanup(any());
   }
 
   /**
@@ -369,7 +369,7 @@ public class TestProcedureMember {
     doThrow(new ForeignException("SRC", "prepare exception")).when(spy).acquireBarrier();
     // and throw a connection error when we try to tell the controller about it
     doThrow(new IOException("Controller is down!")).when(mockMemberComms)
-        .sendMemberAborted(eq(spy), any(ForeignException.class));
+        .sendMemberAborted(eq(spy), any());
 
 
     // run the operation
@@ -388,9 +388,9 @@ public class TestProcedureMember {
     // TODO Need to do another refactor to get this to propagate to the coordinator.
     // make sure we pass a remote exception back the controller
 //    order.verify(mockMemberComms).sendMemberAborted(eq(spy),
-//      any(ExternalException.class));
+//      any());
 //    order.verify(dispSpy).receiveError(anyString(),
-//        any(ExternalException.class), any());
+//        any(), any());
   }
 
   /**
@@ -427,7 +427,7 @@ public class TestProcedureMember {
     verifyZeroInteractions(pool);
     // get two abort requests
     // TODO Need to do another refactor to get this to propagate to the coordinator.
-    // verify(mockMemberComms, times(2)).sendMemberAborted(any(Subprocedure.class), any(ExternalException.class));
+    // verify(mockMemberComms, times(2)).sendMemberAborted(any(), any());
   }
 
   /**

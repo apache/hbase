@@ -284,7 +284,7 @@ public class TestZKProcedure {
     Procedure coordinatorTask = Mockito.spy(new Procedure(coordinator,
         coordinatorTaskErrorMonitor, WAKE_FREQUENCY, TIMEOUT,
         opName, data, expected));
-    when(coordinator.createProcedure(any(ForeignExceptionDispatcher.class), eq(opName), eq(data), anyListOf(String.class)))
+    when(coordinator.createProcedure(any(), eq(opName), eq(data), anyListOf(String.class)))
       .thenReturn(coordinatorTask);
     // count down the error latch when we get the remote error
     Mockito.doAnswer(new Answer<Void>() {
@@ -296,7 +296,7 @@ public class TestZKProcedure {
         coordinatorReceivedErrorLatch.countDown();
         return null;
       }
-    }).when(coordinatorTask).receive(Mockito.any(ForeignException.class));
+    }).when(coordinatorTask).receive(Mockito.any());
 
     // ----------------------------
     // start running the operation
