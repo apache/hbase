@@ -340,7 +340,9 @@ public class CreateTableProcedure
     ProcedureSyncWait.waitMetaRegions(env);
 
     // Add replicas if needed
-    List<RegionInfo> newRegions = addReplicas(env, tableDescriptor, regions);
+    // we need to create regions with replicaIds starting from 1
+    List<RegionInfo> newRegions = RegionReplicaUtil.addReplicas(tableDescriptor, regions, 1,
+      tableDescriptor.getRegionReplication());
 
     // Add regions to META
     addRegionsToMeta(env, tableDescriptor, newRegions);
@@ -351,31 +353,6 @@ public class CreateTableProcedure
     }
     return newRegions;
   }
-
-  /**
-   * Create any replicas for the regions (the default replicas that was
-   * already created is passed to the method)
-   * @param tableDescriptor descriptor to use
-   * @param regions default replicas
-   * @return the combined list of default and non-default replicas
-   */
-  private static List<RegionInfo> addReplicas(final MasterProcedureEnv env,
-      final TableDescriptor tableDescriptor,
-      final List<RegionInfo> regions) {
-    int numRegionReplicas = tableDescriptor.getRegionReplication() - 1;
-    if (numRegionReplicas <= 0) {
-      return regions;
-    }
-    List<RegionInfo> hRegionInfos = new ArrayList<>((numRegionReplicas+1)*regions.size());
-    for (int i = 0; i < regions.size(); i++) {
-      for (int j = 1; j <= numRegionReplicas; j++) {
-        hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(i), j));
-      }
-    }
-    hRegionInfos.addAll(regions);
-    return hRegionInfos;
-  }
-
 
   protected static void setEnablingState(final MasterProcedureEnv env, final TableName tableName)
       throws IOException {

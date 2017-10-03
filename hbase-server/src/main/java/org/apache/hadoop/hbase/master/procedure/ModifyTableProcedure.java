@@ -359,13 +359,27 @@ public class ModifyTableProcedure
           connection);
       }
     }
-
-    // Setup replication for region replicas if needed
-    if (newReplicaCount > 1 && oldReplicaCount <= 1) {
-      ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+    if (newReplicaCount > oldReplicaCount) {
+      Connection connection = env.getMasterServices().getConnection();
+      // Get the existing table regions
+      List<RegionInfo> existingTableRegions =
+          MetaTableAccessor.getTableRegions(connection, getTableName());
+      // add all the new entries to the meta table
+      addRegionsToMeta(env, newTableDescriptor, existingTableRegions);
+      if (oldReplicaCount <= 1) {
+        // The table has been newly enabled for replica. So check if we need to setup
+        // region replication
+        ServerRegionReplicaUtil.setupRegionReplicaReplication(env.getMasterConfiguration());
+      }
     }
   }
 
+  private static void addRegionsToMeta(final MasterProcedureEnv env,
+      final TableDescriptor tableDescriptor, final List<RegionInfo> regionInfos)
+      throws IOException {
+    MetaTableAccessor.addRegionsToMeta(env.getMasterServices().getConnection(), regionInfos,
+      tableDescriptor.getRegionReplication());
+  }
   /**
    * Action after modifying table.
    * @param env MasterProcedureEnv
