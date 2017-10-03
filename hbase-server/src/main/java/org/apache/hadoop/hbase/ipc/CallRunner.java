@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
@@ -107,9 +108,9 @@ public class CallRunner {
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.getRemoteAddress().getHostAddress(), call.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
-        User remoteUser = call.getRequestUser();
+        Optional<User> remoteUser = call.getRequestUser();
         RpcServer.LOG.trace(call.toShortString() + " executing as " +
-            ((remoteUser == null) ? "NULL principal" : remoteUser.getName()));
+            (remoteUser.isPresent() ? "NULL principal" : remoteUser.get().getName()));
       }
       Throwable errorThrowable = null;
       String error = null;

@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -82,7 +83,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   protected ByteBufferListOutputStream cellBlockStream = null;
   protected CallCleanup reqCleanup = null;
 
-  protected User user;
+  protected final User user;
   protected final InetAddress remoteAddress;
   protected RpcCallback rpcCallback;
 
@@ -110,10 +111,14 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     this.isError = false;
     this.size = size;
     this.tinfo = tinfo;
-    this.user = connection == null ? null : connection.user; // FindBugs: NP_NULL_ON_SOME_PATH
+    if (connection != null) {
+      this.user =  connection.user;
+      this.retryImmediatelySupported = connection.retryImmediatelySupported;
+    } else {
+      this.user = null;
+      this.retryImmediatelySupported = false;
+    }
     this.remoteAddress = remoteAddress;
-    this.retryImmediatelySupported =
-        connection == null ? false : connection.retryImmediatelySupported;
     this.timeout = timeout;
     this.deadline = this.timeout > 0 ? this.receiveTime + this.timeout : Long.MAX_VALUE;
     this.reservoir = reservoir;
@@ -432,14 +437,8 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   }
 
   @Override
-  public User getRequestUser() {
-    return user;
-  }
-
-  @Override
-  public String getRequestUserName() {
-    User user = getRequestUser();
-    return user == null? null: user.getShortName();
+  public Optional<User> getRequestUser() {
+    return Optional.ofNullable(user);
   }
 
   @Override

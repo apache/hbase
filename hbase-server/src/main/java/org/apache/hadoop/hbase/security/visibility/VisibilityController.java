@@ -23,6 +23,11 @@ import static org.apache.hadoop.hbase.HConstants.OperationStatusCode.SUCCESS;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_FAMILY;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -51,7 +56,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -82,8 +86,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
@@ -109,13 +113,10 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 
 /**
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
@@ -663,7 +664,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
     if (!RpcServer.isInRpcCallContext())
       return;
-    String requestUName = RpcServer.getRequestUserName();
+    String requestUName = RpcServer.getRequestUserName().orElse(null);
     String owner = scannerOwners.get(s);
     if (authorizationEnabled && owner != null && !owner.equals(requestUName)) {
       throw new AccessDeniedException("User '" + requestUName + "' is not the scanner owner!");
@@ -892,7 +893,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       List<byte[]> labelAuths, String regex) {
     if (AUDITLOG.isTraceEnabled()) {
       // This is more duplicated code!
-      InetAddress remoteAddr = RpcServer.getRemoteAddress();
       List<String> labelAuthsStr = new ArrayList<>();
       if (labelAuths != null) {
         int labelAuthsSize = labelAuths.size();
@@ -909,11 +909,12 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         LOG.warn("Failed to get active system user.");
         LOG.debug("Details on failure to get active system user.", e);
       }
-      AUDITLOG.trace("Access " + (isAllowed ? "allowed" : "denied") + " for user "
-          + (requestingUser != null ? requestingUser.getShortName() : "UNKNOWN") + "; reason: "
-          + reason + "; remote address: " + (remoteAddr != null ? remoteAddr : "") + "; request: "
-          + request + "; user: " + (user != null ? Bytes.toShort(user) : "null") + "; labels: "
-          + labelAuthsStr + "; regex: " + regex);
+      AUDITLOG.trace("Access " + (isAllowed ? "allowed" : "denied") + " for user " +
+          (requestingUser != null ? requestingUser.getShortName() : "UNKNOWN") + "; reason: " +
+          reason + "; remote address: " +
+          RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("") + "; request: " +
+          request + "; user: " + (user != null ? Bytes.toShort(user) : "null") + "; labels: " +
+          labelAuthsStr + "; regex: " + regex);
     }
   }
 

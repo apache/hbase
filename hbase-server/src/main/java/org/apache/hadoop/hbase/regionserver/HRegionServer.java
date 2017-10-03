@@ -2112,7 +2112,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void stop(final String msg) {
-    stop(msg, false, RpcServer.getRequestUser());
+    stop(msg, false, RpcServer.getRequestUser().orElse(null));
   }
 
   /**

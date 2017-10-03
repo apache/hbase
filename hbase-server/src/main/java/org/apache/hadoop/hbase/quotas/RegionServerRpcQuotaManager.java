@@ -176,13 +176,7 @@ public class RegionServerRpcQuotaManager {
   private OperationQuota checkQuota(final Region region,
       final int numWrites, final int numReads, final int numScans)
       throws IOException, ThrottlingException {
-    User user = RpcServer.getRequestUser();
-    UserGroupInformation ugi;
-    if (user != null) {
-      ugi = user.getUGI();
-    } else {
-      ugi = User.getCurrent().getUGI();
-    }
+    UserGroupInformation ugi = RpcServer.getRequestUser().orElse(User.getCurrent()).getUGI();
     TableName table = region.getTableDescriptor().getTableName();
 
     OperationQuota quota = getQuota(ugi, table);
