@@ -274,7 +274,7 @@ public class MetaTableAccessor {
    * @return An {@link Table} for <code>hbase:meta</code>
    * @throws IOException
    */
-  static Table getMetaHTable(final Connection connection)
+  public static Table getMetaHTable(final Connection connection)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
     if (connection == null) {

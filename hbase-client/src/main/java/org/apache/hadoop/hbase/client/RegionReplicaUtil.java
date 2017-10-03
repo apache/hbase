@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -156,5 +158,33 @@ public class RegionReplicaUtil {
       return -1;
     }
     return 0;
+  }
+
+  /**
+   * Create any replicas for the regions (the default replicas that was already created is passed to
+   * the method)
+   * @param tableDescriptor descriptor to use
+   * @param regions existing regions
+   * @param oldReplicaCount existing replica count
+   * @param newReplicaCount updated replica count due to modify table
+   * @return the combined list of default and non-default replicas
+   */
+  public static List<RegionInfo> addReplicas(final TableDescriptor tableDescriptor,
+      final List<RegionInfo> regions, int oldReplicaCount, int newReplicaCount) {
+    if ((newReplicaCount - 1) <= 0) {
+      return regions;
+    }
+    List<RegionInfo> hRegionInfos = new ArrayList<>((newReplicaCount) * regions.size());
+    for (int i = 0; i < regions.size(); i++) {
+      if (RegionReplicaUtil.isDefaultReplica(regions.get(i))) {
+        // region level replica index starts from 0. So if oldReplicaCount was 2 then the max replicaId for
+        // the existing regions would be 1
+        for (int j = oldReplicaCount; j < newReplicaCount; j++) {
+          hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(i), j));
+        }
+      }
+    }
+    hRegionInfos.addAll(regions);
+    return hRegionInfos;
   }
 }
