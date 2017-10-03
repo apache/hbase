@@ -571,7 +571,7 @@ public final class BackupCommands {
       System.arraycopy(args, 1, backupIds, 0, backupIds.length);
       try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
         int deleted = admin.deleteBackups(backupIds);
-        System.out.println("Deleted " + deleted + " backups. Total requested: " + args.length);
+        System.out.println("Deleted " + deleted + " backups. Total requested: " + (args.length -1));
       } catch (IOException e) {
         System.err
             .println("Delete command FAILED. Please run backup repair tool to restore backup system integrity");
