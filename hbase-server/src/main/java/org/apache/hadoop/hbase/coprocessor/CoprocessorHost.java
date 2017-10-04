@@ -545,7 +545,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   @FunctionalInterface
   public interface ObserverGetter<C, O> extends Function<C, Optional<O>> {}
 
-  private abstract class ObserverOperation<O> extends ObserverContext<E> {
+  private abstract class ObserverOperation<O> extends ObserverContextImpl<E> {
     ObserverGetter<C, O> observerGetter;
 
     ObserverOperation(ObserverGetter<C, O> observerGetter) {

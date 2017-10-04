@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import java.util.Optional;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import java.util.Optional;
 
 /**
  * Carries the execution state for a given invocation of an Observer coprocessor
@@ -39,64 +37,21 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class ObserverContext<E extends CoprocessorEnvironment> {
-  private E env;
-  private boolean bypass;
-  private boolean complete;
-  private final User caller;
-
-  @InterfaceAudience.Private
-  public ObserverContext(User caller) {
-    this.caller = caller;
-  }
-
-  public E getEnvironment() {
-    return env;
-  }
-
-  @InterfaceAudience.Private
-  public void prepare(E env) {
-    this.env = env;
-  }
+public interface ObserverContext<E extends CoprocessorEnvironment> {
+  E getEnvironment();
 
   /**
    * Call to indicate that the current coprocessor's return value should be
    * used in place of the normal HBase obtained value.
    */
-  public void bypass() {
-    bypass = true;
-  }
+  void bypass();
 
   /**
    * Call to indicate that additional coprocessors further down the execution
    * chain do not need to be invoked.  Implies that this coprocessor's response
    * is definitive.
    */
-  public void complete() {
-    complete = true;
-  }
-
-  /**
-   * For use by the coprocessor framework.
-   * @return <code>true</code> if {@link ObserverContext#bypass()}
-   *     was called by one of the loaded coprocessors, <code>false</code> otherwise.
-   */
-  public boolean shouldBypass() {
-    boolean current = bypass;
-    bypass = false;
-    return current;
-  }
-
-  /**
-   * For use by the coprocessor framework.
-   * @return <code>true</code> if {@link ObserverContext#complete()}
-   *     was called by one of the loaded coprocessors, <code>false</code> otherwise.
-   */
-  public boolean shouldComplete() {
-    boolean current = complete;
-    complete = false;
-    return current;
-  }
+  void complete();
 
   /**
    * Returns the active user for the coprocessor call. If an explicit {@code User} instance was
@@ -104,25 +59,6 @@ public class ObserverContext<E extends CoprocessorEnvironment> {
    * RPC call, the remote user is used. May not be present if the execution is outside of an RPC
    * context.
    */
-  public Optional<User> getCaller() {
-    return Optional.ofNullable(caller);
-  }
+  Optional<User> getCaller();
 
-  /**
-   * Instantiates a new ObserverContext instance if the passed reference is <code>null</code> and
-   * sets the environment in the new or existing instance. This allows deferring the instantiation
-   * of a ObserverContext until it is actually needed.
-   * @param <E> The environment type for the context
-   * @param env The coprocessor environment to set
-   * @return An instance of <code>ObserverContext</code> with the environment set
-   */
-  @Deprecated
-  @InterfaceAudience.Private
-  @VisibleForTesting
-  // TODO: Remove this method, ObserverContext should not depend on RpcServer
-  public static <E extends CoprocessorEnvironment> ObserverContext<E> createAndPrepare(E env) {
-    ObserverContext<E> ctx = new ObserverContext<>(RpcServer.getRequestUser().orElse(null));
-    ctx.prepare(env);
-    return ctx;
-  }
 }
