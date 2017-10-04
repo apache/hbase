@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -59,7 +60,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, klength);
       ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      CellUtil.writeFlatKey(cell, out);
+      CellUtil.writeFlatKey(cell, (DataOutput)out);
     } else {
       // find a common prefix and skip it
       int common = CellUtil.findCommonPrefixInFlatKey(cell, state.prevCell, true, true);

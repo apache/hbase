@@ -31,10 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -44,8 +41,9 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -53,6 +51,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A tool to replay WAL files as a M/R job.
@@ -94,10 +93,10 @@ public class WALPlayer extends Configured implements Tool {
 
   /**
    * A mapper that just writes out KeyValues.
-   * This one can be used together with {@link KeyValueSortReducer}
+   * This one can be used together with {@link CellSortReducer}
    */
   static class WALKeyValueMapper
-    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue> {
+    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell> {
     private byte[] table;
 
     @Override
@@ -108,11 +107,11 @@ public class WALPlayer extends Configured implements Tool {
         // skip all other tables
         if (Bytes.equals(table, key.getTablename().getName())) {
           for (Cell cell : value.getCells()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            if (WALEdit.isMetaEditFamily(kv)) {
+            if (WALEdit.isMetaEditFamily(cell)) {
               continue;
             }
-            context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)), kv);
+            context.write(new ImmutableBytesWritable(CellUtil.cloneRow(cell)),
+              new MapReduceCell(cell));
           }
         }
       } catch (InterruptedException e) {
@@ -300,10 +299,10 @@ public class WALPlayer extends Configured implements Tool {
       }
       TableName tableName = TableName.valueOf(tables[0]);
       job.setMapperClass(WALKeyValueMapper.class);
-      job.setReducerClass(KeyValueSortReducer.class);
+      job.setReducerClass(CellSortReducer.class);
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputValueClass(KeyValue.class);
+      job.setMapOutputValueClass(MapReduceCell.class);
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {

@@ -139,7 +139,7 @@ public class CopyTable extends Configured implements Tool {
     job.setNumReduceTasks(0);
 
     if (bulkload) {
-      TableMapReduceUtil.initTableMapperJob(tableName, scan, Import.KeyValueImporter.class, null,
+      TableMapReduceUtil.initTableMapperJob(tableName, scan, Import.CellImporter.class, null,
         null, job);
 
       // We need to split the inputs by destination tables so that output of Map can be bulk-loaded.

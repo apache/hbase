@@ -23,31 +23,35 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
 
 @InterfaceAudience.Public
-public class KeyValueSerialization implements Serialization<KeyValue> {
+public class CellSerialization implements Serialization<Cell> {
   @Override
   public boolean accept(Class<?> c) {
-    return KeyValue.class.isAssignableFrom(c);
+    return Cell.class.isAssignableFrom(c);
   }
 
   @Override
-  public KeyValueDeserializer getDeserializer(Class<KeyValue> t) {
-    return new KeyValueDeserializer();
+  public CellDeserializer getDeserializer(Class<Cell> t) {
+    return new CellDeserializer();
   }
 
   @Override
-  public KeyValueSerializer getSerializer(Class<KeyValue> c) {
-    return new KeyValueSerializer();
+  public CellSerializer getSerializer(Class<Cell> c) {
+    return new CellSerializer();
   }
 
-  public static class KeyValueDeserializer implements Deserializer<KeyValue> {
+  public static class CellDeserializer implements Deserializer<Cell> {
     private DataInputStream dis;
 
     @Override
@@ -56,7 +60,7 @@ public class KeyValueSerialization implements Serialization<KeyValue> {
     }
 
     @Override
-    public KeyValue deserialize(KeyValue ignore) throws IOException {
+    public KeyValue deserialize(Cell ignore) throws IOException {
       // I can't overwrite the passed in KV, not from a proto kv, not just yet.  TODO
       return KeyValueUtil.create(this.dis);
     }
@@ -67,7 +71,7 @@ public class KeyValueSerialization implements Serialization<KeyValue> {
     }
   }
 
-  public static class KeyValueSerializer implements Serializer<KeyValue> {
+  public static class CellSerializer implements Serializer<Cell> {
     private DataOutputStream dos;
 
     @Override
@@ -81,8 +85,9 @@ public class KeyValueSerialization implements Serialization<KeyValue> {
     }
 
     @Override
-    public void serialize(KeyValue kv) throws IOException {
-      KeyValueUtil.write(kv, this.dos);
+    public void serialize(Cell kv) throws IOException {
+      dos.writeInt(CellUtil.estimatedSerializedSizeOf(kv) - Bytes.SIZEOF_INT);
+      CellUtil.writeCell(kv, dos, true);
     }
   }
 }

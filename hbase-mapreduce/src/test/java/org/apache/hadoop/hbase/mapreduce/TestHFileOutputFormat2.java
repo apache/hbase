@@ -440,12 +440,12 @@ public class TestHFileOutputFormat2  {
     // Set start and end rows for partitioner.
     SimpleTotalOrderPartitioner.setStartKey(job.getConfiguration(), startKey);
     SimpleTotalOrderPartitioner.setEndKey(job.getConfiguration(), endKey);
-    job.setReducerClass(KeyValueSortReducer.class);
+    job.setReducerClass(CellSortReducer.class);
     job.setOutputFormatClass(HFileOutputFormat2.class);
     job.setNumReduceTasks(4);
     job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-        KeyValueSerialization.class.getName());
+        CellSerialization.class.getName());
 
     FileOutputFormat.setOutputPath(job, testDir);
     assertTrue(job.waitForCompletion(false));
@@ -764,7 +764,7 @@ public class TestHFileOutputFormat2  {
     job.setWorkingDirectory(util.getDataTestDirOnTestFS("runIncrementalPELoad"));
     job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-        KeyValueSerialization.class.getName());
+        CellSerialization.class.getName());
     setupRandomGeneratorMapper(job, putSortReducer);
     if (tableInfo.size() > 1) {
       MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfo);

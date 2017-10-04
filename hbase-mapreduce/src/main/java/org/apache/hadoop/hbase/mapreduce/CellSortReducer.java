@@ -18,39 +18,42 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
 import java.util.TreeSet;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Emits sorted KeyValues.
- * Reads in all KeyValues from passed Iterator, sorts them, then emits
- * KeyValues in sorted order.  If lots of columns per row, it will use lots of
+ * Emits sorted Cells.
+ * Reads in all Cells from passed Iterator, sorts them, then emits
+ * Cells in sorted order.  If lots of columns per row, it will use lots of
  * memory sorting.
  * @see HFileOutputFormat2
  */
 @InterfaceAudience.Public
-public class KeyValueSortReducer
-    extends Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue> {
-  protected void reduce(ImmutableBytesWritable row, Iterable<KeyValue> kvs,
-      Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue>.Context context)
+public class CellSortReducer
+    extends Reducer<ImmutableBytesWritable, Cell, ImmutableBytesWritable, Cell> {
+  protected void reduce(ImmutableBytesWritable row, Iterable<Cell> kvs,
+      Reducer<ImmutableBytesWritable, Cell, ImmutableBytesWritable, Cell>.Context context)
   throws java.io.IOException, InterruptedException {
-    TreeSet<KeyValue> map = new TreeSet<>(CellComparator.COMPARATOR);
-    for (KeyValue kv: kvs) {
+    TreeSet<Cell> map = new TreeSet<>(CellComparator.COMPARATOR);
+    for (Cell kv : kvs) {
       try {
-        map.add(kv.clone());
+        map.add(CellUtil.deepClone(kv));
       } catch (CloneNotSupportedException e) {
-        throw new java.io.IOException(e);
+        throw new IOException(e);
       }
     }
     context.setStatus("Read " + map.getClass());
     int index = 0;
-    for (KeyValue kv: map) {
-      context.write(row, kv);
+    for (Cell kv: map) {
+      context.write(row, new MapReduceCell(kv));
       if (++index % 100 == 0) context.setStatus("Wrote " + index);
     }
   }

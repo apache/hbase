@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -262,7 +263,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, kLength);
       ByteBufferUtils.putCompressedInt(out, vLength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      CellUtil.writeFlatKey(cell, out);
+      CellUtil.writeFlatKey(cell, (DataOutput)out);
       // Write the value part
       CellUtil.writeValue(out, cell, cell.getValueLength());
     } else {

@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -63,7 +64,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
+import org.apache.hadoop.hbase.mapreduce.Import.CellImporter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -664,7 +665,7 @@ public class TestImportExport {
   @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
   public void testKeyValueImporter() throws Throwable {
-    KeyValueImporter importer = new KeyValueImporter();
+    CellImporter importer = new CellImporter();
     Configuration configuration = new Configuration();
     Context ctx = mock(Context.class);
     when(ctx.getConfiguration()).thenReturn(configuration);
@@ -674,12 +675,12 @@ public class TestImportExport {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
         assertEquals("Key", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(ctx).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+    }).when(ctx).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
 
     importer.setup(ctx);
     Result value = mock(Result.class);

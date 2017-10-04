@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -90,7 +91,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -233,14 +233,13 @@ public class HFileOutputFormat2
       private final Map<byte[], WriterLength> writers =
               new TreeMap<>(Bytes.BYTES_COMPARATOR);
       private byte[] previousRow = HConstants.EMPTY_BYTE_ARRAY;
-      private final byte[] now = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
+      private final long now = EnvironmentEdgeManager.currentTime();
       private boolean rollRequested = false;
 
       @Override
       public void write(ImmutableBytesWritable row, V cell)
           throws IOException {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-
+        Cell kv = cell;
         // null input == user explicitly wants to flush
         if (row == null && kv == null) {
           rollWriters();
@@ -248,7 +247,7 @@ public class HFileOutputFormat2
         }
 
         byte[] rowKey = CellUtil.cloneRow(kv);
-        long length = kv.getLength();
+        int length = (CellUtil.estimatedSerializedSizeOf(kv)) - Bytes.SIZEOF_INT;
         byte[] family = CellUtil.cloneFamily(kv);
         byte[] tableNameBytes = null;
         if (writeMultipleTables) {
@@ -337,7 +336,8 @@ public class HFileOutputFormat2
         }
 
         // we now have the proper WAL writer. full steam ahead
-        kv.updateLatestStamp(this.now);
+        // TODO : Currently in SettableTimeStamp but this will also move to ExtendedCell
+        CellUtil.updateLatestStamp(cell, this.now);
         wl.writer.append(kv);
         wl.written += length;
 
@@ -578,10 +578,11 @@ public class HFileOutputFormat2
     configureIncrementalLoad(job, singleTableInfo, HFileOutputFormat2.class);
   }
 
-  static void configureIncrementalLoad(Job job, List<TableInfo> multiTableInfo, Class<? extends OutputFormat<?, ?>> cls) throws IOException {
+  static void configureIncrementalLoad(Job job, List<TableInfo> multiTableInfo,
+      Class<? extends OutputFormat<?, ?>> cls) throws IOException {
     Configuration conf = job.getConfiguration();
     job.setOutputKeyClass(ImmutableBytesWritable.class);
-    job.setOutputValueClass(KeyValue.class);
+    job.setOutputValueClass(MapReduceCell.class);
     job.setOutputFormatClass(cls);
 
     if (multiTableInfo.stream().distinct().count() != multiTableInfo.size()) {
@@ -595,8 +596,9 @@ public class HFileOutputFormat2
     // Based on the configured map output class, set the correct reducer to properly
     // sort the incoming values.
     // TODO it would be nice to pick one or the other of these formats.
-    if (KeyValue.class.equals(job.getMapOutputValueClass())) {
-      job.setReducerClass(KeyValueSortReducer.class);
+    if (KeyValue.class.equals(job.getMapOutputValueClass())
+        || MapReduceCell.class.equals(job.getMapOutputValueClass())) {
+      job.setReducerClass(CellSortReducer.class);
     } else if (Put.class.equals(job.getMapOutputValueClass())) {
       job.setReducerClass(PutSortReducer.class);
     } else if (Text.class.equals(job.getMapOutputValueClass())) {
@@ -607,7 +609,7 @@ public class HFileOutputFormat2
 
     conf.setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-        KeyValueSerialization.class.getName());
+        CellSerialization.class.getName());
 
     if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
       LOG.info("bulkload locality sensitive enabled");
@@ -655,7 +657,7 @@ public class HFileOutputFormat2
     Configuration conf = job.getConfiguration();
 
     job.setOutputKeyClass(ImmutableBytesWritable.class);
-    job.setOutputValueClass(KeyValue.class);
+    job.setOutputValueClass(MapReduceCell.class);
     job.setOutputFormatClass(HFileOutputFormat2.class);
 
     ArrayList<TableDescriptor> singleTableDescriptor = new ArrayList<>(1);
