@@ -108,10 +108,10 @@ public class RestoreTablesClient {
       if (!isOverwrite) {
         LOG.error("Existing table (" + existTableList
             + ") found in the restore target, please add "
-            + "\"-overwrite\" option in the command if you mean"
+            + "\"-o\" as overwrite option in the command if you mean"
             + " to restore to these existing tables");
-        throw new IOException("Existing table found in target while no \"-overwrite\" "
-            + "option found");
+        throw new IOException("Existing table found in target while no \"-o\" "
+            + "as overwrite option found");
       } else {
         if (disabledTableList.size() > 0) {
           LOG.error("Found offline table in the restore target, "
