@@ -221,7 +221,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
         BackupType.INCREMENTAL, conf);
-      return;
+      throw new IOException(e);
     }
 
     // case INCREMENTAL_COPY:
@@ -237,7 +237,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId;
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, msg, BackupType.INCREMENTAL, conf);
-      return;
+      throw new IOException(e);
     }
     // case INCR_BACKUP_COMPLETE:
     // set overall backup status: complete. Here we make sure to complete the backup.
@@ -266,6 +266,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     } catch (IOException e) {
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
         BackupType.INCREMENTAL, conf);
+      throw new IOException(e);
     }
   }
 
