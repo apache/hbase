@@ -20,6 +20,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -182,6 +183,28 @@ public final class ByteBufferUtils {
    */
   public static void copyBufferToStream(OutputStream out, ByteBuffer in,
       int offset, int length) throws IOException {
+    if (out instanceof ByteBufferWriter) {
+      ((ByteBufferWriter) out).write(in, offset, length);
+    } else if (in.hasArray()) {
+      out.write(in.array(), in.arrayOffset() + offset, length);
+    } else {
+      for (int i = 0; i < length; ++i) {
+        out.write(toByte(in, offset + i));
+      }
+    }
+  }
+
+  /**
+   * Copy data from a buffer to an output stream. Does not update the position
+   * in the buffer.
+   * @param out the output stream to write bytes to
+   * @param in the buffer to read bytes from
+   * @param offset the offset in the buffer (from the buffer's array offset)
+   *      to start copying bytes from
+   * @param length the number of bytes to copy
+   */
+  public static void copyBufferToStream(DataOutput out, ByteBuffer in, int offset, int length)
+      throws IOException {
     if (out instanceof ByteBufferWriter) {
       ((ByteBufferWriter) out).write(in, offset, length);
     } else if (in.hasArray()) {

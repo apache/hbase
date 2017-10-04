@@ -48,7 +48,7 @@ import org.apache.hadoop.util.StringUtils;
  * Puts in sorted order.  If lots of columns per row, it will use lots of
  * memory sorting.
  * @see HFileOutputFormat2
- * @see KeyValueSortReducer
+ * @see CellSortReducer
  */
 @InterfaceAudience.Public
 public class PutSortReducer extends

@@ -119,8 +119,7 @@ import org.mockito.Mockito;
  * emits keys and values like those of {@link PerformanceEvaluation}.
  */
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
-//TODO : Remove this in 3.0
-public class TestHFileOutputFormat2  {
+public class TestCellBasedHFileOutputFormat2  {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   private final static int ROWSPERSPLIT = 1024;
@@ -133,7 +132,7 @@ public class TestHFileOutputFormat2  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestHFileOutputFormat2.class);
+  private static final Log LOG = LogFactory.getLog(TestCellBasedHFileOutputFormat2.class);
 
   /**
    * Simple mapper that makes KeyValue output.
@@ -197,7 +196,7 @@ public class TestHFileOutputFormat2  {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
           }
 
-          for (byte[] family : TestHFileOutputFormat2.FAMILIES) {
+          for (byte[] family : TestCellBasedHFileOutputFormat2.FAMILIES) {
             Cell kv = new KeyValue(keyBytes, family, QUALIFIER, valBytes);
             context.write(new ImmutableBytesWritable(key), kv);
           }
@@ -267,7 +266,7 @@ public class TestHFileOutputFormat2  {
             key = MultiTableHFileOutputFormat.createCompositeKey(tables[j].getName(), keyBytes);
           }
 
-          for (byte[] family : TestHFileOutputFormat2.FAMILIES) {
+          for (byte[] family : TestCellBasedHFileOutputFormat2.FAMILIES) {
             Put p = new Put(keyBytes);
             p.addColumn(family, QUALIFIER, valBytes);
             // set TTL to very low so that the scan does not return any value
@@ -441,12 +440,12 @@ public class TestHFileOutputFormat2  {
     // Set start and end rows for partitioner.
     SimpleTotalOrderPartitioner.setStartKey(job.getConfiguration(), startKey);
     SimpleTotalOrderPartitioner.setEndKey(job.getConfiguration(), endKey);
-    job.setReducerClass(KeyValueSortReducer.class);
+    job.setReducerClass(CellSortReducer.class);
     job.setOutputFormatClass(HFileOutputFormat2.class);
     job.setNumReduceTasks(4);
     job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-        KeyValueSerialization.class.getName());
+        CellSerialization.class.getName());
 
     FileOutputFormat.setOutputPath(job, testDir);
     assertTrue(job.waitForCompletion(false));
@@ -765,7 +764,7 @@ public class TestHFileOutputFormat2  {
     job.setWorkingDirectory(util.getDataTestDirOnTestFS("runIncrementalPELoad"));
     job.getConfiguration().setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-        KeyValueSerialization.class.getName());
+        CellSerialization.class.getName());
     setupRandomGeneratorMapper(job, putSortReducer);
     if (tableInfo.size() > 1) {
       MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfo);
@@ -1385,7 +1384,7 @@ public class TestHFileOutputFormat2  {
   }
 
   public static void main(String args[]) throws Exception {
-    new TestHFileOutputFormat2().manualTest(args);
+    new TestCellBasedHFileOutputFormat2().manualTest(args);
   }
 
   public void manualTest(String args[]) throws Exception {

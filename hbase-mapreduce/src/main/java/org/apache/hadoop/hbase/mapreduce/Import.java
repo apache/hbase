@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.RawComparator;
@@ -96,11 +97,11 @@ public class Import extends Configured implements Tool {
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
-  public static class KeyValueWritableComparablePartitioner
-      extends Partitioner<KeyValueWritableComparable, KeyValue> {
-    private static KeyValueWritableComparable[] START_KEYS = null;
+  public static class CellWritableComparablePartitioner
+      extends Partitioner<CellWritableComparable, Cell> {
+    private static CellWritableComparable[] START_KEYS = null;
     @Override
-    public int getPartition(KeyValueWritableComparable key, KeyValue value,
+    public int getPartition(CellWritableComparable key, Cell value,
         int numPartitions) {
       for (int i = 0; i < START_KEYS.length; ++i) {
         if (key.compareTo(START_KEYS[i]) <= 0) {
@@ -112,6 +113,26 @@ public class Import extends Configured implements Tool {
 
   }
 
+  /**
+   * @deprecated Use {@link CellWritableComparablePartitioner}. Will be removed
+   * from 3.0 onwards
+   */
+  @Deprecated
+  public static class KeyValueWritableComparablePartitioner
+      extends Partitioner<KeyValueWritableComparable, KeyValue> {
+    private static KeyValueWritableComparable[] START_KEYS = null;
+
+    @Override
+    public int getPartition(KeyValueWritableComparable key, KeyValue value, int numPartitions) {
+      for (int i = 0; i < START_KEYS.length; ++i) {
+        if (key.compareTo(START_KEYS[i]) <= 0) {
+          return i;
+        }
+      }
+      return START_KEYS.length;
+    }
+  }
+
   public static class KeyValueWritableComparable
       implements WritableComparable<KeyValueWritableComparable> {
 
@@ -119,8 +140,7 @@ public class Import extends Configured implements Tool {
 
     static {
       // register this comparator
-      WritableComparator.define(KeyValueWritableComparable.class,
-          new KeyValueWritableComparator());
+      WritableComparator.define(KeyValueWritableComparable.class, new KeyValueWritableComparator());
     }
 
     public KeyValueWritableComparable() {
@@ -141,10 +161,10 @@ public class Import extends Configured implements Tool {
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
-      justification="This is wrong, yes, but we should be purging Writables, not fixing them")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+        justification = "This is wrong, yes, but we should be purging Writables, not fixing them")
     public int compareTo(KeyValueWritableComparable o) {
-      return CellComparator.COMPARATOR.compare(this.kv, ((KeyValueWritableComparable)o).kv);
+      return CellComparator.COMPARATOR.compare(this.kv, ((KeyValueWritableComparable) o).kv);
     }
 
     public static class KeyValueWritableComparator extends WritableComparator {
@@ -166,18 +186,93 @@ public class Import extends Configured implements Tool {
 
   }
 
+  public static class CellWritableComparable
+      implements WritableComparable<CellWritableComparable> {
+
+    private Cell kv = null;
+
+    static {
+      // register this comparator
+      WritableComparator.define(CellWritableComparable.class,
+          new CellWritableComparator());
+    }
+
+    public CellWritableComparable() {
+    }
+
+    public CellWritableComparable(Cell kv) {
+      this.kv = kv;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(CellUtil.estimatedSerializedSizeOfKey(kv));
+      out.writeInt(0);
+      CellUtil.writeFlatKey(kv, out);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      kv = KeyValue.create(in);
+    }
+
+    @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
+      justification="This is wrong, yes, but we should be purging Writables, not fixing them")
+    public int compareTo(CellWritableComparable o) {
+      return CellComparator.COMPARATOR.compare(this.kv, ((CellWritableComparable)o).kv);
+    }
+
+    public static class CellWritableComparator extends WritableComparator {
+
+      @Override
+      public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+        try {
+          CellWritableComparable kv1 = new CellWritableComparable();
+          kv1.readFields(new DataInputStream(new ByteArrayInputStream(b1, s1, l1)));
+          CellWritableComparable kv2 = new CellWritableComparable();
+          kv2.readFields(new DataInputStream(new ByteArrayInputStream(b2, s2, l2)));
+          return compare(kv1, kv2);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+    }
+
+  }
+
+  /**
+   * @deprecated Use {@link CellReducer}. Will be removed from 3.0 onwards
+   */
+  @Deprecated
   public static class KeyValueReducer
-      extends
-      Reducer<KeyValueWritableComparable, KeyValue, ImmutableBytesWritable, KeyValue> {
-    protected void reduce(
-        KeyValueWritableComparable row,
-        Iterable<KeyValue> kvs,
-        Reducer<KeyValueWritableComparable,
-          KeyValue, ImmutableBytesWritable, KeyValue>.Context context)
+      extends Reducer<KeyValueWritableComparable, KeyValue, ImmutableBytesWritable, KeyValue> {
+    protected void reduce(KeyValueWritableComparable row, Iterable<KeyValue> kvs,
+        Reducer<KeyValueWritableComparable, KeyValue, ImmutableBytesWritable, KeyValue>.Context context)
         throws java.io.IOException, InterruptedException {
       int index = 0;
       for (KeyValue kv : kvs) {
         context.write(new ImmutableBytesWritable(kv.getRowArray()), kv);
+        if (++index % 100 == 0) context.setStatus("Wrote " + index + " KeyValues, "
+            + "and the rowkey whose is being wrote is " + Bytes.toString(kv.getRowArray()));
+      }
+    }
+  }
+
+  public static class CellReducer
+      extends
+      Reducer<CellWritableComparable, Cell, ImmutableBytesWritable, Cell> {
+    protected void reduce(
+        CellWritableComparable row,
+        Iterable<Cell> kvs,
+        Reducer<CellWritableComparable,
+          Cell, ImmutableBytesWritable, Cell>.Context context)
+        throws java.io.IOException, InterruptedException {
+      int index = 0;
+      for (Cell kv : kvs) {
+        context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)),
+          new MapReduceCell(kv));
         if (++index % 100 == 0)
           context.setStatus("Wrote " + index + " KeyValues, "
               + "and the rowkey whose is being wrote is " + Bytes.toString(kv.getRowArray()));
@@ -185,30 +280,31 @@ public class Import extends Configured implements Tool {
     }
   }
 
+  /**
+   * @deprecated Use {@link CellSortImporter}. Will be removed from 3.0 onwards
+   */
+  @Deprecated
   public static class KeyValueSortImporter
       extends TableMapper<KeyValueWritableComparable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(KeyValueImporter.class);
+    private static final Log LOG = LogFactory.getLog(KeyValueSortImporter.class);
 
     /**
-     * @param row  The current table row key.
-     * @param value  The columns.
-     * @param context  The current context.
+     * @param row The current table row key.
+     * @param value The columns.
+     * @param context The current context.
      * @throws IOException When something is broken with the data.
      */
     @Override
-    public void map(ImmutableBytesWritable row, Result value,
-      Context context)
-    throws IOException {
+    public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException {
       try {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Considering the row."
-              + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
+          LOG.trace(
+            "Considering the row." + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
-        if (filter == null
-            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
-                (short) row.getLength()))) {
+        if (filter == null || !filter.filterRowKey(
+          CellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
@@ -249,13 +345,56 @@ public class Import extends Configured implements Tool {
 
   /**
    * A mapper that just writes out KeyValues.
+   * @deprecated Use {@link CellImporter}. Will be removed from 3.0 onwards
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
-      justification="Writables are going away and this has been this way forever")
+  @Deprecated
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_COMPARETO_USE_OBJECT_EQUALS",
+      justification = "Writables are going away and this has been this way forever")
   public static class KeyValueImporter extends TableMapper<ImmutableBytesWritable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
     private static final Log LOG = LogFactory.getLog(KeyValueImporter.class);
+
+    /**
+     * @param row The current table row key.
+     * @param value The columns.
+     * @param context The current context.
+     * @throws IOException When something is broken with the data.
+     */
+    @Override
+    public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException {
+      try {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(
+            "Considering the row." + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
+        }
+        if (filter == null || !filter.filterRowKey(
+          CellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
+          for (Cell kv : value.rawCells()) {
+            kv = filterKv(filter, kv);
+            // skip if we filtered it out
+            if (kv == null) continue;
+            // TODO get rid of ensureKeyValue
+            context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
+          }
+        }
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    @Override
+    public void setup(Context context) {
+      cfRenameMap = createCfRenameMap(context.getConfiguration());
+      filter = instantiateFilter(context.getConfiguration());
+    }
+  }
+
+  public static class CellSortImporter
+      extends TableMapper<CellWritableComparable, Cell> {
+    private Map<byte[], byte[]> cfRenameMap;
+    private Filter filter;
+    private static final Log LOG = LogFactory.getLog(CellImporter.class);
 
     /**
      * @param row  The current table row key.
@@ -279,8 +418,72 @@ public class Import extends Configured implements Tool {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
             if (kv == null) continue;
-            // TODO get rid of ensureKeyValue
-            context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
+            Cell ret = convertKv(kv, cfRenameMap);
+            context.write(new CellWritableComparable(ret), ret);
+          }
+        }
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    @Override
+    public void setup(Context context) throws IOException {
+      cfRenameMap = createCfRenameMap(context.getConfiguration());
+      filter = instantiateFilter(context.getConfiguration());
+      int reduceNum = context.getNumReduceTasks();
+      Configuration conf = context.getConfiguration();
+      TableName tableName = TableName.valueOf(context.getConfiguration().get(TABLE_NAME));
+      try (Connection conn = ConnectionFactory.createConnection(conf);
+          RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
+        byte[][] startKeys = regionLocator.getStartKeys();
+        if (startKeys.length != reduceNum) {
+          throw new IOException("Region split after job initialization");
+        }
+        CellWritableComparable[] startKeyWraps =
+            new CellWritableComparable[startKeys.length - 1];
+        for (int i = 1; i < startKeys.length; ++i) {
+          startKeyWraps[i - 1] =
+              new CellWritableComparable(KeyValueUtil.createFirstOnRow(startKeys[i]));
+        }
+        CellWritableComparablePartitioner.START_KEYS = startKeyWraps;
+      }
+    }
+  }
+
+  /**
+   * A mapper that just writes out KeyValues.
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
+      justification="Writables are going away and this has been this way forever")
+  public static class CellImporter extends TableMapper<ImmutableBytesWritable, Cell> {
+    private Map<byte[], byte[]> cfRenameMap;
+    private Filter filter;
+    private static final Log LOG = LogFactory.getLog(CellImporter.class);
+
+    /**
+     * @param row  The current table row key.
+     * @param value  The columns.
+     * @param context  The current context.
+     * @throws IOException When something is broken with the data.
+     */
+    @Override
+    public void map(ImmutableBytesWritable row, Result value,
+      Context context)
+    throws IOException {
+      try {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Considering the row."
+              + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
+        }
+        if (filter == null
+            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
+                (short) row.getLength()))) {
+          for (Cell kv : value.rawCells()) {
+            kv = filterKv(filter, kv);
+            // skip if we filtered it out
+            if (kv == null) continue;
+            context.write(row, new MapReduceCell(convertKv(kv, cfRenameMap)));
           }
         }
       } catch (InterruptedException e) {
@@ -505,21 +708,21 @@ public class Import extends Configured implements Tool {
     if(cfRenameMap != null) {
       // If there's a rename mapping for this CF, create a new KeyValue
       byte[] newCfName = cfRenameMap.get(CellUtil.cloneFamily(kv));
-      if(newCfName != null) {
-          kv = new KeyValue(kv.getRowArray(), // row buffer
-                  kv.getRowOffset(),        // row offset
-                  kv.getRowLength(),        // row length
-                  newCfName,                // CF buffer
-                  0,                        // CF offset
-                  newCfName.length,         // CF length
-                  kv.getQualifierArray(),   // qualifier buffer
-                  kv.getQualifierOffset(),  // qualifier offset
-                  kv.getQualifierLength(),  // qualifier length
-                  kv.getTimestamp(),        // timestamp
-                  KeyValue.Type.codeToType(kv.getTypeByte()), // KV Type
-                  kv.getValueArray(),       // value buffer
-                  kv.getValueOffset(),      // value offset
-                  kv.getValueLength());     // value length
+      if (newCfName != null) {
+        kv = new KeyValue(kv.getRowArray(), // row buffer
+            kv.getRowOffset(),              // row offset
+            kv.getRowLength(),              // row length
+            newCfName,                      // CF buffer
+            0,                              // CF offset
+            newCfName.length,               // CF length
+            kv.getQualifierArray(),         // qualifier buffer
+            kv.getQualifierOffset(),        // qualifier offset
+            kv.getQualifierLength(),        // qualifier length
+            kv.getTimestamp(),              // timestamp
+            KeyValue.Type.codeToType(kv.getTypeByte()), // KV Type
+            kv.getValueArray(),             // value buffer
+            kv.getValueOffset(),            // value offset
+            kv.getValueLength());           // value length
       }
     }
     return kv;
@@ -626,35 +829,35 @@ public class Import extends Configured implements Tool {
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
         HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
-        job.setMapperClass(KeyValueSortImporter.class);
-        job.setReducerClass(KeyValueReducer.class);
+        job.setMapperClass(CellSortImporter.class);
+        job.setReducerClass(CellReducer.class);
         Path outputDir = new Path(hfileOutPath);
         FileOutputFormat.setOutputPath(job, outputDir);
-        job.setMapOutputKeyClass(KeyValueWritableComparable.class);
-        job.setMapOutputValueClass(KeyValue.class);
+        job.setMapOutputKeyClass(CellWritableComparable.class);
+        job.setMapOutputValueClass(MapReduceCell.class);
         job.getConfiguration().setClass("mapreduce.job.output.key.comparator.class",
-            KeyValueWritableComparable.KeyValueWritableComparator.class,
+            CellWritableComparable.CellWritableComparator.class,
             RawComparator.class);
         Path partitionsPath =
             new Path(TotalOrderPartitioner.getPartitionFile(job.getConfiguration()));
         FileSystem fs = FileSystem.get(job.getConfiguration());
         fs.deleteOnExit(partitionsPath);
-        job.setPartitionerClass(KeyValueWritableComparablePartitioner.class);
+        job.setPartitionerClass(CellWritableComparablePartitioner.class);
         job.setNumReduceTasks(regionLocator.getStartKeys().length);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
             org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);
       }
     } else if (hfileOutPath != null) {
       LOG.info("writing to hfiles for bulk load.");
-      job.setMapperClass(KeyValueImporter.class);
+      job.setMapperClass(CellImporter.class);
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)){
-        job.setReducerClass(KeyValueSortReducer.class);
+        job.setReducerClass(CellSortReducer.class);
         Path outputDir = new Path(hfileOutPath);
         FileOutputFormat.setOutputPath(job, outputDir);
         job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-        job.setMapOutputValueClass(KeyValue.class);
+        job.setMapOutputValueClass(MapReduceCell.class);
         HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
             org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions.class);

@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -487,5 +489,120 @@ public class TestCellUtil {
     buffer = ByteBuffer.wrap(kv.getBuffer());
     bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
     assertEquals(bd, CellUtil.getValueAsBigDecimal(bbCell));
+  }
+
+  @Test
+  public void testWriteCell() throws IOException {
+    byte[] r = Bytes.toBytes("row1");
+    byte[] f = Bytes.toBytes("cf1");
+    byte[] q1 = Bytes.toBytes("qual1");
+    byte[] q2 = Bytes.toBytes("qual2");
+    byte[] v = Bytes.toBytes("val1");
+    byte[] tags = Bytes.toBytes("tag1");
+    KeyValue kv = new KeyValue(r, f, q1, 0, q1.length, 1234L, Type.Put, v, 0, v.length, tags);
+    NonExtendedCell nonExtCell = new NonExtendedCell(kv);
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    int writeCell = CellUtil.writeCell(nonExtCell, os, true);
+    byte[] byteArray = os.toByteArray();
+    KeyValue res = new KeyValue(byteArray);
+    assertTrue(CellUtil.equals(kv, res));
+  }
+
+  private static class NonExtendedCell implements Cell {
+    private KeyValue kv;
+
+    public NonExtendedCell(KeyValue kv) {
+      this.kv = kv;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return this.kv.getRowArray();
+    }
+
+    @Override
+    public int getRowOffset() {
+      return this.kv.getRowOffset();
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.kv.getRowLength();
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return this.kv.getFamilyArray();
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return this.kv.getFamilyOffset();
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.kv.getFamilyLength();
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return this.kv.getQualifierArray();
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return this.kv.getQualifierOffset();
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.kv.getQualifierLength();
+    }
+
+    @Override
+    public long getTimestamp() {
+      return this.kv.getTimestamp();
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return this.kv.getTypeByte();
+    }
+
+    @Override
+    public long getSequenceId() {
+      return this.kv.getSequenceId();
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return this.kv.getValueArray();
+    }
+
+    @Override
+    public int getValueOffset() {
+      return this.kv.getValueOffset();
+    }
+
+    @Override
+    public int getValueLength() {
+      return this.kv.getValueLength();
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      return this.kv.getTagsArray();
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return this.kv.getTagsOffset();
+    }
+
+    @Override
+    public int getTagsLength() {
+      return this.kv.getTagsLength();
+    }
   }
 }

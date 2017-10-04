@@ -45,13 +45,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALKeyValueMapper;
+import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALCellMapper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -70,8 +71,7 @@ import org.mockito.stubbing.Answer;
  * Basic test for the WALPlayer M/R tool
  */
 @Category({MapReduceTests.class, LargeTests.class})
-//TODO : Remove this in 3.0
-public class TestWALPlayer {
+public class TestCellBasedWALPlayer2 {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
   private static Path rootDir;
@@ -165,11 +165,11 @@ public class TestWALPlayer {
   private void testWALKeyValueMapper(final String tableConfigKey) throws Exception {
     Configuration configuration = new Configuration();
     configuration.set(tableConfigKey, "table");
-    WALKeyValueMapper mapper = new WALKeyValueMapper();
+    WALCellMapper mapper = new WALCellMapper();
     WALKey key = mock(WALKey.class);
     when(key.getTablename()).thenReturn(TableName.valueOf("table"));
     @SuppressWarnings("unchecked")
-    Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue>.Context context = mock(Context.class);
+    Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell>.Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(configuration);
 
     WALEdit value = mock(WALEdit.class);
@@ -185,12 +185,12 @@ public class TestWALPlayer {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
         assertEquals("row", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(context).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+    }).when(context).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
 
     mapper.map(key, value, context);
 

@@ -584,7 +584,7 @@ public class ImportTsv extends Configured implements Tool {
           job.getConfiguration().setStrings("io.serializations",
               job.getConfiguration().get("io.serializations"),
               MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-              KeyValueSerialization.class.getName());
+              CellSerialization.class.getName());
         }
         TableMapReduceUtil.addDependencyJars(job);
         TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),

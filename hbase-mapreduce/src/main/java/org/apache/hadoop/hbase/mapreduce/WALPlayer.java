@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -44,8 +43,9 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A tool to replay WAL files as a M/R job.
@@ -95,7 +96,9 @@ public class WALPlayer extends Configured implements Tool {
   /**
    * A mapper that just writes out KeyValues.
    * This one can be used together with {@link KeyValueSortReducer}
+   * @deprecated Use {@link WALCellMapper}. Will  be removed from 3.0 onwards
    */
+  @Deprecated
   static class WALKeyValueMapper
     extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue> {
     private byte[] table;
@@ -113,6 +116,47 @@ public class WALPlayer extends Configured implements Tool {
               continue;
             }
             context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)), kv);
+          }
+        }
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    @Override
+    public void setup(Context context) throws IOException {
+      // only a single table is supported when HFiles are generated with HFileOutputFormat
+      String[] tables = context.getConfiguration().getStrings(TABLES_KEY);
+      if (tables == null || tables.length != 1) {
+        // this can only happen when WALMapper is used directly by a class other than WALPlayer
+        throw new IOException("Exactly one table must be specified for bulk HFile case.");
+      }
+      table = Bytes.toBytes(tables[0]);
+
+    }
+
+  }
+  /**
+   * A mapper that just writes out Cells.
+   * This one can be used together with {@link CellSortReducer}
+   */
+  static class WALCellMapper
+    extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell> {
+    private byte[] table;
+
+    @Override
+    public void map(WALKey key, WALEdit value,
+      Context context)
+    throws IOException {
+      try {
+        // skip all other tables
+        if (Bytes.equals(table, key.getTablename().getName())) {
+          for (Cell cell : value.getCells()) {
+            if (WALEdit.isMetaEditFamily(cell)) {
+              continue;
+            }
+            context.write(new ImmutableBytesWritable(CellUtil.cloneRow(cell)),
+              new MapReduceCell(cell));
           }
         }
       } catch (InterruptedException e) {
@@ -299,11 +343,11 @@ public class WALPlayer extends Configured implements Tool {
         throw new IOException("Exactly one table must be specified for the bulk export option");
       }
       TableName tableName = TableName.valueOf(tables[0]);
-      job.setMapperClass(WALKeyValueMapper.class);
-      job.setReducerClass(KeyValueSortReducer.class);
+      job.setMapperClass(WALCellMapper.class);
+      job.setReducerClass(CellSortReducer.class);
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputValueClass(KeyValue.class);
+      job.setMapOutputValueClass(MapReduceCell.class);
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {

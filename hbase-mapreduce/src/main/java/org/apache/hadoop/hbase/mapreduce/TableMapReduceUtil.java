@@ -208,7 +208,7 @@ public class TableMapReduceUtil {
     conf.set(TableInputFormat.SCAN, convertScanToString(scan));
     conf.setStrings("io.serializations", conf.get("io.serializations"),
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-        KeyValueSerialization.class.getName());
+        CellSerialization.class.getName());
     if (addDependencyJars) {
       addDependencyJars(job);
     }

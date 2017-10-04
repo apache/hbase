@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
 import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIM_ARRAY;
 
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -1465,9 +1466,12 @@ public final class CellUtil {
   }
 
   /**
-   * Estimate based on keyvalue's serialization format.
+   * Estimate based on keyvalue's serialization format in the RPC layer. Note that there is an extra
+   * SIZEOF_INT added to the size here that indicates the actual length of the cell for cases where
+   * cell's are serialized in a contiguous format (For eg in RPCs).
    * @param cell
-   * @return Estimate of the <code>cell</code> size in bytes.
+   * @return Estimate of the <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the
+   *         actual cell length.
    */
   public static int estimatedSerializedSizeOf(final Cell cell) {
     if (cell instanceof ExtendedCell) {
@@ -1762,9 +1766,48 @@ public final class CellUtil {
    * timestamp&gt;&lt;1 byte type&gt;
    * @param cell
    * @param out
+   * @deprecated Use {@link #writeFlatKey(Cell, DataOutput)}
    * @throws IOException
    */
+  @Deprecated
   public static void writeFlatKey(Cell cell, DataOutputStream out) throws IOException {
+    short rowLen = cell.getRowLength();
+    byte fLen = cell.getFamilyLength();
+    int qLen = cell.getQualifierLength();
+    // Using just one if/else loop instead of every time checking before writing every
+    // component of cell
+    if (cell instanceof ByteBufferCell) {
+      out.writeShort(rowLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferCell) cell).getRowByteBuffer(), ((ByteBufferCell) cell).getRowPosition(),
+        rowLen);
+      out.writeByte(fLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferCell) cell).getFamilyByteBuffer(), ((ByteBufferCell) cell).getFamilyPosition(),
+        fLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferCell) cell).getQualifierPosition(), qLen);
+    } else {
+      out.writeShort(rowLen);
+      out.write(cell.getRowArray(), cell.getRowOffset(), rowLen);
+      out.writeByte(fLen);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qLen);
+    }
+    out.writeLong(cell.getTimestamp());
+    out.writeByte(cell.getTypeByte());
+  }
+
+  /**
+   * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
+   * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
+   * timestamp&gt;&lt;1 byte type&gt;
+   * @param cell
+   * @param out
+   * @throws IOException
+   */
+  public static void writeFlatKey(Cell cell, DataOutput out) throws IOException {
     short rowLen = cell.getRowLength();
     byte fLen = cell.getFamilyLength();
     int qLen = cell.getQualifierLength();
@@ -1788,6 +1831,69 @@ public final class CellUtil {
     }
     out.writeLong(cell.getTimestamp());
     out.writeByte(cell.getTypeByte());
+  }
+
+  /**
+   * Deep clones the given cell if the cell supports deep cloning
+   * @param cell the cell to be cloned
+   * @return the cloned cell
+   * @throws CloneNotSupportedException
+   */
+  public static Cell deepClone(Cell cell) throws CloneNotSupportedException {
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).deepClone();
+    }
+    throw new CloneNotSupportedException();
+  }
+
+  /**
+   * Writes the cell to the given OutputStream
+   * @param cell the cell to be written
+   * @param out the outputstream
+   * @param withTags if tags are to be written or not
+   * @return the total bytes written
+   * @throws IOException
+   */
+  public static int writeCell(Cell cell, OutputStream out, boolean withTags) throws IOException {
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).write(out, withTags);
+    } else {
+      ByteBufferUtils.putInt(out, CellUtil.estimatedSerializedSizeOfKey(cell));
+      ByteBufferUtils.putInt(out, cell.getValueLength());
+      CellUtil.writeFlatKey(cell, out);
+      CellUtil.writeValue(out, cell, cell.getValueLength());
+      int tagsLength = cell.getTagsLength();
+      if (withTags) {
+        byte[] len = new byte[Bytes.SIZEOF_SHORT];
+        Bytes.putAsShort(len, 0, tagsLength);
+        out.write(len);
+        if (tagsLength > 0) {
+          CellUtil.writeTags(out, cell, tagsLength);
+        }
+      }
+      int lenWritten = (2 * Bytes.SIZEOF_INT) + CellUtil.estimatedSerializedSizeOfKey(cell)
+          + cell.getValueLength();
+      if (withTags) {
+        lenWritten += Bytes.SIZEOF_SHORT + tagsLength;
+      }
+      return lenWritten;
+    }
+  }
+
+  /**
+   * Writes a cell to the buffer at the given offset
+   * @param cell the cell to be written
+   * @param buf the buffer to which the cell has to be wrriten
+   * @param offset the offset at which the cell should be written
+   */
+  public static void writeCellToBuffer(Cell cell, ByteBuffer buf, int offset) {
+    if (cell instanceof ExtendedCell) {
+      ((ExtendedCell) cell).write(buf, offset);
+    } else {
+      // Using the KVUtil
+      byte[] bytes = KeyValueUtil.copyToNewByteArray(cell);
+      ByteBufferUtils.copyFromArrayToBuffer(buf, offset, bytes, 0, bytes.length);
+    }
   }
 
   public static int writeFlatKey(Cell cell, OutputStream out) throws IOException {
@@ -1844,7 +1950,7 @@ public final class CellUtil {
   public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
       int commonPrefix) throws IOException {
     if (cell instanceof ByteBufferCell) {
-      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getRowByteBuffer(),
+      ByteBufferUtils.copyBufferToStream((DataOutput)out, ((ByteBufferCell) cell).getRowByteBuffer(),
         ((ByteBufferCell) cell).getRowPosition() + commonPrefix, rlength - commonPrefix);
     } else {
       out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rlength - commonPrefix);
@@ -1894,7 +2000,7 @@ public final class CellUtil {
   public static void writeQualifierSkippingBytes(DataOutputStream out, Cell cell,
       int qlength, int commonPrefix) throws IOException {
     if (cell instanceof ByteBufferCell) {
-      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getQualifierByteBuffer(),
+      ByteBufferUtils.copyBufferToStream((DataOutput)out, ((ByteBufferCell) cell).getQualifierByteBuffer(),
         ((ByteBufferCell) cell).getQualifierPosition() + commonPrefix, qlength - commonPrefix);
     } else {
       out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonPrefix,

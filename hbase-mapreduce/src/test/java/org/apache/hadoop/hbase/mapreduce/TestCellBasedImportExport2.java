@@ -63,12 +63,13 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
+import org.apache.hadoop.hbase.mapreduce.Import.CellImporter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -91,10 +92,9 @@ import org.mockito.stubbing.Answer;
  * Tests the table import and table export MR job functionality
  */
 @Category({VerySlowMapReduceTests.class, MediumTests.class})
-//TODO : Remove this in 3.0
-public class TestImportExport {
+public class TestCellBasedImportExport2 {
 
-  private static final Log LOG = LogFactory.getLog(TestImportExport.class);
+  private static final Log LOG = LogFactory.getLog(TestCellBasedImportExport2.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x32row1");
   private static final byte[] ROW2 = Bytes.toBytesBinary("\\x32row2");
@@ -254,7 +254,7 @@ public class TestImportExport {
   @Test
   public void testImport94Table() throws Throwable {
     final String name = "exportedTableIn94Format";
-    URL url = TestImportExport.class.getResource(name);
+    URL url = TestCellBasedImportExport2.class.getResource(name);
     File f = new File(url.toURI());
     if (!f.exists()) {
       LOG.warn("FAILED TO FIND " + f + "; skipping out on test");
@@ -665,7 +665,7 @@ public class TestImportExport {
   @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
   public void testKeyValueImporter() throws Throwable {
-    KeyValueImporter importer = new KeyValueImporter();
+    CellImporter importer = new CellImporter();
     Configuration configuration = new Configuration();
     Context ctx = mock(Context.class);
     when(ctx.getConfiguration()).thenReturn(configuration);
@@ -675,12 +675,12 @@ public class TestImportExport {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
         assertEquals("Key", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(ctx).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+    }).when(ctx).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
 
     importer.setup(ctx);
     Result value = mock(Result.class);
