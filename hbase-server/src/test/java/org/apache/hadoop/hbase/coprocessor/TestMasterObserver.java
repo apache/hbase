@@ -391,8 +391,6 @@ public class TestMasterObserver {
         TableName tableName, TableDescriptor htd) throws IOException {
       if (bypass) {
         env.bypass();
-      }else{
-        env.shouldBypass();
       }
       preModifyTableCalled = true;
     }
@@ -526,10 +524,7 @@ public class TestMasterObserver {
     ) throws IOException {
       if (bypass) {
         ctx.bypass();
-      }else{
-        ctx.shouldBypass();
       }
-
       preAddColumnCalled = true;
     }
 
