@@ -25,12 +25,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 
 /**
- * This Chore, every time it runs, will attempt to delete the WALs in the old logs folder. The WAL
- * is only deleted if none of the cleaner delegates says otherwise.
+ * This Chore, every time it runs, will attempt to delete the WALs and Procedure WALs in the old
+ * logs folder. The WAL is only deleted if none of the cleaner delegates says otherwise.
  * @see BaseLogCleanerDelegate
  */
 @InterfaceAudience.Private
@@ -38,19 +39,20 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   private static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
 
   /**
-   * @param p the period of time to sleep between each run
-   * @param s the stopper
+   * @param period the period of time to sleep between each run
+   * @param stopper the stopper
    * @param conf configuration to use
    * @param fs handle to the FS
    * @param oldLogDir the path to the archived logs
    */
-  public LogCleaner(final int p, final Stoppable s, Configuration conf, FileSystem fs,
+  public LogCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
       Path oldLogDir) {
-    super("LogsCleaner", p, s, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS);
+    super("LogsCleaner", period, stopper, conf, fs, oldLogDir, HBASE_MASTER_LOGCLEANER_PLUGINS);
   }
 
   @Override
   protected boolean validate(Path file) {
-    return AbstractFSWALProvider.validateWALFilename(file.getName());
+    return AbstractFSWALProvider.validateWALFilename(file.getName())
+        || MasterProcedureUtil.validateProcedureWALFilename(file.getName());
   }
 }

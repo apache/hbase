@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.cleaner;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.BaseConfigurable;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 
 import java.util.Map;
@@ -34,11 +33,7 @@ implements FileCleanerDelegate {
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    return Iterables.filter(files, new Predicate<FileStatus>() {
-      @Override
-      public boolean apply(FileStatus file) {
-        return isFileDeletable(file);
-      }});
+    return Iterables.filter(files, this::isFileDeletable);
   }
 
   @Override

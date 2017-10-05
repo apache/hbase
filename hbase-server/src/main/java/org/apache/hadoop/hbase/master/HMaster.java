@@ -1198,10 +1198,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void startProcedureExecutor() throws IOException {
     final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
+    final Path rootDir = FSUtils.getRootDir(conf);
     final Path walDir = new Path(FSUtils.getWALRootDir(this.conf),
         MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
-    // TODO: No cleaner currently! Make it a subdir!
-    final Path walArchiveDir = new Path(walDir, "archive");
+    final Path walArchiveDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
 
     final FileSystem walFs = walDir.getFileSystem(conf);
 

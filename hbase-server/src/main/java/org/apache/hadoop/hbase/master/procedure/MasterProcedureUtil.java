@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -140,5 +141,20 @@ public final class MasterProcedureUtil {
       procExec.unregisterNonceIfProcedureWasNotSubmitted(runnable.getNonceKey());
     }
     return runnable.getProcId();
+  }
+
+  /**
+   * Pattern used to validate a Procedure WAL file name see
+   * {@link #validateProcedureWALFilename(String)} for description.
+   */
+  private static final Pattern pattern = Pattern.compile(".*pv-\\d{20}.log");
+
+  /**
+   * A Procedure WAL file name is of the format: pv-&lt;wal-id&gt;.log where wal-id is 20 digits.
+   * @param filename name of the file to validate
+   * @return <tt>true</tt> if the filename matches a Procedure WAL, <tt>false</tt> otherwise
+   */
+  public static boolean validateProcedureWALFilename(String filename) {
+    return pattern.matcher(filename).matches();
   }
 }
