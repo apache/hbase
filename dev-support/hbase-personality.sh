@@ -36,6 +36,15 @@
 
 personality_plugins "all"
 
+if ! declare -f "yetus_info" >/dev/null; then
+
+  function yetus_info
+  {
+    echo "[$(date) INFO]: $*" 1>&2
+  }
+
+fi
+
 ## @description  Globals specific to this personality
 ## @audience     private
 ## @stability    evolving
@@ -50,19 +59,6 @@ function personality_globals
   JIRA_ISSUE_RE='^HBASE-[0-9]+$'
   #shellcheck disable=SC2034
   GITHUB_REPO="apache/hbase"
-
-  # All supported Hadoop versions that we want to test the compilation with
-  # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-    HBASE_HADOOP3_VERSIONS=""
-  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
-    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
-  else # master or a feature branch
-    HBASE_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-    HBASE_HADOOP3_VERSIONS="3.0.0-alpha4"
-  fi
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
@@ -244,9 +240,21 @@ function hadoopcheck_rebuild
 
   big_console_header "Compiling against various Hadoop versions"
 
-  hbase_hadoop2_versions=${HBASE_HADOOP2_VERSIONS}
-  hbase_hadoop3_versions=${HBASE_HADOOP3_VERSIONS}
-
+  # All supported Hadoop versions that we want to test the compilation with
+  # See the Hadoop section on prereqs in the HBase Reference Guide
+  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
+    yetus_info "setting Hadoop versions to test based on branch-1-ish rules."
+    hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    hbase_hadoop3_versions=""
+  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
+    yetus_info "setting Hadoop versions to test based on branch-2-ish rules."
+    hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    hbase_hadoop3_versions="3.0.0-alpha4"
+  else # master or a feature branch
+    yetus_info "setting Hadoop versions to test based on master/feature branch rules."
+    hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
+    hbase_hadoop3_versions="3.0.0-alpha4"
+  fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for hadoopver in ${hbase_hadoop2_versions}; do
