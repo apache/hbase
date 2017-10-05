@@ -71,39 +71,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
   private long deleteFamilyCnt = 0;
   private BloomContext bloomContext = null;
   private BloomContext deleteFamilyBloomContext = null;
-
-  /**
-   * timeRangeTrackerSet is used to figure if we were passed a filled-out TimeRangeTracker or not.
-   * When flushing a memstore, we set the TimeRangeTracker that it accumulated during updates to
-   * memstore in here into this Writer and use this variable to indicate that we do not need to
-   * recalculate the timeRangeTracker bounds; it was done already as part of add-to-memstore.
-   * A completed TimeRangeTracker is not set in cases of compactions when it is recalculated.
-   */
-   private final boolean timeRangeTrackerSet;
-   final TimeRangeTracker timeRangeTracker;
+  private final TimeRangeTracker timeRangeTracker;
 
   protected HFile.Writer writer;
-
-  /**
-   * Creates an HFile.Writer that also write helpful meta data.
-   * @param fs file system to write to
-   * @param path file name to create
-   * @param conf user configuration
-   * @param comparator key comparator
-   * @param bloomType bloom filter setting
-   * @param maxKeys the expected maximum number of keys to be added. Was used
-   *        for Bloom filter size in {@link HFile} format version 1.
-   * @param fileContext - The HFile context
-   * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
-   * @throws IOException problem writing to FS
-   */
-  StoreFileWriter(FileSystem fs, Path path, final Configuration conf, CacheConfig cacheConf,
-      final CellComparator comparator, BloomType bloomType, long maxKeys,
-      InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind)
-          throws IOException {
-      this(fs, path, conf, cacheConf, comparator, bloomType, maxKeys, favoredNodes, fileContext,
-          shouldDropCacheBehind, null);
-    }
 
     /**
      * Creates an HFile.Writer that also write helpful meta data.
@@ -117,7 +87,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      * @param favoredNodes
      * @param fileContext - The HFile context
      * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
-     * @param trt Ready-made timetracker to use.
      * @throws IOException problem writing to FS
      */
     private StoreFileWriter(FileSystem fs, Path path,
@@ -125,13 +94,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         CacheConfig cacheConf,
         final CellComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext,
-        boolean shouldDropCacheBehind, final TimeRangeTracker trt)
+        boolean shouldDropCacheBehind)
             throws IOException {
-    // If passed a TimeRangeTracker, use it. Set timeRangeTrackerSet so we don't destroy it.
-    // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
-    // it no longer writable.
-    this.timeRangeTrackerSet = trt != null;
-    this.timeRangeTracker = this.timeRangeTrackerSet? trt: TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
+    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
     // TODO : Change all writers to be specifically created for compaction context
     writer = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, path)
@@ -232,9 +197,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     if (KeyValue.Type.Put.getCode() == cell.getTypeByte()) {
       earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
     }
-    if (!timeRangeTrackerSet) {
-      timeRangeTracker.includeTimestamp(cell);
-    }
+    timeRangeTracker.includeTimestamp(cell);
   }
 
   private void appendGeneralBloomfilter(final Cell cell) throws IOException {
@@ -389,7 +352,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
-    private TimeRangeTracker trt;
     private boolean shouldDropCacheBehind;
 
     public Builder(Configuration conf, CacheConfig cacheConf,
@@ -406,17 +368,6 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       this.conf = conf;
       this.cacheConf = CacheConfig.DISABLED;
       this.fs = fs;
-    }
-
-    /**
-     * @param trt A premade TimeRangeTracker to use rather than build one per append (building one
-     * of these is expensive so good to pass one in if you have one).
-     * @return this (for chained invocation)
-     */
-    public Builder withTimeRangeTracker(final TimeRangeTracker trt) {
-      Preconditions.checkNotNull(trt);
-      this.trt = trt;
-      return this;
     }
 
     /**
@@ -523,7 +474,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
       return new StoreFileWriter(fs, filePath,
           conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext,
-          shouldDropCacheBehind, trt);
+          shouldDropCacheBehind);
     }
   }
 }
