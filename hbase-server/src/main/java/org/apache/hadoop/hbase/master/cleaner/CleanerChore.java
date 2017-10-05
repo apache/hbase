@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -114,7 +113,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * A utility method to create new instances of LogCleanerDelegate based on the class name of the
    * LogCleanerDelegate.
    * @param className fully qualified class name of the LogCleanerDelegate
-   * @param conf
+   * @param conf used configuration
    * @return the new instance
    */
   private T newFileCleaner(String className, Configuration conf) {
@@ -164,15 +163,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       // no need to sort for empty or single directory
       return;
     }
-    Collections.sort(dirs, new Comparator<FileStatus>() {
-      HashMap<FileStatus, Long> directorySpaces = new HashMap<FileStatus, Long>();
+    dirs.sort(new Comparator<FileStatus>() {
+      HashMap<FileStatus, Long> directorySpaces = new HashMap<>();
 
       @Override
       public int compare(FileStatus f1, FileStatus f2) {
         long f1ConsumedSpace = getSpace(f1);
         long f2ConsumedSpace = getSpace(f2);
-        return (f1ConsumedSpace > f2ConsumedSpace) ? -1
-            : (f1ConsumedSpace < f2ConsumedSpace ? 1 : 0);
+        return Long.compare(f2ConsumedSpace, f1ConsumedSpace);
       }
 
       private long getSpace(FileStatus f) {

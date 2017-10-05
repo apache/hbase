@@ -129,7 +129,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.cleaner.TimeToLiveProcedureWALCleaner</value>
     <description>A comma-separated list of BaseLogCleanerDelegate invoked by
     the LogsCleaner service. These WAL cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
@@ -140,8 +140,15 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.master.logcleaner.ttl</name>
     <value>600000</value>
-    <description>Maximum time a WAL can stay in the .oldlogdir directory,
-    after which it will be cleaned by a Master thread.</description>
+    <description>How long a WAL remain in the {hbase.rootdir}/oldWALs directory,
+    after which it will be cleaned by a Master thread. The value is in milliseconds.</description>
+  </property>
+  <property>
+    <name>hbase.master.procedurewalcleaner.ttl</name>
+    <value>604800000</value>
+    <description>How long a Procedure WAL stays will remain in the
+    {hbase.rootdir}/oldWALs/masterProcedureWALs directory, after which it will be cleaned
+    by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
     <name>hbase.master.hfilecleaner.plugins</name>
