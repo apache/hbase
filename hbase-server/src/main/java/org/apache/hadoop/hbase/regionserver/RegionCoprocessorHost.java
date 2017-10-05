@@ -569,18 +569,16 @@ public class RegionCoprocessorHost
    * @param store The store where compaction is being requested
    * @param candidates The currently available store files
    * @param tracker used to track the life cycle of a compaction
-   * @param request the compaction request
    * @param user the user
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
   public boolean preCompactSelection(final HStore store, final List<HStoreFile> candidates,
-      final CompactionLifeCycleTracker tracker, final CompactionRequest request,
-      final User user) throws IOException {
+      final CompactionLifeCycleTracker tracker, final User user) throws IOException {
     return execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation(user) {
       @Override
       public void call(RegionObserver observer) throws IOException {
-        observer.preCompactSelection(this, store, candidates, tracker, request);
+        observer.preCompactSelection(this, store, candidates, tracker);
       }
     });
   }
