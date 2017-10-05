@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
@@ -57,7 +58,7 @@ import org.apache.hadoop.hbase.rest.model.TableModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -119,26 +120,26 @@ public class TestTableResource {
     table.close();
     // get the initial layout (should just be one region)
     
-    RegionLocator regionLocator = connection.getRegionLocator(TABLE);
+    final RegionLocator regionLocator = connection.getRegionLocator(TABLE);
     List<HRegionLocation> m = regionLocator.getAllRegionLocations();
     assertEquals(m.size(), 1);
     // tell the master to split the table
     admin.split(TABLE);
-    // give some time for the split to happen
 
-    long timeout = System.currentTimeMillis() + (15 * 1000);
-    while (System.currentTimeMillis() < timeout && m.size()!=2){
-      try {
-        Thread.sleep(250);
-      } catch (InterruptedException e) {
-        LOG.warn(StringUtils.stringifyException(e));
+    // give some time for the split to happen
+    long timeout = EnvironmentEdgeManager.currentTime() + (15 * 1000);
+    TEST_UTIL.waitFor(timeout, 250, new Waiter.Predicate<IOException>() {
+      @Override
+      public boolean evaluate() throws IOException {
+        List<HRegionLocation> regionLocations = regionLocator.getAllRegionLocations();
+        return regionLocations.size() == 2 && regionLocations.get(0).getServerName() != null
+            && regionLocations.get(1).getServerName() != null;
       }
-      // check again
-      m = regionLocator.getAllRegionLocations();
-    }
+    });
+    m = regionLocator.getAllRegionLocations();
 
     // should have two regions now
-    assertEquals(m.size(), 2);
+    assertEquals(2, m.size());
     regionMap = m;
     LOG.info("regions: " + regionMap);
     regionLocator.close();
