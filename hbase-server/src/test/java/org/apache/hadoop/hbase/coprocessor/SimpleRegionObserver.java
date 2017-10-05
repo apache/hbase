@@ -203,8 +203,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   @Override
   public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker,
-      CompactionRequest request) throws IOException {
+      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
     ctPreCompactSelect.incrementAndGet();
   }
 

@@ -1666,7 +1666,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
           boolean override = false;
           //TODO: is it correct way to get CompactionRequest?
           override = getCoprocessorHost().preCompactSelection(this, candidatesForCoproc,
-            tracker, null, user);
+            tracker, user);
           if (override) {
             // Coprocessor is overriding normal file selection.
             compaction.forceSelect(new CompactionRequestImpl(candidatesForCoproc));

@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -188,11 +187,10 @@ public interface RegionObserver {
    * @param store the store where compaction is being requested
    * @param candidates the store files currently available for compaction
    * @param tracker tracker used to track the life cycle of a compaction
-   * @param request the requested compaction
    */
   default void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker,
-      CompactionRequest request) throws IOException {}
+      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
+      throws IOException {}
 
   /**
    * Called after the {@link StoreFile}s to compact have been selected from the available
