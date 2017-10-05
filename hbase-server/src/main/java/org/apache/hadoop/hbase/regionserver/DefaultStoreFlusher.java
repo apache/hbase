@@ -68,8 +68,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
             /* isCompaction = */ false,
             /* includeMVCCReadpoint = */ true,
             /* includesTags = */ snapshot.isTagsPresent(),
-            /* shouldDropBehind = */ false,
-            snapshot.getTimeRangeTracker());
+            /* shouldDropBehind = */ false);
         IOException e = null;
         try {
           performFlush(scanner, writer, smallestReadPoint, throughputController);

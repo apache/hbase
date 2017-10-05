@@ -75,8 +75,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     StripeMultiFileWriter mw = null;
     try {
       mw = req.createWriter(); // Writer according to the policy.
-      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(
-          snapshot.getTimeRangeTracker(), cellsCount);
+      StripeMultiFileWriter.WriterFactory factory = createWriterFactory(cellsCount);
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory);
 
@@ -104,8 +103,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     return result;
   }
 
-  private StripeMultiFileWriter.WriterFactory createWriterFactory(
-      final TimeRangeTracker tracker, final long kvCount) {
+  private StripeMultiFileWriter.WriterFactory createWriterFactory(final long kvCount) {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
@@ -114,8 +112,7 @@ public class StripeStoreFlusher extends StoreFlusher {
             /* isCompaction = */ false,
             /* includeMVCCReadpoint = */ true,
             /* includesTags = */ true,
-            /* shouldDropBehind = */ false,
-            tracker);
+            /* shouldDropBehind = */ false);
         return writer;
       }
     };

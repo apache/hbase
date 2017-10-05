@@ -119,7 +119,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
         writer = store.createWriterInTmp(cellsCount, store.getColumnFamilyDescriptor().getCompressionType(),
-            false, true, true, false, snapshot.getTimeRangeTracker());
+            false, true, true, false);
         IOException e = null;
         try {
           // It's a mob store, flush the cells in a mob way. This is the difference of flushing

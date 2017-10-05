@@ -515,6 +515,37 @@ public class TestHStore {
     assertCheck();
   }
 
+  @Test
+  public void testTimeRangeIfSomeCellsAreDroppedInFlush() throws IOException {
+    testTimeRangeIfSomeCellsAreDroppedInFlush(1);
+    testTimeRangeIfSomeCellsAreDroppedInFlush(3);
+    testTimeRangeIfSomeCellsAreDroppedInFlush(5);
+  }
+
+  private void testTimeRangeIfSomeCellsAreDroppedInFlush(int maxVersion) throws IOException {
+    init(this.name.getMethodName(), TEST_UTIL.getConfiguration(),
+    ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(maxVersion).build());
+    long currentTs = 100;
+    long minTs = currentTs;
+    // the extra cell won't be flushed to disk,
+    // so the min of timerange will be different between memStore and hfile.
+    for (int i = 0; i != (maxVersion + 1); ++i) {
+      this.store.add(new KeyValue(row, family, qf1, ++currentTs, (byte[])null), null);
+      if (i == 1) {
+        minTs = currentTs;
+      }
+    }
+    flushStore(store, id++);
+
+    Collection<HStoreFile> files = store.getStorefiles();
+    assertEquals(1, files.size());
+    HStoreFile f = files.iterator().next();
+    f.initReader();
+    StoreFileReader reader = f.getReader();
+    assertEquals(minTs, reader.timeRange.getMin());
+    assertEquals(currentTs, reader.timeRange.getMax());
+  }
+
   /**
    * Getting data from files only
    * @throws IOException

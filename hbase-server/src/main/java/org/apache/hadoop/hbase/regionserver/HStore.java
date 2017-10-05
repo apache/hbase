@@ -1034,26 +1034,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @param includesTag - includesTag or not
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  public StoreFileWriter createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
-      boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,
-      boolean shouldDropBehind) throws IOException {
-    return createWriterInTmp(maxKeyCount, compression, isCompaction, includeMVCCReadpoint,
-      includesTag, shouldDropBehind, null);
-  }
-
-  /**
-   * @param maxKeyCount
-   * @param compression Compression algorithm to use
-   * @param isCompaction whether we are creating a new file in a compaction
-   * @param includeMVCCReadpoint - whether to include MVCC or not
-   * @param includesTag - includesTag or not
-   * @return Writer for a new StoreFile in the tmp dir.
-   */
   // TODO : allow the Writer factory to create Writers of ShipperListener type only in case of
   // compaction
   public StoreFileWriter createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,
-      boolean shouldDropBehind, TimeRangeTracker trt) throws IOException {
+      boolean shouldDropBehind) throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
       // Don't cache data on write on compactions.
@@ -1079,9 +1064,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             .withFavoredNodes(favoredNodes)
             .withFileContext(hFileContext)
             .withShouldDropCacheBehind(shouldDropBehind);
-    if (trt != null) {
-      builder.withTimeRangeTracker(trt);
-    }
     return builder.build();
   }
 
