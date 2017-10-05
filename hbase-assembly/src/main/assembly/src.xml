@@ -141,6 +141,7 @@
         <include>NOTICE.txt</include>
         <include>CHANGES.txt</include>
         <include>README.txt</include>
+        <include>.pylintrc</include>
       </includes>
       <fileMode>0644</fileMode>
     </fileSet>
