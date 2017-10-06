@@ -3086,7 +3086,7 @@ public class HRegionServer extends HasThread implements
   protected boolean closeRegion(String encodedName, final boolean abort, final ServerName sn)
       throws NotServingRegionException {
     //Check for permissions to close.
-    Region actualRegion = this.getRegion(encodedName);
+    HRegion actualRegion = this.getRegion(encodedName);
     // Can be null if we're calling close on a region that's not online
     if ((actualRegion != null) && (actualRegion.getCoprocessorHost() != null)) {
       try {
@@ -3205,7 +3205,7 @@ public class HRegionServer extends HasThread implements
    * @return HRegion for the passed binary <code>regionName</code> or null if
    *         named region is not member of the online regions.
    */
-  public Region getOnlineRegion(final byte[] regionName) {
+  public HRegion getOnlineRegion(final byte[] regionName) {
     String encodedRegionName = RegionInfo.encodeRegionName(regionName);
     return this.onlineRegions.get(encodedRegionName);
   }

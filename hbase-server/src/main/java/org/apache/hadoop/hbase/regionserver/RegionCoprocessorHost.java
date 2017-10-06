@@ -91,8 +91,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * Implements the coprocessor environment and runtime support for coprocessors
  * loaded within a {@link Region}.
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class RegionCoprocessorHost
     extends CoprocessorHost<RegionCoprocessor, RegionCoprocessorEnvironment> {
 

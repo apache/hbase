@@ -58,8 +58,7 @@ import org.apache.hadoop.hbase.util.SortedList;
  * @param <E> type of specific coprocessor environment this host requires.
  * provides
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class CoprocessorHost<C extends Coprocessor, E extends CoprocessorEnvironment<C>> {
   public static final String REGION_COPROCESSOR_CONF_KEY =
       "hbase.coprocessor.region.classes";

@@ -84,7 +84,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
 
-      String bulkToken = secureBulkLoadManager.prepareBulkLoad(this.env.getRegion(),
+      String bulkToken = secureBulkLoadManager.prepareBulkLoad((HRegion) this.env.getRegion(),
           convert(request));
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
     } catch (IOException e) {
@@ -110,7 +110,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
       RpcCallback<CleanupBulkLoadResponse> done) {
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
-      secureBulkLoadManager.cleanupBulkLoad(this.env.getRegion(), convert(request));
+      secureBulkLoadManager.cleanupBulkLoad((HRegion) this.env.getRegion(), convert(request));
       done.run(CleanupBulkLoadResponse.newBuilder().build());
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);

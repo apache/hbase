@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.mapreduce.ResultSerialization;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.DelegationToken;
 import org.apache.hadoop.hbase.protobuf.generated.ExportProtos;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -377,10 +378,10 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
 
   private static class ScanCoprocessor {
 
-    private final Region region;
+    private final HRegion region;
 
     ScanCoprocessor(final Region region) {
-      this.region = region;
+      this.region = (HRegion) region;
     }
 
     RegionScanner checkScannerOpen(final Scan scan) throws IOException {

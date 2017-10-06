@@ -39,8 +39,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class RegionServerCoprocessorHost extends
     CoprocessorHost<RegionServerCoprocessor, RegionServerCoprocessorEnvironment> {
 

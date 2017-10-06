@@ -453,10 +453,6 @@ public interface Region extends ConfigurationObserver {
    */
   void put(Put put) throws IOException;
 
-  /** @return the coprocessor host */
-  // TODO To be removed by HBASE-18954
-  RegionCoprocessorHost getCoprocessorHost();
-
   ///////////////////////////////////////////////////////////////////////////
   // Flushes, compactions, splits, etc.
   // Wizards only, please
