@@ -310,6 +310,27 @@ public class TestHRegionReplayEvents {
   }
 
   @Test
+  public void testBatchReplayWithMultipleNonces() throws IOException {
+    try {
+      MutationReplay[] mutations = new MutationReplay[100];
+      for (int i = 0; i < 100; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.setDurability(Durability.SYNC_WAL);
+        for (byte[] familly : this.families) {
+          put.addColumn(familly, this.cq, null);
+          long nonceNum = i / 10;
+          mutations[i] = new MutationReplay(MutationType.PUT, put, nonceNum, nonceNum);
+        }
+      }
+      primaryRegion.batchReplay(mutations, 20);
+    } catch (Exception e) {
+      String msg = "Error while replay of batch with multiple nonces. ";
+      LOG.error(msg, e);
+      fail(msg + e.getMessage());
+    }
+  }
+
+  @Test
   public void testReplayFlushesAndCompactions() throws IOException {
     // initiate a secondary region with some data.
 
