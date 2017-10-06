@@ -21,10 +21,8 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -71,14 +69,6 @@ final public class FilterList extends Filter {
   private List<Filter> filters = new ArrayList<Filter>();
   private Filter seekHintFilter = null;
 
-  /**
-   * Save previous return code and previous cell for every filter in filter list. For MUST_PASS_ONE,
-   * we use the previous return code to decide whether we should pass current cell encountered to
-   * the filter. For MUST_PASS_ALL, the two list are meaningless.
-   */
-  private List<ReturnCode> prevFilterRCList = null;
-  private List<Cell> prevCellList = null;
-
   /** Reference Cell used by {@link #transformCell(Cell)} for validation purpose. */
   private Cell referenceKV = null;
 
@@ -103,7 +93,6 @@ final public class FilterList extends Filter {
     } else {
       this.filters = new ArrayList<Filter>(rowFilters);
     }
-    initPrevListForMustPassOne(rowFilters.size());
   }
 
   /**
@@ -113,7 +102,6 @@ final public class FilterList extends Filter {
    */
   public FilterList(final Filter... rowFilters) {
     this.filters = new ArrayList<Filter>(Arrays.asList(rowFilters));
-    initPrevListForMustPassOne(filters.size());
   }
 
   /**
@@ -123,7 +111,6 @@ final public class FilterList extends Filter {
    */
   public FilterList(final Operator operator) {
     this.operator = operator;
-    initPrevListForMustPassOne(filters.size());
   }
 
   /**
@@ -135,7 +122,6 @@ final public class FilterList extends Filter {
   public FilterList(final Operator operator, final List<Filter> rowFilters) {
     this.filters = new ArrayList<Filter>(rowFilters);
     this.operator = operator;
-    initPrevListForMustPassOne(filters.size());
   }
 
   /**
@@ -147,18 +133,6 @@ final public class FilterList extends Filter {
   public FilterList(final Operator operator, final Filter... rowFilters) {
     this.filters = new ArrayList<Filter>(Arrays.asList(rowFilters));
     this.operator = operator;
-    initPrevListForMustPassOne(filters.size());
-  }
-
-  public void initPrevListForMustPassOne(int size) {
-    if (operator == Operator.MUST_PASS_ONE) {
-      if (this.prevFilterRCList == null) {
-        prevFilterRCList = new ArrayList<ReturnCode>(Collections.nCopies(size, (ReturnCode) null));
-      }
-      if (this.prevCellList == null) {
-        prevCellList = new ArrayList<Cell>(Collections.nCopies(size, (Cell) null));
-      }
-    }
   }
 
   /**
@@ -191,10 +165,6 @@ final public class FilterList extends Filter {
               + this.isReversed());
     }
     this.filters.add(filter);
-    if (operator == Operator.MUST_PASS_ONE) {
-      this.prevFilterRCList.add((ReturnCode) null);
-      this.prevCellList.add((Cell) null);
-    }
   }
 
   @Override
@@ -202,10 +172,6 @@ final public class FilterList extends Filter {
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
       filters.get(i).reset();
-      if (operator == Operator.MUST_PASS_ONE) {
-        prevFilterRCList.set(i, null);
-        prevCellList.set(i, null);
-      }
     }
     seekHintFilter = null;
   }
@@ -276,38 +242,6 @@ final public class FilterList extends Filter {
     return KeyValueUtil.ensureKeyValue(this.transformedKV);
   }
 
-  /**
-   * For MUST_PASS_ONE, we cannot make sure that when filter-A in filter list return NEXT_COL then
-   * the next cell passing to filterList will be the first cell in next column, because if filter-B
-   * in filter list return SKIP, then the filter list will return SKIP. In this case, we should pass
-   * the cell following the previous cell, and it's possible that the next cell has the same column
-   * as the previous cell even if filter-A has NEXT_COL returned for the previous cell. So we should
-   * save the previous cell and the return code list when checking previous cell for every filter in
-   * filter list, and verify if currentCell fit the previous return code, if fit then pass the
-   * currentCell to the corresponding filter. (HBASE-17678)
-   */
-  private boolean shouldPassCurrentCellToFilter(Cell prevCell, Cell currentCell, int filterIdx)
-      throws IOException {
-    ReturnCode prevCode = this.prevFilterRCList.get(filterIdx);
-    if (prevCell == null || prevCode == null) {
-      return true;
-    }
-    switch (prevCode) {
-    case INCLUDE:
-    case SKIP:
-      return true;
-    case SEEK_NEXT_USING_HINT:
-      Cell nextHintCell = getNextCellHint(prevCell);
-      return nextHintCell == null || KeyValue.COMPARATOR.compare(currentCell, nextHintCell) >= 0;
-    case NEXT_COL:
-    case INCLUDE_AND_NEXT_COL:
-      return !CellUtil.matchingRowColumn(prevCell, currentCell);
-    case NEXT_ROW:
-      return !CellUtil.matchingRow(prevCell, currentCell);
-    default:
-      throw new IllegalStateException("Received code is not valid.");
-    }
-  }
   
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
@@ -351,24 +285,12 @@ final public class FilterList extends Filter {
           return code;
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
-        Cell prevCell = this.prevCellList.get(i);
-        if (filter.filterAllRemaining() || !shouldPassCurrentCellToFilter(prevCell, v, i)) {
+        if (filter.filterAllRemaining()) {
           seenNonHintReturnCode = true;
           continue;
         }
 
         ReturnCode localRC = filter.filterKeyValue(v);
-        // Update previous cell and return code we encountered.
-        prevFilterRCList.set(i, localRC);
-        if (v == null || localRC == ReturnCode.INCLUDE || localRC == ReturnCode.SKIP) {
-          // If previous return code is INCLUDE or SKIP, we should always pass the next cell to the
-          // corresponding sub-filter(need not test shouldPassCurrentCellToFilter() method), So we
-          // need not save current cell to prevCellList for saving heap memory.
-          prevCellList.set(i, null);
-        } else {
-          prevCellList.set(i, KeyValueUtil.toNewKeyCell(v));
-        }
-
         if (localRC != ReturnCode.SEEK_NEXT_USING_HINT) {
           seenNonHintReturnCode = true;
         }
@@ -522,7 +444,7 @@ final public class FilterList extends Filter {
   public Cell getNextCellHint(Cell currentKV) throws IOException {
     Cell keyHint = null;
     if (operator == Operator.MUST_PASS_ALL) {
-      if (seekHintFilter != null) keyHint = seekHintFilter.getNextCellHint(currentKV);
+      keyHint = seekHintFilter.getNextCellHint(currentKV);
       return keyHint;
     }
 
