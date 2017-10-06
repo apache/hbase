@@ -7906,7 +7906,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /** @return the coprocessor host */
-  @Override
   public RegionCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;
   }

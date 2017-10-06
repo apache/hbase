@@ -204,8 +204,6 @@ public interface Store {
    */
   RegionInfo getRegionInfo();
 
-  RegionCoprocessorHost getCoprocessorHost();
-
   boolean areWritesEnabled();
 
   /**

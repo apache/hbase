@@ -209,7 +209,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[][] FAMILIES = new byte[][] { A };
 
     Configuration conf = HBaseConfiguration.create();
-    Region region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
+    HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromScan.class, Coprocessor.PRIORITY_HIGHEST, conf);
     h.load(EmptyRegionObsever.class, Coprocessor.PRIORITY_USER, conf);

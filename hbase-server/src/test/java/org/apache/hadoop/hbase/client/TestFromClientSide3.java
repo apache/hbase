@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -960,7 +959,7 @@ public class TestFromClientSide3 {
     HRegion region = (HRegion) find(tableName);
     assertEquals(0, region.getLockedRows().size());
   }
-  private static Region find(final TableName tableName)
+  private static HRegion find(final TableName tableName)
       throws IOException, InterruptedException {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<HRegion> regions = rs.getRegions(tableName);
@@ -970,7 +969,7 @@ public class TestFromClientSide3 {
 
   private static <T extends RegionObserver> T find(final TableName tableName,
           Class<T> clz) throws IOException, InterruptedException {
-    Region region = find(tableName);
+    HRegion region = find(tableName);
     Coprocessor cp = region.getCoprocessorHost().findCoprocessor(clz.getName());
     assertTrue("The cp instance should be " + clz.getName()
             + ", current instance is " + cp.getClass().getName(), clz.isInstance(cp));

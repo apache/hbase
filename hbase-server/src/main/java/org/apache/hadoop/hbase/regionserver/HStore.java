@@ -2120,7 +2120,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     return this.region;
   }
 
-  @Override
   public RegionCoprocessorHost getCoprocessorHost() {
     return this.region.getCoprocessorHost();
   }

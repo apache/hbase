@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -305,7 +305,7 @@ public class SecureTestUtil {
   private static List<AccessController> getAccessControllers(MiniHBaseCluster cluster) {
     List<AccessController> result = Lists.newArrayList();
     for (RegionServerThread t: cluster.getLiveRegionServerThreads()) {
-      for (Region region: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for (HRegion region: t.getRegionServer().getOnlineRegionsLocalContext()) {
         Coprocessor cp = region.getCoprocessorHost().findCoprocessor(AccessController.class);
         if (cp != null) {
           result.add((AccessController)cp);

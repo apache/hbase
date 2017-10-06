@@ -132,7 +132,7 @@ public class SecureBulkLoadManager {
   public void stop() throws IOException {
   }
 
-  public String prepareBulkLoad(final Region region, final PrepareBulkLoadRequest request)
+  public String prepareBulkLoad(final HRegion region, final PrepareBulkLoadRequest request)
       throws IOException {
     User user = getActiveUser();
     region.getCoprocessorHost().prePrepareBulkLoad(user);
@@ -144,7 +144,7 @@ public class SecureBulkLoadManager {
     return bulkToken;
   }
 
-  public void cleanupBulkLoad(final Region region, final CleanupBulkLoadRequest request)
+  public void cleanupBulkLoad(final HRegion region, final CleanupBulkLoadRequest request)
       throws IOException {
     region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
 
