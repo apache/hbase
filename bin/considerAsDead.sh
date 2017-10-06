@@ -47,6 +47,7 @@ zkrs="$zparent/$zkrs"
 online_regionservers=`$bin/hbase zkcli ls $zkrs 2>&1 | tail -1 | sed "s/\[//" | sed "s/\]//"`
 for rs in $online_regionservers
 do
+    rs=${rs%,}
     rs_parts=(${rs//,/ })
     hostname=${rs_parts[0]}
     echo $deadhost
