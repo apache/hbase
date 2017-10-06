@@ -485,7 +485,7 @@ public class TestFilterList {
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
     assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
-        maxKeyValue));
+        minKeyValue));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMaxHint, filterMinHint } ));
@@ -499,7 +499,7 @@ public class TestFilterList {
             new Filter [] { filterNoHint, filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
     assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
-        maxKeyValue));
+        minKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
