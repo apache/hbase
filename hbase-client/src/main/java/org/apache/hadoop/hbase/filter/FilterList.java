@@ -566,7 +566,6 @@ final public class FilterList extends FilterBase {
       if (isInReturnCodes(rc, ReturnCode.NEXT_ROW)) {
         return ReturnCode.NEXT_ROW;
       }
-      break;
     case SEEK_NEXT_USING_HINT:
       if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
         ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
@@ -578,7 +577,6 @@ final public class FilterList extends FilterBase {
       if (isInReturnCodes(rc, ReturnCode.SEEK_NEXT_USING_HINT)) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
       }
-      break;
     }
     throw new IllegalStateException(
         "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
