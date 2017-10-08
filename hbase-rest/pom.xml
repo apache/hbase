@@ -338,11 +338,6 @@
        <artifactId>findbugs-annotations</artifactId>
        <optional>true</optional>
     </dependency>
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <version>${servlet.api.version}</version>
-    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
