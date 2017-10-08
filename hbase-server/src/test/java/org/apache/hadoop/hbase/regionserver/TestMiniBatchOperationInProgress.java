@@ -44,7 +44,7 @@ public class TestMiniBatchOperationInProgress {
     }
     MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatch = 
       new MiniBatchOperationInProgress<>(operations, retCodeDetails,
-      walEditsFromCoprocessors, 0, 5);
+      walEditsFromCoprocessors, 0, 5, 5);
 
     assertEquals(5, miniBatch.size());
     assertTrue(Bytes.equals(Bytes.toBytes(0), miniBatch.getOperation(0).getFirst().getRow()));
@@ -69,7 +69,7 @@ public class TestMiniBatchOperationInProgress {
     }
 
     miniBatch = new MiniBatchOperationInProgress<>(operations,
-        retCodeDetails, walEditsFromCoprocessors, 7, 10);
+        retCodeDetails, walEditsFromCoprocessors, 7, 10, 3);
     try {
       miniBatch.setWalEdit(-1, new WALEdit());
       fail("Should throw Exception while accessing out of range");
