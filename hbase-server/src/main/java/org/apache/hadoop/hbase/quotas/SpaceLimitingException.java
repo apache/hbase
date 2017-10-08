@@ -20,13 +20,11 @@ package org.apache.hadoop.hbase.quotas;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * An Exception that is thrown when a space quota is in violation.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
 public class SpaceLimitingException extends QuotaExceededException {
   private static final long serialVersionUID = 2319438922387583600L;
   private static final Log LOG = LogFactory.getLog(SpaceLimitingException.class);
