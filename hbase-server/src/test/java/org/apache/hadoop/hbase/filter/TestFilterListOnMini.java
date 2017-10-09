@@ -58,6 +58,7 @@ public class TestFilterListOnMini {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Ignore("HBASE-18410 Should not merge without this test running.")
   @Test
   public void testFiltersWithOR() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());
