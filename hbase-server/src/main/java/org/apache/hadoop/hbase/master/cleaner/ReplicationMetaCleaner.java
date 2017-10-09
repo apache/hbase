@@ -83,8 +83,12 @@ public class ReplicationMetaCleaner extends ScheduledChore {
 
       List<ReplicationPeerDescription> peers = admin.listReplicationPeers();
       for (ReplicationPeerDescription peerDesc : peers) {
-        for (Map.Entry<TableName, List<String>> map : peerDesc.getPeerConfig().getTableCFsMap()
-            .entrySet()) {
+        Map<TableName, List<String>> tableCFsMap = peerDesc.getPeerConfig().getTableCFsMap();
+        if (tableCFsMap ==null) {
+          continue;
+        }
+
+        for (Map.Entry<TableName, List<String>> map : tableCFsMap.entrySet()) {
           if (serialTables.containsKey(map.getKey().getNameAsString())) {
             serialTables.get(map.getKey().getNameAsString()).add(peerDesc.getPeerId());
             break;
