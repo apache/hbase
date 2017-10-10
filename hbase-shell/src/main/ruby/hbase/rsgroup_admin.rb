@@ -36,7 +36,7 @@ module Hbase
     #--------------------------------------------------------------------------
     # Returns a list of groups in hbase
     def list_rs_groups
-      @admin.listRSGroups.map(&:getName)
+      @admin.listRSGroups
     end
 
     #--------------------------------------------------------------------------
@@ -44,32 +44,7 @@ module Hbase
     def get_rsgroup(group_name)
       group = @admin.getRSGroupInfo(group_name)
       raise(ArgumentError, 'Group does not exist: ' + group_name) if group.nil?
-
-      res = {}
-      yield('Servers:') if block_given?
-
-      servers = []
-      group.getServers.each do |v|
-        if block_given?
-          yield(v.toString)
-        else
-          servers << v.toString
-        end
-      end
-      res[:servers] = servers
-
-      tables = []
-      yield('Tables:') if block_given?
-      group.getTables.each do |v|
-        if block_given?
-          yield(v.toString)
-        else
-          tables << v.toString
-        end
-      end
-      res[:tables] = tables
-
-      res unless block_given?
+      group
     end
 
     #--------------------------------------------------------------------------

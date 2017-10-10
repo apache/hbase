@@ -44,13 +44,10 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
-import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.procedure2.LockType;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Service to support Region Server Grouping (HBase-6721).
@@ -88,10 +85,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
       onlineServers.add(server.getAddress());
     }
-    for (Address el: servers) {
-      if (!onlineServers.contains(el)) {
+    for (Address address: servers) {
+      if (!onlineServers.contains(address)) {
         throw new ConstraintException(
-            "Server " + el + " is not an online server in 'default' RSGroup.");
+            "Server " + address + " is not an online server in 'default' RSGroup.");
       }
     }
   }
@@ -192,18 +189,20 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   }
 
   /**
+   * Moves every region from servers which are currently located on these servers,
+   * but should not be located there.
    * @param servers the servers that will move to new group
+   * @param tables these tables will be kept on the servers, others will be moved
    * @param targetGroupName the target group name
-   * @param tables The regions of tables assigned to these servers will not unassign
    * @throws IOException
    */
-  private void unassignRegionFromServers(Set<Address> servers, String targetGroupName,
-                                     Set<TableName> tables) throws IOException {
-    boolean foundRegionsToUnassign;
+  private void moveRegionsFromServers(Set<Address> servers, Set<TableName> tables,
+      String targetGroupName) throws IOException {
+    boolean foundRegionsToMove;
     RSGroupInfo targetGrp = getRSGroupInfo(targetGroupName);
     Set<Address> allSevers = new HashSet<>(servers);
     do {
-      foundRegionsToUnassign = false;
+      foundRegionsToMove = false;
       for (Iterator<Address> iter = allSevers.iterator(); iter.hasNext();) {
         Address rs = iter.next();
         // Get regions that are associated with this server and filter regions by tables.
@@ -214,22 +213,22 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           }
         }
 
-        LOG.info("Unassigning " + regions.size() +
-                " region(s) from " + rs + " for server move to " + targetGroupName);
+        LOG.info("Moving " + regions.size() + " region(s) from " + rs +
+            " for server move to " + targetGroupName);
         if (!regions.isEmpty()) {
           for (RegionInfo region: regions) {
             // Regions might get assigned from tables of target group so we need to filter
             if (!targetGrp.containsTable(region.getTable())) {
-              this.master.getAssignmentManager().unassign(region);
+              this.master.getAssignmentManager().move(region);
               if (master.getAssignmentManager().getRegionStates().
-                      getRegionState(region).isFailedOpen()) {
+                  getRegionState(region).isFailedOpen()) {
                 continue;
               }
-              foundRegionsToUnassign = true;
+              foundRegionsToMove = true;
             }
           }
         }
-        if (!foundRegionsToUnassign) {
+        if (!foundRegionsToMove) {
           iter.remove();
         }
       }
@@ -239,36 +238,27 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         LOG.warn("Sleep interrupted", e);
         Thread.currentThread().interrupt();
       }
-    } while (foundRegionsToUnassign);
+    } while (foundRegionsToMove);
   }
 
   /**
+   * Moves every region of tables which should be kept on the servers,
+   * but currently they are located on other servers.
+   * @param servers the regions of these servers will be kept on the servers,
+   * others will be moved
    * @param tables the tables that will move to new group
    * @param targetGroupName the target group name
-   * @param servers the regions of tables assigned to these servers will not unassign
    * @throws IOException
    */
-  private void unassignRegionFromTables(Set<TableName> tables, String targetGroupName,
-                                        Set<Address> servers) throws IOException {
+  private void moveRegionsToServers(Set<Address> servers, Set<TableName> tables,
+      String targetGroupName) throws IOException {
     for (TableName table: tables) {
-      LOG.info("Unassigning region(s) from " + table + " for table move to " + targetGroupName);
-      LockManager.MasterLock lock = master.getLockManager().createMasterLock(table,
-              LockType.EXCLUSIVE, this.getClass().getName() + ": RSGroup: table move");
-      try {
-        try {
-          lock.acquire();
-        } catch (InterruptedException e) {
-          throw new IOException("Interrupted when waiting for table lock", e);
+      LOG.info("Moving region(s) from " + table + " for table move to " + targetGroupName);
+      for (RegionInfo region : master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
+        ServerName sn = master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
+        if (!servers.contains(sn.getAddress())) {
+          master.getAssignmentManager().move(region);
         }
-        for (RegionInfo region :
-                master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
-          ServerName sn = master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
-          if (!servers.contains(sn.getAddress())) {
-            master.getAssignmentManager().unassign(region);
-          }
-        }
-      } finally {
-        lock.release();
       }
     }
   }
@@ -329,39 +319,34 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       Set<Address> movedServers = rsGroupInfoManager.moveServers(servers, srcGrp.getName(),
           targetGroupName);
       List<Address> editableMovedServers = Lists.newArrayList(movedServers);
-      boolean foundRegionsToUnassign;
+      boolean foundRegionsToMove;
       do {
-        foundRegionsToUnassign = false;
+        foundRegionsToMove = false;
         for (Iterator<Address> iter = editableMovedServers.iterator(); iter.hasNext();) {
           Address rs = iter.next();
           // Get regions that are associated with this server.
           List<RegionInfo> regions = getRegions(rs);
 
-          // Unassign regions for a server
-          // TODO: This is problematic especially if hbase:meta is in the mix.
-          // We need to update state in hbase:meta on Master and if unassigned we hang
-          // around in here. There is a silly sort on linked list done above
-          // in getRegions putting hbase:meta last which helps but probably has holes.
-          LOG.info("Unassigning " + regions.size() +
-              " region(s) from " + rs + " for server move to " + targetGroupName);
-          if (!regions.isEmpty()) {
-            // TODO bulk unassign or throttled unassign?
-            for (RegionInfo region: regions) {
-              // Regions might get assigned from tables of target group so we need to filter
-              if (!targetGrp.containsTable(region.getTable())) {
-                this.master.getAssignmentManager().unassign(region);
-                if (master.getAssignmentManager().getRegionStates().
-                    getRegionState(region).isFailedOpen()) {
-                  // If region is in FAILED_OPEN state, it won't recover, not without
-                  // operator intervention... in hbase-2.0.0 at least. Continue rather
-                  // than mark region as 'foundRegionsToUnassign'.
-                  continue;
-                }
-                foundRegionsToUnassign = true;
-              }
+          LOG.info("Moving " + regions.size() + " region(s) from " + rs +
+              " for server move to " + targetGroupName);
+
+          for (RegionInfo region: regions) {
+            // Regions might get assigned from tables of target group so we need to filter
+            if (targetGrp.containsTable(region.getTable())) {
+              continue;
             }
+            LOG.info("Moving region " + region.getShortNameToLog());
+            this.master.getAssignmentManager().move(region);
+            if (master.getAssignmentManager().getRegionStates().
+                getRegionState(region).isFailedOpen()) {
+              // If region is in FAILED_OPEN state, it won't recover, not without
+              // operator intervention... in hbase-2.0.0 at least. Continue rather
+              // than mark region as 'foundRegionsToMove'.
+              continue;
+            }
+            foundRegionsToMove = true;
           }
-          if (!foundRegionsToUnassign) {
+          if (!foundRegionsToMove) {
             iter.remove();
           }
         }
@@ -371,7 +356,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
           LOG.warn("Sleep interrupted", e);
           Thread.currentThread().interrupt();
         }
-      } while (foundRegionsToUnassign);
+      } while (foundRegionsToMove);
+
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveServers(servers, targetGroupName);
       }
@@ -412,27 +398,25 @@ public class RSGroupAdminServer implements RSGroupAdmin {
               "Source RSGroup " + srcGroup + " is same as target " + targetGroup +
               " RSGroup for table " + table);
         }
+        LOG.info("Moving table " + table.getNameAsString() + " to RSGroup " + targetGroup);
       }
       rsGroupInfoManager.moveTables(tables, targetGroup);
+
+      // targetGroup is null when a table is being deleted. In this case no further
+      // action is required.
+      if (targetGroup != null) {
+        for (TableName table: tables) {
+          for (RegionInfo region :
+              master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
+            LOG.info("Moving region " + region.getShortNameToLog() +
+                " to RSGroup " + targetGroup);
+            master.getAssignmentManager().move(region);
+          }
+        }
+      }
+
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveTables(tables, targetGroup);
-      }
-    }
-    for (TableName table: tables) {
-      LockManager.MasterLock lock = master.getLockManager().createMasterLock(table,
-          LockType.EXCLUSIVE, this.getClass().getName() + ": RSGroup: table move");
-      try {
-        try {
-          lock.acquire();
-        } catch (InterruptedException e) {
-          throw new IOException("Interrupted when waiting for table lock", e);
-        }
-        for (RegionInfo region :
-            master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
-          master.getAssignmentManager().unassign(region);
-        }
-      } finally {
-        lock.release();
       }
     }
   }
@@ -582,10 +566,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       String srcGroup = getRSGroupOfServer(servers.iterator().next()).getName();
       rsGroupInfoManager.moveServersAndTables(servers, tables, srcGroup, targetGroup);
 
-      //unassign regions which not belong to these tables
-      unassignRegionFromServers(servers, targetGroup, tables);
-      //unassign regions which not assigned to these servers
-      unassignRegionFromTables(tables, targetGroup, servers);
+      //move regions which should not belong to these tables
+      moveRegionsFromServers(servers, tables, targetGroup);
+      //move regions which should belong to these servers
+      moveRegionsToServers(servers, tables, targetGroup);
 
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveServersAndTables(servers, tables, targetGroup);

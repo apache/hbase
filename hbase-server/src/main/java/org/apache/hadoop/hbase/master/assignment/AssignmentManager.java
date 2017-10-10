@@ -76,21 +76,18 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
-
-// TODO: why are they here?
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The AssignmentManager is the coordinator for region assign/unassign operations.
@@ -552,6 +549,14 @@ public class AssignmentManager implements ServerListener {
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
+  public void move(final RegionInfo regionInfo) throws IOException {
+    RegionStateNode node = this.regionStates.getRegionNode(regionInfo);
+    ServerName sourceServer = node.getRegionLocation();
+    RegionPlan plan = new RegionPlan(regionInfo, sourceServer, null);
+    MoveRegionProcedure proc = createMoveRegionProcedure(plan);
+    ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
+  }
+
   public Future<byte[]> moveAsync(final RegionPlan regionPlan) {
     MoveRegionProcedure proc = createMoveRegionProcedure(regionPlan);
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
@@ -590,7 +595,7 @@ public class AssignmentManager implements ServerListener {
     }
 
     ProcedureSyncWait.waitForProcedureToCompleteIOE(
-      master.getMasterProcedureExecutor(), proc.getProcId(), timeout);
+      master.getMasterProcedureExecutor(), proc, timeout);
     return true;
   }
 
