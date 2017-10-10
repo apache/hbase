@@ -2476,8 +2476,8 @@ public final class ProtobufUtil {
     switch (type) {
       case THROTTLE: return QuotaProtos.QuotaType.THROTTLE;
       case SPACE: return QuotaProtos.QuotaType.SPACE;
+      default: throw new RuntimeException("Invalid QuotaType " + type);
     }
-    throw new RuntimeException("Invalid QuotaType " + type);
   }
 
   /**
