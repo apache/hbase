@@ -1297,7 +1297,7 @@
     <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
     <spotbugs.version>3.1.0-RC1</spotbugs.version>
     <maven.dependency.version>3.0.1</maven.dependency.version>
-    <maven.enforcer.version>1.4.1</maven.enforcer.version>
+    <maven.enforcer.version>3.0.0-M1</maven.enforcer.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
