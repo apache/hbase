@@ -34,6 +34,7 @@ import org.junit.experimental.categories.Category;
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsTableSourceImpl {
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareToHashCode() throws Exception {
     MetricsRegionServerSourceFactory metricsFact =
