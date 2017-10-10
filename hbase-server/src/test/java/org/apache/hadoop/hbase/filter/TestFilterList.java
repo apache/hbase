@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -798,6 +799,94 @@ public class TestFilterList {
 
     filterList = new FilterList(Operator.MUST_PASS_ONE, filter6, filter6);
     assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterKeyValue(kv1));
+  }
+
+  static class MockSeekHintFilter extends FilterBase {
+    private Cell returnCell;
+
+    public MockSeekHintFilter(Cell returnCell) {
+      this.returnCell = returnCell;
+    }
+
+    @Override
+    public ReturnCode filterKeyValue(Cell v) throws IOException {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
+    }
+
+    @Override
+    public Cell getNextCellHint(Cell currentCell) throws IOException {
+      return this.returnCell;
+    }
+  }
+
+  @Test
+  public void testReversedFilterListWithMockSeekHintFilter() throws IOException {
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("fam"), Bytes.toBytes("a"), 1,
+        Bytes.toBytes("value"));
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("fam"), Bytes.toBytes("a"), 1,
+        Bytes.toBytes("value"));
+    KeyValue kv3 = new KeyValue(Bytes.toBytes("row3"), Bytes.toBytes("fam"), Bytes.toBytes("a"), 1,
+        Bytes.toBytes("value"));
+    Filter filter1 = new MockSeekHintFilter(kv1);
+    filter1.setReversed(true);
+    Filter filter2 = new MockSeekHintFilter(kv2);
+    filter2.setReversed(true);
+    Filter filter3 = new MockSeekHintFilter(kv3);
+    filter3.setReversed(true);
+
+    FilterList filterList = new FilterList(Operator.MUST_PASS_ONE);
+    filterList.setReversed(true);
+    filterList.addFilter(filter1);
+    filterList.addFilter(filter2);
+    filterList.addFilter(filter3);
+
+    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterKeyValue(kv1));
+    Assert.assertEquals(kv3, filterList.getNextCellHint(kv1));
+
+    filterList = new FilterList(Operator.MUST_PASS_ALL);
+    filterList.setReversed(true);
+    filterList.addFilter(filter1);
+    filterList.addFilter(filter2);
+    filterList.addFilter(filter3);
+
+    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterKeyValue(kv1));
+    Assert.assertEquals(kv1, filterList.getNextCellHint(kv1));
+  }
+
+  @Test
+  public void testReversedFilterListWithOR() throws IOException {
+    byte[] r22 = Bytes.toBytes("Row22");
+    byte[] r2 = Bytes.toBytes("Row2");
+    byte[] r1 = Bytes.toBytes("Row1");
+
+    FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    filterList.setReversed(true);
+    PrefixFilter prefixFilter = new PrefixFilter(r2);
+    prefixFilter.setReversed(true);
+    filterList.addFilter(prefixFilter);
+    filterList.filterRowKey(KeyValueUtil.createFirstOnRow(r22));
+    assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(new KeyValue(r22, r22, r22)));
+    assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(new KeyValue(r2, r2, r2)));
+
+    filterList.reset();
+    filterList.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
+    assertEquals(ReturnCode.SKIP, filterList.filterKeyValue(new KeyValue(r1, r1, r1)));
+
+    filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    filterList.setReversed(true);
+    AlwaysNextColFilter alwaysNextColFilter = new AlwaysNextColFilter();
+    alwaysNextColFilter.setReversed(true);
+    prefixFilter = new PrefixFilter(r2);
+    prefixFilter.setReversed(true);
+    filterList.addFilter(alwaysNextColFilter);
+    filterList.addFilter(prefixFilter);
+    filterList.filterRowKey(KeyValueUtil.createFirstOnRow(r22));
+    assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(new KeyValue(r22, r22, r22)));
+    assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(new KeyValue(r2, r2, r2)));
+
+    filterList.reset();
+    filterList.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
+    assertEquals(ReturnCode.NEXT_COL, filterList.filterKeyValue(new KeyValue(r1, r1, r1)));
   }
 }
 
