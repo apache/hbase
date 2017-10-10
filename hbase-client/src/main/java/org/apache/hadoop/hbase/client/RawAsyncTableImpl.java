@@ -23,6 +23,8 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 
+import com.google.protobuf.RpcChannel;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -58,8 +61,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequ
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
-
-import com.google.protobuf.RpcChannel;
 
 /**
  * The implementation of RawAsyncTable.
@@ -134,7 +135,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
       Converter<RESP, HBaseRpcController, PRESP> respConverter) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     try {
-      rpcCall.call(stub, controller, reqConvert.convert(loc.getRegionInfo().getRegionName(), req),
+      rpcCall.call(stub, controller, reqConvert.convert(loc.getRegion().getRegionName(), req),
         new RpcCallback<PRESP>() {
 
           @Override
@@ -251,28 +252,89 @@ class RawAsyncTableImpl implements RawAsyncTable {
         .call();
   }
 
-  @Override
-  public CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-                                                CompareOperator op, byte[] value, Put put) {
-    return this.<Boolean> newCaller(row, rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller, loc,
-          stub, put,
-          (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-            new BinaryComparator(value), CompareType.valueOf(op.name()), p),
-          (c, r) -> r.getProcessed()))
-        .call();
+  private final class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
+
+    private final byte[] row;
+
+    private final byte[] family;
+
+    private byte[] qualifier;
+
+    private CompareOperator op;
+
+    private byte[] value;
+
+    public CheckAndMutateBuilderImpl(byte[] row, byte[] family) {
+      this.row = Preconditions.checkNotNull(row, "row is null");
+      this.family = Preconditions.checkNotNull(family, "family is null");
+    }
+
+    @Override
+    public CheckAndMutateBuilder qualifier(byte[] qualifier) {
+      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
+          " an empty byte array, or just do not call this method if you want a null qualifier");
+      return this;
+    }
+
+    @Override
+    public CheckAndMutateBuilder ifNotExists() {
+      this.op = CompareOperator.EQUAL;
+      this.value = null;
+      return this;
+    }
+
+    @Override
+    public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
+      this.op = Preconditions.checkNotNull(compareOp, "compareOp is null");
+      this.value = Preconditions.checkNotNull(value, "value is null");
+      return this;
+    }
+
+    private void preCheck() {
+      Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by" +
+          " calling ifNotExists/ifEquals/ifMatches before executing the request");
+    }
+
+    @Override
+    public CompletableFuture<Boolean> thenPut(Put put) {
+      preCheck();
+      return RawAsyncTableImpl.this.<Boolean> newCaller(row, rpcTimeoutNs)
+          .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller,
+            loc, stub, put,
+            (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
+              new BinaryComparator(value), CompareType.valueOf(op.name()), p),
+            (c, r) -> r.getProcessed()))
+          .call();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> thenDelete(Delete delete) {
+      preCheck();
+      return RawAsyncTableImpl.this.<Boolean> newCaller(row, rpcTimeoutNs)
+          .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete, Boolean> mutate(controller,
+            loc, stub, delete,
+            (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
+              new BinaryComparator(value), CompareType.valueOf(op.name()), d),
+            (c, r) -> r.getProcessed()))
+          .call();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
+      preCheck();
+      return RawAsyncTableImpl.this.<Boolean> newCaller(mutation, rpcTimeoutNs)
+          .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
+            stub, mutation,
+            (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
+              new BinaryComparator(value), CompareType.valueOf(op.name()), rm),
+            resp -> resp.getExists()))
+          .call();
+    }
   }
 
   @Override
-  public CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-                                                   CompareOperator op, byte[] value, Delete delete) {
-    return this.<Boolean> newCaller(row, rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete, Boolean> mutate(controller,
-          loc, stub, delete,
-          (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-            new BinaryComparator(value), CompareType.valueOf(op.name()), d),
-          (c, r) -> r.getProcessed()))
-        .call();
+  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
+    return new CheckAndMutateBuilderImpl(row, family);
   }
 
   // We need the MultiRequest when constructing the org.apache.hadoop.hbase.client.MultiResponse,
@@ -283,7 +345,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
       Function<Result, RESP> respConverter) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     try {
-      byte[] regionName = loc.getRegionInfo().getRegionName();
+      byte[] regionName = loc.getRegion().getRegionName();
       MultiRequest req = reqConvert.convert(regionName, mutation);
       stub.multi(controller, req, new RpcCallback<MultiResponse>() {
 
@@ -326,18 +388,6 @@ class RawAsyncTableImpl implements RawAsyncTable {
           regionMutationBuilder.setAtomic(true);
           return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
         }, resp -> null)).call();
-  }
-
-  @Override
-  public CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-                                                   CompareOperator op, byte[] value, RowMutations mutation) {
-    return this.<Boolean> newCaller(mutation, rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
-          stub, mutation,
-          (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
-            new BinaryComparator(value), CompareType.valueOf(op.name()), rm),
-          resp -> resp.getExists()))
-        .call();
   }
 
   private Scan setDefaultScanConfig(Scan scan) {
@@ -488,7 +538,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
       return;
     }
     unfinishedRequest.incrementAndGet();
-    RegionInfo region = loc.getRegionInfo();
+    RegionInfo region = loc.getRegion();
     if (locateFinished(region, endKey, endKeyInclusive)) {
       locateFinished.set(true);
     } else {
@@ -524,4 +574,5 @@ class RawAsyncTableImpl implements RawAsyncTable {
           (loc, error) -> onLocateComplete(stubMaker, callable, callback, locs, nonNullEndKey,
             endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error));
   }
+
 }
