@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import static java.util.stream.Collectors.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The implementation of AsyncTable. Based on {@link RawAsyncTable}.
@@ -121,26 +122,49 @@ class AsyncTableImpl implements AsyncTable {
   }
 
   @Override
-  public CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-                                                CompareOperator op, byte[] value, Put put) {
-    return wrap(rawTable.checkAndPut(row, family, qualifier, op, value, put));
-  }
+  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
+    return new CheckAndMutateBuilder() {
 
-  @Override
-  public CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-                                                   CompareOperator op, byte[] value, Delete delete) {
-    return wrap(rawTable.checkAndDelete(row, family, qualifier, op, value, delete));
+      private final CheckAndMutateBuilder builder = rawTable.checkAndMutate(row, family);
+
+      @Override
+      public CompletableFuture<Boolean> thenPut(Put put) {
+        return wrap(builder.thenPut(put));
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenMutate(RowMutations mutation) {
+        return wrap(builder.thenMutate(mutation));
+      }
+
+      @Override
+      public CompletableFuture<Boolean> thenDelete(Delete delete) {
+        return wrap(builder.thenDelete(delete));
+      }
+
+      @Override
+      public CheckAndMutateBuilder qualifier(byte[] qualifier) {
+        builder.qualifier(qualifier);
+        return this;
+      }
+
+      @Override
+      public CheckAndMutateBuilder ifNotExists() {
+        builder.ifNotExists();
+        return this;
+      }
+
+      @Override
+      public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
+        builder.ifMatches(compareOp, value);
+        return this;
+      }
+    };
   }
 
   @Override
   public CompletableFuture<Void> mutateRow(RowMutations mutation) {
     return wrap(rawTable.mutateRow(mutation));
-  }
-
-  @Override
-  public CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-                                                   CompareOperator op, byte[] value, RowMutations mutation) {
-    return wrap(rawTable.checkAndMutate(row, family, qualifier, op, value, mutation));
   }
 
   @Override
@@ -198,5 +222,4 @@ class AsyncTableImpl implements AsyncTable {
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
     return rawTable.<T> batch(actions).stream().map(this::wrap).collect(toList());
   }
-
 }

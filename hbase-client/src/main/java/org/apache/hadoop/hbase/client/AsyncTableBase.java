@@ -191,70 +191,73 @@ public interface AsyncTableBase {
   }
 
   /**
-   * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
-   * adds the put. If the passed value is null, the check is for the lack of column (ie:
-   * non-existence)
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param value the expected value
-   * @param put data to put if check succeeds
-   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
-   *         a {@link CompletableFuture}.
-   */
-  default CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-      byte[] value, Put put) {
-    return checkAndPut(row, family, qualifier, CompareOperator.EQUAL, value, put);
-  }
-
-  /**
    * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
-   * adds the put. If the passed value is null, the check is for the lack of column (ie:
-   * non-existence)
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param compareOp comparison operator to use
-   * @param value the expected value
-   * @param put data to put if check succeeds
-   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
-   *         a {@link CompletableFuture}.
+   * adds the Put/Delete/RowMutations.
+   * <p>
+   * Use the returned {@link CheckAndMutateBuilder} to construct your request and then execute it.
+   * This is a fluent style API, the code is like:
+   *
+   * <pre>
+   * <code>
+   * table.checkAndMutate(row, family).qualifier(qualifier).ifNotExists().thenPut(put)
+   *     .thenAccept(succ -> {
+   *       if (succ) {
+   *         System.out.println("Check and put succeeded");
+   *       } else {
+   *         System.out.println("Check and put failed");
+   *       }
+   *     });
+   * </code>
+   * </pre>
    */
-  CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-                                         CompareOperator compareOp, byte[] value, Put put);
+  CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family);
 
   /**
-   * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
-   * adds the delete. If the passed value is null, the check is for the lack of column (ie:
-   * non-existence)
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param value the expected value
-   * @param delete data to delete if check succeeds
-   * @return true if the new delete was executed, false otherwise. The return value will be wrapped
-   *         by a {@link CompletableFuture}.
+   * A helper class for sending checkAndMutate request.
    */
-  default CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      byte[] value, Delete delete) {
-    return checkAndDelete(row, family, qualifier, CompareOperator.EQUAL, value, delete);
+  interface CheckAndMutateBuilder {
+
+    /**
+     * @param qualifier column qualifier to check.
+     */
+    CheckAndMutateBuilder qualifier(byte[] qualifier);
+
+    /**
+     * Check for lack of column.
+     */
+    CheckAndMutateBuilder ifNotExists();
+
+    default CheckAndMutateBuilder ifEquals(byte[] value) {
+      return ifMatches(CompareOperator.EQUAL, value);
+    }
+
+    /**
+     * @param compareOp comparison operator to use
+     * @param value the expected value
+     */
+    CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value);
+
+    /**
+     * @param put data to put if check succeeds
+     * @return {@code true} if the new put was executed, {@code false} otherwise. The return value
+     *         will be wrapped by a {@link CompletableFuture}.
+     */
+    CompletableFuture<Boolean> thenPut(Put put);
+
+    /**
+     * @param delete data to delete if check succeeds
+     * @return {@code true} if the new delete was executed, {@code false} otherwise. The return
+     *         value will be wrapped by a {@link CompletableFuture}.
+     */
+    CompletableFuture<Boolean> thenDelete(Delete delete);
+
+    /**
+     * @param mutation mutations to perform if check succeeds
+     * @return true if the new mutation was executed, false otherwise. The return value will be
+     *         wrapped by a {@link CompletableFuture}.
+     */
+    CompletableFuture<Boolean> thenMutate(RowMutations mutation);
   }
-
-  /**
-   * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
-   * adds the delete. If the passed value is null, the check is for the lack of column (ie:
-   * non-existence)
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param compareOp comparison operator to use
-   * @param value the expected value
-   * @param delete data to delete if check succeeds
-   * @return true if the new delete was executed, false otherwise. The return value will be wrapped
-   *         by a {@link CompletableFuture}.
-   */
-  CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-                                            CompareOperator compareOp, byte[] value, Delete delete);
 
   /**
    * Performs multiple mutations atomically on a single row. Currently {@link Put} and
@@ -263,39 +266,6 @@ public interface AsyncTableBase {
    * @return A {@link CompletableFuture} that always returns null when complete normally.
    */
   CompletableFuture<Void> mutateRow(RowMutations mutation);
-
-  /**
-   * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
-   * performs the row mutations. If the passed value is null, the check is for the lack of column
-   * (ie: non-existence)
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param value the expected value
-   * @param mutation mutations to perform if check succeeds
-   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
-   *         a {@link CompletableFuture}.
-   */
-  default CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      byte[] value, RowMutations mutation) {
-    return checkAndMutate(row, family, qualifier, CompareOperator.EQUAL, value, mutation);
-  }
-
-  /**
-   * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
-   * performs the row mutations. If the passed value is null, the check is for the lack of column
-   * (ie: non-existence)
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param compareOp the comparison operator
-   * @param value the expected value
-   * @param mutation mutations to perform if check succeeds
-   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
-   *         a {@link CompletableFuture}.
-   */
-  CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-                                            CompareOperator compareOp, byte[] value, RowMutations mutation);
 
   /**
    * Return all the results that match the given scan object.

@@ -221,14 +221,15 @@ public class TestAsyncTable {
     AtomicInteger successIndex = new AtomicInteger(-1);
     int count = 10;
     CountDownLatch latch = new CountDownLatch(count);
-    IntStream.range(0, count).forEach(i -> table.checkAndPut(row, FAMILY, QUALIFIER, null,
-      new Put(row).addColumn(FAMILY, QUALIFIER, concat(VALUE, i))).thenAccept(x -> {
-        if (x) {
-          successCount.incrementAndGet();
-          successIndex.set(i);
-        }
-        latch.countDown();
-      }));
+    IntStream.range(0, count)
+        .forEach(i -> table.checkAndMutate(row, FAMILY).qualifier(QUALIFIER).ifNotExists()
+            .thenPut(new Put(row).addColumn(FAMILY, QUALIFIER, concat(VALUE, i))).thenAccept(x -> {
+              if (x) {
+                successCount.incrementAndGet();
+                successIndex.set(i);
+              }
+              latch.countDown();
+            }));
     latch.await();
     assertEquals(1, successCount.get());
     String actual = Bytes.toString(table.get(new Get(row)).get().getValue(FAMILY, QUALIFIER));
@@ -249,16 +250,17 @@ public class TestAsyncTable {
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger successIndex = new AtomicInteger(-1);
     CountDownLatch deleteLatch = new CountDownLatch(count);
-    IntStream.range(0, count).forEach(i -> table
-        .checkAndDelete(row, FAMILY, QUALIFIER, VALUE,
-          new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
-        .thenAccept(x -> {
-          if (x) {
-            successCount.incrementAndGet();
-            successIndex.set(i);
-          }
-          deleteLatch.countDown();
-        }));
+    IntStream.range(0, count)
+        .forEach(i -> table.checkAndMutate(row, FAMILY).qualifier(QUALIFIER).ifEquals(VALUE)
+            .thenDelete(
+              new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
+            .thenAccept(x -> {
+              if (x) {
+                successCount.incrementAndGet();
+                successIndex.set(i);
+              }
+              deleteLatch.countDown();
+            }));
     deleteLatch.await();
     assertEquals(1, successCount.get());
     Result result = table.get(new Get(row)).get();
@@ -311,13 +313,14 @@ public class TestAsyncTable {
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
-      table.checkAndMutate(row, FAMILY, QUALIFIER, VALUE, mutation).thenAccept(x -> {
-        if (x) {
-          successCount.incrementAndGet();
-          successIndex.set(i);
-        }
-        mutateLatch.countDown();
-      });
+      table.checkAndMutate(row, FAMILY).qualifier(QUALIFIER).ifEquals(VALUE).thenMutate(mutation)
+          .thenAccept(x -> {
+            if (x) {
+              successCount.incrementAndGet();
+              successIndex.set(i);
+            }
+            mutateLatch.countDown();
+          });
     });
     mutateLatch.await();
     assertEquals(1, successCount.get());
