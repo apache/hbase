@@ -32,6 +32,7 @@ import org.junit.experimental.categories.Category;
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRegionSourceImpl {
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareToHashCodeEquals() throws Exception {
     MetricsRegionServerSourceFactory fact = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
