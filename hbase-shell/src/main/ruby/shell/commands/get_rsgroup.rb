@@ -30,9 +30,17 @@ EOF
       end
 
       def command(group_name)
-        formatter.header(['RSGROUP '.concat(group_name)])
-        rsgroup_admin.get_rsgroup(group_name) do |s|
-          formatter.row([s])
+        group = rsgroup_admin.get_rsgroup(group_name)
+
+        formatter.header(['SERVERS'])
+        group.getServers.each do |server|
+          formatter.row([server.toString])
+        end
+        formatter.footer
+
+        formatter.header(['TABLES'])
+        group.getTables.each do |table|
+          formatter.row([table.getNameAsString])
         end
         formatter.footer
       end

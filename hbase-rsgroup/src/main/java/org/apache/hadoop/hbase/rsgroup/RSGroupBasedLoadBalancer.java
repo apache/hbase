@@ -124,7 +124,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
     List<RegionInfo> misplacedRegions = correctedState.get(LoadBalancer.BOGUS_SERVER_NAME);
     for (RegionInfo regionInfo : misplacedRegions) {
-      regionPlans.add(new RegionPlan(regionInfo, null, null));
+      ServerName serverName = findServerForRegion(clusterState, regionInfo);
+      regionPlans.add(new RegionPlan(regionInfo, serverName, null));
     }
     try {
       List<RSGroupInfo> rsgi = rsGroupInfoManager.listRSGroups();
@@ -321,6 +322,19 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       }
     }
     return misplacedRegions;
+  }
+
+  private ServerName findServerForRegion(
+      Map<ServerName, List<RegionInfo>> existingAssignments, RegionInfo region)
+  {
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : existingAssignments.entrySet()) {
+      if (entry.getValue().contains(region)) {
+        return entry.getKey();
+      }
+    }
+
+    throw new IllegalStateException("Could not find server for region "
+        + region.getShortNameToLog());
   }
 
   private Map<ServerName, List<RegionInfo>> correctAssignments(

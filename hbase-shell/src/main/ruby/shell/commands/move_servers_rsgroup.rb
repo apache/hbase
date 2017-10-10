@@ -20,7 +20,8 @@ module Shell
     class MoveServersRsgroup < Command
       def help
         <<-EOF
-Reassign RegionServers from one group to another.
+Reassign RegionServers from one group to another. Every region of the
+RegionServer will be moved to another RegionServer.
 
 Example:
 

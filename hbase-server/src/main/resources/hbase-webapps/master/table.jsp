@@ -251,7 +251,7 @@ if ( fqtn != null ) {
                             RegionInfoBuilder.FIRST_META_REGIONINFO, j);
     ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
     for (int i = 0; i < 1; i++) {
-      String url = "";
+      String hostAndPort = "";
       String readReq = "N/A";
       String writeReq = "N/A";
       String fileSize = "N/A";
@@ -262,7 +262,7 @@ if ( fqtn != null ) {
       if (metaLocation != null) {
         ServerLoad sl = master.getServerManager().getLoad(metaLocation);
         // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
-        url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
+        hostAndPort = URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation);
         if (sl != null) {
           Map<byte[], RegionLoad> map = sl.getRegionsLoad();
           if (map.containsKey(meta.getRegionName())) {
@@ -279,7 +279,7 @@ if ( fqtn != null ) {
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td><a href="http://<%= hostAndPort %>/"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
     <td><%= readReq%></td>
     <td><%= writeReq%></td>
     <td><%= fileSize%></td>
