@@ -888,5 +888,53 @@ public class TestFilterList {
     filterList.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
     assertEquals(ReturnCode.NEXT_COL, filterList.filterKeyValue(new KeyValue(r1, r1, r1)));
   }
+
+  @Test
+  public void testKeyOnlyFilterTransformCell() throws IOException {
+    Cell c;
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("column1"),
+        1, Bytes.toBytes("value1"));
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("column1"),
+        2, Bytes.toBytes("value2"));
+
+    Filter filter1 = new SingleColumnValueFilter(Bytes.toBytes("cf"), Bytes.toBytes("column1"),
+        CompareOperator.EQUAL, Bytes.toBytes("value1"));
+    Filter filter2 = new SingleColumnValueFilter(Bytes.toBytes("cf"), Bytes.toBytes("column1"),
+        CompareOperator.EQUAL, Bytes.toBytes("value2"));
+    FilterList internalFilterList = new FilterList(Operator.MUST_PASS_ONE, filter1, filter2);
+
+    FilterList keyOnlyFilterFirst =
+        new FilterList(Operator.MUST_PASS_ALL, new KeyOnlyFilter(), internalFilterList);
+
+    assertEquals(ReturnCode.INCLUDE, keyOnlyFilterFirst.filterKeyValue(kv1));
+    c = keyOnlyFilterFirst.transformCell(kv1);
+    assertEquals(0, c.getValueLength());
+    assertEquals(ReturnCode.INCLUDE, keyOnlyFilterFirst.filterKeyValue(kv2));
+    c = keyOnlyFilterFirst.transformCell(kv2);
+    assertEquals(0, c.getValueLength());
+
+    internalFilterList.reset();
+    FilterList keyOnlyFilterLast =
+        new FilterList(Operator.MUST_PASS_ALL, new KeyOnlyFilter(), internalFilterList);
+    assertEquals(ReturnCode.INCLUDE, keyOnlyFilterLast.filterKeyValue(kv1));
+    c = keyOnlyFilterLast.transformCell(kv1);
+    assertEquals(0, c.getValueLength());
+    assertEquals(ReturnCode.INCLUDE, keyOnlyFilterLast.filterKeyValue(kv2));
+    c = keyOnlyFilterLast.transformCell(kv2);
+    assertEquals(0, c.getValueLength());
+  }
+
+  @Test
+  public void testEmptyFilterListTransformCell() throws IOException {
+    KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("column1"),
+        1, Bytes.toBytes("value"));
+    FilterList filterList = new FilterList(Operator.MUST_PASS_ALL);
+    assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(kv));
+    assertEquals(kv, filterList.transformCell(kv));
+
+    filterList = new FilterList(Operator.MUST_PASS_ONE);
+    assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(kv));
+    assertEquals(kv, filterList.transformCell(kv));
+  }
 }
 

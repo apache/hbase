@@ -107,6 +107,9 @@ public abstract class FilterListBase extends FilterBase {
     return cell;
   }
 
+  abstract ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformedCell)
+      throws IOException;
+
   /**
    * Filters that never filter by modifying the returned List of Cells can inherit this
    * implementation that does nothing. {@inheritDoc}
