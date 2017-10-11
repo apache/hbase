@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -169,8 +170,30 @@ public class TestHRegionInfo {
     HRegionInfo newer = new HRegionInfo(tableName, empty, empty, false, 1L);
     assertTrue(older.compareTo(newer) < 0);
     assertTrue(newer.compareTo(older) > 0);
-    assertTrue(older.compareTo(older) == 0);
-    assertTrue(newer.compareTo(newer) == 0);
+    assertEquals(0, older.compareTo(older));
+    assertEquals(0, newer.compareTo(newer));
+
+    HRegionInfo a = new HRegionInfo(TableName.valueOf("a"), null, null);
+    HRegionInfo b = new HRegionInfo(TableName.valueOf("b"), null, null);
+    assertNotEquals(0, a.compareTo(b));
+    HTableDescriptor t = new HTableDescriptor(TableName.valueOf("t"));
+    byte [] midway = Bytes.toBytes("midway");
+    a = new HRegionInfo(t.getTableName(), null, midway);
+    b = new HRegionInfo(t.getTableName(), midway, null);
+    assertTrue(a.compareTo(b) < 0);
+    assertTrue(b.compareTo(a) > 0);
+    assertEquals(a, a);
+    assertEquals(0, a.compareTo(a));
+    a = new HRegionInfo(t.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("d"));
+    b = new HRegionInfo(t.getTableName(), Bytes.toBytes("e"), Bytes.toBytes("g"));
+    assertTrue(a.compareTo(b) < 0);
+    a = new HRegionInfo(t.getTableName(), Bytes.toBytes("aaaa"), Bytes.toBytes("dddd"));
+    b = new HRegionInfo(t.getTableName(), Bytes.toBytes("e"), Bytes.toBytes("g"));
+    assertTrue(a.compareTo(b) < 0);
+    a = new HRegionInfo(t.getTableName(), Bytes.toBytes("aaaa"), Bytes.toBytes("dddd"));
+    b = new HRegionInfo(t.getTableName(), Bytes.toBytes("aaaa"), Bytes.toBytes("eeee"));
+    assertTrue(a.compareTo(b) < 0);
+
   }
 
   @Test
@@ -325,7 +348,7 @@ public class TestHRegionInfo {
       if (i != 1) {
         Assert.assertArrayEquals(regionNameParts[i], modifiedRegionNameParts[i]);
       } else {
-        Assert.assertNotEquals(regionNameParts[i][0], modifiedRegionNameParts[i][0]);
+        assertNotEquals(regionNameParts[i][0], modifiedRegionNameParts[i][0]);
         Assert.assertArrayEquals(modifiedRegionNameParts[1],
             HRegionInfo.getStartKeyForDisplay(h, conf));
       }

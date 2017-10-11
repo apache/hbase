@@ -124,7 +124,7 @@ public class TestIPv6NIOServerSocketChannel {
       //On Windows JDK6, we will get expected exception:
       //java.net.SocketException: Address family not supported by protocol family
       //or java.net.SocketException: Protocol family not supported
-      Assert.assertFalse(ex.getClass().isInstance(BindException.class));
+      Assert.assertFalse(ex instanceof BindException);
       Assert.assertTrue(ex.getMessage().toLowerCase(Locale.ROOT).contains("protocol family"));
       LOG.info("Received expected exception:");
       LOG.info(ex);
