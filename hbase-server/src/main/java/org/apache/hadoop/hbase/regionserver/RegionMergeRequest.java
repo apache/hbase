@@ -22,9 +22,11 @@ import java.security.PrivilegedAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -91,7 +93,8 @@ class RegionMergeRequest implements Runnable {
     // The parent region will be unassigned and the two new regions will be assigned.
     // hri_a and hri_b objects may not reflect the regions that will be created, those objectes
     // are created just to pass the information to the reportRegionStateTransition().
-    if (!server.reportRegionStateTransition(TransitionCode.READY_TO_MERGE, merged, region_a, region_b)) {
+    if (!server.reportRegionStateTransition(new RegionStateTransitionContext(
+        TransitionCode.READY_TO_MERGE, HConstants.NO_SEQNUM, -1, merged, region_a, region_b))) {
       LOG.error("Unable to ask master to merge: " + region_a + ", " + region_b);
     }
   }

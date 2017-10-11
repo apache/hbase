@@ -270,12 +270,12 @@ public class RegionAsTable implements Table {
 
   @Override
   public Result append(Append append) throws IOException {
-    return this.region.append(append, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return this.region.append(append);
   }
 
   @Override
   public Result increment(Increment increment) throws IOException {
-    return this.region.increment(increment, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return this.region.increment(increment);
   }
 
   @Override

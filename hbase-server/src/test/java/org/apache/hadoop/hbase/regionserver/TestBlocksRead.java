@@ -63,7 +63,7 @@ public class TestBlocksRead  {
       BloomType.ROW, BloomType.NONE };
 
   private static BlockCache blockCache;
-  Region region = null;
+  HRegion region = null;
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
   private Configuration conf = TEST_UTIL.getConfiguration();
@@ -88,7 +88,7 @@ public class TestBlocksRead  {
    * @throws IOException
    * @return created and initialized region.
    */
-  private Region initHRegion(byte[] tableName, String callingMethod,
+  private HRegion initHRegion(byte[] tableName, String callingMethod,
       Configuration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor familyDesc;
@@ -102,7 +102,7 @@ public class TestBlocksRead  {
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();
     return r;
   }

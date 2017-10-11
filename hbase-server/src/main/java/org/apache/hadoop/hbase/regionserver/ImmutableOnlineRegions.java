@@ -50,11 +50,11 @@ public interface ImmutableOnlineRegions {
     * @return List of Region
     * @throws java.io.IOException
     */
-   List<Region> getRegions(TableName tableName) throws IOException;
+   List<? extends Region> getRegions(TableName tableName) throws IOException;
 
    /**
     * Get all online regions in this RS.
     * @return List of online Region
     */
-   List<Region> getRegions();
+   List<? extends Region> getRegions();
 }

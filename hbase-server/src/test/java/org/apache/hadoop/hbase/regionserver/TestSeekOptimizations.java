@@ -107,7 +107,7 @@ public class TestSeekOptimizations {
   private static final int[] MAX_VERSIONS_VALUES = new int[] { 1, 2 };
 
   // Instance variables
-  private Region region;
+  private HRegion region;
   private Put put;
   private Delete del;
   private Random rand;

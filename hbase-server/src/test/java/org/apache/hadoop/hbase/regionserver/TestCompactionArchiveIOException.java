@@ -27,7 +27,6 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 
@@ -58,6 +57,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 
 /**
  * Tests that archiving compacted files behaves correctly when encountering exceptions.
@@ -99,9 +99,9 @@ public class TestCompactionArchiveIOException {
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     final HRegion region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
 
     // Create the cleaner object
     final CompactedHFilesDischarger cleaner =

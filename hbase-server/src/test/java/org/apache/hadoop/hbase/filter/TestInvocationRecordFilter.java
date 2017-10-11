@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,7 +60,7 @@ public class TestInvocationRecordFilter {
   private static final String VALUE_PREFIX = "value";
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private Region region;
+  private HRegion region;
 
   @Before
   public void setUp() throws Exception {

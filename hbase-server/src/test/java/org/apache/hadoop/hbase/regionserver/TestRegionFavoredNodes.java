@@ -114,8 +114,8 @@ public class TestRegionFavoredNodes {
     // them as favored nodes through the region.
     for (int i = 0; i < REGION_SERVERS; i++) {
       HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
-      List<Region> regions = server.getRegions(TABLE_NAME);
-      for (Region region : regions) {
+      List<HRegion> regions = server.getRegions(TABLE_NAME);
+      for (HRegion region : regions) {
         List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>favoredNodes =
             new ArrayList<>(3);
         String encodedRegionName = region.getRegionInfo().getEncodedName();
@@ -142,8 +142,8 @@ public class TestRegionFavoredNodes {
     // they are consistent with the favored nodes for that region.
     for (int i = 0; i < REGION_SERVERS; i++) {
       HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
-      List<Region> regions = server.getRegions(TABLE_NAME);
-      for (Region region : regions) {
+      List<HRegion> regions = server.getRegions(TABLE_NAME);
+      for (HRegion region : regions) {
         List<String> files = region.getStoreFileList(new byte[][]{COLUMN_FAMILY});
         for (String file : files) {
           FileStatus status = TEST_UTIL.getDFSCluster().getFileSystem().

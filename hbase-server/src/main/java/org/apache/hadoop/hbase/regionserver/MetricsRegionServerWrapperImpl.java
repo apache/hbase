@@ -214,7 +214,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getNumOnlineRegions() {
-    Collection<Region> onlineRegionsLocalContext = regionServer.getOnlineRegionsLocalContext();
+    Collection<HRegion> onlineRegionsLocalContext = regionServer.getOnlineRegionsLocalContext();
     if (onlineRegionsLocalContext == null) {
       return 0;
     }
@@ -754,7 +754,7 @@ class MetricsRegionServerWrapperImpl
         long tempMobScanCellsSize = 0;
         long tempBlockedRequestsCount = 0;
         int regionCount = 0;
-        for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+        for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
           tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
           tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
           tempReadRequestsCount += r.getReadRequestsCount();

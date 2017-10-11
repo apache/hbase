@@ -31,8 +31,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
+import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -50,7 +49,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 public class FlushSnapshotSubprocedure extends Subprocedure {
   private static final Log LOG = LogFactory.getLog(FlushSnapshotSubprocedure.class);
 
-  private final List<Region> regions;
+  private final List<HRegion> regions;
   private final SnapshotDescription snapshot;
   private final SnapshotSubprocedurePool taskManager;
   private boolean snapshotSkipFlush = false;
@@ -60,7 +59,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
 
   public FlushSnapshotSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
-      List<Region> regions, SnapshotDescription snapshot,
+      List<HRegion> regions, SnapshotDescription snapshot,
       SnapshotSubprocedurePool taskManager) {
     super(member, snapshot.getName(), errorListener, wakeFrequency, timeout);
     this.snapshot = snapshot;
@@ -76,12 +75,12 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
    * Callable for adding files to snapshot manifest working dir.  Ready for multithreading.
    */
   public static class RegionSnapshotTask implements Callable<Void> {
-    private Region region;
+    private HRegion region;
     private boolean skipFlush;
     private ForeignExceptionDispatcher monitor;
     private SnapshotDescription snapshotDesc;
 
-    public RegionSnapshotTask(Region region, SnapshotDescription snapshotDesc,
+    public RegionSnapshotTask(HRegion region, SnapshotDescription snapshotDesc,
         boolean skipFlush, ForeignExceptionDispatcher monitor) {
       this.region = region;
       this.skipFlush = skipFlush;
@@ -111,7 +110,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
         } else {
           LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
           boolean succeeded = false;
-          long readPt = region.getReadpoint(IsolationLevel.READ_COMMITTED);
+          long readPt = region.getReadPoint(IsolationLevel.READ_COMMITTED);
           for (int i = 0; i < MAX_RETRIES; i++) {
             FlushResult res = region.flush(true);
             if (res.getResult() == FlushResult.Result.CANNOT_FLUSH) {
@@ -132,7 +131,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
             throw new IOException("Unable to complete flush after " + MAX_RETRIES + " attempts");
           }
         }
-        ((HRegion)region).addRegionToSnapshot(snapshotDesc, monitor);
+        region.addRegionToSnapshot(snapshotDesc, monitor);
         if (skipFlush) {
           LOG.debug("... SkipFlush Snapshotting region " + region.toString() + " completed.");
         } else {
@@ -162,7 +161,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
     }
 
     // Add all hfiles already existing in region.
-    for (Region region : regions) {
+    for (HRegion region : regions) {
       // submit one task per region for parallelize by region.
       taskManager.submitTask(new RegionSnapshotTask(region, snapshot, snapshotSkipFlush, monitor));
       monitor.rethrowException();

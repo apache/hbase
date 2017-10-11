@@ -290,7 +290,7 @@ public class HRegionServer extends HasThread implements
    * Map of regions currently being served by this region server. Key is the
    * encoded region name.  All access should be synchronized.
    */
-  protected final Map<String, Region> onlineRegions = new ConcurrentHashMap<>();
+  protected final Map<String, HRegion> onlineRegions = new ConcurrentHashMap<>();
 
   /**
    * Map of encoded region names to the DataNode locations they should be hosted on
@@ -308,8 +308,8 @@ public class HRegionServer extends HasThread implements
    * Set of regions currently being in recovering state which means it can accept writes(edits from
    * previous failed region server) but not reads. A recovering region is also an online region.
    */
-  protected final Map<String, Region> recoveringRegions = Collections
-      .synchronizedMap(new HashMap<String, Region>());
+  protected final Map<String, HRegion> recoveringRegions = Collections
+      .synchronizedMap(new HashMap<String, HRegion>());
 
   // Leases
   protected Leases leases;
@@ -1235,7 +1235,7 @@ public class HRegionServer extends HasThread implements
   private boolean areAllUserRegionsOffline() {
     if (getNumberOfOnlineRegions() > 2) return false;
     boolean allUserRegionsOffline = true;
-    for (Map.Entry<String, Region> e: this.onlineRegions.entrySet()) {
+    for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
       if (!e.getValue().getRegionInfo().isMetaTable()) {
         allUserRegionsOffline = false;
         break;
@@ -1249,7 +1249,7 @@ public class HRegionServer extends HasThread implements
    */
   private long getWriteRequestCount() {
     long writeCount = 0;
-    for (Map.Entry<String, Region> e: this.onlineRegions.entrySet()) {
+    for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
       writeCount += e.getValue().getWriteRequestsCount();
     }
     return writeCount;
@@ -1369,7 +1369,7 @@ public class HRegionServer extends HasThread implements
     // improved; Additionally the load balancer will be able to take advantage of a more complete
     // history.
     MetricsRegionServerWrapper regionServerWrapper = metricsRegionServer.getRegionServerWrapper();
-    Collection<Region> regions = getOnlineRegionsLocalContext();
+    Collection<HRegion> regions = getOnlineRegionsLocalContext();
     long usedMemory = -1L;
     long maxMemory = -1L;
     final MemoryUsage usage = MemorySizeUtil.safeGetHeapMemoryUsage();
@@ -1391,7 +1391,7 @@ public class HRegionServer extends HasThread implements
     }
     RegionLoad.Builder regionLoadBldr = RegionLoad.newBuilder();
     RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
-    for (Region region : regions) {
+    for (HRegion region : regions) {
       if (region.getCoprocessorHost() != null) {
         Set<String> regionCoprocessors = region.getCoprocessorHost().getCoprocessors();
         Iterator<String> iterator = regionCoprocessors.iterator();
@@ -1469,7 +1469,7 @@ public class HRegionServer extends HasThread implements
         // Ensure all user regions have been sent a close. Use this to
         // protect against the case where an open comes in after we start the
         // iterator of onlineRegions to close all user regions.
-        for (Map.Entry<String, Region> e : this.onlineRegions.entrySet()) {
+        for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
           RegionInfo hri = e.getValue().getRegionInfo();
           if (!this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes())
               && !closedRegions.contains(hri.getEncodedName())) {
@@ -1672,7 +1672,7 @@ public class HRegionServer extends HasThread implements
    *
    * @throws IOException
    */
-  RegionLoad createRegionLoad(final Region r, RegionLoad.Builder regionLoadBldr,
+  RegionLoad createRegionLoad(final HRegion r, RegionLoad.Builder regionLoadBldr,
       RegionSpecifier.Builder regionSpecifier) throws IOException {
     byte[] name = r.getRegionInfo().getRegionName();
     int stores = 0;
@@ -1740,7 +1740,7 @@ public class HRegionServer extends HasThread implements
    * @return An instance of RegionLoad.
    */
   public RegionLoad createRegionLoad(final String encodedRegionName) throws IOException {
-    Region r = onlineRegions.get(encodedRegionName);
+    HRegion r = onlineRegions.get(encodedRegionName);
     return r != null ? createRegionLoad(r, null, null) : null;
   }
 
@@ -1821,9 +1821,9 @@ public class HRegionServer extends HasThread implements
     @Override
     protected void chore() {
       final StringBuffer whyFlush = new StringBuffer();
-      for (Region r : this.server.onlineRegions.values()) {
+      for (HRegion r : this.server.onlineRegions.values()) {
         if (r == null) continue;
-        if (((HRegion)r).shouldFlush(whyFlush)) {
+        if (r.shouldFlush(whyFlush)) {
           FlushRequester requester = server.getFlushRequester();
           if (requester != null) {
             long randomDelay = RandomUtils.nextInt(0, RANGE_OF_DELAY) + MIN_DELAY_TIME;
@@ -2157,11 +2157,6 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public void postOpenDeployTasks(final Region r) throws KeeperException, IOException {
-    postOpenDeployTasks(new PostOpenDeployContext(r, -1));
-  }
-
-  @Override
   public void postOpenDeployTasks(final PostOpenDeployContext context)
       throws KeeperException, IOException {
     HRegion r = (HRegion) context.getRegion();
@@ -2195,18 +2190,6 @@ public class HRegionServer extends HasThread implements
     triggerFlushInPrimaryRegion((HRegion)r);
 
     LOG.debug("Finished post open deploy task for " + r.getRegionInfo().getRegionNameAsString());
-  }
-
-  @Override
-  public boolean reportRegionStateTransition(TransitionCode code, RegionInfo... hris) {
-    return reportRegionStateTransition(code, HConstants.NO_SEQNUM, hris);
-  }
-
-  @Override
-  public boolean reportRegionStateTransition(
-      TransitionCode code, long openSeqNum, RegionInfo... hris) {
-    return reportRegionStateTransition(
-      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
   }
 
   @Override
@@ -2664,10 +2647,10 @@ public class HRegionServer extends HasThread implements
    * @param abort Whether we're running an abort.
    */
   void closeMetaTableRegions(final boolean abort) {
-    Region meta = null;
+    HRegion meta = null;
     this.lock.writeLock().lock();
     try {
-      for (Map.Entry<String, Region> e: onlineRegions.entrySet()) {
+      for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
         RegionInfo hri = e.getValue().getRegionInfo();
         if (hri.isMetaRegion()) {
           meta = e.getValue();
@@ -2689,8 +2672,8 @@ public class HRegionServer extends HasThread implements
   void closeUserRegions(final boolean abort) {
     this.lock.writeLock().lock();
     try {
-      for (Map.Entry<String, Region> e: this.onlineRegions.entrySet()) {
-        Region r = e.getValue();
+      for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
+        HRegion r = e.getValue();
         if (!r.getRegionInfo().isMetaTable() && r.isAvailable()) {
           // Don't update zk with this close transition; pass false.
           closeRegionIgnoreErrors(r.getRegionInfo(), abort);
@@ -2720,7 +2703,7 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public Map<String, Region> getRecoveringRegions() {
+  public Map<String, HRegion> getRecoveringRegions() {
     return this.recoveringRegions;
   }
 
@@ -2751,13 +2734,13 @@ public class HRegionServer extends HasThread implements
    * This method will only work if HRegionServer is in the same JVM as client;
    * HRegion cannot be serialized to cross an rpc.
    */
-  public Collection<Region> getOnlineRegionsLocalContext() {
-    Collection<Region> regions = this.onlineRegions.values();
+  public Collection<HRegion> getOnlineRegionsLocalContext() {
+    Collection<HRegion> regions = this.onlineRegions.values();
     return Collections.unmodifiableCollection(regions);
   }
 
   @Override
-  public void addRegion(Region region) {
+  public void addRegion(HRegion region) {
     this.onlineRegions.put(region.getRegionInfo().getEncodedName(), region);
     configurationManager.registerObserver(region);
   }
@@ -2767,9 +2750,9 @@ public class HRegionServer extends HasThread implements
    * biggest.  If two regions are the same size, then the last one found wins; i.e. this method
    * may NOT return all regions.
    */
-  SortedMap<Long, Region> getCopyOfOnlineRegionsSortedBySize() {
+  SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize() {
     // we'll sort the regions in reverse
-    SortedMap<Long, Region> sortedRegions = new TreeMap<>(
+    SortedMap<Long, HRegion> sortedRegions = new TreeMap<>(
         new Comparator<Long>() {
           @Override
           public int compare(Long a, Long b) {
@@ -2777,7 +2760,7 @@ public class HRegionServer extends HasThread implements
           }
         });
     // Copy over all regions. Regions are sorted by size with biggest first.
-    for (Region region : this.onlineRegions.values()) {
+    for (HRegion region : this.onlineRegions.values()) {
       sortedRegions.put(region.getMemStoreSize(), region);
     }
     return sortedRegions;
@@ -3003,10 +2986,10 @@ public class HRegionServer extends HasThread implements
    * @return Online regions from <code>tableName</code>
    */
   @Override
-  public List<Region> getRegions(TableName tableName) {
-     List<Region> tableRegions = new ArrayList<>();
+  public List<HRegion> getRegions(TableName tableName) {
+     List<HRegion> tableRegions = new ArrayList<>();
      synchronized (this.onlineRegions) {
-       for (Region region: this.onlineRegions.values()) {
+       for (HRegion region: this.onlineRegions.values()) {
          RegionInfo regionInfo = region.getRegionInfo();
          if(regionInfo.getTable().equals(tableName)) {
            tableRegions.add(region);
@@ -3017,8 +3000,8 @@ public class HRegionServer extends HasThread implements
    }
 
   @Override
-  public List<Region> getRegions() {
-    List<Region> allRegions = new ArrayList<>();
+  public List<HRegion> getRegions() {
+    List<HRegion> allRegions = new ArrayList<>();
     synchronized (this.onlineRegions) {
       // Return a clone copy of the onlineRegions
       allRegions.addAll(onlineRegions.values());
@@ -3051,8 +3034,8 @@ public class HRegionServer extends HasThread implements
           "skipping.");
       LOG.debug("Exception details for failure to fetch wal coprocessor information.", exception);
     }
-    Collection<Region> regions = getOnlineRegionsLocalContext();
-    for (Region region: regions) {
+    Collection<HRegion> regions = getOnlineRegionsLocalContext();
+    for (HRegion region: regions) {
       coprocessors.addAll(region.getCoprocessorHost().getCoprocessors());
       try {
         coprocessors.addAll(getWAL(region.getRegionInfo()).getCoprocessorHost().getCoprocessors());
@@ -3170,7 +3153,7 @@ public class HRegionServer extends HasThread implements
  protected boolean closeAndOfflineRegionForSplitOrMerge(
      final List<String> regionEncodedName) throws IOException {
    for (int i = 0; i < regionEncodedName.size(); ++i) {
-     Region regionToClose = this.getRegion(regionEncodedName.get(i));
+     HRegion regionToClose = this.getRegion(regionEncodedName.get(i));
      if (regionToClose != null) {
        Map<byte[], List<HStoreFile>> hstoreFiles = null;
        Exception exceptionToThrow = null;
@@ -3232,14 +3215,14 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public Region getRegion(final String encodedRegionName) {
+  public HRegion getRegion(final String encodedRegionName) {
     return this.onlineRegions.get(encodedRegionName);
   }
 
 
   @Override
-  public boolean removeRegion(final Region r, ServerName destination) {
-    Region toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
+  public boolean removeRegion(final HRegion r, ServerName destination) {
+    HRegion toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
     if (destination != null) {
       long closeSeqNum = r.getMaxFlushedSeqId();
       if (closeSeqNum == HConstants.NO_SEQNUM) {
@@ -3261,20 +3244,20 @@ public class HRegionServer extends HasThread implements
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  protected Region getRegion(final byte[] regionName)
+  protected HRegion getRegion(final byte[] regionName)
       throws NotServingRegionException {
     String encodedRegionName = RegionInfo.encodeRegionName(regionName);
     return getRegionByEncodedName(regionName, encodedRegionName);
   }
 
-  public Region getRegionByEncodedName(String encodedRegionName)
+  public HRegion getRegionByEncodedName(String encodedRegionName)
       throws NotServingRegionException {
     return getRegionByEncodedName(null, encodedRegionName);
   }
 
-  protected Region getRegionByEncodedName(byte[] regionName, String encodedRegionName)
+  protected HRegion getRegionByEncodedName(byte[] regionName, String encodedRegionName)
     throws NotServingRegionException {
-    Region region = this.onlineRegions.get(encodedRegionName);
+    HRegion region = this.onlineRegions.get(encodedRegionName);
     if (region == null) {
       MovedRegionInfo moveInfo = getMovedRegion(encodedRegionName);
       if (moveInfo != null) {

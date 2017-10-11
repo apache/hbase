@@ -201,7 +201,7 @@ public class RegionCoprocessorHost
   /** The region server services */
   RegionServerServices rsServices;
   /** The region */
-  Region region;
+  HRegion region;
 
   /**
    * Constructor
@@ -209,7 +209,7 @@ public class RegionCoprocessorHost
    * @param rsServices interface to available region server functionality
    * @param conf the configuration
    */
-  public RegionCoprocessorHost(final Region region,
+  public RegionCoprocessorHost(final HRegion region,
       final RegionServerServices rsServices, final Configuration conf) {
     super(rsServices);
     this.conf = conf;

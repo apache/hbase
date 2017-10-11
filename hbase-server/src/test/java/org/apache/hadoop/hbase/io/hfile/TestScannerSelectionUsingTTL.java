@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,7 +106,7 @@ public class TestScannerSelectionUsingTTL {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
-    Region region = HBaseTestingUtility.createRegionAndWAL(info,
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info,
       TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, htd);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -150,7 +150,7 @@ public class TestScannerSelectionUsingTTL {
 
     // Exercise both compaction codepaths.
     if (explicitCompaction) {
-      HStore store = (HStore)region.getStore(FAMILY_BYTES);
+      HStore store = region.getStore(FAMILY_BYTES);
       store.compactRecentForTestingAssumingDefaultPolicy(totalNumFiles);
     } else {
       region.compact(false);

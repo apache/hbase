@@ -73,7 +73,7 @@ public class TestResettingCounters {
         throw new IOException("Failed delete of " + path);
       }
     }
-    Region region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
     try {
       Increment odd = new Increment(rows[0]);
       odd.setDurability(Durability.SKIP_WAL);

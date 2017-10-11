@@ -3947,8 +3947,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           if (server.equals(rs.getServerName())) {
             continue;
           }
-          Collection<Region> hrs = rs.getOnlineRegionsLocalContext();
-          for (Region r: hrs) {
+          Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
+          for (HRegion r: hrs) {
             assertTrue("Region should not be double assigned",
               r.getRegionInfo().getRegionId() != hri.getRegionId());
           }

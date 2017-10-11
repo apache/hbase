@@ -350,7 +350,7 @@ public abstract class AbstractTestWALReplay {
     Region region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
-    Region region = HRegion.openHRegion(hri, htd, wal, this.conf);
+    HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
     byte [] family = htd.getFamilies().iterator().next().getName();
     Path f =  new Path(basedir, "hfile");
@@ -1117,7 +1117,7 @@ public abstract class AbstractTestWALReplay {
     private HRegion r;
 
     @Override
-    public void requestFlush(Region region, boolean force) {
+    public void requestFlush(HRegion region, boolean force) {
       try {
         r.flush(force);
       } catch (IOException e) {
@@ -1126,7 +1126,7 @@ public abstract class AbstractTestWALReplay {
     }
 
     @Override
-    public void requestDelayedFlush(Region region, long when, boolean forceFlushAllStores) {
+    public void requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
       // TODO Auto-generated method stub
 
     }

@@ -615,7 +615,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void flushcache() throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         r.flush(true);
       }
     }
@@ -628,7 +628,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void flushcache(TableName tableName) throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         if(r.getTableDescriptor().getTableName().equals(tableName)) {
           r.flush(true);
         }
@@ -643,7 +643,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void compact(boolean major) throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         r.compact(major);
       }
     }
@@ -656,7 +656,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void compact(TableName tableName, boolean major) throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         if(r.getTableDescriptor().getTableName().equals(tableName)) {
           r.compact(major);
         }

@@ -130,7 +130,7 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
         40 * 1024);
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
+    HRegion region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -324,12 +324,12 @@ public class TestPerColumnFamilyFlush {
   }
 
   // Find the (first) region which has the specified name.
-  private static Pair<Region, HRegionServer> getRegionWithName(TableName tableName) {
+  private static Pair<HRegion, HRegionServer> getRegionWithName(TableName tableName) {
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (Region region : hrs.getRegions(tableName)) {
+      for (HRegion region : hrs.getRegions(tableName)) {
         return Pair.newPair(region, hrs);
       }
     }
@@ -367,8 +367,8 @@ public class TestPerColumnFamilyFlush {
       }
       Thread.sleep(1000);
 
-      Pair<Region, HRegionServer> desiredRegionAndServer = getRegionWithName(TABLENAME);
-      Region desiredRegion = desiredRegionAndServer.getFirst();
+      Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(TABLENAME);
+      HRegion desiredRegion = desiredRegionAndServer.getFirst();
       assertTrue("Could not find a region which hosts the new region.", desiredRegion != null);
 
       // Flush the region selectively.
@@ -476,8 +476,8 @@ public class TestPerColumnFamilyFlush {
       try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
         admin.flush(TableName.NAMESPACE_TABLE_NAME);
       }
-      Pair<Region, HRegionServer> desiredRegionAndServer = getRegionWithName(tableName);
-      final Region desiredRegion = desiredRegionAndServer.getFirst();
+      Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(tableName);
+      final HRegion desiredRegion = desiredRegionAndServer.getFirst();
       assertTrue("Could not find a region which hosts the new region.", desiredRegion != null);
       LOG.info("Writing to region=" + desiredRegion);
 

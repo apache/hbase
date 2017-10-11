@@ -138,7 +138,7 @@ public class TestCompactionState {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-      List<Region> regions = rs.getRegions(table);
+      List<HRegion> regions = rs.getRegions(table);
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
@@ -206,13 +206,13 @@ public class TestCompactionState {
   }
 
   private static int countStoreFilesInFamily(
-      List<Region> regions, final byte[] family) {
+      List<HRegion> regions, final byte[] family) {
     return countStoreFilesInFamilies(regions, new byte[][]{family});
   }
 
-  private static int countStoreFilesInFamilies(List<Region> regions, final byte[][] families) {
+  private static int countStoreFilesInFamilies(List<HRegion> regions, final byte[][] families) {
     int count = 0;
-    for (Region region: regions) {
+    for (HRegion region: regions) {
       count += region.getStoreFileList(families).size();
     }
     return count;

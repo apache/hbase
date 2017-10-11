@@ -196,7 +196,7 @@ public class TestKeepDeletes {
     // KEEP_DELETED_CELLS is NOT enabled
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);

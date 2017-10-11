@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -759,8 +760,8 @@ public final class SnapshotTestingUtils {
                                             final TableName tableName)
       throws IOException, InterruptedException {
     HRegionServer rs = util.getRSForFirstRegionInTable(tableName);
-    List<Region> onlineRegions = rs.getRegions(tableName);
-    for (Region region : onlineRegions) {
+    List<HRegion> onlineRegions = rs.getRegions(tableName);
+    for (HRegion region : onlineRegions) {
       region.waitForFlushesAndCompactions();
     }
     // Wait up to 60 seconds for a table to be available.

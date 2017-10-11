@@ -32,7 +32,7 @@ public interface OnlineRegions extends ImmutableOnlineRegions {
    * Add to online regions.
    * @param r
    */
-  void addRegion(final Region r);
+  void addRegion(final HRegion r);
 
   /**
    * This method removes Region corresponding to hri from the Map of onlineRegions.
@@ -41,5 +41,5 @@ public interface OnlineRegions extends ImmutableOnlineRegions {
    * @param destination Destination, if any, null otherwise.
    * @return True if we removed a region from online list.
    */
-  boolean removeRegion(final Region r, ServerName destination);
+  boolean removeRegion(final HRegion r, ServerName destination);
 }

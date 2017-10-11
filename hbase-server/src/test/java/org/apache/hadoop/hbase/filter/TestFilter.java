@@ -71,7 +71,7 @@ import org.junit.rules.TestName;
 @Category({FilterTests.class, SmallTests.class})
 public class TestFilter {
   private final static Log LOG = LogFactory.getLog(TestFilter.class);
-  private Region region;
+  private HRegion region;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
@@ -1499,7 +1499,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
 
     for(int i=0; i<5; i++) {
@@ -2060,7 +2060,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));

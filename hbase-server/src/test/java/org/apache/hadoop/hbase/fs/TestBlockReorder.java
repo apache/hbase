@@ -292,7 +292,7 @@ public class TestBlockReorder {
 
     int nbTest = 0;
     while (nbTest < 10) {
-      final List<Region> regions = targetRs.getRegions(h.getName());
+      final List<HRegion> regions = targetRs.getRegions(h.getName());
       final CountDownLatch latch = new CountDownLatch(regions.size());
       // listen for successful log rolls
       final WALActionsListener listener = new WALActionsListener.Base() {
@@ -301,8 +301,8 @@ public class TestBlockReorder {
               latch.countDown();
             }
           };
-      for (Region region : regions) {
-        ((HRegion)region).getWAL().registerWALActionsListener(listener);
+      for (HRegion region : regions) {
+        region.getWAL().registerWALActionsListener(listener);
       }
 
       htu.getAdmin().rollWALWriter(targetRs.getServerName());

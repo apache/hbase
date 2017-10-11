@@ -89,7 +89,7 @@ public class TestBlocksScanned extends HBaseTestCase {
   }
 
   private void _testBlocksScanned(HTableDescriptor table) throws Exception {
-    Region r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
+    HRegion r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
     addContent(r, FAMILY, COL);
     r.flush(true);
 

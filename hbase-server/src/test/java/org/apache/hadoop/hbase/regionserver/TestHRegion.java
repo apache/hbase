@@ -5884,7 +5884,7 @@ public class TestHRegion {
     when(rss.getWAL((HRegionInfo) any())).thenReturn(wal);
 
     // add the region to recovering regions
-    HashMap<String, Region> recoveringRegions = Maps.newHashMap();
+    HashMap<String, HRegion> recoveringRegions = Maps.newHashMap();
     recoveringRegions.put(region.getRegionInfo().getEncodedName(), null);
     when(rss.getRecoveringRegions()).thenReturn(recoveringRegions);
 

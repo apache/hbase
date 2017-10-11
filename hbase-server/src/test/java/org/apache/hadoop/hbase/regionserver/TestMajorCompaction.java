@@ -388,17 +388,17 @@ public class TestMajorCompaction {
     return count;
   }
 
-  private void createStoreFile(final Region region) throws IOException {
+  private void createStoreFile(final HRegion region) throws IOException {
     createStoreFile(region, Bytes.toString(COLUMN_FAMILY));
   }
 
-  private void createStoreFile(final Region region, String family) throws IOException {
+  private void createStoreFile(final HRegion region, String family) throws IOException {
     Table loader = new RegionAsTable(region);
     HBaseTestCase.addContent(loader, family);
     region.flush(true);
   }
 
-  private void createSmallerStoreFile(final Region region) throws IOException {
+  private void createSmallerStoreFile(final HRegion region) throws IOException {
     Table loader = new RegionAsTable(region);
     HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
         "bbb").getBytes(), null);

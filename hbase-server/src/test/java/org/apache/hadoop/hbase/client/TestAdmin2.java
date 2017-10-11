@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -472,7 +473,7 @@ public class TestAdmin2 {
         + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
-    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+    for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
       r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName());

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -247,11 +246,6 @@ public class TestMetaCache {
         final ClientProtos.ScanRequest request) throws ServiceException {
       exceptions.throwOnScan(this, request);
       return super.scan(controller, request);
-    }
-
-    public Region getRegion(
-        final HBaseProtos.RegionSpecifier regionSpecifier) throws IOException {
-      return super.getRegion(regionSpecifier);
     }
   }
 

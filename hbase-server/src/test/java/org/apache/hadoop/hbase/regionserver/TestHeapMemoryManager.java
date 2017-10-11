@@ -804,12 +804,12 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public void requestFlush(Region region, boolean forceFlushAllStores) {
+    public void requestFlush(HRegion region, boolean forceFlushAllStores) {
       this.listener.flushRequested(flushType, region);
     }
 
     @Override
-    public void requestDelayedFlush(Region region, long delay, boolean forceFlushAllStores) {
+    public void requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
 
     }
 

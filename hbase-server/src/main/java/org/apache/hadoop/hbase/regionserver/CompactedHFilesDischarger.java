@@ -86,13 +86,13 @@ public class CompactedHFilesDischarger extends ScheduledChore {
     // Noop if rss is null. This will never happen in a normal condition except for cases
     // when the test case is not spinning up a cluster
     if (regionServerServices == null) return;
-    List<Region> onlineRegions = regionServerServices.getRegions();
+    List<HRegion> onlineRegions = (List<HRegion>) regionServerServices.getRegions();
     if (onlineRegions == null) return;
-    for (Region region : onlineRegions) {
+    for (HRegion region : onlineRegions) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Started compacted hfiles cleaner on " + region.getRegionInfo());
       }
-      for (HStore store : ((HRegion) region).getStores()) {
+      for (HStore store : region.getStores()) {
         try {
           if (useExecutor && regionServerServices != null) {
             CompactedHFilesDischargeHandler handler = new CompactedHFilesDischargeHandler(

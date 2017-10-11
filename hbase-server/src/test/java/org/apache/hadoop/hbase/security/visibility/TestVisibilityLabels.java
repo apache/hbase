@@ -307,7 +307,7 @@ public abstract class TestVisibilityLabels {
         List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
             .getRegionServerThreads();
         for (RegionServerThread rsThread : regionServerThreads) {
-          List<Region> onlineRegions = rsThread.getRegionServer().getRegions(
+          List<HRegion> onlineRegions = rsThread.getRegionServer().getRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             rsThread.getRegionServer().abort("Aborting ");
@@ -341,7 +341,7 @@ public abstract class TestVisibilityLabels {
     for (RegionServerThread rsThread : regionServerThreads) {
       while (true) {
         if (!rsThread.getRegionServer().isAborted()) {
-          List<Region> onlineRegions = rsThread.getRegionServer().getRegions(
+          List<HRegion> onlineRegions = rsThread.getRegionServer().getRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             break;

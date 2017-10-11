@@ -85,7 +85,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region =
+    HRegion region =
         HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
     try {
       // Add 5 cells to memstore
@@ -132,7 +132,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region =
+    HRegion region =
         HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
     try {
       // Add to memstore

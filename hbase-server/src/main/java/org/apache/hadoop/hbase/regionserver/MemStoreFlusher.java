@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
+import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -126,8 +126,8 @@ class MemStoreFlusher implements FlushRequester {
    * @return true if successful
    */
   private boolean flushOneForGlobalPressure() {
-    SortedMap<Long, Region> regionsBySize = server.getCopyOfOnlineRegionsSortedBySize();
-    Set<Region> excludedRegions = new HashSet<>();
+    SortedMap<Long, HRegion> regionsBySize = server.getCopyOfOnlineRegionsSortedBySize();
+    Set<HRegion> excludedRegions = new HashSet<>();
 
     double secondaryMultiplier
       = ServerRegionReplicaUtil.getRegionReplicaStoreFileRefreshMultiplier(conf);
@@ -136,12 +136,12 @@ class MemStoreFlusher implements FlushRequester {
     while (!flushedOne) {
       // Find the biggest region that doesn't have too many storefiles
       // (might be null!)
-      Region bestFlushableRegion = getBiggestMemStoreRegion(regionsBySize, excludedRegions, true);
+      HRegion bestFlushableRegion = getBiggestMemStoreRegion(regionsBySize, excludedRegions, true);
       // Find the biggest region, total, even if it might have too many flushes.
-      Region bestAnyRegion = getBiggestMemStoreRegion(
+      HRegion bestAnyRegion = getBiggestMemStoreRegion(
           regionsBySize, excludedRegions, false);
       // Find the biggest region that is a secondary region
-      Region bestRegionReplica = getBiggestMemStoreOfRegionReplica(regionsBySize,
+      HRegion bestRegionReplica = getBiggestMemStoreOfRegionReplica(regionsBySize,
         excludedRegions);
 
       if (bestAnyRegion == null && bestRegionReplica == null) {
@@ -149,7 +149,7 @@ class MemStoreFlusher implements FlushRequester {
         return false;
       }
 
-      Region regionToFlush;
+      HRegion regionToFlush;
       if (bestFlushableRegion != null &&
           bestAnyRegion.getMemStoreSize() > 2 * bestFlushableRegion.getMemStoreSize()) {
         // Even if it's not supposed to be flushed, pick a region if it's more than twice
@@ -283,18 +283,17 @@ class MemStoreFlusher implements FlushRequester {
     }
   }
 
-  private Region getBiggestMemStoreRegion(
-      SortedMap<Long, Region> regionsBySize,
-      Set<Region> excludedRegions,
+  private HRegion getBiggestMemStoreRegion(
+      SortedMap<Long, HRegion> regionsBySize,
+      Set<HRegion> excludedRegions,
       boolean checkStoreFileCount) {
     synchronized (regionsInQueue) {
-      for (Region region : regionsBySize.values()) {
+      for (HRegion region : regionsBySize.values()) {
         if (excludedRegions.contains(region)) {
           continue;
         }
 
-        if (((HRegion)region).writestate.flushing ||
-            !((HRegion)region).writestate.writesEnabled) {
+        if (region.writestate.flushing || !region.writestate.writesEnabled) {
           continue;
         }
 
@@ -307,10 +306,10 @@ class MemStoreFlusher implements FlushRequester {
     return null;
   }
 
-  private Region getBiggestMemStoreOfRegionReplica(SortedMap<Long, Region> regionsBySize,
-      Set<Region> excludedRegions) {
+  private HRegion getBiggestMemStoreOfRegionReplica(SortedMap<Long, HRegion> regionsBySize,
+      Set<HRegion> excludedRegions) {
     synchronized (regionsInQueue) {
-      for (Region region : regionsBySize.values()) {
+      for (HRegion region : regionsBySize.values()) {
         if (excludedRegions.contains(region)) {
           continue;
         }
@@ -349,8 +348,8 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public void requestFlush(Region r, boolean forceFlushAllStores) {
-    ((HRegion)r).incrementFlushesQueuedCount();
+  public void requestFlush(HRegion r, boolean forceFlushAllStores) {
+    r.incrementFlushesQueuedCount();
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
@@ -363,8 +362,8 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   @Override
-  public void requestDelayedFlush(Region r, long delay, boolean forceFlushAllStores) {
-    ((HRegion)r).incrementFlushesQueuedCount();
+  public void requestDelayedFlush(HRegion r, long delay, boolean forceFlushAllStores) {
+    r.incrementFlushesQueuedCount();
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has some delay
@@ -430,7 +429,7 @@ class MemStoreFlusher implements FlushRequester {
    * not flushed.
    */
   private boolean flushRegion(final FlushRegionEntry fqe) {
-    Region region = fqe.region;
+    HRegion region = fqe.region;
     if (!region.getRegionInfo().isMetaRegion() &&
         isTooManyStoreFiles(region)) {
       if (fqe.isMaximumWait(this.blockingWaitTime)) {
@@ -479,7 +478,7 @@ class MemStoreFlusher implements FlushRequester {
    * false, there will be accompanying log messages explaining why the region was
    * not flushed.
    */
-  private boolean flushRegion(final Region region, final boolean emergencyFlush,
+  private boolean flushRegion(final HRegion region, final boolean emergencyFlush,
       boolean forceFlushAllStores) {
     synchronized (this.regionsInQueue) {
       FlushRegionEntry fqe = this.regionsInQueue.remove(region);
@@ -497,12 +496,11 @@ class MemStoreFlusher implements FlushRequester {
       FlushResult flushResult = region.flush(forceFlushAllStores);
       boolean shouldCompact = flushResult.isCompactionNeeded();
       // We just want to check the size
-      boolean shouldSplit = ((HRegion)region).checkSplit() != null;
+      boolean shouldSplit = region.checkSplit() != null;
       if (shouldSplit) {
         this.server.compactSplitThread.requestSplit(region);
       } else if (shouldCompact) {
-        server.compactSplitThread.requestSystemCompaction((HRegion) region,
-          Thread.currentThread().getName());
+        server.compactSplitThread.requestSystemCompaction(region, Thread.currentThread().getName());
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
@@ -728,7 +726,7 @@ class MemStoreFlusher implements FlushRequester {
    * a while.
    */
   static class FlushRegionEntry implements FlushQueueEntry {
-    private final Region region;
+    private final HRegion region;
 
     private final long createTime;
     private long whenToExpire;
@@ -736,7 +734,7 @@ class MemStoreFlusher implements FlushRequester {
 
     private boolean forceFlushAllStores;
 
-    FlushRegionEntry(final Region r, boolean forceFlushAllStores) {
+    FlushRegionEntry(final HRegion r, boolean forceFlushAllStores) {
       this.region = r;
       this.createTime = EnvironmentEdgeManager.currentTime();
       this.whenToExpire = this.createTime;

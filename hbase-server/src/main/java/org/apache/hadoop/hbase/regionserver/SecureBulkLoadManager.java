@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.regionserver.Region.BulkLoadListener;
+import org.apache.hadoop.hbase.regionserver.HRegion.BulkLoadListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
@@ -157,7 +157,7 @@ public class SecureBulkLoadManager {
     LOG.info("Cleaned up " + path + " successfully.");
   }
 
-  public Map<byte[], List<Path>> secureBulkLoadHFiles(final Region region,
+  public Map<byte[], List<Path>> secureBulkLoadHFiles(final HRegion region,
       final BulkLoadHFileRequest request) throws IOException {
     final List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
