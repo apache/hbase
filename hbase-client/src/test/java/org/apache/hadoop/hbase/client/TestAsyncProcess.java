@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -746,12 +747,12 @@ public class TestAsyncProcess {
     puts.add(createPut(1, true));
 
     for (int i = 0; i != controller.maxConcurrentTasksPerRegion; ++i) {
-      ap.incTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+      ap.incTaskCounters(Collections.singleton(hri1.getRegionName()), sn);
     }
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
     Assert.assertEquals(puts.size(), 1);
 
-    ap.decTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+    ap.decTaskCounters(Collections.singleton(hri1.getRegionName()), sn);
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
     Assert.assertEquals(0, puts.size());
     if (defaultClazz != null) {
@@ -966,7 +967,7 @@ public class TestAsyncProcess {
 
 
     for (int i = 0; i < 1000; i++) {
-      ap.incTaskCounters(Arrays.asList("dummy".getBytes()), sn);
+      ap.incTaskCounters(Collections.singleton("dummy".getBytes()), sn);
     }
 
     final Thread myThread = Thread.currentThread();
@@ -997,7 +998,7 @@ public class TestAsyncProcess {
       public void run() {
         Threads.sleep(sleepTime);
         while (controller.tasksInProgress.get() > 0) {
-          ap.decTaskCounters(Arrays.asList("dummy".getBytes()), sn);
+          ap.decTaskCounters(Collections.singleton("dummy".getBytes()), sn);
         }
       }
     };
@@ -1119,6 +1120,7 @@ public class TestAsyncProcess {
     Assert.assertEquals("the put should not been inserted.", 0, mutator.size());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testAction() {
     Action action_0 = new Action(new Put(Bytes.toBytes("abc")), 10);

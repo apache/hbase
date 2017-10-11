@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -599,6 +600,7 @@ public class TestStoreScanner {
     }
   }
 
+  @Test
   public void testDeleteVersionMaskingMultiplePuts() throws IOException {
     long now = System.currentTimeMillis();
     KeyValue [] kvs1 = new KeyValue[] {
@@ -623,6 +625,8 @@ public class TestStoreScanner {
       assertEquals(kvs2[1], results.get(0));
     }
   }
+
+  @Test
   public void testDeleteVersionsMixedAndMultipleVersionReturn() throws IOException {
     long now = System.currentTimeMillis();
     KeyValue [] kvs1 = new KeyValue[] {
@@ -834,10 +838,8 @@ public class TestStoreScanner {
   }
 
 
-  /**
-   * TODO this fails, since we don't handle deletions, etc, in peek
-   */
-  public void SKIP_testPeek() throws Exception {
+  @Test @Ignore("this fails, since we don't handle deletions, etc, in peek")
+  public void testPeek() throws Exception {
     KeyValue[] kvs = new KeyValue [] {
         create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
         create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"),

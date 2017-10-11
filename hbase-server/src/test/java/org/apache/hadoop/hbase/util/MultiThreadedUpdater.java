@@ -167,7 +167,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                 get = dataGenerator.beforeGet(rowKeyBase, get);
               } catch (Exception e) {
                 // Ideally wont happen
-                LOG.warn("Failed to modify the get from the load generator  = [" + get.getRow()
+                LOG.warn("Failed to modify the get from the load generator  = [" + Bytes.toString(get.getRow())
                     + "], column family = [" + Bytes.toString(cf) + "]", e);
               }
               Result result = getRow(get, rowKeyBase, cf);
@@ -234,7 +234,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
             if (isBatchUpdate) {
               if (verbose) {
                 LOG.debug("Preparing increment and append for key = ["
-                  + rowKey + "], " + columnCount + " columns");
+                  + Bytes.toString(rowKey) + "], " + columnCount + " columns");
               }
               mutate(table, inc, rowKeyBase);
               mutate(table, app, rowKeyBase);
@@ -267,7 +267,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
         result = table.get(get);
       } catch (IOException ie) {
         LOG.warn(
-            "Failed to get the row for key = [" + get.getRow() + "], column family = ["
+            "Failed to get the row for key = [" + Bytes.toString(get.getRow()) + "], column family = ["
                 + Bytes.toString(cf) + "]", ie);
       }
       return result;

@@ -63,6 +63,7 @@ public class TestHRegionLocation {
     System.out.println(hrl1.toString());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareTo() {
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
@@ -71,8 +72,8 @@ public class TestHRegionLocation {
     ServerName hsa2 = ServerName.valueOf("localhost", 1235, -1L);
     HRegionLocation hsl2 =
       new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
-    assertTrue(hsl1.compareTo(hsl1) == 0);
-    assertTrue(hsl2.compareTo(hsl2) == 0);
+    assertEquals(0, hsl1.compareTo(hsl1));
+    assertEquals(0, hsl2.compareTo(hsl2));
     int compare1 = hsl1.compareTo(hsl2);
     int compare2 = hsl2.compareTo(hsl1);
     assertTrue((compare1 > 0)? compare2 < 0: compare2 > 0);

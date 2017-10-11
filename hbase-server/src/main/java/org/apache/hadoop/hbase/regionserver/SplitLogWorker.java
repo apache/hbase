@@ -75,14 +75,13 @@ public class SplitLogWorker implements Runnable {
     this.server = server;
     this.conf = conf;
     this.coordination = hserver.getCoordinatedStateManager().getSplitLogWorkerCoordination();
-    this.server = server;
     coordination.init(server, conf, splitTaskExecutor, this);
   }
 
   public SplitLogWorker(final Server hserver, final Configuration conf,
       final RegionServerServices server, final LastSequenceId sequenceIdChecker,
       final WALFactory factory) {
-    this(server, conf, server, new TaskExecutor() {
+    this(hserver, conf, server, new TaskExecutor() {
       @Override
       public Status exec(String filename, RecoveryMode mode, CancelableProgressable p) {
         Path walDir;

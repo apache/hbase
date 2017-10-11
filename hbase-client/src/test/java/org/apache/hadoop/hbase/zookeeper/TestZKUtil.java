@@ -96,6 +96,7 @@ public class TestZKUtil {
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user6"))));
   }
 
+  @Test(expected = KeeperException.SystemErrorException.class)
   public void testInterruptedDuringAction()
       throws ZooKeeperConnectionException, IOException, KeeperException, InterruptedException {
     final RecoverableZooKeeper recoverableZk = Mockito.mock(RecoverableZooKeeper.class);
@@ -107,12 +108,6 @@ public class TestZKUtil {
     };
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
         .getChildren(zkw.znodePaths.baseZNode, null);
-    try {
-      ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.baseZNode);
-    } catch (KeeperException.SystemErrorException e) {
-      // expected
-      return;
-    }
-    Assert.fail("Should have thrown KeeperException but not");
+    ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.baseZNode);
   }
 }

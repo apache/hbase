@@ -174,7 +174,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     }
     node.add(rp);
     // Check our node still in the map; could have been removed by #removeNode.
-    return nodeMap.contains(node);
+    return nodeMap.containsValue(node);
   }
 
   /**
