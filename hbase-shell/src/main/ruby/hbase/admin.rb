@@ -197,6 +197,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Requests clear block cache for table
+    def clear_block_cache(table_name)
+      @admin.clearBlockCache(org.apache.hadoop.hbase.TableName.valueOf(table_name)).toString
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Requests region normalization for all configured tables in the cluster
     # Returns true if normalizer ran successfully
     def normalize

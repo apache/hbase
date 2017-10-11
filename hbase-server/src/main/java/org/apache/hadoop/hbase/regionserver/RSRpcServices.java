@@ -49,6 +49,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -130,6 +132,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
@@ -142,6 +145,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -1361,19 +1366,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @VisibleForTesting
   public HRegion getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
-    ByteString value = regionSpecifier.getValue();
-    RegionSpecifierType type = regionSpecifier.getType();
-    switch (type) {
-      case REGION_NAME:
-        byte[] regionName = value.toByteArray();
-        String encodedRegionName = RegionInfo.encodeRegionName(regionName);
-        return regionServer.getRegionByEncodedName(regionName, encodedRegionName);
-      case ENCODED_REGION_NAME:
-        return regionServer.getRegionByEncodedName(value.toStringUtf8());
-      default:
-        throw new DoNotRetryIOException(
-          "Unsupported region specifier type: " + type);
+    return regionServer.getRegion(regionSpecifier.getValue().toByteArray());
+  }
+
+  /**
+   * Find the List of HRegions based on a list of region specifiers
+   *
+   * @param regionSpecifiers the list of region specifiers
+   * @return the corresponding list of regions
+   * @throws IOException if any of the specifiers is not null,
+   *    but failed to find the region
+   */
+  private List<HRegion> getRegions(
+      final List<RegionSpecifier> regionSpecifiers) throws IOException {
+    List<HRegion> regions = Lists.newArrayListWithCapacity(regionSpecifiers.size());
+    for (RegionSpecifier regionSpecifier: regionSpecifiers) {
+      regions.add(regionServer.getRegion(regionSpecifier.getValue().toByteArray()));
     }
+    return regions;
   }
 
   @VisibleForTesting
@@ -3442,15 +3452,33 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
        ExecuteProceduresRequest request) throws ServiceException {
     ExecuteProceduresResponse.Builder builder = ExecuteProceduresResponse.newBuilder();
     if (request.getOpenRegionCount() > 0) {
-      for (OpenRegionRequest req: request.getOpenRegionList()) {
+      for (OpenRegionRequest req : request.getOpenRegionList()) {
         builder.addOpenRegion(openRegion(controller, req));
       }
-     }
-     if (request.getCloseRegionCount() > 0) {
-       for (CloseRegionRequest req: request.getCloseRegionList()) {
-         builder.addCloseRegion(closeRegion(controller, req));
-       }
-     }
-     return builder.build();
+    }
+    if (request.getCloseRegionCount() > 0) {
+      for (CloseRegionRequest req : request.getCloseRegionList()) {
+        builder.addCloseRegion(closeRegion(controller, req));
+      }
+    }
+    return builder.build();
+  }
+
+  @Override
+  public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
+                                                             ClearRegionBlockCacheRequest request)
+    throws ServiceException {
+    CacheEvictionStatsBuilder stats = CacheEvictionStats.builder();
+    try {
+      List<HRegion> regions = getRegions(request.getRegionList());
+      for (HRegion region : regions) {
+        stats = stats.append(this.regionServer.clearRegionBlockCache(region));
+      }
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+    return ClearRegionBlockCacheResponse.newBuilder()
+        .setStats(ProtobufUtil.toCacheEvictionStats(stats.build()))
+        .build();
   }
 }

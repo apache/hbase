@@ -59,6 +59,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -99,6 +100,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -3269,7 +3271,7 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Protected utility method for safely obtaining an HRegion handle.
+   * Protected Utility method for safely obtaining an HRegion handle.
    *
    * @param regionName
    *          Name of online {@link HRegion} to return
@@ -3611,6 +3613,22 @@ public class HRegionServer extends HasThread implements
     // Reload the configuration from disk.
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
+  }
+
+  public CacheEvictionStats clearRegionBlockCache(Region region) {
+    BlockCache blockCache = this.getCacheConfig().getBlockCache();
+    long evictedBlocks = 0;
+
+    for(Store store : region.getStores()) {
+      for(StoreFile hFile : store.getStorefiles()) {
+        evictedBlocks += blockCache.evictBlocksByHfileName(hFile.getPath().getName());
+      }
+    }
+
+    return CacheEvictionStats.builder()
+        .withEvictedBlocks(evictedBlocks)
+        .withMaxCacheSize(blockCache.getMaxSize())
+        .build();
   }
 
   @Override
