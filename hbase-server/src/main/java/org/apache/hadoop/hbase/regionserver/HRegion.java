@@ -2956,7 +2956,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         //  This is expensive.
         if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP && CellUtil.isDeleteType(cell)) {
           byte[] qual = CellUtil.cloneQualifier(cell);
-          if (qual == null) qual = HConstants.EMPTY_BYTE_ARRAY;
 
           Integer count = kvCount.get(qual);
           if (count == null) {
