@@ -248,6 +248,14 @@ message ClearCompactionQueuesRequest {
 message ClearCompactionQueuesResponse {
 }
 
+message ClearRegionBlockCacheRequest {
+  repeated RegionSpecifier region = 1;
+}
+
+message ClearRegionBlockCacheResponse {
+  required CacheEvictionStats stats = 1;
+}
+
 message ExecuteProceduresRequest {
   repeated OpenRegionRequest open_region = 1;
   repeated CloseRegionRequest close_region = 2;
@@ -309,6 +317,9 @@ service AdminService {
 
   rpc ClearCompactionQueues(ClearCompactionQueuesRequest)
     returns(ClearCompactionQueuesResponse);
+
+  rpc ClearRegionBlockCache(ClearRegionBlockCacheRequest)
+    returns(ClearRegionBlockCacheResponse);
 
   /** Fetches the RegionServer's view of space quotas */
   rpc GetSpaceQuotaSnapshots(GetSpaceQuotaSnapshotsRequest)

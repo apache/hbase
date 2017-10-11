@@ -399,6 +399,12 @@ public class TestReplicator extends TestReplicationBase {
       throws ServiceException {
         return null;
       }
+
+      @Override
+      public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
+                                                               ClearRegionBlockCacheRequest request) throws ServiceException {
+        return delegate.clearRegionBlockCache(controller, request);
+      }
     }
 
     public class FailureInjectingReplicatorForTest extends ReplicatorForTest {

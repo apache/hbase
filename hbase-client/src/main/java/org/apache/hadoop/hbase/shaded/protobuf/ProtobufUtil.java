@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
@@ -3384,5 +3385,19 @@ public final class ProtobufUtil {
     return response.getSnapshotsList().stream().map(ProtobufUtil::createSnapshotDesc)
         .filter(snap -> pattern != null ? pattern.matcher(snap.getName()).matches() : true)
         .collect(Collectors.toList());
+  }
+
+  public static CacheEvictionStats toCacheEvictionStats(HBaseProtos.CacheEvictionStats cacheEvictionStats) {
+    return CacheEvictionStats.builder()
+        .withEvictedBlocks(cacheEvictionStats.getEvictedBlocks())
+        .withMaxCacheSize(cacheEvictionStats.getMaxCacheSize())
+        .build();
+  }
+
+  public static HBaseProtos.CacheEvictionStats toCacheEvictionStats(CacheEvictionStats cacheEvictionStats) {
+    return HBaseProtos.CacheEvictionStats.newBuilder()
+        .setEvictedBlocks(cacheEvictionStats.getEvictedBlocks())
+        .setMaxCacheSize(cacheEvictionStats.getMaxCacheSize())
+        .build();
   }
 }

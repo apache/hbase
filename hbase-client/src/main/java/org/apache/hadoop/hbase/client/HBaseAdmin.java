@@ -46,6 +46,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -111,6 +113,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -1475,6 +1478,51 @@ public class HBaseAdmin implements Admin {
     });
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CacheEvictionStats clearBlockCache(final TableName tableName) throws IOException {
+    checkTableExists(tableName);
+    CacheEvictionStatsBuilder cacheEvictionStats = CacheEvictionStats.builder();
+    List<Pair<RegionInfo, ServerName>> pairs =
+      MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+    for (Pair<RegionInfo, ServerName> pair: pairs) {
+      if (pair.getFirst().isOffline() || pair.getSecond() == null) {
+        continue;
+      }
+      try {
+        cacheEvictionStats = cacheEvictionStats.append(
+            clearBlockCache(pair.getSecond(), pair.getFirst()));
+      } catch (NotServingRegionException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to clear block cache for " + pair.getFirst() + " on " +
+              pair.getSecond() + ": " + StringUtils.stringifyException(e));
+        }
+      }
+    }
+    return cacheEvictionStats.build();
+  }
+
+  private CacheEvictionStats clearBlockCache(final ServerName sn, final RegionInfo hri)
+      throws IOException {
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    ClearRegionBlockCacheRequest request =
+      RequestConverter.buildClearRegionBlockCacheRequest(hri.getRegionName());
+    try {
+      return ProtobufUtil.toCacheEvictionStats(
+          admin.clearRegionBlockCache(controller, request).getStats());
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   *
+   * @return True if region normalizer ran, false otherwise.
+   */
   @Override
   public boolean normalize() throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {

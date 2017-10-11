@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1046,6 +1047,18 @@ public interface Admin extends Abortable, Closeable {
    * @return <code>true</code> if the balancer is enabled, <code>false</code> otherwise.
    */
   boolean isBalancerEnabled() throws IOException;
+
+  /**
+   * Clear all the blocks corresponding to this table from BlockCache. For expert-admins.
+   * Calling this API will drop all the cached blocks specific to a table from BlockCache.
+   * This can significantly impact the query performance as the subsequent queries will
+   * have to retrieve the blocks from underlying filesystem.
+   *
+   * @param tableName table to clear block cache
+   * @return CacheEvictionStats related to the eviction
+   * @throws IOException if a remote or network exception occurs
+   */
+  CacheEvictionStats clearBlockCache(final TableName tableName) throws IOException;
 
   /**
    * Invoke region normalizer. Can NOT run for various reasons.  Check logs.

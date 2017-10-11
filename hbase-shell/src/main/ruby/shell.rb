@@ -360,6 +360,7 @@ Shell.load_command_group(
     clear_compaction_queues
     list_deadservers
     clear_deadservers
+    clear_block_cache
   ],
   # TODO: remove older hlog_roll command
   aliases: {

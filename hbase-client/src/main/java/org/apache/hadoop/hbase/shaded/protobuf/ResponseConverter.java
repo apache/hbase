@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -434,5 +435,15 @@ public final class ResponseConverter {
     }
 
     return metricMap;
+  }
+
+  /**
+   * Creates a protocol buffer ClearRegionBlockCacheResponse
+   *
+   * @return a ClearRegionBlockCacheResponse
+   */
+  public static AdminProtos.ClearRegionBlockCacheResponse buildClearRegionBlockCacheResponse(final HBaseProtos.CacheEvictionStats
+                                                                                   cacheEvictionStats) {
+    return AdminProtos.ClearRegionBlockCacheResponse.newBuilder().setStats(cacheEvictionStats).build();
   }
 }

@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -60,6 +61,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -1420,6 +1422,17 @@ public final class RequestConverter {
    */
   public static IsBalancerEnabledRequest buildIsBalancerEnabledRequest() {
     return IsBalancerEnabledRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a protocol buffer ClearRegionBlockCacheRequest
+   *
+   * @return a ClearRegionBlockCacheRequest
+   */
+  public static ClearRegionBlockCacheRequest buildClearRegionBlockCacheRequest(final byte[]
+                                                                                 regionName) {
+    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+    return ClearRegionBlockCacheRequest.newBuilder().addAllRegion(Lists.newArrayList(region)).build();
   }
 
   /**
