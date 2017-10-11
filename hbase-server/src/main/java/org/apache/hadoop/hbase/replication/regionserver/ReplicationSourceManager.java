@@ -820,10 +820,10 @@ public class ReplicationSourceManager implements ReplicationListener {
     return stats.toString();
   }
 
-  public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+  public void addHFileRefs(TableName tableName, byte[] family, List<String> files)
       throws ReplicationException {
     for (ReplicationSourceInterface source : this.sources) {
-      source.addHFileRefs(tableName, family, pairs);
+      source.addHFileRefs(tableName, family, files);
     }
   }
 

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Interface that defines a replication source
@@ -113,11 +112,10 @@ public interface ReplicationSourceInterface {
    * Add hfile names to the queue to be replicated.
    * @param tableName Name of the table these files belongs to
    * @param family Name of the family these files belong to
-   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
-   *          will be added in the queue for replication}
+   * @param files files whose names needs to be added to the queue to be replicated
    * @throws ReplicationException If failed to add hfile references
    */
-  void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+  void addHFileRefs(TableName tableName, byte[] family, List<String> files)
       throws ReplicationException;
 
   /**

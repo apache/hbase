@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -497,18 +496,16 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
-  public void addHFileRefs(String peerId, List<Pair<Path, Path>> pairs)
-      throws ReplicationException {
+  public void addHFileRefs(String peerId, List<String> files) throws ReplicationException {
     String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
     boolean debugEnabled = LOG.isDebugEnabled();
     if (debugEnabled) {
-      LOG.debug("Adding hfile references " + pairs + " in queue " + peerZnode);
+      LOG.debug("Adding hfile references " + files + " in queue " + peerZnode);
     }
     List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
-    int size = pairs.size();
+    int size = files.size();
     for (int i = 0; i < size; i++) {
-      listOfOps.add(ZKUtilOp.createAndFailSilent(
-        ZKUtil.joinZNode(peerZnode, pairs.get(i).getSecond().getName()),
+      listOfOps.add(ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(peerZnode, files.get(i)),
         HConstants.EMPTY_BYTE_ARRAY));
     }
     if (debugEnabled) {
