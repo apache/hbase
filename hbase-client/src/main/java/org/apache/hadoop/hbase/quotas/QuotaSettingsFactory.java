@@ -116,7 +116,7 @@ public class QuotaSettingsFactory {
     return settings;
   }
 
-  private static List<QuotaSettings> fromThrottle(final String userName, final TableName tableName,
+  protected static List<QuotaSettings> fromThrottle(final String userName, final TableName tableName,
       final String namespace, final QuotaProtos.Throttle throttle) {
     List<QuotaSettings> settings = new ArrayList<>();
     if (throttle.hasReqNum()) {
