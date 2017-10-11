@@ -147,16 +147,26 @@ public class FilterListWithAND extends FilterListBase {
         "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
   }
 
-  private ReturnCode filterKeyValueWithMustPassAll(Cell c) throws IOException {
+  @Override
+  ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformedCell) throws IOException {
+    if (isEmpty()) {
+      return ReturnCode.INCLUDE;
+    }
     ReturnCode rc = ReturnCode.INCLUDE;
-    Cell transformed = c;
+    Cell transformed = currentTransformedCell;
+    this.referenceCell = c;
     this.seekHintFilter.clear();
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         return ReturnCode.NEXT_ROW;
       }
-      ReturnCode localRC = filter.filterKeyValue(c);
+      ReturnCode localRC;
+      if (filter instanceof FilterList) {
+        localRC = ((FilterList) filter).internalFilterKeyValue(c, transformed);
+      } else {
+        localRC = filter.filterKeyValue(c);
+      }
       rc = mergeReturnCode(rc, localRC);
 
       // For INCLUDE* case, we need to update the transformed cell.
@@ -177,11 +187,7 @@ public class FilterListWithAND extends FilterListBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell c) throws IOException {
-    if (isEmpty()) {
-      return ReturnCode.INCLUDE;
-    }
-    this.referenceCell = c;
-    return filterKeyValueWithMustPassAll(c);
+    return internalFilterKeyValue(c, c);
   }
 
   @Override

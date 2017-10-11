@@ -72,6 +72,8 @@ final public class FilterList extends FilterBase {
       filterListBase = new FilterListWithAND(filters);
     } else if (operator == Operator.MUST_PASS_ONE) {
       filterListBase = new FilterListWithOR(filters);
+    } else {
+      throw new IllegalArgumentException("Invalid operator: " + operator);
     }
     this.operator = operator;
   }
@@ -166,6 +168,10 @@ final public class FilterList extends FilterBase {
   @Override
   public Cell transformCell(Cell c) throws IOException {
     return filterListBase.transformCell(c);
+  }
+
+  ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformedCell) throws IOException {
+    return this.filterListBase.internalFilterKeyValue(c, currentTransformedCell);
   }
 
   @Override

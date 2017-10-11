@@ -235,10 +235,15 @@ public class FilterListWithOR extends FilterListBase {
     }
   }
 
-  private ReturnCode filterKeyValueWithMustPassOne(Cell c) throws IOException {
+  @Override
+  ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformCell) throws IOException {
+    if (isEmpty()) {
+      return ReturnCode.INCLUDE;
+    }
     ReturnCode rc = null;
     boolean everyFilterReturnHint = true;
-    Cell transformed = c;
+    Cell transformed = currentTransformCell;
+    this.referenceCell = c;
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
 
@@ -248,7 +253,12 @@ public class FilterListWithOR extends FilterListBase {
         continue;
       }
 
-      ReturnCode localRC = filter.filterKeyValue(c);
+      ReturnCode localRC;
+      if (filter instanceof FilterList) {
+        localRC = ((FilterList) filter).internalFilterKeyValue(c, transformed);
+      } else {
+        localRC = filter.filterKeyValue(c);
+      }
 
       // Update previous return code and previous cell for filter[i].
       updatePrevFilterRCList(i, localRC);
@@ -280,11 +290,7 @@ public class FilterListWithOR extends FilterListBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell c) throws IOException {
-    if (isEmpty()) {
-      return ReturnCode.INCLUDE;
-    }
-    this.referenceCell = c;
-    return filterKeyValueWithMustPassOne(c);
+    return internalFilterKeyValue(c, c);
   }
 
   @Override
