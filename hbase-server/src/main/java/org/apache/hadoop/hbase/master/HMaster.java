@@ -2550,7 +2550,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       LOG.fatal("Master server abort: loaded coprocessors are: " +
           getLoadedCoprocessors());
     }
-    if (t != null) LOG.fatal(msg, t);
+    if (t != null) {
+      LOG.fatal(msg, t);
+    } else {
+      LOG.fatal(msg);
+    }
 
     try {
       stopMaster();
