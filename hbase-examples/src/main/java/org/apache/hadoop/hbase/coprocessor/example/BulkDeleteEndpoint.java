@@ -150,8 +150,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
           for (List<Cell> deleteRow : deleteRows) {
             deleteArr[i++] = createDeleteMutation(deleteRow, deleteType, timestamp);
           }
-          OperationStatus[] opStatus = region.batchMutate(deleteArr, HConstants.NO_NONCE,
-            HConstants.NO_NONCE);
+          OperationStatus[] opStatus = region.batchMutate(deleteArr);
           for (i = 0; i < opStatus.length; i++) {
             if (opStatus[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
               break;

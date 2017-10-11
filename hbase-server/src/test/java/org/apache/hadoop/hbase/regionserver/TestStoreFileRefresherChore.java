@@ -99,7 +99,7 @@ public class TestStoreFileRefresherChore {
     }
   }
 
-  private Region initHRegion(HTableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
+  private HRegion initHRegion(HTableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
       throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
@@ -171,14 +171,14 @@ public class TestStoreFileRefresherChore {
     byte[] qf = Bytes.toBytes("cq");
 
     HRegionServer regionServer = mock(HRegionServer.class);
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
     HTableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), families);
     htd.setRegionReplication(2);
-    Region primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
-    Region replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
+    HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
+    HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
     regions.add(replica1);
 

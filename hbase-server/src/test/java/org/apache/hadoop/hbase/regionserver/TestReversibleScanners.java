@@ -321,7 +321,7 @@ public class TestReversibleScanners {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
         .addFamily(new HColumnDescriptor(FAMILYNAME))
         .addFamily(new HColumnDescriptor(FAMILYNAME2));
-    Region region = TEST_UTIL.createLocalHRegion(htd, null, null);
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     loadDataToRegion(region, FAMILYNAME2);
 
     // verify row count with forward scan
@@ -641,7 +641,7 @@ public class TestReversibleScanners {
     return nextReadableNum;
   }
 
-  private static void loadDataToRegion(Region region, byte[] additionalFamily)
+  private static void loadDataToRegion(HRegion region, byte[] additionalFamily)
       throws IOException {
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);

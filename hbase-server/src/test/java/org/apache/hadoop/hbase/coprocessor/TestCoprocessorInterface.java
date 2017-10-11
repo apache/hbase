@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
@@ -289,7 +288,7 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initConfig();
-    Region region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[]{}, families);
+    HRegion region = initHRegion(tableName, name.getMethodName(), hc, new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
@@ -351,7 +350,7 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initConfig();
-    Region region = initHRegion(tableName, name.getMethodName(), hc,
+    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
@@ -378,10 +377,10 @@ public class TestCoprocessorInterface {
     assertTrue(((CoprocessorImpl)c).wasCompacted());
   }
 
-  Region reopenRegion(final Region closedRegion, Class<?> ... implClasses)
+  HRegion reopenRegion(final HRegion closedRegion, Class<?> ... implClasses)
       throws IOException {
     //RegionInfo info = new RegionInfo(tableName, null, null, false);
-    Region r = HRegion.openHRegion(closedRegion, null);
+    HRegion r = HRegion.openHRegion(closedRegion, null);
 
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
@@ -389,7 +388,7 @@ public class TestCoprocessorInterface {
     // and set it to region.
     Configuration conf = TEST_UTIL.getConfiguration();
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    ((HRegion)r).setCoprocessorHost(host);
+    r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
       host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);
@@ -405,7 +404,7 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  Region initHRegion (TableName tableName, String callingMethod,
+  HRegion initHRegion (TableName tableName, String callingMethod,
       Configuration conf, Class<?> [] implClasses, byte [][] families)
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -419,11 +418,11 @@ public class TestCoprocessorInterface {
         .setSplit(false)
         .build();
     Path path = new Path(DIR + callingMethod);
-    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 
     // this following piece is a hack.
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    ((HRegion)r).setCoprocessorHost(host);
+    r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
       host.load((Class<? extends RegionCoprocessor>) implClass, Coprocessor.PRIORITY_USER, conf);

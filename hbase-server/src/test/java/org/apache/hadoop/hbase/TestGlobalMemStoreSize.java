@@ -31,8 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -109,7 +109,7 @@ public class TestGlobalMemStoreSize {
 
       for (RegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
-        Region r = server.getRegion(regionInfo.getEncodedName());
+        HRegion r = server.getRegion(regionInfo.getEncodedName());
         flush(r, server);
       }
       LOG.info("Post flush on " + server.getServerName());
@@ -125,7 +125,7 @@ public class TestGlobalMemStoreSize {
         // our test was running....
         for (RegionInfo regionInfo :
             ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
-          Region r = server.getRegion(regionInfo.getEncodedName());
+          HRegion r = server.getRegion(regionInfo.getEncodedName());
           long l = r.getMemStoreSize();
           if (l > 0) {
             // Only meta could have edits at this stage.  Give it another flush
@@ -150,7 +150,7 @@ public class TestGlobalMemStoreSize {
    * @param server
    * @throws IOException
    */
-  private void flush(final Region r, final HRegionServer server)
+  private void flush(final HRegion r, final HRegionServer server)
   throws IOException {
     LOG.info("Flush " + r.toString() + " on " + server.getServerName() +
       ", " +  r.flush(true) + ", size=" +

@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -31,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -39,7 +36,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -116,9 +112,9 @@ public class TestRegionReplicasWithModifyTable {
     try {
       tableName = TableName.valueOf(name.getMethodName());
       enableReplicationByModification(tableName, false, 0, 3, 0);
-      List<Region> onlineRegions = getRS().getRegions(tableName);
-      List<Region> onlineRegions2 = getSecondaryRS().getRegions(tableName);
-      List<Region> onlineRegions3 = getTertiaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions = getRS().getRegions(tableName);
+      List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
       assertEquals("the number of regions should be more than 1", totalRegions, 3);
     } finally {
@@ -137,9 +133,9 @@ public class TestRegionReplicasWithModifyTable {
     try {
       tableName = TableName.valueOf(name.getMethodName());
       enableReplicationByModification(tableName, false, 0, 3, 10);
-      List<Region> onlineRegions = getRS().getRegions(tableName);
-      List<Region> onlineRegions2 = getSecondaryRS().getRegions(tableName);
-      List<Region> onlineRegions3 = getTertiaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions = getRS().getRegions(tableName);
+      List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
       assertEquals("the number of regions should be equal to 30", totalRegions, 30);
     } finally {
@@ -153,9 +149,9 @@ public class TestRegionReplicasWithModifyTable {
     try {
       tableName = TableName.valueOf(name.getMethodName());
       enableReplicationByModification(tableName, true, 2, 3, 0);
-      List<Region> onlineRegions = getRS().getRegions(tableName);
-      List<Region> onlineRegions2 = getSecondaryRS().getRegions(tableName);
-      List<Region> onlineRegions3 = getTertiaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions = getRS().getRegions(tableName);
+      List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
       assertEquals("the number of regions should be 3", totalRegions, 3);
     } finally {
@@ -169,9 +165,9 @@ public class TestRegionReplicasWithModifyTable {
     try {
       tableName = TableName.valueOf(name.getMethodName());
       enableReplicationByModification(tableName, true, 3, 2, 0);
-      List<Region> onlineRegions = getRS().getRegions(tableName);
-      List<Region> onlineRegions2 = getSecondaryRS().getRegions(tableName);
-      List<Region> onlineRegions3 = getTertiaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions = getRS().getRegions(tableName);
+      List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
       assertEquals("the number of regions should be reduced to 2", totalRegions, 2);
     } finally {
@@ -186,9 +182,9 @@ public class TestRegionReplicasWithModifyTable {
     try {
       tableName = TableName.valueOf(name.getMethodName());
       enableReplicationByModification(tableName, true, 3, 2, 20);
-      List<Region> onlineRegions = getRS().getRegions(tableName);
-      List<Region> onlineRegions2 = getSecondaryRS().getRegions(tableName);
-      List<Region> onlineRegions3 = getTertiaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions = getRS().getRegions(tableName);
+      List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
       assertEquals("the number of regions should be reduced to 40", totalRegions, 40);
     } finally {
@@ -203,9 +199,9 @@ public class TestRegionReplicasWithModifyTable {
     try {
       tableName = TableName.valueOf(name.getMethodName());
       enableReplicationByModification(tableName, true, 2, 3, 15);
-      List<Region> onlineRegions = getRS().getRegions(tableName);
-      List<Region> onlineRegions2 = getSecondaryRS().getRegions(tableName);
-      List<Region> onlineRegions3 = getTertiaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions = getRS().getRegions(tableName);
+      List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
+      List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
       assertEquals("the number of regions should be equal to 45", totalRegions, 3 * 15);
     } finally {

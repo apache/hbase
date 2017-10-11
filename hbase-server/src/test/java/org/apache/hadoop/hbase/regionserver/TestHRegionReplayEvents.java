@@ -87,7 +87,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.mockito.Mockito;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -180,9 +180,9 @@ public class TestHRegionReplayEvents {
     when(rss.getExecutorService()).thenReturn(es);
     primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
     primaryRegion.close();
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(primaryRegion);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
 
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, null, CONF, rss, null);
@@ -1393,9 +1393,9 @@ public class TestHRegionReplayEvents {
 
     // Test case 3: compact primary files
     primaryRegion.compactStores();
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(primaryRegion);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null, rss, false);
     cleaner.chore();
     secondaryRegion.refreshStoreFiles();

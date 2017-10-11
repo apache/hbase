@@ -165,7 +165,7 @@ public class TestFlushWithThroughputController {
     HRegionServer regionServer = hbtu.getRSForFirstRegionInTable(tableName);
     PressureAwareFlushThroughputController throughputController =
         (PressureAwareFlushThroughputController) regionServer.getFlushThroughputController();
-    for (Region region : regionServer.getRegions()) {
+    for (HRegion region : regionServer.getRegions()) {
       region.flush(true);
     }
     assertEquals(0.0, regionServer.getFlushPressure(), EPSILON);

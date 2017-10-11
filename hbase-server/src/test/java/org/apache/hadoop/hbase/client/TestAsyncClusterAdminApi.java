@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -140,7 +140,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
         + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
-    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+    for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
       r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName()).join();

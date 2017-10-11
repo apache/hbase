@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureManager.FlushTableSubprocedurePool;
-import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
  * This flush region implementation uses the distributed procedure framework to flush
@@ -40,12 +40,12 @@ public class FlushTableSubprocedure extends Subprocedure {
   private static final Log LOG = LogFactory.getLog(FlushTableSubprocedure.class);
 
   private final String table;
-  private final List<Region> regions;
+  private final List<HRegion> regions;
   private final FlushTableSubprocedurePool taskManager;
 
   public FlushTableSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
-      List<Region> regions, String table,
+      List<HRegion> regions, String table,
       FlushTableSubprocedurePool taskManager) {
     super(member, table, errorListener, wakeFrequency, timeout);
     this.table = table;
@@ -54,8 +54,8 @@ public class FlushTableSubprocedure extends Subprocedure {
   }
 
   private static class RegionFlushTask implements Callable<Void> {
-    Region region;
-    RegionFlushTask(Region region) {
+    HRegion region;
+    RegionFlushTask(HRegion region) {
       this.region = region;
     }
 
@@ -90,7 +90,7 @@ public class FlushTableSubprocedure extends Subprocedure {
     }
 
     // Add all hfiles already existing in region.
-    for (Region region : regions) {
+    for (HRegion region : regions) {
       // submit one task per region for parallelize by region.
       taskManager.submitTask(new RegionFlushTask(region));
       monitor.rethrowException();

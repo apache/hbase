@@ -76,7 +76,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(table, null, null, false);
     // Set this so that the archiver writes to the temp dir as well.
-    Region region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       List<String> rows = generateRandomWords(10, "row");
       List<String> allColumns = generateRandomWords(10, "column");
@@ -188,7 +188,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
 
     HRegionInfo info = new HRegionInfo(table, null, null, false);
-    Region region = TEST_UTIL.createLocalHRegion(info, htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(100, "column");

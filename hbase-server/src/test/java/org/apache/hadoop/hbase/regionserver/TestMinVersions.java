@@ -68,7 +68,7 @@ public class TestMinVersions {
   public void testGetClosestBefore() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -118,7 +118,7 @@ public class TestMinVersions {
     // keep 3 versions minimum
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
@@ -173,7 +173,7 @@ public class TestMinVersions {
   public void testDelete() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -232,7 +232,7 @@ public class TestMinVersions {
   public void testMemStore() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -308,7 +308,7 @@ public class TestMinVersions {
     // 1 version minimum, 1000 versions maximum, ttl = 1s
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -400,7 +400,7 @@ public class TestMinVersions {
   public void testFilters() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    Region region = hbu.createLocalHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
     // 2s in the past

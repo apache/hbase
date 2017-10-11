@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -1347,7 +1348,7 @@ public class TestHCM {
       assertTrue(!destServerName.equals(metaServerName));
 
        //find another row in the cur server that is less than ROW_X
-      List<Region> regions = curServer.getRegions(TABLE_NAME3);
+      List<HRegion> regions = curServer.getRegions(TABLE_NAME3);
       byte[] otherRow = null;
        for (Region region : regions) {
          if (!region.getRegionInfo().getEncodedName().equals(toMove.getRegionInfo().getEncodedName())

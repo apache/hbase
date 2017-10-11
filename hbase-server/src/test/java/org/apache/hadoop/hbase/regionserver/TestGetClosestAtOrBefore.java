@@ -83,7 +83,7 @@ public class TestGetClosestAtOrBefore  {
     TableDescriptorBuilder metaBuilder = UTIL.getMetaTableDescriptorBuilder()
             .setMemStoreFlushSize(64 * 1024 * 1024);
 
-    Region mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
+    HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
         rootdir, this.conf, metaBuilder.build());
     try {
     // Write rows for three tables 'A', 'B', and 'C'.
@@ -195,7 +195,7 @@ public class TestGetClosestAtOrBefore  {
    */
   @Test
   public void testGetClosestRowBefore3() throws IOException{
-    Region region = null;
+    HRegion region = null;
     byte [] c0 = UTIL.COLUMNS[0];
     byte [] c1 = UTIL.COLUMNS[1];
     try {
@@ -306,7 +306,7 @@ public class TestGetClosestAtOrBefore  {
   /** For HBASE-694 */
   @Test
   public void testGetClosestRowBefore2() throws IOException{
-    Region region = null;
+    HRegion region = null;
     byte [] c0 = UTIL.COLUMNS[0];
     try {
       TableName tn = TableName.valueOf(testName.getMethodName());

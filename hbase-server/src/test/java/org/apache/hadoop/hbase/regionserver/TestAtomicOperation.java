@@ -287,7 +287,7 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
           inc.setDurability(Durability.ASYNC_WAL);
-          Result result = region.increment(inc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+          Result result = region.increment(inc);
           if (result != null) {
             assertEquals(Bytes.toLong(result.getValue(fam1, qual1))*2,
               Bytes.toLong(result.getValue(fam1, qual2)));
@@ -555,13 +555,13 @@ public class TestAtomicOperation {
   }
 
   public static class AtomicOperation extends Thread {
-    protected final Region region;
+    protected final HRegion region;
     protected final int numOps;
     protected final AtomicLong timeStamps;
     protected final AtomicInteger failures;
     protected final Random r = new Random();
 
-    public AtomicOperation(Region region, int numOps, AtomicLong timeStamps,
+    public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps,
         AtomicInteger failures) {
       this.region = region;
       this.numOps = numOps;
@@ -633,7 +633,7 @@ public class TestAtomicOperation {
       put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("50"));
       puts[0] = put;
       testStep = TestStep.PUT_STARTED;
-      region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      region.batchMutate(puts);
     }
   }
 

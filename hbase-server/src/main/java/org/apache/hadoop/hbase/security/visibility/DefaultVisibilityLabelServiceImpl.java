@@ -307,7 +307,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private boolean mutateLabelsRegion(List<Mutation> mutations, OperationStatus[] finalOpStatus)
       throws IOException {
     OperationStatus[] opStatus = this.labelsRegion.batchMutate(mutations
-      .toArray(new Mutation[mutations.size()]), HConstants.NO_NONCE, HConstants.NO_NONCE);
+      .toArray(new Mutation[mutations.size()]));
     int i = 0;
     boolean updateZk = false;
     for (OperationStatus status : opStatus) {

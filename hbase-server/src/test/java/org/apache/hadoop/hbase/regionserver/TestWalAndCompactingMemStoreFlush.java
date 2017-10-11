@@ -141,7 +141,7 @@ public class TestWalAndCompactingMemStoreFlush {
         String.valueOf(MemoryCompactionPolicy.EAGER));
 
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWithEager", conf);
+    HRegion region = initHRegion("testSelectiveFlushWithEager", conf);
     verifyInMemoryFlushSize(region);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
@@ -382,7 +382,7 @@ public class TestWalAndCompactingMemStoreFlush {
         String.valueOf(MemoryCompactionPolicy.BASIC));
 
     // Initialize the region
-    Region region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
+    HRegion region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
     verifyInMemoryFlushSize(region);
     /*------------------------------------------------------------------------------*/
     /* PHASE I - insertions */

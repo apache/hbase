@@ -123,7 +123,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * A mock RegionServer implementation.
@@ -264,12 +263,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public void addRegion(Region r) {
+  public void addRegion(HRegion r) {
     // TODO Auto-generated method stub
   }
 
   @Override
-  public boolean removeRegion(Region r, ServerName destination) {
+  public boolean removeRegion(HRegion r, ServerName destination) {
     // TODO Auto-generated method stub
     return false;
   }
@@ -330,11 +329,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public RegionServerRpcQuotaManager getRegionServerRpcQuotaManager() {
     return null;
-  }
-
-  @Override
-  public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
-    // TODO Auto-generated method stub
   }
 
   @Override
@@ -592,7 +586,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public Map<String, Region> getRecoveringRegions() {
+  public Map<String, HRegion> getRecoveringRegions() {
     // TODO Auto-generated method stub
     return null;
   }
@@ -606,17 +600,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public ServerNonceManager getNonceManager() {
     return null;
-  }
-
-  @Override
-  public boolean reportRegionStateTransition(TransitionCode code, RegionInfo... hris) {
-    return false;
-  }
-
-  @Override
-  public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
-      RegionInfo... hris) {
-    return false;
   }
 
   @Override

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -195,7 +196,7 @@ public abstract class AbstractTestLogRolling  {
     assertLogFileSize(log);
 
     // flush all regions
-    for (Region r : server.getOnlineRegionsLocalContext()) {
+    for (HRegion r : server.getOnlineRegionsLocalContext()) {
       r.flush(true);
     }
 
@@ -248,7 +249,7 @@ public abstract class AbstractTestLogRolling  {
       table = createTestTable(getName());
 
       server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
-      Region region = server.getRegions(table.getName()).get(0);
+      HRegion region = server.getRegions(table.getName()).get(0);
       final WAL log = server.getWAL(region.getRegionInfo());
       Store s = region.getStore(HConstants.CATALOG_FAMILY);
 

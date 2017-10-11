@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -179,10 +180,10 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.Closeables;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Service;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
@@ -197,6 +198,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
+/**
+ * Regions store data for a certain region of a table.  It stores all columns
+ * for each row. A given table consists of one or more Regions.
+ *
+ * <p>An Region is defined by its table and its key extent.
+ *
+ * <p>Locking at the Region level serves only one purpose: preventing the
+ * region from being closed (and consequently split) while other operations
+ * are ongoing. Each row level operation obtains both a row lock and a region
+ * read lock for the duration of the operation. While a scanner is being
+ * constructed, getScanner holds a read lock. If the scanner is successfully
+ * constructed, it holds a read lock until it is closed. A close takes out a
+ * write lock and consequently will block for ongoing operations and will block
+ * new operations from starting while the close is in progress.
+ */
 @SuppressWarnings("deprecation")
 @InterfaceAudience.Private
 public class HRegion implements HeapSize, PropagatingConfigurationObserver, Region {
@@ -782,7 +798,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
       this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
 
-      Map<String, Region> recoveringRegions = rsServices.getRecoveringRegions();
+      Map<String, HRegion> recoveringRegions = rsServices.getRecoveringRegions();
       String encodedName = getRegionInfo().getEncodedName();
       if (recoveringRegions != null && recoveringRegions.containsKey(encodedName)) {
         this.recovering = true;
@@ -1121,7 +1137,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.updatesLock.writeLock().unlock();
   }
 
-  @Override
   public HDFSBlocksDistribution getHDFSBlocksDistribution() {
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     stores.values().stream().filter(s -> s.getStorefiles() != null)
@@ -1238,7 +1253,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return readRequestsCount.sum();
   }
 
-  @Override
+  /**
+   * Update the read request count for this region
+   * @param i increment
+   */
   public void updateReadRequestsCount(long i) {
     readRequestsCount.add(i);
   }
@@ -1253,7 +1271,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return writeRequestsCount.sum();
   }
 
-  @Override
+  /**
+   * Update the write request count for this region
+   * @param i increment
+   */
   public void updateWriteRequestsCount(long i) {
     writeRequestsCount.add(i);
   }
@@ -1263,7 +1284,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return memstoreDataSize.get();
   }
 
-  @Override
+  /** @return store services for this region, to access services required by store level needs */
   public RegionServicesForStores getRegionServicesForStores() {
     return regionServicesForStores;
   }
@@ -1293,7 +1314,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return checkAndMutateChecksFailed.sum();
   }
 
-  @Override
+  // TODO Needs to check whether we should expose our metrics system to CPs. If CPs themselves doing
+  // the op and bypassing the core, this might be needed? Should be stop supporting the bypass
+  // feature?
   public MetricsRegion getMetrics() {
     return metricsRegion;
   }
@@ -1433,12 +1456,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return mvcc.getReadPoint();
   }
 
-  @Override
-  public long getReadpoint(IsolationLevel isolationLevel) {
-    return getReadPoint(isolationLevel);
-  }
-
-  @Override
   public boolean isLoadingCfsOnDemandDefault() {
     return this.isLoadingCfsOnDemandDefault;
   }
@@ -1719,7 +1736,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return stores.values().stream().mapToLong(s -> s.getMemStoreSize().getHeapSize()).sum();
   }
 
-  @Override
+  /** Wait for all current flushes and compactions of the region to complete */
+  // TODO HBASE-18906. Check the usage (if any) in Phoenix and expose this or give alternate way for
+  // Phoenix needs.
   public void waitForFlushesAndCompactions() {
     synchronized (writestate) {
       if (this.writestate.readOnly) {
@@ -1748,7 +1767,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @Override
+  /** Wait for all current flushes of the region to complete
+   */
+  // TODO HBASE-18906. Check the usage (if any) in Phoenix and expose this or give alternate way for
+  // Phoenix needs.
   public void waitForFlushes() {
     synchronized (writestate) {
       if (this.writestate.readOnly) {
@@ -1941,7 +1963,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     stores.values().forEach(HStore::triggerMajorCompaction);
   }
 
-  @Override
+  /**
+   * Synchronously compact all stores in the region.
+   * <p>This operation could block for a long time, so don't call it from a
+   * time-sensitive thread.
+   * <p>Note that no locks are taken to prevent possible conflicts between
+   * compaction and splitting activities. The regionserver does not normally compact
+   * and split in parallel. However by calling this method you may introduce
+   * unexpected and unhandled concurrency. Don't do this unless you know what
+   * you are doing.
+   *
+   * @param majorCompaction True to force a major compaction regardless of thresholds
+   * @throws IOException
+   */
   public void compact(boolean majorCompaction) throws IOException {
     if (majorCompaction) {
       triggerMajorCompaction();
@@ -2157,9 +2191,49 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @Override
+  /**
+   * Flush the cache.
+   *
+   * <p>When this method is called the cache will be flushed unless:
+   * <ol>
+   *   <li>the cache is empty</li>
+   *   <li>the region is closed.</li>
+   *   <li>a flush is already in progress</li>
+   *   <li>writes are disabled</li>
+   * </ol>
+   *
+   * <p>This method may block for some time, so it should not be called from a
+   * time-sensitive thread.
+   * @param force whether we want to force a flush of all stores
+   * @return FlushResult indicating whether the flush was successful or not and if
+   * the region needs compacting
+   *
+   * @throws IOException general io exceptions
+   * because a snapshot was not properly persisted.
+   */
+  // TODO HBASE-18905. We might have to expose a requestFlush API for CPs
   public FlushResult flush(boolean force) throws IOException {
     return flushcache(force, false);
+  }
+
+  public static interface FlushResult {
+    enum Result {
+      FLUSHED_NO_COMPACTION_NEEDED,
+      FLUSHED_COMPACTION_NEEDED,
+      // Special case where a flush didn't run because there's nothing in the memstores. Used when
+      // bulk loading to know when we can still load even if a flush didn't happen.
+      CANNOT_FLUSH_MEMSTORE_EMPTY,
+      CANNOT_FLUSH
+    }
+
+    /** @return the detailed result code */
+    Result getResult();
+
+    /** @return true if the memstores were flushed, else false */
+    boolean isFlushSucceeded();
+
+    /** @return True if the flush requested a compaction, else false */
+    boolean isCompactionNeeded();
   }
 
   /**
@@ -2805,7 +2879,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return new RegionScannerImpl(scan, additionalScanners, this, nonceGroup, nonce);
   }
 
-  @Override
+  /**
+   * Prepare a delete for a row mutation processor
+   * @param delete The passed delete is modified by this method. WARNING!
+   * @throws IOException
+   */
   public void prepareDelete(Delete delete) throws IOException {
     // Check to see if this is a deleteRow insert
     if(delete.getFamilyCellMap().isEmpty()){
@@ -2854,7 +2932,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     doBatchMutate(delete);
   }
 
-  @Override
+  /**
+   * Set up correct timestamps in the KVs in Delete object.
+   * <p>Caller should have the row and region locks.
+   * @param mutation
+   * @param familyMap
+   * @param byteNow
+   * @throws IOException
+   */
   public void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<Cell>> familyMap,
       byte[] byteNow) throws IOException {
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
@@ -3043,7 +3128,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @Override
   public OperationStatus[] batchMutate(Mutation[] mutations, long nonceGroup, long nonce)
       throws IOException {
     // As it stands, this is used for 3 things
@@ -3053,11 +3137,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return batchMutate(new MutationBatch(mutations, nonceGroup, nonce));
   }
 
+  @Override
   public OperationStatus[] batchMutate(Mutation[] mutations) throws IOException {
     return batchMutate(mutations, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  @Override
   public OperationStatus[] batchReplay(MutationReplay[] mutations, long replaySeqId)
       throws IOException {
     if (!RegionReplicaUtil.isDefaultReplica(getRegionInfo())
@@ -3841,7 +3925,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @Override
+  /**
+   * Replace any cell timestamps set to {@link org.apache.hadoop.hbase.HConstants#LATEST_TIMESTAMP}
+   * provided current timestamp.
+   * @param cellItr
+   * @param now
+   */
   public void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
       throws IOException {
     for (List<Cell> cells: cellItr) {
@@ -3991,14 +4080,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     store.add(cell, memstoreSize);
   }
 
-  @Override
+  /**
+   * Check the collection of families for validity.
+   * @param families
+   * @throws NoSuchColumnFamilyException
+   */
   public void checkFamilies(Collection<byte[]> families) throws NoSuchColumnFamilyException {
     for (byte[] family : families) {
       checkFamily(family);
     }
   }
 
-  @Override
+  /**
+   * Check the collection of families for valid timestamps
+   * @param familyMap
+   * @param now current timestamp
+   * @throws FailedSanityCheckException
+   */
   public void checkTimestamps(final Map<byte[], List<Cell>> familyMap, long now)
       throws FailedSanityCheckException {
     if (timestampSlop == HConstants.LATEST_TIMESTAMP) {
@@ -5423,8 +5521,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  @Override
-  public void releaseRowLocks(List<RowLock> rowLocks) {
+  private void releaseRowLocks(List<RowLock> rowLocks) {
     if (rowLocks != null) {
       for (int i = 0; i < rowLocks.size(); i++) {
         rowLocks.get(i).release();
@@ -5560,13 +5657,67 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return multipleFamilies;
   }
 
-  @Override
+  /**
+   * Attempts to atomically load a group of hfiles.  This is critical for loading
+   * rows with multiple column families atomically.
+   *
+   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
+   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
+   * file about to be bulk loaded
+   * @param assignSeqId
+   * @return Map from family to List of store file paths if successful, null if failed recoverably
+   * @throws IOException if failed unrecoverably.
+   */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
       BulkLoadListener bulkLoadListener) throws IOException {
     return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false);
   }
 
-  @Override
+  /**
+   * Listener class to enable callers of
+   * bulkLoadHFile() to perform any necessary
+   * pre/post processing of a given bulkload call
+   */
+  public static interface BulkLoadListener {
+    /**
+     * Called before an HFile is actually loaded
+     * @param family family being loaded to
+     * @param srcPath path of HFile
+     * @return final path to be used for actual loading
+     * @throws IOException
+     */
+    String prepareBulkLoad(byte[] family, String srcPath, boolean copyFile)
+        throws IOException;
+
+    /**
+     * Called after a successful HFile load
+     * @param family family being loaded to
+     * @param srcPath path of HFile
+     * @throws IOException
+     */
+    void doneBulkLoad(byte[] family, String srcPath) throws IOException;
+
+    /**
+     * Called after a failed HFile load
+     * @param family family being loaded to
+     * @param srcPath path of HFile
+     * @throws IOException
+     */
+    void failedBulkLoad(byte[] family, String srcPath) throws IOException;
+  }
+
+  /**
+   * Attempts to atomically load a group of hfiles.  This is critical for loading
+   * rows with multiple column families atomically.
+   *
+   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
+   * @param assignSeqId
+   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
+   * file about to be bulk loaded
+   * @param copyFile always copy hfiles if true
+   * @return Map from family to List of store file paths if successful, null if failed recoverably
+   * @throws IOException if failed unrecoverably.
+   */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
       boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException {
     long seqId = -1;
@@ -6875,7 +7026,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return get(get, withCoprocessor, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  @Override
   public List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
       throws IOException {
     List<Cell> results = new ArrayList<>();
@@ -7167,22 +7317,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  @Override
   public Result append(Append append) throws IOException {
     return append(append, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  @Override
   public Result append(Append mutation, long nonceGroup, long nonce) throws IOException {
     return doDelta(Operation.APPEND, mutation, nonceGroup, nonce, mutation.isReturnResults());
   }
 
+  @Override
   public Result increment(Increment increment) throws IOException {
     return increment(increment, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  @Override
-  public Result increment(Increment mutation, long nonceGroup, long nonce)
-  throws IOException {
+  public Result increment(Increment mutation, long nonceGroup, long nonce) throws IOException {
     return doDelta(Operation.INCREMENT, mutation, nonceGroup, nonce, mutation.isReturnResults());
   }
 
@@ -7574,7 +7723,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return DEEP_OVERHEAD + stores.values().stream().mapToLong(HStore::heapSize).sum();
   }
 
-  @Override
+  /**
+   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
+   * be available for handling Region#execService(com.google.protobuf.RpcController,
+   *    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall) calls.
+   *
+   * <p>
+   * Only a single instance may be registered per region for a given {@link Service} subclass (the
+   * instances are keyed on {@link com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
+   * After the first registration, subsequent calls with the same service name will fail with
+   * a return value of {@code false}.
+   * </p>
+   * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
+   * @return {@code true} if the registration was successful, {@code false}
+   * otherwise
+   */
   public boolean registerService(com.google.protobuf.Service instance) {
     /*
      * No stacking of instances is allowed for a single service name
@@ -7597,10 +7760,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return true;
   }
 
-  @Override
+  /**
+   * Executes a single protocol buffer coprocessor endpoint {@link Service} method using
+   * the registered protocol handlers.  {@link Service} implementations must be registered via the
+   * {@link #registerService(com.google.protobuf.Service)}
+   * method before they are available.
+   *
+   * @param controller an {@code RpcContoller} implementation to pass to the invoked service
+   * @param call a {@code CoprocessorServiceCall} instance identifying the service, method,
+   *     and parameters for the method invocation
+   * @return a protocol buffer {@code Message} instance containing the method's result
+   * @throws IOException if no registered service handler is found or an error
+   *     occurs during the invocation
+   * @see #registerService(com.google.protobuf.Service)
+   */
   public com.google.protobuf.Message execService(com.google.protobuf.RpcController controller,
-      CoprocessorServiceCall call)
-  throws IOException {
+      CoprocessorServiceCall call) throws IOException {
     String serviceName = call.getServiceName();
     com.google.protobuf.Service service = coprocessorServiceHandlers.get(serviceName);
     if (service == null) {
@@ -7971,7 +8146,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   };
 
-  @Override
+  /** @return the latest sequence number that was read from storage when this region was opened */
   public long getOpenSeqNum() {
     return this.openSeqNum;
   }
@@ -7981,7 +8156,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.maxSeqIdInStores;
   }
 
-  @Override
   public long getOldestSeqIdOfStore(byte[] familyName) {
     return wal.getEarliestMemStoreSeqNum(getRegionInfo().getEncodedNameAsBytes(), familyName);
   }

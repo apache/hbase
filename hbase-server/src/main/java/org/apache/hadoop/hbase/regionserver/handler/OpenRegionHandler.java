@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -160,7 +162,8 @@ public class OpenRegionHandler extends EventHandler {
         cleanupFailedOpen(region);
       }
     } finally {
-      rsServices.reportRegionStateTransition(TransitionCode.FAILED_OPEN, regionInfo);
+      rsServices.reportRegionStateTransition(new RegionStateTransitionContext(
+          TransitionCode.FAILED_OPEN, HConstants.NO_SEQNUM, -1, regionInfo));
     }
   }
 

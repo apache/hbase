@@ -156,7 +156,7 @@ public class TestRegionReplicas {
       // assert that we can read back from primary
       Assert.assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
-      Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+      HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
 
       openRegion(HTU, getRS(), hriSecondary);
@@ -180,7 +180,7 @@ public class TestRegionReplicas {
       // assert that we can read back from primary
       Assert.assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
-      Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+      HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
 
       openRegion(HTU, getRS(), hriSecondary);
@@ -250,7 +250,7 @@ public class TestRegionReplicas {
       Assert.assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
       LOG.info("Flushing primary region");
-      Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+      HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
       HRegion primaryRegion = (HRegion) region;
 
@@ -442,11 +442,11 @@ public class TestRegionReplicas {
       LOG.info("Loading data to primary region");
       for (int i = 0; i < 3; ++i) {
         HTU.loadNumericRows(table, f, i * 1000, (i + 1) * 1000);
-        Region region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
+        HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
         region.flush(true);
       }
 
-      Region primaryRegion = getRS().getRegion(hriPrimary.getEncodedName());
+      HRegion primaryRegion = getRS().getRegion(hriPrimary.getEncodedName());
       Assert.assertEquals(3, primaryRegion.getStore(f).getStorefilesCount());
 
       // Refresh store files on the secondary

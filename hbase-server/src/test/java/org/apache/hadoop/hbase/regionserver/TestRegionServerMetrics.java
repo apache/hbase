@@ -496,7 +496,7 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes("mobdata");
     try {
       Table table = TEST_UTIL.createTable(htd, new byte[0][0], conf);
-      Region region = rs.getRegions(tableName).get(0);
+      HRegion region = rs.getRegions(tableName).get(0);
       for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
         Put p = new Put(Bytes.toBytes(insertCount));
         p.addColumn(cf, qualifier, val);
@@ -515,7 +515,7 @@ public class TestRegionServerMetrics {
 
       setMobThreshold(region, cf, 100);
       // metrics are reset by the region initialization
-      ((HRegion) region).initialize();
+      region.initialize();
       region.compact(true);
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("cellsCountCompactedFromMob", numHfiles);
@@ -539,7 +539,7 @@ public class TestRegionServerMetrics {
       ((HRegion) region).close();
 
       // metrics are reset by the region initialization
-      ((HRegion) region).initialize();
+      region.initialize();
       region.compact(true);
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       // metrics are reset by the region initialization

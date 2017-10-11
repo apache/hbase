@@ -85,15 +85,15 @@ public interface RegionServerServices
    * Context for postOpenDeployTasks().
    */
   class PostOpenDeployContext {
-    private final Region region;
+    private final HRegion region;
     private final long masterSystemTime;
 
     @InterfaceAudience.Private
-    public PostOpenDeployContext(Region region, long masterSystemTime) {
+    public PostOpenDeployContext(HRegion region, long masterSystemTime) {
       this.region = region;
       this.masterSystemTime = masterSystemTime;
     }
-    public Region getRegion() {
+    public HRegion getRegion() {
       return region;
     }
     public long getMasterSystemTime() {
@@ -110,18 +110,6 @@ public interface RegionServerServices
    * @throws IOException
    */
   void postOpenDeployTasks(final PostOpenDeployContext context) throws KeeperException, IOException;
-
-  /**
-   * Tasks to perform after region open to complete deploy of region on
-   * regionserver
-   *
-   * @param r Region to open.
-   * @throws KeeperException
-   * @throws IOException
-   * @deprecated use {@link #postOpenDeployTasks(PostOpenDeployContext)}
-   */
-  @Deprecated
-  void postOpenDeployTasks(final Region r) throws KeeperException, IOException;
 
   class RegionStateTransitionContext {
     private final TransitionCode code;
@@ -157,20 +145,6 @@ public interface RegionServerServices
   boolean reportRegionStateTransition(final RegionStateTransitionContext context);
 
   /**
-   * Notify master that a handler requests to change a region state
-   * @deprecated use {@link #reportRegionStateTransition(RegionStateTransitionContext)}
-   */
-  @Deprecated
-  boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, RegionInfo... hris);
-
-  /**
-   * Notify master that a handler requests to change a region state
-   * @deprecated use {@link #reportRegionStateTransition(RegionStateTransitionContext)}
-   */
-  @Deprecated
-  boolean reportRegionStateTransition(TransitionCode code, RegionInfo... hris);
-
-  /**
    * Returns a reference to the region server's RPC server
    */
   RpcServerInterface getRpcServer();
@@ -194,7 +168,7 @@ public interface RegionServerServices
   /**
    * @return set of recovering regions on the hosting region server
    */
-  Map<String, Region> getRecoveringRegions();
+  Map<String, HRegion> getRecoveringRegions();
 
   /**
    * Only required for "old" log replay; if it's removed, remove this.

@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
-import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
+import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -120,7 +120,7 @@ public class TestSplitWalDataLoss {
       Matchers.<Collection<HStore>> any());
     // Find region key; don't pick up key for hbase:meta by mistake.
     String key = null;
-    for (Map.Entry<String, Region> entry: rs.onlineRegions.entrySet()) {
+    for (Map.Entry<String, HRegion> entry: rs.onlineRegions.entrySet()) {
       if (entry.getValue().getRegionInfo().getTable().equals(this.tableName)) {
         key = entry.getKey();
         break;

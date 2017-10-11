@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -179,9 +177,9 @@ public class TestZooKeeperTableArchiveClient {
     // create the region
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
         new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -232,9 +230,9 @@ public class TestZooKeeperTableArchiveClient {
     // create the region
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(TEST_FAM);
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
-    List<Region> regions = new ArrayList<>();
+    List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
         new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -244,7 +242,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
     regions = new ArrayList<>();
     regions.add(otherRegion);
-    when(rss.getRegions()).thenReturn(regions);
+    Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
         rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);
@@ -422,7 +420,7 @@ public class TestZooKeeperTableArchiveClient {
    * @param columnFamily family for which to add data
    * @throws IOException
    */
-  private void createHFileInRegion(Region region, byte[] columnFamily) throws IOException {
+  private void createHFileInRegion(HRegion region, byte[] columnFamily) throws IOException {
     // put one row in the region
     Put p = new Put(Bytes.toBytes("row"));
     p.addColumn(columnFamily, Bytes.toBytes("Qual"), Bytes.toBytes("v1"));

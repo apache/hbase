@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -183,7 +182,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
         @Override
         public void run() {
           try {
-            Region.FlushResult flushResult = region.flush(true);
+            HRegion.FlushResult flushResult = region.flush(true);
             LOG.info("Flush result:" +  flushResult.getResult());
             LOG.info("Flush succeeded:" +  flushResult.isFlushSucceeded());
             flushFinished.countDown();

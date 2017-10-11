@@ -129,7 +129,7 @@ public class TestRegionServerNoMaster {
   /** Flush the given region in the mini cluster. Since no master, we cannot use HBaseAdmin.flush() */
   public static void flushRegion(HBaseTestingUtility HTU, HRegionInfo regionInfo) throws IOException {
     for (RegionServerThread rst : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-      Region region = rst.getRegionServer().getRegionByEncodedName(regionInfo.getEncodedName());
+      HRegion region = rst.getRegionServer().getRegionByEncodedName(regionInfo.getEncodedName());
       if (region != null) {
         region.flush(true);
         return;

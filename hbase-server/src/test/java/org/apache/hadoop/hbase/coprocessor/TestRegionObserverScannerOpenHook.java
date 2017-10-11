@@ -186,7 +186,7 @@ public class TestRegionObserverScannerOpenHook {
     }
   }
 
-  Region initHRegion(byte[] tableName, String callingMethod, Configuration conf,
+  HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for (byte[] family : families) {
@@ -239,7 +239,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[][] FAMILIES = new byte[][] { A };
 
     Configuration conf = HBaseConfiguration.create();
-    Region region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
+    HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromFlush.class, Coprocessor.PRIORITY_HIGHEST, conf);
     h.load(EmptyRegionObsever.class, Coprocessor.PRIORITY_USER, conf);
@@ -323,7 +323,7 @@ public class TestRegionObserverScannerOpenHook {
     table.put(put);
 
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    List<Region> regions = rs.getRegions(desc.getTableName());
+    List<HRegion> regions = rs.getRegions(desc.getTableName());
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());

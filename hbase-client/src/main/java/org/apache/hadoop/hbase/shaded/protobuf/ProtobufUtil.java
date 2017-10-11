@@ -2863,6 +2863,10 @@ public final class ProtobufUtil {
     return CompactionState.valueOf(state.toString());
   }
 
+  public static GetRegionInfoResponse.CompactionState createCompactionState(CompactionState state) {
+    return GetRegionInfoResponse.CompactionState.valueOf(state.toString());
+  }
+
   public static Optional<Long> toOptionalTimestamp(MajorCompactionTimestampResponse resp) {
     long timestamp = resp.getCompactionTimestamp();
     return timestamp == 0 ? Optional.empty() : Optional.of(timestamp);

@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -544,7 +545,7 @@ public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 
   private void compactTable(TableName tableName) throws IOException {
     for(JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
-      for(Region region : t.getRegionServer().getRegions(tableName)) {
+      for(HRegion region : t.getRegionServer().getRegions(tableName)) {
         region.compact(true);
       }
     }

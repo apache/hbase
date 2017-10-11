@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadService;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 
@@ -141,7 +142,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
       BulkLoadHFileRequest bulkLoadHFileRequest = ConvertSecureBulkLoadHFilesRequest(request);
-      map = secureBulkLoadManager.secureBulkLoadHFiles(this.env.getRegion(),
+      map = secureBulkLoadManager.secureBulkLoadHFiles((HRegion) this.env.getRegion(),
           convert(bulkLoadHFileRequest));
       loaded = map != null && !map.isEmpty();
     } catch (IOException e) {

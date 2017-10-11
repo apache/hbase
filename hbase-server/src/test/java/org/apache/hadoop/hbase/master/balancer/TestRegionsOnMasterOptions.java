@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -150,7 +151,7 @@ public class TestRegionsOnMasterOptions {
     try {
       Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY, REGIONS);
       LOG.info("Server: " + cluster.getMaster().getServerManager().getOnlineServersList());
-      List<Region> regions = cluster.getMaster().getRegions();
+      List<HRegion> regions = cluster.getMaster().getRegions();
       int mActualCount = regions.size();
       if (masterCount == 0 || masterCount == SYSTEM_REGIONS) {
         // 0 means no regions on master.

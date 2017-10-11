@@ -230,7 +230,7 @@ public class TestHFileArchiving {
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
-    Region region = servingRegions.get(0);
+    HRegion region = servingRegions.get(0);
 
     // get the parent RS and monitor
     HRegionServer hrs = UTIL.getRSForFirstRegionInTable(tableName);
@@ -241,7 +241,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<Region> regions = hrs.getRegions(tableName);
+    List<HRegion> regions = hrs.getRegions(tableName);
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);
@@ -309,7 +309,7 @@ public class TestHFileArchiving {
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
-    Region region = servingRegions.get(0);
+    HRegion region = servingRegions.get(0);
 
     // get the parent RS and monitor
     HRegionServer hrs = UTIL.getRSForFirstRegionInTable(tableName);
@@ -320,7 +320,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<Region> regions = hrs.getRegions(tableName);
+    List<HRegion> regions = hrs.getRegions(tableName);
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);

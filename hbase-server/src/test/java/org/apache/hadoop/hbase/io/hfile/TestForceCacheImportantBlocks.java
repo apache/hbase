@@ -127,7 +127,7 @@ public class TestForceCacheImportantBlocks {
     else assertTrue(stats.getMissCount() > missCount);
   }
 
-  private void writeTestData(Region region) throws IOException {
+  private void writeTestData(HRegion region) throws IOException {
     for (int i = 0; i < NUM_ROWS; ++i) {
       Put put = new Put(Bytes.toBytes("row" + i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {

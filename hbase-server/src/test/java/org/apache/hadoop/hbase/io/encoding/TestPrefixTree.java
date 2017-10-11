@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -65,7 +66,7 @@ public class TestPrefixTree {
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  private Region region;
+  private HRegion region;
 
   @Before
   public void setUp() throws Exception {

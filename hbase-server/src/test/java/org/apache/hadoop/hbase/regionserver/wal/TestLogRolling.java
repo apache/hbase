@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -345,7 +346,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       assertTrue(loggedRows.contains("row1005"));
 
       // flush all regions
-      for (Region r : server.getOnlineRegionsLocalContext()) {
+      for (HRegion r : server.getOnlineRegionsLocalContext()) {
         try {
           r.flush(true);
         } catch (Exception e) {

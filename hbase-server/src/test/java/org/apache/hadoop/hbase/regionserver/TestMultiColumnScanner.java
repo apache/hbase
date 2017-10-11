@@ -145,7 +145,7 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    Region region = TEST_UTIL.createTestRegion(TABLE_NAME,
+    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
         new HColumnDescriptor(FAMILY)
             .setCompressionType(comprAlgo)
             .setBloomFilterType(bloomType)
