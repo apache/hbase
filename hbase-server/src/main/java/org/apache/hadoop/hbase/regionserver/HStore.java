@@ -91,7 +91,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -797,21 +796,10 @@ public class HStore implements Store {
     }
   }
 
-  public Pair<Path, Path> preBulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
-    Path srcPath = new Path(srcPathStr);
-    return fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
-  }
-
   @Override
-  public Path bulkLoadHFile(byte[] family, String srcPathStr, Path dstPath) throws IOException {
+  public Path bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
     Path srcPath = new Path(srcPathStr);
-    try {
-      fs.commitStoreFile(srcPath, dstPath);
-    } finally {
-      if (this.getCoprocessorHost() != null) {
-        this.getCoprocessorHost().postCommitStoreFile(family, srcPath, dstPath);
-      }
-    }
+    Path dstPath = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
 
     LOG.info("Loaded HFile " + srcPath + " into store '" + getColumnFamilyName() + "' as "
         + dstPath + " - updating store file list.");

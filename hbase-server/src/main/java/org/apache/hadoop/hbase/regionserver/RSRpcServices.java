@@ -2074,14 +2074,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
       }
       boolean loaded = false;
-      try {
-        if (!bypass) {
-          loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null);
-        }
-      } finally {
-        if (region.getCoprocessorHost() != null) {
-          loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
-        }
+      if (!bypass) {
+        loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null);
+      }
+      if (region.getCoprocessorHost() != null) {
+        loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
       }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
       builder.setLoaded(loaded);

@@ -316,11 +316,10 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * This method should only be called from Region. It is assumed that the ranges of values in the
    * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
    *
-   * @param family the column family
    * @param srcPathStr
-   * @param dstPath
+   * @param sequenceId sequence Id associated with the HFile
    */
-  Path bulkLoadHFile(byte[] family, String srcPathStr, Path dstPath) throws IOException;
+  Path bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class
