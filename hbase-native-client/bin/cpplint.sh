@@ -16,9 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 IFS=$'\n\t'
-
+OUTPUT_DIR=$1
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CPPLINT_LOC=https://raw.githubusercontent.com/google/styleguide/gh-pages/cpplint/cpplint.py
-OUTPUT=build/cpplint.py
+OUTPUT=$OUTPUT_DIR/cpplint.py
 
 declare -a MODULES=( client connection exceptions security serde utils test-util )
 
@@ -31,9 +32,9 @@ wget -nc $CPPLINT_LOC -O $OUTPUT
 #                              build/c++11 (We are building with c++14)
 for m in ${MODULES[@]}; do
   if [ $m != "security" ]; then  #These are empty
-    exec find src/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
+    exec find ${SCRIPT_DIR}/../src/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
   fi
   if [ $m != "test-util" ]; then
-    exec find include/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
+    exec find ${SCRIPT_DIR}/../include/hbase/$m -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo,-build/c++11 --linelength=100
   fi
 done

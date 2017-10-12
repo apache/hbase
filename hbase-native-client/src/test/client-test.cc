@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
 #include "hbase/client/append.h"
 #include "hbase/client/cell.h"
 #include "hbase/client/client.h"
