@@ -58,9 +58,9 @@ import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -139,8 +139,8 @@ public abstract class AbstractTestFSWAL {
     // test to see whether the coprocessor is loaded or not.
     AbstractFSWAL<?> wal = null;
     try {
-      wal = newWAL(FS, FSUtils.getWALRootDir(CONF), DIR.toString(), HConstants.HREGION_OLDLOGDIR_NAME,
-        CONF, null, true, null, null);
+      wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
+          HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
       WALCoprocessorHost host = wal.getCoprocessorHost();
       Coprocessor c = host.findCoprocessor(SampleRegionWALCoprocessor.class);
       assertNotNull(c);
@@ -187,8 +187,8 @@ public abstract class AbstractTestFSWAL {
     AbstractFSWAL<?> wal1 = null;
     AbstractFSWAL<?> walMeta = null;
     try {
-      wal1 = newWAL(FS, FSUtils.getWALRootDir(CONF), DIR.toString(), HConstants.HREGION_OLDLOGDIR_NAME,
-        CONF, null, true, null, null);
+      wal1 = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
+          HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
       LOG.debug("Log obtained is: " + wal1);
       Comparator<Path> comp = wal1.LOG_NAME_COMPARATOR;
       Path p1 = wal1.computeFilename(11);
@@ -197,9 +197,9 @@ public abstract class AbstractTestFSWAL {
       assertTrue(comp.compare(p1, p1) == 0);
       // comparing with different filenum.
       assertTrue(comp.compare(p1, p2) < 0);
-      walMeta =
-          newWAL(FS, FSUtils.getWALRootDir(CONF), DIR.toString(), HConstants.HREGION_OLDLOGDIR_NAME,
-            CONF, null, true, null, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+      walMeta = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
+          HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null,
+          AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       Comparator<Path> compMeta = walMeta.LOG_NAME_COMPARATOR;
 
       Path p1WithMeta = walMeta.computeFilename(11);
@@ -245,7 +245,7 @@ public abstract class AbstractTestFSWAL {
     LOG.debug("testFindMemStoresEligibleForFlush");
     Configuration conf1 = HBaseConfiguration.create(CONF);
     conf1.setInt("hbase.regionserver.maxlogs", 1);
-    AbstractFSWAL<?> wal = newWAL(FS, FSUtils.getWALRootDir(conf1), DIR.toString(),
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(conf1), DIR.toString(),
       HConstants.HREGION_OLDLOGDIR_NAME, conf1, null, true, null, null);
     HTableDescriptor t1 =
         new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
@@ -332,9 +332,10 @@ public abstract class AbstractTestFSWAL {
   }
 
   @Test(expected = IOException.class)
-  public void testFailedToCreateWALIfParentRenamed() throws IOException {
+  public void testFailedToCreateWALIfParentRenamed() throws IOException,
+      CommonFSUtils.StreamLacksCapabilityException {
     final String name = "testFailedToCreateWALIfParentRenamed";
-    AbstractFSWAL<?> wal = newWAL(FS, FSUtils.getWALRootDir(CONF), name,
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = System.currentTimeMillis();
     Path path = wal.computeFilename(filenum);
@@ -373,17 +374,17 @@ public abstract class AbstractTestFSWAL {
       scopes.put(fam, 0);
     }
     // subclass and doctor a method.
-    AbstractFSWAL<?> wal = newSlowWAL(FS, FSUtils.getWALRootDir(CONF), DIR.toString(), testName, CONF,
-      null, true, null, null, new Runnable() {
+    AbstractFSWAL<?> wal = newSlowWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
+        testName, CONF, null, true, null, null, new Runnable() {
 
-        @Override
-        public void run() {
-          if (goslow.get()) {
-            Threads.sleep(100);
-            LOG.debug("Sleeping before appending 100ms");
+          @Override
+          public void run() {
+            if (goslow.get()) {
+              Threads.sleep(100);
+              LOG.debug("Sleeping before appending 100ms");
+            }
           }
-        }
-      });
+        });
     HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
       TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
     EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
@@ -434,8 +435,8 @@ public abstract class AbstractTestFSWAL {
   @Test
   public void testSyncNoAppend() throws IOException {
     String testName = currentTest.getMethodName();
-    AbstractFSWAL<?> wal = newWAL(FS, FSUtils.getWALRootDir(CONF), DIR.toString(), testName, CONF,
-      null, true, null, null);
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
+        CONF, null, true, null, null);
     try {
       wal.sync();
     } finally {

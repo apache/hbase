@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -184,10 +185,8 @@ public class MockMasterServices extends MockNoopMasterServices {
       throws IOException {
     final Configuration conf = getConfiguration();
     final Path logDir = new Path(fileSystemManager.getRootDir(),
-        MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
+        WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
 
-    //procedureStore = new WALProcedureStore(conf, fileSystemManager.getFileSystem(), logDir,
-    //    new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     this.procedureStore = new NoopProcedureStore();
     this.procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
 

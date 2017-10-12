@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
@@ -100,7 +100,7 @@ public class IOTestProvider implements WALProvider {
       providerId = DEFAULT_PROVIDER_ID;
     }
     final String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
-    log = new IOTestWAL(FSUtils.getWALFileSystem(conf), FSUtils.getWALRootDir(conf),
+    log = new IOTestWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
         AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
         HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
@@ -184,7 +184,12 @@ public class IOTestProvider implements WALProvider {
       if (!initialized || doFileRolls) {
         LOG.info("creating new writer instance.");
         final ProtobufLogWriter writer = new IOTestWriter();
-        writer.init(fs, path, conf, false);
+        try {
+          writer.init(fs, path, conf, false);
+        } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
+          throw new IOException("Can't create writer instance because underlying FileSystem " +
+              "doesn't support needed stream capabilities.", exception);
+        }
         if (!initialized) {
           LOG.info("storing initial writer instance in case file rolling isn't allowed.");
           noRollsWriter = writer;
@@ -207,7 +212,8 @@ public class IOTestProvider implements WALProvider {
     private boolean doSyncs;
 
     @Override
-    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable) throws IOException {
+    public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable)
+        throws IOException, CommonFSUtils.StreamLacksCapabilityException {
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
       if (operations.isEmpty() || operations.contains(AllowedOperations.all.name())) {
         doAppends = doSyncs = true;

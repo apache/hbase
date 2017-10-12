@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,7 +43,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -57,6 +58,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestFSUtils {
+  private static final Log LOG = LogFactory.getLog(TestFSUtils.class);
 
   private HBaseTestingUtility htu;
   private FileSystem fs;
@@ -67,53 +69,6 @@ public class TestFSUtils {
     htu = new HBaseTestingUtility();
     fs = htu.getTestFileSystem();
     conf = htu.getConfiguration();
-  }
-
-  /**
-   * Test path compare and prefix checking.
-   * @throws IOException
-   */
-  @Test
-  public void testMatchingTail() throws IOException {
-    Path rootdir = htu.getDataTestDir();
-    assertTrue(rootdir.depth() > 1);
-    Path partPath = new Path("a", "b");
-    Path fullPath = new Path(rootdir, partPath);
-    Path fullyQualifiedPath = fs.makeQualified(fullPath);
-    assertFalse(FSUtils.isMatchingTail(fullPath, partPath));
-    assertFalse(FSUtils.isMatchingTail(fullPath, partPath.toString()));
-    assertTrue(FSUtils.isStartingWithPath(rootdir, fullPath.toString()));
-    assertTrue(FSUtils.isStartingWithPath(fullyQualifiedPath, fullPath.toString()));
-    assertFalse(FSUtils.isStartingWithPath(rootdir, partPath.toString()));
-    assertFalse(FSUtils.isMatchingTail(fullyQualifiedPath, partPath));
-    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fullPath));
-    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fullPath.toString()));
-    assertTrue(FSUtils.isMatchingTail(fullyQualifiedPath, fs.makeQualified(fullPath)));
-    assertTrue(FSUtils.isStartingWithPath(rootdir, fullyQualifiedPath.toString()));
-    assertFalse(FSUtils.isMatchingTail(fullPath, new Path("x")));
-    assertFalse(FSUtils.isMatchingTail(new Path("x"), fullPath));
-  }
-
-  @Test
-  public void testVersion() throws DeserializationException, IOException {
-    final Path rootdir = htu.getDataTestDir();
-    assertNull(FSUtils.getVersion(fs, rootdir));
-    // Write out old format version file.  See if we can read it in and convert.
-    Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    FSDataOutputStream s = fs.create(versionFile);
-    final String version = HConstants.FILE_SYSTEM_VERSION;
-    s.writeUTF(version);
-    s.close();
-    assertTrue(fs.exists(versionFile));
-    FileStatus [] status = fs.listStatus(versionFile);
-    assertNotNull(status);
-    assertTrue(status.length > 0);
-    String newVersion = FSUtils.getVersion(fs, rootdir);
-    assertEquals(version.length(), newVersion.length());
-    assertEquals(version, newVersion);
-    // File will have been converted. Exercise the pb format
-    assertEquals(version, FSUtils.getVersion(fs, rootdir));
-    FSUtils.checkVersion(fs, rootdir, true);
   }
 
   @Test public void testIsHDFS() throws Exception {
@@ -239,7 +194,32 @@ public class TestFSUtils {
   }
 
   @Test
+  public void testVersion() throws DeserializationException, IOException {
+    final Path rootdir = htu.getDataTestDir();
+    final FileSystem fs = rootdir.getFileSystem(conf);
+    assertNull(FSUtils.getVersion(fs, rootdir));
+    // Write out old format version file.  See if we can read it in and convert.
+    Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    FSDataOutputStream s = fs.create(versionFile);
+    final String version = HConstants.FILE_SYSTEM_VERSION;
+    s.writeUTF(version);
+    s.close();
+    assertTrue(fs.exists(versionFile));
+    FileStatus [] status = fs.listStatus(versionFile);
+    assertNotNull(status);
+    assertTrue(status.length > 0);
+    String newVersion = FSUtils.getVersion(fs, rootdir);
+    assertEquals(version.length(), newVersion.length());
+    assertEquals(version, newVersion);
+    // File will have been converted. Exercise the pb format
+    assertEquals(version, FSUtils.getVersion(fs, rootdir));
+    FSUtils.checkVersion(fs, rootdir, true);
+  }
+
+  @Test
   public void testPermMask() throws Exception {
+    final Path rootdir = htu.getDataTestDir();
+    final FileSystem fs = rootdir.getFileSystem(conf);
     // default fs permission
     FsPermission defaultFsPerm = FSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
@@ -277,6 +257,8 @@ public class TestFSUtils {
 
   @Test
   public void testDeleteAndExists() throws Exception {
+    final Path rootdir = htu.getDataTestDir();
+    final FileSystem fs = rootdir.getFileSystem(conf);
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
@@ -301,6 +283,7 @@ public class TestFSUtils {
       FSUtils.delete(fs, p1, true);
     }
   }
+
 
   @Test
   public void testRenameAndSetModifyTime() throws Exception {
@@ -338,6 +321,24 @@ public class TestFSUtils {
     }
   }
 
+  @Test
+  public void testSetStoragePolicyDefault() throws Exception {
+    verifyFileInDirWithStoragePolicy(HConstants.DEFAULT_WAL_STORAGE_POLICY);
+  }
+
+  /* might log a warning, but still work. (always warning on Hadoop < 2.6.0) */
+  @Test
+  public void testSetStoragePolicyValidButMaybeNotPresent() throws Exception {
+    verifyFileInDirWithStoragePolicy("ALL_SSD");
+  }
+
+  /* should log a warning, but still work. (different warning on Hadoop < 2.6.0) */
+  @Test
+  public void testSetStoragePolicyInvalid() throws Exception {
+    verifyFileInDirWithStoragePolicy("1772");
+  }
+
+  // Here instead of TestCommonFSUtils because we need a minicluster
   private void verifyFileInDirWithStoragePolicy(final String policy) throws Exception {
     conf.set(HConstants.WAL_STORAGE_POLICY, policy);
 
@@ -360,63 +361,6 @@ public class TestFSUtils {
     } finally {
       cluster.shutdown();
     }
-  }
-
-  @Test
-  public void testSetStoragePolicyDefault() throws Exception {
-    verifyFileInDirWithStoragePolicy(HConstants.DEFAULT_WAL_STORAGE_POLICY);
-  }
-
-  /* might log a warning, but still work. (always warning on Hadoop < 2.6.0) */
-  @Test
-  public void testSetStoragePolicyValidButMaybeNotPresent() throws Exception {
-    verifyFileInDirWithStoragePolicy("ALL_SSD");
-  }
-
-  /* should log a warning, but still work. (different warning on Hadoop < 2.6.0) */
-  @Test
-  public void testSetStoragePolicyInvalid() throws Exception {
-    verifyFileInDirWithStoragePolicy("1772");
-  }
-
-  @Test
-  public void testSetWALRootDir() throws Exception {
-    Path p = new Path("file:///hbase/root");
-    FSUtils.setWALRootDir(conf, p);
-    assertEquals(p.toString(), conf.get(HFileSystem.HBASE_WAL_DIR));
-  }
-
-  @Test
-  public void testGetWALRootDir() throws IOException {
-    Path root = new Path("file:///hbase/root");
-    Path walRoot = new Path("file:///hbase/logroot");
-    FSUtils.setRootDir(conf, root);
-    assertEquals(FSUtils.getRootDir(conf), root);
-    assertEquals(FSUtils.getWALRootDir(conf), root);
-    FSUtils.setWALRootDir(conf, walRoot);
-    assertEquals(FSUtils.getWALRootDir(conf), walRoot);
-  }
-
-  @Test(expected=IllegalStateException.class)
-  public void testGetWALRootDirIllegalWALDir() throws IOException {
-    Path root = new Path("file:///hbase/root");
-    Path invalidWALDir = new Path("file:///hbase/root/logroot");
-    FSUtils.setRootDir(conf, root);
-    FSUtils.setWALRootDir(conf, invalidWALDir);
-    FSUtils.getWALRootDir(conf);
-  }
-
-  @Test
-  public void testRemoveWALRootPath() throws Exception {
-    FSUtils.setRootDir(conf, new Path("file:///user/hbase"));
-    Path testFile = new Path(FSUtils.getRootDir(conf), "test/testfile");
-    Path tmpFile = new Path("file:///test/testfile");
-    assertEquals(FSUtils.removeWALRootPath(testFile, conf), "test/testfile");
-    assertEquals(FSUtils.removeWALRootPath(tmpFile, conf), tmpFile.toString());
-    FSUtils.setWALRootDir(conf, new Path("file:///user/hbaseLogDir"));
-    assertEquals(FSUtils.removeWALRootPath(testFile, conf), testFile.toString());
-    Path logFile = new Path(FSUtils.getWALRootDir(conf), "test/testlog");
-    assertEquals(FSUtils.removeWALRootPath(logFile, conf), "test/testlog");
   }
 
   /**
@@ -565,4 +509,37 @@ public class TestFSUtils {
     assertTrue(fileSys.delete(name, true));
     assertTrue(!fileSys.exists(name));
   }
+
+
+  private static final boolean STREAM_CAPABILITIES_IS_PRESENT;
+  static {
+    boolean tmp = false;
+    try {
+      Class.forName("org.apache.hadoop.fs.StreamCapabilities");
+      tmp = true;
+      LOG.debug("Test thought StreamCapabilities class was present.");
+    } catch (ClassNotFoundException exception) {
+      LOG.debug("Test didn't think StreamCapabilities class was present.");
+    } finally {
+      STREAM_CAPABILITIES_IS_PRESENT = tmp;
+    }
+  }
+
+  // Here instead of TestCommonFSUtils because we need a minicluster
+  @Test
+  public void checkStreamCapabilitiesOnHdfsDataOutputStream() throws Exception {
+    MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
+    try (FileSystem filesystem = cluster.getFileSystem()) {
+      FSDataOutputStream stream = filesystem.create(new Path("/tmp/foobar"));
+      assertTrue(FSUtils.hasCapability(stream, "hsync"));
+      assertTrue(FSUtils.hasCapability(stream, "hflush"));
+      assertNotEquals("We expect HdfsDataOutputStream to say it has a dummy capability iff the " +
+          "StreamCapabilities class is not defined.",
+          STREAM_CAPABILITIES_IS_PRESENT,
+          FSUtils.hasCapability(stream, "a capability that hopefully HDFS doesn't add."));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 }

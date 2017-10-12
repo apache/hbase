@@ -61,9 +61,9 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -356,7 +356,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
     // Now that it exists, set the storage policy for the entire directory of wal files related to
     // this FSHLog instance
-    FSUtils.setStoragePolicy(fs, conf, this.walDir, HConstants.WAL_STORAGE_POLICY,
+    CommonFSUtils.setStoragePolicy(fs, conf, this.walDir, HConstants.WAL_STORAGE_POLICY,
       HConstants.DEFAULT_WAL_STORAGE_POLICY);
     this.walFileSuffix = (suffix == null) ? "" : URLEncoder.encode(suffix, "UTF8");
     this.prefixPathStr = new Path(walDir, walFilePrefix + WAL_FILE_NAME_DELIMITER).toString();
@@ -381,7 +381,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     };
 
     if (failIfWALExists) {
-      final FileStatus[] walFiles = FSUtils.listStatus(fs, walDir, ourFiles);
+      final FileStatus[] walFiles = CommonFSUtils.listStatus(fs, walDir, ourFiles);
       if (null != walFiles && 0 != walFiles.length) {
         throw new IOException("Target WAL already exists within directory " + walDir);
       }
@@ -398,7 +398,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // Get size to roll log at. Roll at 95% of HDFS block size so we avoid crossing HDFS blocks
     // (it costs a little x'ing bocks)
     final long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
-      FSUtils.getDefaultBlockSize(this.fs, this.walDir));
+      CommonFSUtils.getDefaultBlockSize(this.fs, this.walDir));
     this.logrollsize = (long) (blocksize
         * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
 
@@ -652,7 +652,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       }
     }
     LOG.info("Archiving " + p + " to " + newPath);
-    if (!FSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
+    if (!CommonFSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
     }
     // Tell our listeners that a log has been archived.
@@ -685,12 +685,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     try {
       long oldFileLen = doReplaceWriter(oldPath, newPath, nextWriter);
       int oldNumEntries = this.numEntries.getAndSet(0);
-      final String newPathString = (null == newPath ? null : FSUtils.getPath(newPath));
+      final String newPathString = (null == newPath ? null : CommonFSUtils.getPath(newPath));
       if (oldPath != null) {
         this.walFile2Props.put(oldPath,
           new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
         this.totalLogSize.addAndGet(oldFileLen);
-        LOG.info("Rolled WAL " + FSUtils.getPath(oldPath) + " with entries=" + oldNumEntries
+        LOG.info("Rolled WAL " + CommonFSUtils.getPath(oldPath) + " with entries=" + oldNumEntries
             + ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " + newPathString);
       } else {
         LOG.info("New WAL " + newPathString);
@@ -767,6 +767,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           cleanOldLogs();
           regionsToFlush = findRegionsToForceFlush();
         }
+      } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
+        // If the underlying FileSystem can't do what we ask, treat as IO failure so
+        // we'll abort.
+        throw new IOException("Underlying FileSystem can't meet stream requirements. See RS log " +
+            "for details.", exception);
       } finally {
         closeBarrier.endOp();
         assert scope == NullScope.INSTANCE || !scope.isDetached();
@@ -794,7 +799,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * @return may be null if there are no files.
    */
   protected FileStatus[] getFiles() throws IOException {
-    return FSUtils.listStatus(fs, walDir, ourFiles);
+    return CommonFSUtils.listStatus(fs, walDir, ourFiles);
   }
 
   @Override
@@ -833,7 +838,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           }
         }
 
-        if (!FSUtils.renameAndSetModifyTime(fs, file.getPath(), p)) {
+        if (!CommonFSUtils.renameAndSetModifyTime(fs, file.getPath(), p)) {
           throw new IOException("Unable to rename " + file.getPath() + " to " + p);
         }
         // Tell our listeners that a log was archived.
@@ -843,7 +848,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           }
         }
       }
-      LOG.debug("Moved " + files.length + " WAL file(s) to " + FSUtils.getPath(this.walArchiveDir));
+      LOG.debug("Moved " + files.length + " WAL file(s) to " +
+          CommonFSUtils.getPath(this.walArchiveDir));
     }
     LOG.info("Closed WAL: " + toString());
   }
@@ -1022,7 +1028,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;
 
-  protected abstract W createWriterInstance(Path path) throws IOException;
+  protected abstract W createWriterInstance(Path path) throws IOException,
+      CommonFSUtils.StreamLacksCapabilityException;
 
   /**
    * @return old wal file size

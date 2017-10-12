@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -1029,7 +1030,8 @@ public abstract class AbstractTestWALReplay {
   /**
    * testcase for https://issues.apache.org/jira/browse/HBASE-14949.
    */
-  private void testNameConflictWhenSplit(boolean largeFirst) throws IOException {
+  private void testNameConflictWhenSplit(boolean largeFirst) throws IOException,
+      StreamLacksCapabilityException {
     final TableName tableName = TableName.valueOf("testReplayEditsWrittenIntoWAL");
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
@@ -1071,12 +1073,12 @@ public abstract class AbstractTestWALReplay {
   }
 
   @Test
-  public void testNameConflictWhenSplit0() throws IOException {
+  public void testNameConflictWhenSplit0() throws IOException, StreamLacksCapabilityException {
     testNameConflictWhenSplit(true);
   }
 
   @Test
-  public void testNameConflictWhenSplit1() throws IOException {
+  public void testNameConflictWhenSplit1() throws IOException, StreamLacksCapabilityException {
     testNameConflictWhenSplit(false);
   }
 
@@ -1231,7 +1233,8 @@ public abstract class AbstractTestWALReplay {
     return htd;
   }
 
-  private void writerWALFile(Path file, List<FSWALEntry> entries) throws IOException {
+  private void writerWALFile(Path file, List<FSWALEntry> entries) throws IOException,
+      StreamLacksCapabilityException {
     fs.mkdirs(file.getParent());
     ProtobufLogWriter writer = new ProtobufLogWriter();
     writer.init(fs, file, conf, true);

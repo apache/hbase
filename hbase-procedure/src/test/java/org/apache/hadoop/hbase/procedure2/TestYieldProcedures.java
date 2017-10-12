@@ -65,7 +65,7 @@ public class TestYieldProcedures {
     assertTrue(testDir.depth() > 1);
 
     logDir = new Path(testDir, "proc-logs");
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procRunnables = new TestScheduler();
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), new TestProcEnv(),
         procStore, procRunnables);
