@@ -65,9 +65,6 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 public class HFileSystem extends FilterFileSystem {
   public static final Log LOG = LogFactory.getLog(HFileSystem.class);
 
-  /** Parameter name for HBase WAL directory */
-  public static final String HBASE_WAL_DIR = "hbase.wal.dir";
-
   private final FileSystem noChecksumFs;   // read hfile data from storage
   private final boolean useHBaseChecksum;
   private static volatile byte unspecifiedStoragePolicyId = Byte.MIN_VALUE;

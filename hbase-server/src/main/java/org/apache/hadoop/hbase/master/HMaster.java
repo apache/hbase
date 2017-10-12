@@ -53,7 +53,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
@@ -1201,23 +1200,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void startProcedureExecutor() throws IOException {
     final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
     final Path rootDir = FSUtils.getRootDir(conf);
-    final Path walDir = new Path(FSUtils.getWALRootDir(this.conf),
-        MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
-    final Path walArchiveDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
 
-    final FileSystem walFs = walDir.getFileSystem(conf);
-
-    // Create the log directory for the procedure store
-    if (!walFs.exists(walDir)) {
-      if (!walFs.mkdirs(walDir)) {
-        throw new IOException("Unable to mkdir " + walDir);
-      }
-    }
-    // Now that it exists, set the log policy
-    FSUtils.setStoragePolicy(walFs, conf, walDir, HConstants.WAL_STORAGE_POLICY,
-      HConstants.DEFAULT_WAL_STORAGE_POLICY);
-
-    procedureStore = new WALProcedureStore(conf, walDir.getFileSystem(conf), walDir, walArchiveDir,
+    procedureStore = new WALProcedureStore(conf,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     MasterProcedureScheduler procedureScheduler = procEnv.getProcedureScheduler();

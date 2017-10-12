@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
@@ -56,7 +57,8 @@ public final class AsyncFSOutputHelper {
    */
   public static AsyncFSOutput createOutput(FileSystem fs, Path f, boolean overwrite,
       boolean createParent, short replication, long blockSize, EventLoop eventLoop,
-      Class<? extends Channel> channelClass) throws IOException {
+      Class<? extends Channel> channelClass)
+          throws IOException, CommonFSUtils.StreamLacksCapabilityException {
     if (fs instanceof DistributedFileSystem) {
       return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f,
         overwrite, createParent, replication, blockSize, eventLoop, channelClass);
@@ -68,6 +70,13 @@ public final class AsyncFSOutputHelper {
       fsOut = fs.create(f, overwrite, bufferSize, replication, blockSize, null);
     } else {
       fsOut = fs.createNonRecursive(f, overwrite, bufferSize, replication, blockSize, null);
+    }
+    // After we create the stream but before we attempt to use it at all
+    // ensure that we can provide the level of data safety we're configured
+    // to provide.
+    if (!(CommonFSUtils.hasCapability(fsOut, "hflush") &&
+        CommonFSUtils.hasCapability(fsOut, "hsync"))) {
+      throw new CommonFSUtils.StreamLacksCapabilityException("hflush and hsync");
     }
     final ExecutorService flushExecutor =
         Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true)

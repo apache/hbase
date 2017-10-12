@@ -115,8 +115,8 @@ public class TestMasterProcedureWalLease {
     Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();
     Mockito.doReturn(true).when(backupMaster3).isActiveMaster();
     final WALProcedureStore backupStore3 = new WALProcedureStore(firstMaster.getConfiguration(),
-        firstMaster.getMasterFileSystem().getFileSystem(),
         ((WALProcedureStore)masterStore).getWALDir(),
+        null,
         new MasterProcedureEnv.WALStoreLeaseRecovery(backupMaster3));
     // Abort Latch for the test store
     final CountDownLatch backupStore3Abort = new CountDownLatch(1);
@@ -195,8 +195,8 @@ public class TestMasterProcedureWalLease {
     Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();
     Mockito.doReturn(true).when(backupMaster3).isActiveMaster();
     final WALProcedureStore procStore2 = new WALProcedureStore(firstMaster.getConfiguration(),
-        firstMaster.getMasterFileSystem().getFileSystem(),
         ((WALProcedureStore)procStore).getWALDir(),
+        null,
         new MasterProcedureEnv.WALStoreLeaseRecovery(backupMaster3));
 
     // start a second store which should fence the first one out

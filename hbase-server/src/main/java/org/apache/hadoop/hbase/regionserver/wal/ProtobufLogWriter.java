@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -86,9 +88,13 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
   @SuppressWarnings("deprecation")
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException {
+      short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
     this.output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize,
       null);
+    // TODO Be sure to add a check for hsync if this branch includes HBASE-19024
+    if (!(CommonFSUtils.hasCapability(output, "hflush"))) {
+      throw new StreamLacksCapabilityException("hflush");
+    }
   }
 
   @Override

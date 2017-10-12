@@ -86,7 +86,7 @@ public class TestWALProcedureStore {
 
     setupConfig(htu.getConfiguration());
     logDir = new Path(testDir, "proc-logs");
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procStore.start(PROCEDURE_STORE_SLOTS);
     procStore.recoverLease();
     procStore.load(new LoadCounter());
@@ -729,7 +729,7 @@ public class TestWALProcedureStore {
     assertEquals(procs.length + 1, status.length);
 
     // simulate another active master removing the wals
-    procStore = new WALProcedureStore(htu.getConfiguration(), fs, logDir,
+    procStore = new WALProcedureStore(htu.getConfiguration(), logDir, null,
         new WALProcedureStore.LeaseRecovery() {
       private int count = 0;
 

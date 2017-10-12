@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -144,10 +144,10 @@ public class MasterFileSystem {
     };
 
     final String[] protectedSubLogDirs = new String[] {
-            HConstants.HREGION_LOGDIR_NAME,
-            HConstants.HREGION_OLDLOGDIR_NAME,
-            HConstants.CORRUPT_DIR_NAME,
-            MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR
+      HConstants.HREGION_LOGDIR_NAME,
+      HConstants.HREGION_OLDLOGDIR_NAME,
+      HConstants.CORRUPT_DIR_NAME,
+      WALProcedureStore.MASTER_PROCEDURE_LOGDIR
     };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);

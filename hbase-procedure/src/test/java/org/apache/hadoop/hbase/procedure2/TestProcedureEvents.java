@@ -61,7 +61,7 @@ public class TestProcedureEvents {
     logDir = new Path(testDir, "proc-logs");
 
     procEnv = new TestProcEnv();
-    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), logDir);
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
     procStore.start(1);
     procExecutor.start(1, true);
