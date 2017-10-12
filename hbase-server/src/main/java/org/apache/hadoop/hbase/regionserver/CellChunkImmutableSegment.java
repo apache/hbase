@@ -124,7 +124,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     }
     // build the immutable CellSet
     CellChunkMap ccm =
-        new CellChunkMap(CellComparator.COMPARATOR,chunks,0,numOfCellsAfterCompaction,false);
+        new CellChunkMap(getComparator(), chunks, 0, numOfCellsAfterCompaction, false);
     this.setCellSet(null, new CellSet(ccm));  // update the CellSet of this Segment
   }
 
@@ -167,7 +167,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       segmentScanner.close();
     }
 
-    CellChunkMap ccm = new CellChunkMap(CellComparator.COMPARATOR,chunks,0,numOfCells,false);
+    CellChunkMap ccm = new CellChunkMap(getComparator(), chunks, 0, numOfCells, false);
     this.setCellSet(oldCellSet, new CellSet(ccm)); // update the CellSet of this Segment
   }
 

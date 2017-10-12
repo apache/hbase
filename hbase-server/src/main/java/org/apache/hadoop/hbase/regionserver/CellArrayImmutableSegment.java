@@ -125,7 +125,7 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
       segmentScanner.close();
     }
     // build the immutable CellSet
-    CellArrayMap cam = new CellArrayMap(CellComparator.COMPARATOR, cells, 0, idx, false);
+    CellArrayMap cam = new CellArrayMap(getComparator(), cells, 0, idx, false);
     this.setCellSet(oldCellSet, new CellSet(cam));   // update the CellSet of this Segment
   }
 
