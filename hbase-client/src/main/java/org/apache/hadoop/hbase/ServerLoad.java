@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
@@ -363,5 +364,32 @@ public class ServerLoad {
 
   public long getReportTime() {
     return reportTime;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(stores, storefiles, storeUncompressedSizeMB,
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeKB, readRequestsCount,
+      filteredReadRequestsCount, writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB,
+      totalStaticBloomSizeKB, totalCompactingKVs, currentCompactedKVs);
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == this) return true;
+    if (other instanceof ServerLoad) {
+      ServerLoad sl = ((ServerLoad) other);
+      return stores == sl.stores && storefiles == sl.storefiles &&
+        storeUncompressedSizeMB == sl.storeUncompressedSizeMB &&
+        storefileSizeMB == sl.storefileSizeMB && memstoreSizeMB == sl.memstoreSizeMB &&
+        storefileIndexSizeKB == sl.storefileIndexSizeKB && readRequestsCount == sl.readRequestsCount &&
+        filteredReadRequestsCount == sl.filteredReadRequestsCount &&
+        writeRequestsCount == sl.writeRequestsCount && rootIndexSizeKB == sl.rootIndexSizeKB &&
+        totalStaticIndexSizeKB == sl.totalStaticIndexSizeKB &&
+        totalStaticBloomSizeKB == sl.totalStaticBloomSizeKB &&
+        totalCompactingKVs == sl.totalCompactingKVs &&
+        currentCompactedKVs == sl.currentCompactedKVs;
+    }
+    return false;
   }
 }
