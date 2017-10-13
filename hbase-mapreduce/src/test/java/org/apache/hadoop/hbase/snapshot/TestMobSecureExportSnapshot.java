@@ -33,7 +33,6 @@ import org.junit.experimental.categories.Category;
 /**
  * Reruns TestMobExportSnapshot using MobExportSnapshot in secure mode.
  */
-@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobSecureExportSnapshot extends TestMobExportSnapshot {
   @BeforeClass
