@@ -7279,10 +7279,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         processor.process(now, region, mutations, walEdit);
       } catch (IOException e) {
+        String row = processor.getRowsToLock().isEmpty() ? "" :
+          " on row(s):" + Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) + "...";
         LOG.warn("RowProcessor:" + processor.getClass().getName() +
-            " throws Exception on row(s):" +
-            Bytes.toStringBinary(
-              processor.getRowsToLock().iterator().next()) + "...", e);
+            " throws Exception" + row, e);
         throw e;
       }
       return;
@@ -7296,10 +7296,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             processor.process(now, region, mutations, walEdit);
             return null;
           } catch (IOException e) {
+            String row = processor.getRowsToLock().isEmpty() ? "" :
+              " on row(s):" + Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) + "...";
             LOG.warn("RowProcessor:" + processor.getClass().getName() +
-                " throws Exception on row(s):" +
-                Bytes.toStringBinary(
-                    processor.getRowsToLock().iterator().next()) + "...", e);
+                " throws Exception" + row, e);
             throw e;
           }
         }
@@ -7308,9 +7308,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       task.get(timeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException te) {
-      LOG.error("RowProcessor timeout:" + timeout + " ms on row(s):" +
-          Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) +
-          "...");
+      String row = processor.getRowsToLock().isEmpty() ? "" :
+        " on row(s):" + Bytes.toStringBinary(processor.getRowsToLock().iterator().next()) + "...";
+      LOG.error("RowProcessor timeout:" + timeout + " ms" + row);
       throw new IOException(te);
     } catch (Exception e) {
       throw new IOException(e);
