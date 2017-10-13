@@ -46,11 +46,13 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface InternalScanner extends Closeable {
   /**
    * Grab the next row's worth of values.
-   * @param results return output array
+   * @param result return output array
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean next(List<Cell> results) throws IOException;
+  default boolean next(List<Cell> result) throws IOException {
+    return next(result, NoLimitScannerContext.getInstance());
+  }
 
   /**
    * Grab the next row's worth of values.

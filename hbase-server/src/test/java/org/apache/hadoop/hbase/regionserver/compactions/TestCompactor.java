@@ -193,15 +193,10 @@ public class TestCompactor {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
-      if (kvs.isEmpty()) return false;
-      results.add(kvs.remove(0));
-      return !kvs.isEmpty();
-    }
-
-    @Override
     public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
-      return next(result);
+      if (kvs.isEmpty()) return false;
+      result.add(kvs.remove(0));
+      return !kvs.isEmpty();
     }
 
     @Override

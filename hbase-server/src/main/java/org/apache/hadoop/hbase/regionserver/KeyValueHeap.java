@@ -140,14 +140,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * <p>
    * This can ONLY be called when you are using Scanners that implement InternalScanner as well as
    * KeyValueScanner (a {@link StoreScanner}).
-   * @param result
    * @return true if more rows exist after this one, false if scanner is done
    */
-  @Override
-  public boolean next(List<Cell> result) throws IOException {
-    return next(result, NoLimitScannerContext.getInstance());
-  }
-
   @Override
   public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
     if (this.current == null) {

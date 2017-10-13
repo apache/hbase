@@ -140,11 +140,6 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
-      return false;
-    }
-
-    @Override
     public void close() throws IOException {}
   };
   /**

@@ -503,11 +503,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     return this.heap.seek(key);
   }
 
-  @Override
-  public boolean next(List<Cell> outResult) throws IOException {
-    return next(outResult, NoLimitScannerContext.getInstance());
-  }
-
   /**
    * Get the next row of values from this Store.
    * @param outResult

@@ -427,10 +427,6 @@ public class TestRegionObserverInterface {
         InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
         CompactionRequest request) {
       return new InternalScanner() {
-        @Override
-        public boolean next(List<Cell> results) throws IOException {
-          return next(results, NoLimitScannerContext.getInstance());
-        }
 
         @Override
         public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
