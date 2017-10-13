@@ -32,7 +32,6 @@ import org.junit.experimental.categories.Category;
 /**
  * Test Export Snapshot Tool
  */
-@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestMobExportSnapshot extends TestExportSnapshot {
 

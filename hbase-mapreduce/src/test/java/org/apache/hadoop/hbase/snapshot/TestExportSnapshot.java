@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test Export Snapshot Tool
  */
-@Ignore
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().

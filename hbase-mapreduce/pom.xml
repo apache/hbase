@@ -298,6 +298,13 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>${netty.hadoop.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->

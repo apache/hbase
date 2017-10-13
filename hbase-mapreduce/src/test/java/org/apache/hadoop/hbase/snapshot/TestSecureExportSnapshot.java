@@ -36,7 +36,6 @@ import org.junit.rules.TestRule;
 /**
  * Reruns TestExportSnapshot using ExportSnapshot in secure mode.
  */
-@Ignore
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestSecureExportSnapshot extends TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
