@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -37,10 +38,13 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
@@ -54,6 +58,7 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
  */
 @InterfaceAudience.Private
 public class MapReduceBackupCopyJob implements BackupCopyJob {
+  public static final String NUMBER_OF_LEVELS_TO_PRESERVE_KEY = "num.levels.preserve";
   private static final Log LOG = LogFactory.getLog(MapReduceBackupCopyJob.class);
 
   private Configuration conf;
@@ -143,6 +148,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
    * Only the argument "src1, [src2, [...]] dst" is supported,
    * no more DistCp options.
    */
+
   class BackupDistCp extends DistCp {
 
     private BackupInfo backupInfo;
@@ -154,6 +160,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       this.backupInfo = backupInfo;
       this.backupManager = backupManager;
     }
+
 
 
     @Override
@@ -226,7 +233,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         LOG.debug("Backup progress data updated to backup system table: \"Progress: "
             + newProgressStr + " - " + bytesCopied + " bytes copied.\"");
       } catch (Throwable t) {
-        LOG.error("distcp " + job == null ? "" : job.getJobID() + " encountered error", t);
+        LOG.error(t);
         throw t;
       }
 
@@ -281,6 +288,80 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       }
 
     }
+
+    @Override
+    protected Path createInputFileListing(Job job) throws IOException {
+
+      if (conf.get(NUMBER_OF_LEVELS_TO_PRESERVE_KEY) == null) {
+        return super.createInputFileListing(job);
+      }
+      long totalBytesExpected = 0;
+      int totalRecords = 0;
+      Path fileListingPath = getFileListingPath();
+      try (SequenceFile.Writer writer = getWriter(fileListingPath);) {
+        List<Path> srcFiles = getSourceFiles();
+        if (srcFiles.size() == 0) {
+          return fileListingPath;
+        }
+        totalRecords = srcFiles.size();
+        FileSystem fs = srcFiles.get(0).getFileSystem(conf);
+        for (Path path : srcFiles) {
+          FileStatus fst = fs.getFileStatus(path);
+          totalBytesExpected += fst.getLen();
+          Text key = getKey(path);
+          writer.append(key, new CopyListingFileStatus(fst));
+        }
+        writer.close();
+
+        // update jobs configuration
+
+        Configuration cfg = job.getConfiguration();
+        cfg.setLong(DistCpConstants.CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED, totalBytesExpected);
+        cfg.set(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH, fileListingPath.toString());
+        cfg.setLong(DistCpConstants.CONF_LABEL_TOTAL_NUMBER_OF_RECORDS, totalRecords);
+      } catch (NoSuchFieldException | SecurityException | IllegalArgumentException
+          | IllegalAccessException | NoSuchMethodException | ClassNotFoundException
+          | InvocationTargetException e) {
+        throw new IOException(e);
+      }
+      return fileListingPath;
+    }
+
+    private Text getKey(Path path) {
+      int level = conf.getInt(NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 1);
+      int count = 0;
+      String relPath = "";
+      while (count++ < level) {
+        relPath = Path.SEPARATOR + path.getName() + relPath;
+        path = path.getParent();
+      }
+      return new Text(relPath);
+    }
+
+    private List<Path> getSourceFiles() throws NoSuchFieldException, SecurityException,
+        IllegalArgumentException, IllegalAccessException, NoSuchMethodException,
+        ClassNotFoundException, InvocationTargetException, IOException {
+      Field options = null;
+      try {
+        options = DistCp.class.getDeclaredField("inputOptions");
+      } catch (NoSuchFieldException | SecurityException e) {
+        options = DistCp.class.getDeclaredField("context");
+      }
+      options.setAccessible(true);
+      return getSourcePaths(options);
+    }
+
+
+
+    private SequenceFile.Writer getWriter(Path pathToListFile) throws IOException {
+      FileSystem fs = pathToListFile.getFileSystem(conf);
+      fs.delete(pathToListFile, false);
+      return SequenceFile.createWriter(conf, SequenceFile.Writer.file(pathToListFile),
+        SequenceFile.Writer.keyClass(Text.class),
+        SequenceFile.Writer.valueClass(CopyListingFileStatus.class),
+        SequenceFile.Writer.compression(SequenceFile.CompressionType.NONE));
+    }
+
   }
 
   /**
