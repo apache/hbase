@@ -111,6 +111,11 @@ function personality_modules
   # and sets -Dtest.exclude.pattern/-Dtest to exclude/include the
   # tests respectively.
   if [[ ${testtype} = unit ]]; then
+    # if the modules include root, skip all the submodules HBASE-18505
+    if [[ "${CHANGED_MODULES[*]}" =~ \. ]]; then
+      CHANGED_MODULES=(.)
+    fi
+
     extra="${extra} -PrunAllTests"
     yetus_debug "EXCLUDE_TESTS_URL = ${EXCLUDE_TESTS_URL}"
     yetus_debug "INCLUDE_TESTS_URL = ${INCLUDE_TESTS_URL}"
