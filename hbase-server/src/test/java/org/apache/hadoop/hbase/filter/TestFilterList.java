@@ -501,7 +501,7 @@ public class TestFilterList {
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
     assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
-        minKeyValue));
+      minKeyValue));
 
     // Should have no hint if any filter has no hint
     filterList = new FilterList(Operator.MUST_PASS_ONE,
@@ -525,7 +525,7 @@ public class TestFilterList {
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
     assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
-        minKeyValue));
+        maxKeyValue));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMaxHint, filterMinHint } ));
@@ -539,7 +539,7 @@ public class TestFilterList {
             new Filter [] { filterNoHint, filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
     assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
-        minKeyValue));
+        maxKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
     filterList.filterKeyValue(null);

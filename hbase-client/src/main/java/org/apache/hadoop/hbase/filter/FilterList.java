@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -64,7 +65,7 @@ final public class FilterList extends FilterBase {
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private final List<Filter> filters;
-  private Filter seekHintFilter = null;
+  private Collection<Filter> seekHintFilters = new ArrayList<Filter>();
 
   /** Reference Cell used by {@link #transformCell(Cell)} for validation purpose. */
   private Cell referenceCell = null;
@@ -201,7 +202,7 @@ final public class FilterList extends FilterBase {
     for (int i = 0; i < listize; i++) {
       filters.get(i).reset();
     }
-    seekHintFilter = null;
+    seekHintFilters.clear();
   }
 
   @Override
@@ -290,6 +291,7 @@ final public class FilterList extends FilterBase {
       return ReturnCode.INCLUDE;
     }
     this.referenceCell = c;
+    seekHintFilters.clear();
 
     // Accumulates successive transformation of every filter that includes the Cell:
     Cell transformed = c;
@@ -321,10 +323,12 @@ final public class FilterList extends FilterBase {
           transformed = filter.transformCell(transformed);
           continue;
         case SEEK_NEXT_USING_HINT:
-          seekHintFilter = filter;
-          return code;
+          seekHintFilters.add(filter);
+          continue;
         default:
-          return code;
+          if (seekHintFilters.isEmpty()) {
+            return code;
+          }
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
         if (filter.filterAllRemaining()) {
@@ -360,6 +364,10 @@ final public class FilterList extends FilterBase {
           throw new IllegalStateException("Received code is not valid.");
         }
       }
+    }
+
+    if (!seekHintFilters.isEmpty()) {
+      return ReturnCode.SEEK_NEXT_USING_HINT;
     }
 
     // Save the transformed Cell for transform():
@@ -485,7 +493,17 @@ final public class FilterList extends FilterBase {
     }
     Cell keyHint = null;
     if (operator == Operator.MUST_PASS_ALL) {
-      keyHint = seekHintFilter.getNextCellHint(currentCell);
+      for (Filter filter : seekHintFilters) {
+        if (filter.filterAllRemaining()) continue;
+        Cell curKeyHint = filter.getNextCellHint(currentCell);
+        if (keyHint == null) {
+          keyHint = curKeyHint;
+          continue;
+        }
+        if (CellComparator.COMPARATOR.compare(keyHint, curKeyHint) < 0) {
+          keyHint = curKeyHint;
+        }
+      }
       return keyHint;
     }
 
