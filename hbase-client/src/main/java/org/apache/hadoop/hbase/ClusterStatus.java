@@ -25,10 +25,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.master.RegionState;
-
-import com.google.common.base.Objects;
 
 /**
  * Status information on the HBase cluster.
@@ -198,7 +197,6 @@ public class ClusterStatus {
       return false;
     }
     ClusterStatus other = (ClusterStatus) o;
-    //TODO Override the equals() methods in ServerLoad.
     return Objects.equal(getHBaseVersion(), other.getHBaseVersion()) &&
       Objects.equal(this.liveServers, other.liveServers) &&
       getDeadServerNames().containsAll(other.getDeadServerNames()) &&

@@ -81,6 +81,7 @@ public class TestClientClusterStatus {
     Assert.assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
     Assert.assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
     Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
+    Assert.assertTrue(origin.equals(defaults));
   }
 
   @Test
@@ -100,7 +101,7 @@ public class TestClientClusterStatus {
     Assert.assertNotNull(status.hashCode());
     ClusterStatus nullEqualsCheck =
         ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
-    Assert.assertNotNull(status.equals(nullEqualsCheck));
+    Assert.assertTrue(status.equals(nullEqualsCheck));
   }
 
   @Test
