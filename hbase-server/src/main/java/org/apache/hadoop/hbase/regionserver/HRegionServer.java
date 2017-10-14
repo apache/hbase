@@ -1236,7 +1236,7 @@ public class HRegionServer extends HasThread implements
     if (getNumberOfOnlineRegions() > 2) return false;
     boolean allUserRegionsOffline = true;
     for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
-      if (!e.getValue().getRegionInfo().isMetaTable()) {
+      if (!e.getValue().getRegionInfo().isMetaRegion()) {
         allUserRegionsOffline = false;
         break;
       }
@@ -2078,7 +2078,7 @@ public class HRegionServer extends HasThread implements
   public WAL getWAL(RegionInfo regionInfo) throws IOException {
     WAL wal;
     // _ROOT_ and hbase:meta regions have separate WAL.
-    if (regionInfo != null && regionInfo.isMetaTable()
+    if (regionInfo != null && regionInfo.isMetaRegion()
         && regionInfo.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       wal = walFactory.getMetaWAL(regionInfo.getEncodedNameAsBytes());
     } else if (regionInfo == null) {
@@ -2674,7 +2674,7 @@ public class HRegionServer extends HasThread implements
     try {
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
-        if (!r.getRegionInfo().isMetaTable() && r.isAvailable()) {
+        if (!r.getRegionInfo().isMetaRegion() && r.isAvailable()) {
           // Don't update zk with this close transition; pass false.
           closeRegionIgnoreErrors(r.getRegionInfo(), abort);
         }

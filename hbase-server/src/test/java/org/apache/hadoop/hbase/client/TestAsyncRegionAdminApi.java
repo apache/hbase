@@ -98,7 +98,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaTable()) {
+      if (!regionInfo.isMetaRegion()) {
         if (regionInfo.getRegionNameAsString().contains(tableName.getNameAsString())) {
           info = regionInfo;
           boolean catchNotServingException = false;
@@ -125,7 +125,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaTable()) {
+      if (!regionInfo.isMetaRegion()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
           admin.closeRegion(regionInfo.getRegionName(), Optional.empty()).get();
         }

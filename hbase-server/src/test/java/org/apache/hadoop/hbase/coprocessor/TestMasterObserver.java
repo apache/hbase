@@ -1926,7 +1926,7 @@ public class TestMasterObserver {
       int moveCnt = openRegions.size()/2;
       for (int i=0; i<moveCnt; i++) {
         RegionInfo info = openRegions.get(i);
-        if (!info.isMetaTable()) {
+        if (!info.isMetaRegion()) {
           master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
               openRegions.get(i).getEncodedNameAsBytes(), destRS));
         }

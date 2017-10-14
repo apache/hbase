@@ -1048,7 +1048,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * If so, the primary replica may be expected to be put on the master regionserver.
    */
   public boolean shouldBeOnMaster(RegionInfo region) {
-    return this.onlySystemTablesOnMaster && region.isSystemTable();
+    return this.onlySystemTablesOnMaster && region.getTable().isSystemTable();
   }
 
   /**

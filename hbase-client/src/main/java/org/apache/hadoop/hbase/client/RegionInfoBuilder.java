@@ -362,26 +362,10 @@ public class RegionInfoBuilder {
          Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
     }
 
-    /**
-     * @return true if this region is from hbase:meta
-     */
-    @Override
-    public boolean isMetaTable() {
-      return isMetaRegion();
-    }
-
     /** @return true if this region is a meta region */
     @Override
     public boolean isMetaRegion() {
        return tableName.equals(FIRST_META_REGIONINFO.getTable());
-    }
-
-    /**
-     * @return true if this region is from a system table
-     */
-    @Override
-    public boolean isSystemTable() {
-      return tableName.isSystemTable();
     }
 
     /**

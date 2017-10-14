@@ -117,7 +117,7 @@ public class FavoredNodesManager {
    * we apply any favored nodes logic on a region.
    */
   public static boolean isFavoredNodeApplicable(RegionInfo regionInfo) {
-    return !regionInfo.isSystemTable();
+    return !regionInfo.getTable().isSystemTable();
   }
 
   /**

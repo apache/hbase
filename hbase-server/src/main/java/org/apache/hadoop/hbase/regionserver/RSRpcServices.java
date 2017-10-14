@@ -550,7 +550,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private void mutateRows(final HRegion region,
       final List<ClientProtos.Action> actions,
       final CellScanner cellScanner, RegionActionResult.Builder builder) throws IOException {
-    if (!region.getRegionInfo().isMetaTable()) {
+    if (!region.getRegionInfo().isMetaRegion()) {
       regionServer.cacheFlusher.reclaimMemStoreMemory();
     }
     RowMutations rm = null;
@@ -604,7 +604,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                                     final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
                                     CompareOperator op, ByteArrayComparable comparator, RegionActionResult.Builder builder,
                                     ActivePolicyEnforcement spaceQuotaEnforcement) throws IOException {
-    if (!region.getRegionInfo().isMetaTable()) {
+    if (!region.getRegionInfo().isMetaRegion()) {
       regionServer.cacheFlusher.reclaimMemStoreMemory();
     }
     RowMutations rm = null;
@@ -983,7 +983,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         quota.addMutation(mutation);
       }
 
-      if (!region.getRegionInfo().isMetaTable()) {
+      if (!region.getRegionInfo().isMetaRegion()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
 
@@ -1095,7 +1095,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       requestCount.increment();
       requestRowActionCount.add(mutations.size());
-      if (!region.getRegionInfo().isMetaTable()) {
+      if (!region.getRegionInfo().isMetaRegion()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
       return region.batchReplay(mutations.toArray(
@@ -2697,7 +2697,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       HRegion region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
-      if (!region.getRegionInfo().isMetaTable()) {
+      if (!region.getRegionInfo().isMetaRegion()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;

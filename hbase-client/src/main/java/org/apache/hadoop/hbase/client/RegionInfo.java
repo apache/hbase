@@ -215,16 +215,6 @@ public interface RegionInfo {
   boolean isSplitParent();
 
   /**
-   * @return true if this region is from hbase:meta.
-   */
-  boolean isMetaTable();
-
-  /**
-   * @return true if this region is from a system table.
-   */
-  boolean isSystemTable();
-
-  /**
    * @return true if this region is a meta region.
    */
   boolean isMetaRegion();

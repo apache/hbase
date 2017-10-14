@@ -142,7 +142,7 @@ class AsyncRegionLocator {
   }
 
   void updateCachedLocation(HRegionLocation loc, Throwable exception) {
-    if (loc.getRegionInfo().isMetaTable()) {
+    if (loc.getRegion().isMetaRegion()) {
       metaRegionLocator.updateCachedLocation(loc, exception);
     } else {
       nonMetaRegionLocator.updateCachedLocation(loc, exception);
