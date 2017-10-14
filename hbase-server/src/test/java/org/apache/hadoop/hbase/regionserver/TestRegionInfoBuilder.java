@@ -189,7 +189,7 @@ public class TestRegionInfoBuilder {
 
   @Test
   public void testMetaTables() {
-    assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isMetaTable());
+    assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isMetaRegion());
   }
 
   @Test

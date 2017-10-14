@@ -2379,7 +2379,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return true;
     }
     long modifiedFlushCheckInterval = flushCheckInterval;
-    if (getRegionInfo().isSystemTable() &&
+    if (getRegionInfo().getTable().isSystemTable() &&
         getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       modifiedFlushCheckInterval = SYSTEM_CACHE_FLUSH_INTERVAL;
     }
@@ -7861,7 +7861,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public byte[] checkSplit() {
     // Can't split META
-    if (this.getRegionInfo().isMetaTable() ||
+    if (this.getRegionInfo().isMetaRegion() ||
         TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTable())) {
       if (shouldForceSplit()) {
         LOG.warn("Cannot split meta region in HBase 0.20 and above");
@@ -8244,7 +8244,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     buf.append(title + ", ");
     buf.append(getRegionInfo().toString());
     buf.append(getRegionInfo().isMetaRegion() ? " meta region " : " ");
-    buf.append(getRegionInfo().isMetaTable() ? " meta table " : " ");
     buf.append("stores: ");
     for (HStore s : stores.values()) {
       buf.append(s.getColumnFamilyDescriptor().getNameAsString());

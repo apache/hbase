@@ -169,7 +169,7 @@ public class TestImportTSVWithTTLs implements Configurable {
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
         Durability durability) throws IOException {
       Region region = e.getEnvironment().getRegion();
-      if (!region.getRegionInfo().isMetaTable()
+      if (!region.getRegionInfo().isMetaRegion()
           && !region.getRegionInfo().getTable().isSystemTable()) {
         // The put carries the TTL attribute
         if (put.getTTL() != Long.MAX_VALUE) {

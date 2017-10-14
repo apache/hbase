@@ -185,7 +185,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     List<Cell> cells = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
-    boolean control = throughputController != null && !store.getRegionInfo().isSystemTable();
+    boolean control = throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }

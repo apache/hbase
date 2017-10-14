@@ -157,7 +157,7 @@ class RegionLocationFinder {
     boolean includesUserTables = false;
     for (final RegionInfo hri : am.getAssignedRegions()) {
       cache.refresh(hri);
-      includesUserTables = includesUserTables || !hri.isSystemTable();
+      includesUserTables = includesUserTables || !hri.getTable().isSystemTable();
     }
     return includesUserTables;
   }

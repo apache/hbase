@@ -218,7 +218,7 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
         Method getRegion = methodMap.get("getRegion").get(rpcArgClass);
         regionSpecifier = (RegionSpecifier)getRegion.invoke(param, (Object[])null);
         Region region = rpcServices.getRegion(regionSpecifier);
-        if (region.getRegionInfo().isSystemTable()) {
+        if (region.getRegionInfo().getTable().isSystemTable()) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("High priority because region=" +
               region.getRegionInfo().getRegionNameAsString());
@@ -239,7 +239,7 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
         return HConstants.NORMAL_QOS;
       }
       RegionScanner scanner = rpcServices.getScanner(request.getScannerId());
-      if (scanner != null && scanner.getRegionInfo().isSystemTable()) {
+      if (scanner != null && scanner.getRegionInfo().getTable().isSystemTable()) {
         if (LOG.isTraceEnabled()) {
           // Scanner requests are small in size so TextFormat version should not overwhelm log.
           LOG.trace("High priority scanner request " + TextFormat.shortDebugString(request));

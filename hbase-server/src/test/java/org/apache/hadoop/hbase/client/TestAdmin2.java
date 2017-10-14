@@ -349,7 +349,7 @@ public class TestAdmin2 {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(tableName));
     List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaTable()) {
+      if (!regionInfo.isMetaRegion()) {
         if (regionInfo.getRegionNameAsString().contains(name)) {
           info = regionInfo;
           try {
@@ -374,7 +374,7 @@ public class TestAdmin2 {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaTable()) {
+      if (!regionInfo.isMetaRegion()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion2")) {
           info = regionInfo;
           admin.unassign(regionInfo.getRegionName(), true);

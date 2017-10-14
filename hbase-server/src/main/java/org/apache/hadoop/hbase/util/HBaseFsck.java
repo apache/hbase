@@ -4316,7 +4316,7 @@ public class HBaseFsck extends Configured implements Closeable {
     private List<RegionInfo> filterRegions(List<RegionInfo> regions) {
       List<RegionInfo> ret = Lists.newArrayList();
       for (RegionInfo hri : regions) {
-        if (hri.isMetaTable() || (!hbck.checkMetaOnly
+        if (hri.isMetaRegion() || (!hbck.checkMetaOnly
             && hbck.isTableIncluded(hri.getTable()))) {
           ret.add(hri);
         }

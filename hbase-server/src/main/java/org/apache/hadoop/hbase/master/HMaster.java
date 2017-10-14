@@ -1645,7 +1645,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     ServerName dest;
-    List<ServerName> exclude = hri.isSystemTable() ? assignmentManager.getExcludedServersForSystemTable()
+    List<ServerName> exclude = hri.getTable().isSystemTable() ? assignmentManager.getExcludedServersForSystemTable()
         : new ArrayList<>(1);
     if (destServerName != null && exclude.contains(ServerName.valueOf(Bytes.toString(destServerName)))) {
       LOG.info(

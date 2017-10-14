@@ -149,7 +149,7 @@ public class BaseTestHBaseFsck {
       RegionInfo hri) throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(conn, sn, hri);
-      if (!hri.isMetaTable()) {
+      if (!hri.isMetaRegion()) {
         admin.offline(hri.getRegionName());
       }
     } catch (IOException ioe) {

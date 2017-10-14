@@ -119,7 +119,7 @@ abstract class StoreFlusher {
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush
-    boolean control = throughputController != null && !store.getRegionInfo().isSystemTable();
+    boolean control = throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }

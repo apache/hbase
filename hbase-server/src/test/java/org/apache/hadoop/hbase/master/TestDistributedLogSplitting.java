@@ -836,7 +836,7 @@ public class TestDistributedLogSplitting {
       Iterator<RegionInfo> it = regions.iterator();
       while (it.hasNext()) {
         RegionInfo region = it.next();
-        if (region.isMetaTable()) {
+        if (region.isMetaRegion()) {
           it.remove();
         }
       }
@@ -1289,7 +1289,7 @@ public class TestDistributedLogSplitting {
       Iterator<RegionInfo> it = regions.iterator();
       while (it.hasNext()) {
         RegionInfo region = it.next();
-        if (region.isMetaTable()
+        if (region.isMetaRegion()
             || region.getEncodedName().equals(
             RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName())) {
           it.remove();
@@ -1385,7 +1385,7 @@ public class TestDistributedLogSplitting {
       Iterator<RegionInfo> it = regions.iterator();
       while (it.hasNext()) {
         RegionInfo region = it.next();
-        if (region.isMetaTable()
+        if (region.isMetaRegion()
             || region.getEncodedName().equals(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName())) {
           it.remove();
         }
