@@ -184,6 +184,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecomm
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -399,7 +403,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> listTables(boolean includeSysTables) {
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptors(boolean includeSysTables) {
     return getTableDescriptors(RequestConverter.buildGetTableDescriptorsRequest(null,
       includeSysTables));
   }
@@ -408,7 +412,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    * {@link #listTables(boolean)}
    */
   @Override
-  public CompletableFuture<List<TableDescriptor>> listTables(Pattern pattern,
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
       boolean includeSysTables) {
     Preconditions.checkNotNull(pattern,
       "pattern is null. If you don't specify a pattern, use listTables(boolean) instead");
@@ -450,7 +454,31 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<TableDescriptor> getTableDescriptor(TableName tableName) {
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name) {
+    return this.<List<TableDescriptor>> newMasterCaller().action((controller, stub) -> this
+        .<ListTableDescriptorsByNamespaceRequest, ListTableDescriptorsByNamespaceResponse,
+        List<TableDescriptor>> call(
+          controller, stub,
+          ListTableDescriptorsByNamespaceRequest.newBuilder().setNamespaceName(name).build(),
+          (s, c, req, done) -> s.listTableDescriptorsByNamespace(c, req, done),
+          (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByNamespace(String name) {
+    return this.<List<TableName>> newMasterCaller().action((controller, stub) -> this
+        .<ListTableNamesByNamespaceRequest, ListTableNamesByNamespaceResponse,
+        List<TableName>> call(
+          controller, stub,
+          ListTableNamesByNamespaceRequest.newBuilder().setNamespaceName(name).build(),
+          (s, c, req, done) -> s.listTableNamesByNamespace(c, req, done),
+          (resp) -> ProtobufUtil.toTableNameList(resp.getTableNameList())))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<TableDescriptor> getDescriptor(TableName tableName) {
     CompletableFuture<TableDescriptor> future = new CompletableFuture<>();
     this.<List<TableSchema>> newMasterCaller()
         .action(
@@ -727,7 +755,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<RegionInfo>> getOnlineRegions(ServerName serverName) {
+  public CompletableFuture<List<RegionInfo>> getRegions(ServerName serverName) {
     return this.<List<RegionInfo>> newAdminCaller()
         .action((controller, stub) -> this
             .<GetOnlineRegionRequest, GetOnlineRegionResponse, List<RegionInfo>> adminCall(
@@ -738,7 +766,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<RegionInfo>> getTableRegions(TableName tableName) {
+  public CompletableFuture<List<RegionInfo>> getRegions(TableName tableName) {
     if (tableName.equals(META_TABLE_NAME)) {
       return connection.getLocator().getRegionLocation(tableName, null, null, operationTimeoutNs)
           .thenApply(loc -> Collections.singletonList(loc.getRegion()));
@@ -873,7 +901,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Void> compactRegionServer(ServerName sn, boolean major) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    getOnlineRegions(sn).whenComplete((hRegionInfos, err) -> {
+    getRegions(sn).whenComplete((hRegionInfos, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
         return;
@@ -1043,22 +1071,22 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setMergeOn(boolean on) {
+  public CompletableFuture<Boolean> mergeSwitch(boolean on) {
     return setSplitOrMergeOn(on, MasterSwitchType.MERGE);
   }
 
   @Override
-  public CompletableFuture<Boolean> isMergeOn() {
+  public CompletableFuture<Boolean> isMergeEnabled() {
     return isSplitOrMergeOn(MasterSwitchType.MERGE);
   }
 
   @Override
-  public CompletableFuture<Boolean> setSplitOn(boolean on) {
+  public CompletableFuture<Boolean> splitSwitch(boolean on) {
     return setSplitOrMergeOn(on, MasterSwitchType.SPLIT);
   }
 
   @Override
-  public CompletableFuture<Boolean> isSplitOn() {
+  public CompletableFuture<Boolean> isSplitEnabled() {
     return isSplitOrMergeOn(MasterSwitchType.SPLIT);
   }
 
@@ -1622,7 +1650,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<TableCFs>> listReplicatedTableCFs() {
     CompletableFuture<List<TableCFs>> future = new CompletableFuture<List<TableCFs>>();
-    listTables().whenComplete(
+    listTableDescriptors().whenComplete(
       (tables, error) -> {
         if (!completeExceptionally(future, error)) {
           List<TableCFs> replicatedTableCFs = new ArrayList<>();
@@ -2062,7 +2090,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<byte[]> execProcedureWithRet(String signature, String instance,
+  public CompletableFuture<byte[]> execProcedureWithReturn(String signature, String instance,
       Map<String, String> props) {
     ProcedureDescription proDesc =
         ProtobufUtil.buildProcedureDescription(signature, instance, props);
@@ -2861,7 +2889,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setBalancerOn(final boolean on) {
+  public CompletableFuture<Boolean> balancerSwitch(final boolean on) {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2883,7 +2911,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isBalancerOn() {
+  public CompletableFuture<Boolean> isBalancerEnabled() {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2894,7 +2922,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setNormalizerOn(boolean on) {
+  public CompletableFuture<Boolean> normalizerSwitch(boolean on) {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2906,7 +2934,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isNormalizerOn() {
+  public CompletableFuture<Boolean> isNormalizerEnabled() {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2929,7 +2957,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setCleanerChoreOn(boolean enabled) {
+  public CompletableFuture<Boolean> cleanerChoreSwitch(boolean enabled) {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2941,7 +2969,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isCleanerChoreOn() {
+  public CompletableFuture<Boolean> isCleanerChoreEnabled() {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2965,7 +2993,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> setCatalogJanitorOn(boolean enabled) {
+  public CompletableFuture<Boolean> catalogJanitorSwitch(boolean enabled) {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -2977,7 +3005,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Boolean> isCatalogJanitorOn() {
+  public CompletableFuture<Boolean> isCatalogJanitorEnabled() {
     return this
         .<Boolean> newMasterCaller()
         .action(
@@ -3125,7 +3153,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<byte[][]> getTableSplits(TableName tableName) {
     CompletableFuture<byte[][]> future = new CompletableFuture<>();
-    getTableRegions(tableName).whenComplete((regions, err2) -> {
+    getRegions(tableName).whenComplete((regions, err2) -> {
       if (err2 != null) {
         future.completeExceptionally(err2);
         return;
@@ -3202,7 +3230,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err);
           return;
         }
-        getTableDescriptor(tableName).whenComplete(
+        getDescriptor(tableName).whenComplete(
           (tableDesc, err1) -> {
             if (err1 != null) {
               future.completeExceptionally(err1);
@@ -3249,7 +3277,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<Void> compareTableWithPeerCluster(TableName tableName,
       TableDescriptor tableDesc, ReplicationPeerDescription peer, AsyncAdmin peerAdmin) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    peerAdmin.getTableDescriptor(tableName).whenComplete(
+    peerAdmin.getDescriptor(tableName).whenComplete(
       (peerTableDesc, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
@@ -3280,7 +3308,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
    */
   private CompletableFuture<Void> setTableReplication(TableName tableName, boolean enableRep) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    getTableDescriptor(tableName).whenComplete(
+    getDescriptor(tableName).whenComplete(
       (tableDesc, err) -> {
         if (err != null) {
           future.completeExceptionally(err);

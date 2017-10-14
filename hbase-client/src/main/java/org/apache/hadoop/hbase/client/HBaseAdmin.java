@@ -30,11 +30,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -224,8 +224,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 @InterfaceStability.Evolving
 public class HBaseAdmin implements Admin {
   private static final Log LOG = LogFactory.getLog(HBaseAdmin.class);
-
-  private static final String ZK_IDENTIFIER_PREFIX =  "hbase-admin-on-";
 
   private ClusterConnection connection;
 
@@ -1230,14 +1228,17 @@ public class HBaseAdmin implements Admin {
     compactRegion(regionName, columnFamily, false);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public void compactRegionServer(final ServerName sn, boolean major)
-      throws IOException, InterruptedException {
-    for (RegionInfo region : getRegions(sn)) {
-      compact(this.connection.getAdmin(sn), region, major, null);
+  public void compactRegionServer(final ServerName serverName) throws IOException {
+    for (RegionInfo region : getRegions(serverName)) {
+      compact(this.connection.getAdmin(serverName), region, false, null);
+    }
+  }
+
+  @Override
+  public void majorCompactRegionServer(final ServerName serverName) throws IOException {
+    for (RegionInfo region : getRegions(serverName)) {
+      compact(this.connection.getAdmin(serverName), region, true, null);
     }
   }
 
@@ -2085,21 +2086,11 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public Map<byte[], RegionLoad> getRegionLoad(final ServerName sn) throws IOException {
-    return getRegionLoad(sn, null);
-  }
-
-  @Override
-  public Map<byte[], RegionLoad> getRegionLoad(final ServerName sn, final TableName tableName)
+  public List<RegionLoad> getRegionLoads(ServerName serverName, TableName tableName)
       throws IOException {
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
     HBaseRpcController controller = rpcControllerFactory.newController();
-    List<RegionLoad> regionLoads = ProtobufUtil.getRegionLoad(controller, admin, tableName);
-    Map<byte[], RegionLoad> resultMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (RegionLoad regionLoad : regionLoads) {
-      resultMap.put(regionLoad.getName(), regionLoad);
-    }
-    return resultMap;
+    return ProtobufUtil.getRegionLoad(controller, admin, tableName);
   }
 
   @Override
@@ -3035,6 +3026,18 @@ public class HBaseAdmin implements Admin {
     return QuotaRetriever.open(conf, filter);
   }
 
+  @Override
+  public List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException {
+    List<QuotaSettings> quotas = new LinkedList<>();
+    try (QuotaRetriever retriever = QuotaRetriever.open(conf, filter)) {
+      Iterator<QuotaSettings> iterator = retriever.iterator();
+      while (iterator.hasNext()) {
+        quotas.add(iterator.next());
+      }
+    }
+    return quotas;
+  }
+
   private <C extends RetryingCallable<V> & Closeable, V> V executeCallable(C callable)
       throws IOException {
     return executeCallable(callable, rpcCallerFactory, operationTimeout, rpcTimeout);
@@ -3793,34 +3796,46 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public boolean[] splitOrMergeEnabledSwitch(final boolean enabled, final boolean synchronous,
-                                          final MasterSwitchType... switchTypes)
-    throws IOException {
-    return executeCallable(new MasterCallable<boolean[]>(getConnection(),
-        getRpcControllerFactory()) {
+  public boolean splitSwitch(boolean enabled, boolean synchronous) throws IOException {
+    return splitOrMergeSwitch(enabled, synchronous, MasterSwitchType.SPLIT);
+  }
+
+  @Override
+  public boolean mergeSwitch(boolean enabled, boolean synchronous) throws IOException {
+    return splitOrMergeSwitch(enabled, synchronous, MasterSwitchType.MERGE);
+  }
+
+  private boolean splitOrMergeSwitch(boolean enabled, boolean synchronous,
+      MasterSwitchType switchType) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override
-      protected boolean[] rpcCall() throws Exception {
-        MasterProtos.SetSplitOrMergeEnabledResponse response =
-            master.setSplitOrMergeEnabled(getRpcController(),
-                RequestConverter.buildSetSplitOrMergeEnabledRequest(enabled, synchronous,
-                    switchTypes));
-        boolean[] result = new boolean[switchTypes.length];
-        int i = 0;
-        for (Boolean prevValue : response.getPrevValueList()) {
-          result[i++] = prevValue;
-        }
-        return result;
+      protected Boolean rpcCall() throws Exception {
+        MasterProtos.SetSplitOrMergeEnabledResponse response = master.setSplitOrMergeEnabled(
+          getRpcController(),
+          RequestConverter.buildSetSplitOrMergeEnabledRequest(enabled, synchronous, switchType));
+        return response.getPrevValueList().get(0);
       }
     });
   }
 
   @Override
-  public boolean splitOrMergeEnabledSwitch(final MasterSwitchType switchType) throws IOException {
+  public boolean isSplitEnabled() throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Boolean rpcCall() throws Exception {
         return master.isSplitOrMergeEnabled(getRpcController(),
-          RequestConverter.buildIsSplitOrMergeEnabledRequest(switchType)).getEnabled();
+          RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.SPLIT)).getEnabled();
+      }
+    });
+  }
+
+  @Override
+  public boolean isMergeEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return master.isSplitOrMergeEnabled(getRpcController(),
+          RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
       }
     });
   }

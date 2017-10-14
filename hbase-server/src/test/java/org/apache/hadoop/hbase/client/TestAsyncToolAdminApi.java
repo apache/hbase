@@ -35,93 +35,93 @@ public class TestAsyncToolAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testBalancer() throws Exception {
-    boolean initialState = admin.isBalancerOn().get();
+    boolean initialState = admin.isBalancerEnabled().get();
 
     // Start the balancer, wait for it.
-    boolean prevState = admin.setBalancerOn(!initialState).get();
+    boolean prevState = admin.balancerSwitch(!initialState).get();
 
     // The previous state should be the original state we observed
     assertEquals(initialState, prevState);
 
     // Current state should be opposite of the original
-    assertEquals(!initialState, admin.isBalancerOn().get());
+    assertEquals(!initialState, admin.isBalancerEnabled().get());
 
     // Reset it back to what it was
-    prevState = admin.setBalancerOn(initialState).get();
+    prevState = admin.balancerSwitch(initialState).get();
 
     // The previous state should be the opposite of the initial state
     assertEquals(!initialState, prevState);
 
     // Current state should be the original state again
-    assertEquals(initialState, admin.isBalancerOn().get());
+    assertEquals(initialState, admin.isBalancerEnabled().get());
   }
 
   @Test
   public void testNormalizer() throws Exception {
-    boolean initialState = admin.isNormalizerOn().get();
+    boolean initialState = admin.isNormalizerEnabled().get();
 
     // flip state
-    boolean prevState = admin.setNormalizerOn(!initialState).get();
+    boolean prevState = admin.normalizerSwitch(!initialState).get();
 
     // The previous state should be the original state we observed
     assertEquals(initialState, prevState);
 
     // Current state should be opposite of the original
-    assertEquals(!initialState, admin.isNormalizerOn().get());
+    assertEquals(!initialState, admin.isNormalizerEnabled().get());
 
     // Reset it back to what it was
-    prevState = admin.setNormalizerOn(initialState).get();
+    prevState = admin.normalizerSwitch(initialState).get();
 
     // The previous state should be the opposite of the initial state
     assertEquals(!initialState, prevState);
 
     // Current state should be the original state again
-    assertEquals(initialState, admin.isNormalizerOn().get());
+    assertEquals(initialState, admin.isNormalizerEnabled().get());
   }
 
   @Test
   public void testCleanerChore() throws Exception {
-    boolean initialState = admin.isCleanerChoreOn().get();
+    boolean initialState = admin.isCleanerChoreEnabled().get();
 
     // flip state
-    boolean prevState = admin.setCleanerChoreOn(!initialState).get();
+    boolean prevState = admin.cleanerChoreSwitch(!initialState).get();
 
     // The previous state should be the original state we observed
     assertEquals(initialState, prevState);
 
     // Current state should be opposite of the original
-    assertEquals(!initialState, admin.isCleanerChoreOn().get());
+    assertEquals(!initialState, admin.isCleanerChoreEnabled().get());
 
     // Reset it back to what it was
-    prevState = admin.setCleanerChoreOn(initialState).get();
+    prevState = admin.cleanerChoreSwitch(initialState).get();
 
     // The previous state should be the opposite of the initial state
     assertEquals(!initialState, prevState);
 
     // Current state should be the original state again
-    assertEquals(initialState, admin.isCleanerChoreOn().get());
+    assertEquals(initialState, admin.isCleanerChoreEnabled().get());
   }
 
   @Test
   public void testCatalogJanitor() throws Exception {
-    boolean initialState = admin.isCatalogJanitorOn().get();
+    boolean initialState = admin.isCatalogJanitorEnabled().get();
 
     // flip state
-    boolean prevState = admin.setCatalogJanitorOn(!initialState).get();
+    boolean prevState = admin.catalogJanitorSwitch(!initialState).get();
 
     // The previous state should be the original state we observed
     assertEquals(initialState, prevState);
 
     // Current state should be opposite of the original
-    assertEquals(!initialState, admin.isCatalogJanitorOn().get());
+    assertEquals(!initialState, admin.isCatalogJanitorEnabled().get());
 
     // Reset it back to what it was
-    prevState = admin.setCatalogJanitorOn(initialState).get();
+    prevState = admin.catalogJanitorSwitch(initialState).get();
 
     // The previous state should be the opposite of the initial state
     assertEquals(!initialState, prevState);
 
     // Current state should be the original state again
-    assertEquals(initialState, admin.isCatalogJanitorOn().get());
+    assertEquals(initialState, admin.isCatalogJanitorEnabled().get());
   }
 }

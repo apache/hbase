@@ -152,7 +152,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testMoveRegion() throws Exception {
-    admin.setBalancerOn(false).join();
+    admin.balancerSwitch(false).join();
 
     RegionInfo hri = createTableAndGetOneRegion(tableName);
     RawAsyncHBaseAdmin rawAdmin = (RawAsyncHBaseAdmin) ASYNC_CONN.getAdmin();
@@ -186,7 +186,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       }
       Thread.sleep(100);
     }
-    admin.setBalancerOn(true).join();
+    admin.balancerSwitch(true).join();
   }
 
   @Test
@@ -202,7 +202,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
           rs -> {
             ServerName serverName = rs.getServerName();
             try {
-              Assert.assertEquals(admin.getOnlineRegions(serverName).get().size(), rs
+              Assert.assertEquals(admin.getRegions(serverName).get().size(), rs
                   .getRegions().size());
             } catch (Exception e) {
               fail("admin.getOnlineRegions() method throws a exception: " + e.getMessage());
@@ -266,18 +266,18 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     int originalCount = regionLocations.size();
 
     initSplitMergeSwitch();
-    assertTrue(admin.setSplitOn(false).get());
+    assertTrue(admin.splitSwitch(false).get());
     try {
       admin.split(tableName, Bytes.toBytes(rows / 2)).join();
     } catch (Exception e){
       //Expected
     }
-    int count = admin.getTableRegions(tableName).get().size();
+    int count = admin.getRegions(tableName).get().size();
     assertTrue(originalCount == count);
 
-    assertFalse(admin.setSplitOn(true).get());
+    assertFalse(admin.splitSwitch(true).get());
     admin.split(tableName).join();
-    while ((count = admin.getTableRegions(tableName).get().size()) == originalCount) {
+    while ((count = admin.getRegions(tableName).get().size()) == originalCount) {
       Threads.sleep(100);
     }
     assertTrue(originalCount < count);
@@ -299,36 +299,36 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     initSplitMergeSwitch();
     admin.split(tableName).join();
     int postSplitCount = originalCount;
-    while ((postSplitCount = admin.getTableRegions(tableName).get().size()) == originalCount) {
+    while ((postSplitCount = admin.getRegions(tableName).get().size()) == originalCount) {
       Threads.sleep(100);
     }
     assertTrue("originalCount=" + originalCount + ", postSplitCount=" + postSplitCount,
       originalCount != postSplitCount);
 
     // Merge switch is off so merge should NOT succeed.
-    assertTrue(admin.setMergeOn(false).get());
-    List<RegionInfo> regions = admin.getTableRegions(tableName).get();
+    assertTrue(admin.mergeSwitch(false).get());
+    List<RegionInfo> regions = admin.getRegions(tableName).get();
     assertTrue(regions.size() > 1);
     admin.mergeRegions(regions.get(0).getRegionName(), regions.get(1).getRegionName(), true).join();
-    int count = admin.getTableRegions(tableName).get().size();
+    int count = admin.getRegions(tableName).get().size();
     assertTrue("postSplitCount=" + postSplitCount + ", count=" + count, postSplitCount == count);
 
     // Merge switch is on so merge should succeed.
-    assertFalse(admin.setMergeOn(true).get());
+    assertFalse(admin.mergeSwitch(true).get());
     admin.mergeRegions(regions.get(0).getRegionName(), regions.get(1).getRegionName(), true).join();
-    count = admin.getTableRegions(tableName).get().size();
+    count = admin.getRegions(tableName).get().size();
     assertTrue((postSplitCount / 2) == count);
   }
 
   private void initSplitMergeSwitch() throws Exception {
-    if (!admin.isSplitOn().get()) {
-      admin.setSplitOn(true).get();
+    if (!admin.isSplitEnabled().get()) {
+      admin.splitSwitch(true).get();
     }
-    if (!admin.isMergeOn().get()) {
-      admin.setMergeOn(true).get();
+    if (!admin.isMergeEnabled().get()) {
+      admin.mergeSwitch(true).get();
     }
-    assertTrue(admin.isSplitOn().get());
-    assertTrue(admin.isMergeOn().get());
+    assertTrue(admin.isSplitEnabled().get());
+    assertTrue(admin.isMergeEnabled().get());
   }
 
   @Test
