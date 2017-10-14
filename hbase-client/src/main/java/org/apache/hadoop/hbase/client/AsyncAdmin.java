@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -61,8 +62,8 @@ public interface AsyncAdmin {
    * List all the userspace tables.
    * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
-  default CompletableFuture<List<TableDescriptor>> listTables() {
-    return listTables(false);
+  default CompletableFuture<List<TableDescriptor>> listTableDescriptors() {
+    return listTableDescriptors(false);
   }
 
   /**
@@ -70,7 +71,7 @@ public interface AsyncAdmin {
    * @param includeSysTables False to match only against userspace tables
    * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<List<TableDescriptor>> listTables(boolean includeSysTables);
+  CompletableFuture<List<TableDescriptor>> listTableDescriptors(boolean includeSysTables);
 
   /**
    * List all the tables matching the given pattern.
@@ -78,7 +79,15 @@ public interface AsyncAdmin {
    * @param includeSysTables False to match only against userspace tables
    * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<List<TableDescriptor>> listTables(Pattern pattern, boolean includeSysTables);
+  CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
+      boolean includeSysTables);
+
+  /**
+   * Get list of table descriptors by namespace.
+   * @param name namespace name
+   * @return returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name);
 
   /**
    * List all of the names of userspace tables.
@@ -105,11 +114,18 @@ public interface AsyncAdmin {
   CompletableFuture<List<TableName>> listTableNames(Pattern pattern, boolean includeSysTables);
 
   /**
+   * Get list of table names by namespace.
+   * @param name namespace name
+   * @return The list of table names in the namespace wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableName>> listTableNamesByNamespace(String name);
+
+  /**
    * Method for getting the tableDescriptor
    * @param tableName as a {@link TableName}
    * @return the read-only tableDescriptor wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<TableDescriptor> getTableDescriptor(TableName tableName);
+  CompletableFuture<TableDescriptor> getDescriptor(TableName tableName);
 
   /**
    * Creates a new table.
@@ -140,7 +156,7 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys);
 
-  /*
+  /**
    * Modify an existing table, more IRB friendly version.
    * @param desc modified description of the table
    */
@@ -259,12 +275,12 @@ public interface AsyncAdmin {
   /**
    * Get all the online regions on a region server.
    */
-  CompletableFuture<List<RegionInfo>> getOnlineRegions(ServerName serverName);
+  CompletableFuture<List<RegionInfo>> getRegions(ServerName serverName);
 
   /**
    * Get the regions of a given table.
    */
-  CompletableFuture<List<RegionInfo>> getTableRegions(TableName tableName);
+  CompletableFuture<List<RegionInfo>> getRegions(TableName tableName);
 
   /**
    * Flush a table.
@@ -363,28 +379,28 @@ public interface AsyncAdmin {
    * @param on
    * @return Previous switch value wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> setMergeOn(boolean on);
+  CompletableFuture<Boolean> mergeSwitch(boolean on);
 
   /**
    * Query the current state of the Merge switch.
    * @return true if the switch is on, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> isMergeOn();
+  CompletableFuture<Boolean> isMergeEnabled();
 
   /**
    * Turn the Split switch on or off.
    * @param on
    * @return Previous switch value wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> setSplitOn(boolean on);
+  CompletableFuture<Boolean> splitSwitch(boolean on);
 
   /**
    * Query the current state of the Split switch.
    * @return true if the switch is on, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> isSplitOn();
+  CompletableFuture<Boolean> isSplitEnabled();
 
   /**
    * Merge two regions.
@@ -746,7 +762,7 @@ public interface AsyncAdmin {
    * @param props Property/Value pairs of properties passing to the procedure
    * @return data returned after procedure execution. null if no return data.
    */
-  CompletableFuture<byte[]> execProcedureWithRet(String signature, String instance,
+  CompletableFuture<byte[]> execProcedureWithReturn(String signature, String instance,
       Map<String, String> props);
 
   /**
@@ -840,6 +856,14 @@ public interface AsyncAdmin {
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
     return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).thenApply(ClusterStatus::getServers);
+  }
+
+  /**
+   * @return a list of master coprocessors wrapped by {@link CompletableFuture}
+   */
+  default CompletableFuture<List<String>> getMasterCoprocessors() {
+    return getClusterStatus(EnumSet.of(Option.MASTER_COPROCESSORS))
+        .thenApply(ClusterStatus::getMasterCoprocessors).thenApply(Arrays::asList);
   }
 
   /**
@@ -966,7 +990,7 @@ public interface AsyncAdmin {
    * @param on
    * @return Previous balancer value wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<Boolean> setBalancerOn(boolean on);
+  CompletableFuture<Boolean> balancerSwitch(boolean on);
 
   /**
    * Invoke the balancer. Will run the balancer and if regions to move, it will go ahead and do the
@@ -993,21 +1017,21 @@ public interface AsyncAdmin {
    * @return true if the balance switch is on, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  CompletableFuture<Boolean> isBalancerOn();
+  CompletableFuture<Boolean> isBalancerEnabled();
 
   /**
    * Set region normalizer on/off.
    * @param on whether normalizer should be on or off
    * @return Previous normalizer value wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> setNormalizerOn(boolean on);
+  CompletableFuture<Boolean> normalizerSwitch(boolean on);
 
   /**
    * Query the current state of the region normalizer
    * @return true if region normalizer is on, false otherwise. The return value will be wrapped by a
    *         {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> isNormalizerOn();
+  CompletableFuture<Boolean> isNormalizerEnabled();
 
   /**
    * Invoke region normalizer. Can NOT run for various reasons. Check logs.
@@ -1021,14 +1045,14 @@ public interface AsyncAdmin {
    * @param on
    * @return Previous cleaner state wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> setCleanerChoreOn(boolean on);
+  CompletableFuture<Boolean> cleanerChoreSwitch(boolean on);
 
   /**
    * Query the current state of the cleaner chore.
    * @return true if cleaner chore is on, false otherwise. The return value will be wrapped by
    *         a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> isCleanerChoreOn();
+  CompletableFuture<Boolean> isCleanerChoreEnabled();
 
   /**
    * Ask for cleaner chore to run.
@@ -1042,14 +1066,14 @@ public interface AsyncAdmin {
    * @param on
    * @return the previous state wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> setCatalogJanitorOn(boolean on);
+  CompletableFuture<Boolean> catalogJanitorSwitch(boolean on);
 
   /**
    * Query on the catalog janitor state.
    * @return true if the catalog janitor is on, false otherwise. The return value will be
    *         wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<Boolean> isCatalogJanitorOn();
+  CompletableFuture<Boolean> isCatalogJanitorEnabled();
 
   /**
    * Ask for a scan of the catalog table.

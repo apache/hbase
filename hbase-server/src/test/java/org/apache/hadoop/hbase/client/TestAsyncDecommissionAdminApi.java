@@ -56,7 +56,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     // leaving one online.
     int i;
     for (i = 0; i < clusterRegionServers.size(); i++) {
-      List<RegionInfo> regionsOnServer = admin.getOnlineRegions(clusterRegionServers.get(i)).get();
+      List<RegionInfo> regionsOnServer = admin.getRegions(clusterRegionServers.get(i)).get();
       if (regionsOnServer.size() > 0) {
         serversToDecommssion.put(clusterRegionServers.get(i), regionsOnServer);
         break;

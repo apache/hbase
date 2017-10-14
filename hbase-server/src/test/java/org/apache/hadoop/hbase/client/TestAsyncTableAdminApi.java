@@ -76,7 +76,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testListTables() throws Exception {
-    int numTables = admin.listTables().get().size();
+    int numTables = admin.listTableDescriptors().get().size();
     final TableName tableName1 = TableName.valueOf(tableName.getNameAsString() + "1");
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "2");
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "3");
@@ -85,7 +85,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       createTableWithDefaultConf(tables[i]);
     }
 
-    List<TableDescriptor> tableDescs = admin.listTables().get();
+    List<TableDescriptor> tableDescs = admin.listTableDescriptors().get();
     int size = tableDescs.size();
     assertTrue(size >= tables.length);
     for (int i = 0; i < tables.length && i < size; i++) {
@@ -118,7 +118,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       admin.deleteTable(tables[i]).join();
     }
 
-    tableDescs = admin.listTables(true).get();
+    tableDescs = admin.listTableDescriptors(true).get();
     assertTrue("Not found system tables", tableDescs.size() > 0);
     tableNames = admin.listTableNames(true).get();
     assertTrue("Not found system tables", tableNames.size() > 0);
@@ -134,16 +134,16 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     TableDescriptor desc = builder.build();
     admin.createTable(desc).join();
     ModifyableTableDescriptor modifyableDesc = ((ModifyableTableDescriptor) desc);
-    TableDescriptor confirmedHtd = admin.getTableDescriptor(tableName).get();
+    TableDescriptor confirmedHtd = admin.getDescriptor(tableName).get();
     assertEquals(modifyableDesc.compareTo((ModifyableTableDescriptor) confirmedHtd), 0);
   }
 
   @Test
   public void testCreateTable() throws Exception {
-    List<TableDescriptor> tables = admin.listTables().get();
+    List<TableDescriptor> tables = admin.listTableDescriptors().get();
     int numTables = tables.size();
     createTableWithDefaultConf(tableName);
-    tables = admin.listTables().get();
+    tables = admin.listTableDescriptors().get();
     assertEquals(numTables + 1, tables.size());
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
         .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
@@ -650,7 +650,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     // Modify colymn family
     admin.modifyColumnFamily(tableName, cfd).join();
 
-    TableDescriptor htd = admin.getTableDescriptor(tableName).get();
+    TableDescriptor htd = admin.getDescriptor(tableName).get();
     ColumnFamilyDescriptor hcfd = htd.getColumnFamily(FAMILY_0);
     assertTrue(hcfd.getBlocksize() == newBlockSize);
   }
@@ -720,7 +720,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
       throws Exception {
     // Verify descriptor from master
-    TableDescriptor htd = admin.getTableDescriptor(tableName).get();
+    TableDescriptor htd = admin.getDescriptor(tableName).get();
     verifyTableDescriptor(htd, tableName, families);
 
     // Verify descriptor from HDFS

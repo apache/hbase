@@ -87,7 +87,7 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testExecProcedureWithRet() throws Exception {
-    byte[] result = admin.execProcedureWithRet(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
+    byte[] result = admin.execProcedureWithReturn(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
       "myTest2", new HashMap<>()).get();
     assertArrayEquals("Incorrect return data from execProcedure",
       SimpleMasterProcedureManager.SIMPLE_DATA.getBytes(), result);

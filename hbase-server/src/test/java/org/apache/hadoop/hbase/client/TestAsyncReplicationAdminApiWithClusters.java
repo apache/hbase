@@ -114,13 +114,13 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     // default replication scope is local
     createTableWithDefaultConf(tableName);
     admin.enableTableReplication(tableName).join();
-    TableDescriptor tableDesc = admin.getTableDescriptor(tableName).get();
+    TableDescriptor tableDesc = admin.getDescriptor(tableName).get();
     for (ColumnFamilyDescriptor fam : tableDesc.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }
 
     admin.disableTableReplication(tableName).join();
-    tableDesc = admin.getTableDescriptor(tableName).get();
+    tableDesc = admin.getDescriptor(tableName).get();
     for (ColumnFamilyDescriptor fam : tableDesc.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_LOCAL, fam.getScope());
     }
@@ -140,7 +140,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     createTableWithDefaultConf(admin, tableName);
     createTableWithDefaultConf(admin2, tableName);
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(admin.getTableDescriptor(tableName).get());
+        TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).get());
     builder.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("newFamily"))
         .build());
     admin2.disableTable(tableName).join();
@@ -158,7 +158,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     admin.modifyTable(builder.build()).join();
     admin.enableTable(tableName).join();
     admin.enableTableReplication(tableName).join();
-    TableDescriptor tableDesc = admin.getTableDescriptor(tableName).get();
+    TableDescriptor tableDesc = admin.getDescriptor(tableName).get();
     for (ColumnFamilyDescriptor fam : tableDesc.getColumnFamilies()) {
       assertEquals(HConstants.REPLICATION_SCOPE_GLOBAL, fam.getScope());
     }

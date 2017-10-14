@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -916,15 +918,43 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Compact all regions on the region server. Asynchronous operation in that this method requests
-   * that a Compaction run and then it returns. It does not wait on the completion of Compaction
-   * (it can take a while).
+   * that a Compaction run and then it returns. It does not wait on the completion of Compaction (it
+   * can take a while).
    * @param sn the region server name
    * @param major if it's major compaction
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #compactRegionServer(ServerName)} or
+   *             {@link #majorCompactRegionServer(ServerName)}.
    */
-  void compactRegionServer(ServerName sn, boolean major)
-    throws IOException, InterruptedException;
+  @Deprecated
+  default void compactRegionServer(ServerName sn, boolean major) throws IOException,
+      InterruptedException {
+    if (major) {
+      majorCompactRegionServer(sn);
+    } else {
+      compactRegionServer(sn);
+    }
+  }
+
+  /**
+   * Compact all regions on the region server. Asynchronous operation in that this method requests
+   * that a Compaction run and then it returns. It does not wait on the completion of Compaction (it
+   * can take a while).
+   * @param serverName the region server name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void compactRegionServer(ServerName serverName) throws IOException;
+
+  /**
+   * Major compact all regions on the region server. Asynchronous operation in that this method
+   * requests that a Compaction run and then it returns. It does not wait on the completion of
+   * Compaction (it can take a while).
+   * @param serverName the region server name
+   * @throws IOException if a remote or network exception occurs
+   */
+  void majorCompactRegionServer(ServerName serverName) throws IOException;
 
   /**
    * Move the region <code>r</code> to <code>dest</code>.
@@ -1381,13 +1411,74 @@ public interface Admin extends Abortable, Closeable {
   ClusterStatus getClusterStatus(EnumSet<Option> options) throws IOException;
 
   /**
+   * @return current master server name
+   * @throws IOException if a remote or network exception occurs
+   */
+  default ServerName getMaster() throws IOException {
+    return getClusterStatus(EnumSet.of(Option.MASTER)).getMaster();
+  }
+
+  /**
+   * @return current backup master list
+   * @throws IOException if a remote or network exception occurs
+   */
+  default Collection<ServerName> getBackupMasters() throws IOException {
+    return getClusterStatus(EnumSet.of(Option.BACKUP_MASTERS)).getBackupMasters();
+  }
+
+  /**
+   * @return current live region servers list
+   * @throws IOException if a remote or network exception occurs
+   */
+  default Collection<ServerName> getRegionServers() throws IOException {
+    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
+  }
+
+  /**
    * Get {@link RegionLoad} of all regions hosted on a regionserver.
    *
    * @param serverName region server from which regionload is required.
    * @return region load map of all regions hosted on a region server
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #getRegionLoads(ServerName)}
    */
-  Map<byte[], RegionLoad> getRegionLoad(ServerName serverName) throws IOException;
+  @Deprecated
+  default Map<byte[], RegionLoad> getRegionLoad(ServerName serverName) throws IOException {
+    return getRegionLoad(serverName, null);
+  }
+
+  /**
+   * Get {@link RegionLoad} of all regions hosted on a regionserver.
+   *
+   * @param serverName region server from which regionload is required.
+   * @return a region load list of all regions hosted on a region server
+   * @throws IOException if a remote or network exception occurs
+   */
+  default List<RegionLoad> getRegionLoads(ServerName serverName) throws IOException {
+    return getRegionLoads(serverName, null);
+  }
+
+  /**
+   * Get {@link RegionLoad} of all regions hosted on a regionserver for a table.
+   *
+   * @param serverName region server from which regionload is required.
+   * @param tableName get region load of regions belonging to the table
+   * @return region load map of all regions of a table hosted on a region server
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #getRegionLoads(ServerName, TableName)}
+   */
+  @Deprecated
+  default Map<byte[], RegionLoad> getRegionLoad(ServerName serverName, TableName tableName)
+      throws IOException {
+    List<RegionLoad> regionLoads = getRegionLoads(serverName, tableName);
+    Map<byte[], RegionLoad> resultMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (RegionLoad regionLoad : regionLoads) {
+      resultMap.put(regionLoad.getName(), regionLoad);
+    }
+    return resultMap;
+  }
 
   /**
    * Get {@link RegionLoad} of all regions hosted on a regionserver for a table.
@@ -1397,7 +1488,7 @@ public interface Admin extends Abortable, Closeable {
    * @return region load map of all regions of a table hosted on a region server
    * @throws IOException if a remote or network exception occurs
    */
-  Map<byte[], RegionLoad> getRegionLoad(ServerName serverName, TableName tableName) throws IOException;
+  List<RegionLoad> getRegionLoads(ServerName serverName, TableName tableName) throws IOException;
 
   /**
    * @return Configuration used by the instance.
@@ -2135,12 +2226,21 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Return a QuotaRetriever to list the quotas based on the filter.
-   *
    * @param filter the quota settings filter
    * @return the quota retriever
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #getQuota(QuotaFilter)}.
    */
+  @Deprecated
   QuotaRetriever getQuotaRetriever(QuotaFilter filter) throws IOException;
+
+  /**
+   * List the quotas based on the filter.
+   * @param filter the quota settings filter
+   * @return the QuotaSetting list
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException;
 
   /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the active
@@ -2285,49 +2385,82 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Turn the Split or Merge switches on or off.
-   *
    * @param enabled enabled or not
-   * @param synchronous If <code>true</code>, it waits until current split() call, if outstanding, to return.
+   * @param synchronous If <code>true</code>, it waits until current split() call, if outstanding,
+   *          to return.
    * @param switchTypes switchType list {@link MasterSwitchType}
    * @return Previous switch value array
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #splitOrMergeEnabledSwitch(boolean, boolean, MasterSwitchType...)}.
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #splitSwitch(boolean, boolean)}
+   *             or {@link #mergeSwitch(boolean, boolean)} instead.
    */
   @Deprecated
   default boolean[] setSplitOrMergeEnabled(boolean enabled, boolean synchronous,
-                                   MasterSwitchType... switchTypes) throws IOException {
-    return splitOrMergeEnabledSwitch(enabled, synchronous, switchTypes);
+      MasterSwitchType... switchTypes) throws IOException {
+    boolean[] preValues = new boolean[switchTypes.length];
+    for (int i = 0; i < switchTypes.length; i++) {
+      switch (switchTypes[i]) {
+        case SPLIT:
+          preValues[i] = splitSwitch(enabled, synchronous);
+          break;
+        case MERGE:
+          preValues[i] = mergeSwitch(enabled, synchronous);
+          break;
+        default:
+          throw new UnsupportedOperationException("Unsupported switch type:" + switchTypes[i]);
+      }
+    }
+    return preValues;
   }
 
   /**
-   * Turn the Split or Merge switches on or off.
-   *
+   * Turn the split switch on or off.
    * @param enabled enabled or not
-   * @param synchronous If <code>true</code>, it waits until current split() call, if outstanding, to return.
-   * @param switchTypes switchType list {@link MasterSwitchType}
-   * @return Previous switch value array
+   * @param synchronous If <code>true</code>, it waits until current split() call, if outstanding,
+   *          to return.
+   * @return Previous switch value
    */
-  boolean[] splitOrMergeEnabledSwitch(boolean enabled, boolean synchronous,
-                                   MasterSwitchType... switchTypes) throws IOException;
+  boolean splitSwitch(boolean enabled, boolean synchronous) throws IOException;
+
+  /**
+   * Turn the merge switch on or off.
+   * @param enabled enabled or not
+   * @param synchronous If <code>true</code>, it waits until current merge() call, if outstanding,
+   *          to return.
+   * @return Previous switch value
+   */
+  boolean mergeSwitch(boolean enabled, boolean synchronous) throws IOException;
 
   /**
    * Query the current state of the switch.
    *
    * @return <code>true</code> if the switch is enabled, <code>false</code> otherwise.
    * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #splitOrMergeEnabledSwitch(MasterSwitchType)}} instead.
+   * {@link #isSplitEnabled()} or {@link #isMergeEnabled()} instead.
    */
   @Deprecated
   default boolean isSplitOrMergeEnabled(MasterSwitchType switchType) throws IOException {
-    return splitOrMergeEnabledSwitch(switchType);
+    switch (switchType) {
+      case SPLIT:
+        return isSplitEnabled();
+      case MERGE:
+        return isMergeEnabled();
+      default:
+        break;
+    }
+    throw new UnsupportedOperationException("Unsupported switch type:" + switchType);
   }
 
   /**
-   * Query the current state of the switch.
-   *
+   * Query the current state of the split switch.
    * @return <code>true</code> if the switch is enabled, <code>false</code> otherwise.
    */
-  boolean splitOrMergeEnabledSwitch(MasterSwitchType switchType) throws IOException;
+  boolean isSplitEnabled() throws IOException;
+
+  /**
+   * Query the current state of the merge switch.
+   * @return <code>true</code> if the switch is enabled, <code>false</code> otherwise.
+   */
+  boolean isMergeEnabled() throws IOException;
 
   /**
    * Add a new replication peer for replicating data to slave cluster.
