@@ -38,10 +38,12 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public class MutableSegment extends Segment {
 
-  public final static long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP;
+  public final static long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD
+        + ClassSize.CONCURRENT_SKIPLISTMAP
+        + ClassSize.SYNC_TIMERANGE_TRACKER;
 
   protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
-    super(cellSet, comparator, memStoreLAB);
+    super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
     incSize(0,DEEP_OVERHEAD); // update the mutable segment metadata
   }
 
@@ -110,17 +112,6 @@ public class MutableSegment extends Segment {
   @VisibleForTesting
   Cell first() {
     return this.getCellSet().first();
-  }
-
-  @Override
-  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
-    return (this.timeRangeTracker.includesTimeRange(tr)
-        && (this.timeRangeTracker.getMax() >= oldestUnexpiredTS));
-  }
-
-  @Override
-  public long getMinTimestamp() {
-    return this.timeRangeTracker.getMin();
   }
 
   @Override protected long indexEntrySize() {

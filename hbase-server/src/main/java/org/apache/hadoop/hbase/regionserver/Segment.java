@@ -54,7 +54,7 @@ public abstract class Segment {
       + Bytes.SIZEOF_LONG // minSequenceId
       + Bytes.SIZEOF_BOOLEAN); // tagsPresent
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.ATOMIC_REFERENCE
-      + ClassSize.CELL_SET + 2 * ClassSize.ATOMIC_LONG + ClassSize.SYNC_TIMERANGE_TRACKER;
+      + ClassSize.CELL_SET + 2 * ClassSize.ATOMIC_LONG;
 
   private AtomicReference<CellSet> cellSet= new AtomicReference<>();
   private final CellComparator comparator;
@@ -69,15 +69,15 @@ public abstract class Segment {
 
   // Empty constructor to be used when Segment is used as interface,
   // and there is no need in true Segments state
-  protected Segment(CellComparator comparator) {
+  protected Segment(CellComparator comparator, TimeRangeTracker trt) {
     this.comparator = comparator;
     this.dataSize = new AtomicLong(0);
     this.heapSize = new AtomicLong(0);
-    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
+    this.timeRangeTracker = trt;
   }
 
   // This constructor is used to create empty Segments.
-  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
+  protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB, TimeRangeTracker trt) {
     this.cellSet.set(cellSet);
     this.comparator = comparator;
     this.minSequenceId = Long.MAX_VALUE;
@@ -85,7 +85,7 @@ public abstract class Segment {
     this.dataSize = new AtomicLong(0);
     this.heapSize = new AtomicLong(0);
     this.tagsPresent = false;
-    this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
+    this.timeRangeTracker = trt;
   }
 
   protected Segment(Segment segment) {
@@ -177,9 +177,11 @@ public abstract class Segment {
     return KeyValueUtil.length(cell);
   }
 
-  public abstract boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS);
-
-  public abstract long getMinTimestamp();
+  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
+    return !isEmpty()
+        && (tr.isAllTime() || timeRangeTracker.includesTimeRange(tr))
+        && timeRangeTracker.getMax() >= oldestUnexpiredTS;
+  }
 
   public boolean isTagsPresent() {
     return tagsPresent;
@@ -354,7 +356,8 @@ public abstract class Segment {
     res += "cellsCount "+getCellsCount()+"; ";
     res += "cellsSize "+keySize()+"; ";
     res += "totalHeapSize "+heapSize()+"; ";
-    res += "Min ts "+getMinTimestamp()+"; ";
+    res += "Min ts " + timeRangeTracker.getMin() + "; ";
+    res += "Max ts " + timeRangeTracker.getMax() + "; ";
     return res;
   }
 }

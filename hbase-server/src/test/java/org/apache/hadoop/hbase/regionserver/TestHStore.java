@@ -1083,19 +1083,21 @@ public class TestHStore {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id++);
     storeFlushCtx.prepare();
     inputCellsAfterSnapshot.forEach(c -> store.add(c, null));
-    int numberOfMemScannersWhenScaning = inputCellsAfterSnapshot.isEmpty() ? 1 : 2;
+    int numberOfMemScannersBeforeFlush = inputCellsAfterSnapshot.isEmpty() ? 1 : 2;
     try (StoreScanner s = (StoreScanner) store.getScanner(new Scan(), quals, seqId)) {
-      // snaptshot + active (if it isn't empty)
-      assertEquals(numberOfMemScannersWhenScaning, countMemStoreScanner(s));
+      // snapshot + active (if inputCellsAfterSnapshot isn't empty)
+      assertEquals(numberOfMemScannersBeforeFlush, countMemStoreScanner(s));
       storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
       storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
+      // snapshot has no data after flush
+      int numberOfMemScannersAfterFlush = inputCellsAfterSnapshot.isEmpty() ? 0 : 1;
       boolean more;
       int cellCount = 0;
       do {
         List<Cell> cells = new ArrayList<>();
         more = s.next(cells);
         cellCount += cells.size();
-        assertEquals(more ? numberOfMemScannersWhenScaning : 0, countMemStoreScanner(s));
+        assertEquals(more ? numberOfMemScannersAfterFlush : 0, countMemStoreScanner(s));
       } while (more);
       assertEquals("The number of cells added before snapshot is " + inputCellsBeforeSnapshot.size()
           + ", The number of cells added after snapshot is " + inputCellsAfterSnapshot.size(),

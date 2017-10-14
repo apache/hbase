@@ -229,7 +229,9 @@ public abstract class TimeRangeTracker implements Writable {
     return new TimeRange(min, max);
   }
 
-  private static class NonSyncTimeRangeTracker extends TimeRangeTracker {
+  @VisibleForTesting
+  //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
+  public static class NonSyncTimeRangeTracker extends TimeRangeTracker {
     private long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
     private long maximumTimestamp = INITIAL_MAX_TIMESTAMP;
 
