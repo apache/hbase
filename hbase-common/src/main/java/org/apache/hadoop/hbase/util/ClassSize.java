@@ -132,6 +132,9 @@ public class ClassSize {
   /** Overhead for SyncTimeRangeTracker */
   public static final int SYNC_TIMERANGE_TRACKER;
 
+  /** Overhead for NonSyncTimeRangeTracker */
+  public static final int NON_SYNC_TIMERANGE_TRACKER;
+
   /** Overhead for CellSkipListSet */
   public static final int CELL_SET;
 
@@ -327,6 +330,8 @@ public class ClassSize {
     TIMERANGE = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2 + Bytes.SIZEOF_BOOLEAN);
 
     SYNC_TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * REFERENCE);
+    NON_SYNC_TIMERANGE_TRACKER = align(ClassSize.OBJECT + 2 * Bytes.SIZEOF_LONG);
+
     CELL_SET = align(OBJECT + REFERENCE);
 
     STORE_SERVICES = align(OBJECT + REFERENCE + ATOMIC_LONG);
