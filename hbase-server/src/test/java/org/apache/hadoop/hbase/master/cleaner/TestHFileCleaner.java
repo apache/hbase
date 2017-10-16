@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -199,7 +199,6 @@ public class TestHFileCleaner {
   }
 
   static class DummyServer implements Server {
-
     @Override
     public Configuration getConfiguration() {
       return UTIL.getConfiguration();
@@ -262,6 +261,16 @@ public class TestHFileCleaner {
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
     }
   }
 

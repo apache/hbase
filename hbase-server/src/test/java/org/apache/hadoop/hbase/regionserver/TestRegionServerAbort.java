@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -168,6 +170,7 @@ public class TestRegionServerAbort {
     assertFalse(cluster.getRegionServer(0).isStopped());
   }
 
+  @CoreCoprocessor
   public static class StopBlockingRegionObserver
       implements RegionServerCoprocessor, RegionCoprocessor, RegionServerObserver, RegionObserver {
     public static final String DO_ABORT = "DO_ABORT";
@@ -187,9 +190,12 @@ public class TestRegionServerAbort {
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
                        Durability durability) throws IOException {
       if (put.getAttribute(DO_ABORT) != null) {
-        HRegionServer rs = (HRegionServer) c.getEnvironment().getCoprocessorRegionServerServices();
-        LOG.info("Triggering abort for regionserver " + rs.getServerName());
-        rs.abort("Aborting for test");
+        // TODO: Change this so it throws a CP Abort Exception instead.
+        RegionServerServices rss =
+            ((HasRegionServerServices)c.getEnvironment()).getRegionServerServices();
+        String str = "Aborting for test";
+        LOG.info(str  + " " + rss.getServerName());
+        rss.abort(str, new Throwable(str));
       }
     }
 

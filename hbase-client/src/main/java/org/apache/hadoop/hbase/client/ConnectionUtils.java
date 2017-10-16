@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -124,6 +124,46 @@ public final class ConnectionUtils {
   }
 
   /**
+   * A ClusterConnection that will short-circuit RPC making direct invocations against the
+   * localhost if the invocation target is 'this' server; save on network and protobuf
+   * invocations.
+   */
+  @VisibleForTesting // Class is visible so can assert we are short-circuiting when expected.
+  public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
+    private final ServerName serverName;
+    private final AdminService.BlockingInterface localHostAdmin;
+    private final ClientService.BlockingInterface localHostClient;
+
+    private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
+        ServerName serverName, AdminService.BlockingInterface admin,
+        ClientService.BlockingInterface client)
+    throws IOException {
+      super(conf, pool, user);
+      this.serverName = serverName;
+      this.localHostAdmin = admin;
+      this.localHostClient = client;
+    }
+
+    @Override
+    public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
+      return serverName.equals(sn) ? this.localHostAdmin : super.getAdmin(sn);
+    }
+
+    @Override
+    public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
+      return serverName.equals(sn) ? this.localHostClient : super.getClient(sn);
+    }
+
+    @Override
+    public MasterKeepAliveConnection getKeepAliveMasterService() throws MasterNotRunningException {
+      if (this.localHostClient instanceof MasterService.BlockingInterface) {
+        return new ShortCircuitMasterConnection((MasterService.BlockingInterface)this.localHostClient);
+      }
+      return super.getKeepAliveMasterService();
+    }
+  }
+
+  /**
    * Creates a short-circuit connection that can bypass the RPC layer (serialization,
    * deserialization, networking, etc..) when talking to a local server.
    * @param conf the current configuration
@@ -142,27 +182,7 @@ public final class ConnectionUtils {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
-    return new ConnectionImplementation(conf, pool, user) {
-      @Override
-      public AdminService.BlockingInterface getAdmin(ServerName sn) throws IOException {
-        return serverName.equals(sn) ? admin : super.getAdmin(sn);
-      }
-
-      @Override
-      public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-        return serverName.equals(sn) ? client : super.getClient(sn);
-      }
-
-      @Override
-      public MasterKeepAliveConnection getKeepAliveMasterService()
-          throws MasterNotRunningException {
-        if (!(client instanceof MasterService.BlockingInterface)) {
-          return super.getKeepAliveMasterService();
-        } else {
-          return new ShortCircuitMasterConnection((MasterService.BlockingInterface) client);
-        }
-      }
-    };
+    return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
   }
 
   /**

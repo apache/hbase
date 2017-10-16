@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -73,6 +75,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
 
 // TODO: Encapsulate MasterObserver functions into separate subclass.
+@CoreCoprocessor
 @InterfaceAudience.Private
 public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   private static final Log LOG = LogFactory.getLog(RSGroupAdminEndpoint.class);
@@ -86,7 +89,10 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-    master = ((MasterCoprocessorEnvironment)env).getMasterServices();
+    if (!(env instanceof HasMasterServices)) {
+      throw new IOException("Does not implement HMasterServices");
+    }
+    master = ((HasMasterServices)env).getMasterServices();
     groupInfoManager = RSGroupInfoManagerImpl.getInstance(master);
     groupAdminServer = new RSGroupAdminServer(master, groupInfoManager);
     Class<?> clazz =

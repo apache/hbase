@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,6 +27,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -896,6 +897,16 @@ public class TestHeapMemoryManager {
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
     }
   }
 

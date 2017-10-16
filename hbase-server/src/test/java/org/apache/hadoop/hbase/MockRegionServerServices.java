@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -107,11 +107,6 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public List<Region> getRegions(TableName tableName) throws IOException {
-    return null;
-  }
-
-  @Override
-  public Set<TableName> getOnlineTables() {
     return null;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
@@ -39,11 +40,13 @@ import org.apache.hadoop.hbase.regionserver.ChunkCreator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestRegionObserverStacking extends TestCase {
@@ -128,7 +131,8 @@ public class TestRegionObserverStacking extends TestCase {
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
     // and set it to region.
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r,
+        Mockito.mock(RegionServerServices.class), conf);
     r.setCoprocessorHost(host);
     return r;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -3008,12 +3008,12 @@ public class HRegionServer extends HasThread implements
     }
     return allRegions;
   }
+
   /**
    * Gets the online tables in this RS.
    * This method looks at the in-memory onlineRegions.
    * @return all the online tables in this RS
    */
-  @Override
   public Set<TableName> getOnlineTables() {
     Set<TableName> tables = new HashSet<>();
     synchronized (this.onlineRegions) {

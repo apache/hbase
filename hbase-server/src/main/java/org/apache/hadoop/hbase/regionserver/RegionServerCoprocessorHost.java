@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,10 +24,13 @@ import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -37,7 +40,6 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.Private
 public class RegionServerCoprocessorHost extends
@@ -68,7 +70,11 @@ public class RegionServerCoprocessorHost extends
   @Override
   public RegionServerEnvironment createEnvironment(
       RegionServerCoprocessor instance, int priority, int sequence, Configuration conf) {
-    return new RegionServerEnvironment(instance, priority, sequence, conf, this.rsServices);
+    // If a CoreCoprocessor, return a 'richer' environment, one laden with RegionServerServices.
+    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
+      new RegionServerEnvironmentForCoreCoprocessors(instance, priority, sequence, conf,
+            this.rsServices):
+      new RegionServerEnvironment(instance, priority, sequence, conf, this.rsServices);
   }
 
   @Override
@@ -197,26 +203,33 @@ public class RegionServerCoprocessorHost extends
    */
   private static class RegionServerEnvironment extends BaseEnvironment<RegionServerCoprocessor>
       implements RegionServerCoprocessorEnvironment {
-    private final RegionServerServices regionServerServices;
     private final MetricRegistry metricRegistry;
+    private final Connection connection;
+    private final ServerName serverName;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
         justification="Intentional; FB has trouble detecting isAssignableFrom")
     public RegionServerEnvironment(final RegionServerCoprocessor impl, final int priority,
         final int seq, final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
-      this.regionServerServices = services;
       // If coprocessor exposes any services, register them.
       for (Service service : impl.getServices()) {
-        regionServerServices.registerService(service);
+        services.registerService(service);
       }
+      this.connection = services.getConnection();
+      this.serverName = services.getServerName();
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
     }
 
     @Override
-    public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
-      return regionServerServices;
+    public ServerName getServerName() {
+      return this.serverName;
+    }
+
+    @Override
+    public Connection getConnection() {
+      return this.connection;
     }
 
     @Override
@@ -228,6 +241,30 @@ public class RegionServerCoprocessorHost extends
     public void shutdown() {
       super.shutdown();
       MetricsCoprocessor.removeRegistry(metricRegistry);
+    }
+  }
+
+  /**
+   * Special version of RegionServerEnvironment that exposes RegionServerServices for Core
+   * Coprocessors only. Temporary hack until Core Coprocessors are integrated into Core.
+   */
+  private static class RegionServerEnvironmentForCoreCoprocessors extends RegionServerEnvironment
+      implements HasRegionServerServices {
+    final RegionServerServices regionServerServices;
+
+    public RegionServerEnvironmentForCoreCoprocessors(final RegionServerCoprocessor impl,
+          final int priority, final int seq, final Configuration conf,
+          final RegionServerServices services) {
+       super(impl, priority, seq, conf, services);
+       this.regionServerServices = services;
+    }
+
+    /**
+     * @return An instance of RegionServerServices, an object NOT for general user-space Coprocessor
+     * consumption.
+     */
+    public RegionServerServices getRegionServerServices() {
+      return this.regionServerServices;
     }
   }
 }

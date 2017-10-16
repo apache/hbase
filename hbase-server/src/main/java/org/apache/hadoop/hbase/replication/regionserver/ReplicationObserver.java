@@ -27,7 +27,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,11 +40,13 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Pair;
 
-/**
- * An Observer to facilitate replication operations
- */
+import javax.validation.constraints.Null;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+/**
+ * An Observer to add HFile References to replication queue.
+ */
+@CoreCoprocessor
+@InterfaceAudience.Private
 public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
   private static final Log LOG = LogFactory.getLog(ReplicationObserver.class);
 
@@ -51,19 +56,24 @@ public class ReplicationObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="NPE should never happen; if it does it is a bigger issue")
   public void preCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
     RegionCoprocessorEnvironment env = ctx.getEnvironment();
     Configuration c = env.getConfiguration();
-    if (pairs == null || pairs.isEmpty()
-        || !c.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+    if (pairs == null || pairs.isEmpty() ||
+        !c.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
           HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT)) {
       LOG.debug("Skipping recording bulk load entries in preCommitStoreFile for bulkloaded "
           + "data replication.");
       return;
     }
-    HRegionServer rs = (HRegionServer) env.getCoprocessorRegionServerServices();
-    Replication rep = (Replication) rs.getReplicationSourceService();
+    // This is completely cheating AND getting a HRegionServer from a RegionServerEnvironment is
+    // just going to break. This is all private. Not allowed. Regions shouldn't assume they are
+    // hosted in a RegionServer. TODO: fix.
+    RegionServerServices rss = ((HasRegionServerServices)env).getRegionServerServices();
+    Replication rep = (Replication)((HRegionServer)rss).getReplicationSourceService();
     rep.addHFileRefsToQueue(env.getRegionInfo().getTable(), family, pairs);
   }
 }

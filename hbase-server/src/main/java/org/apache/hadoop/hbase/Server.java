@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -26,8 +27,9 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Defines the set of shared functions implemented by HBase servers (Masters
- * and RegionServers).
+ * Defines a curated set of shared functions implemented by HBase servers (Masters
+ * and RegionServers). For use internally only. Be judicious adding API. Changes cause ripples
+ * through the code base.
  */
 @InterfaceAudience.Private
 public interface Server extends Abortable, Stoppable {
@@ -79,4 +81,17 @@ public interface Server extends Abortable, Stoppable {
    * @return The {@link ChoreService} instance for this server
    */
   ChoreService getChoreService();
+
+  /**
+   * @return Return the FileSystem object used.
+   */
+  // TODO: On Master, return Master's. On RegionServer, return RegionServers. The FileSystems
+  // may differ. TODO.
+  FileSystem getFileSystem();
+
+  /**
+   * @return True is the server is Stopping
+   */
+  // Note: This method is not part of the Stoppable Interface.
+  boolean isStopping();
 }

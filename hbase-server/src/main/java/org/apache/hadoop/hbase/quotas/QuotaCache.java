@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -188,7 +189,7 @@ public class QuotaCache implements Stoppable {
       justification="I do not understand why the complaints, it looks good to me -- FIX")
     protected void chore() {
       // Prefetch online tables/namespaces
-      for (TableName table: QuotaCache.this.rsServices.getOnlineTables()) {
+      for (TableName table: ((HRegionServer)QuotaCache.this.rsServices).getOnlineTables()) {
         if (table.isSystemTable()) continue;
         if (!QuotaCache.this.tableQuotaCache.containsKey(table)) {
           QuotaCache.this.tableQuotaCache.putIfAbsent(table, new QuotaState());

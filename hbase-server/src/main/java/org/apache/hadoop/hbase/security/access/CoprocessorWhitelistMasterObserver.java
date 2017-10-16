@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -147,8 +146,7 @@ public class CoprocessorWhitelistMasterObserver implements MasterCoprocessor, Ma
   private void verifyCoprocessors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableDescriptor htd) throws IOException {
 
-    MasterServices services = ctx.getEnvironment().getMasterServices();
-    Configuration conf = services.getConfiguration();
+    Configuration conf = ctx.getEnvironment().getConfiguration();
 
     Collection<String> paths =
         conf.getStringCollection(

@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -204,6 +205,16 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
     }
   }
 }

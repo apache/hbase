@@ -51,8 +51,7 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
    * @param impl the coprocessor instance
    * @param priority chaining priority
    */
-  public BaseEnvironment(final C impl, final int priority,
-      final int seq, final Configuration conf) {
+  public BaseEnvironment(final C impl, final int priority, final int seq, final Configuration conf) {
     this.impl = impl;
     this.classLoader = impl.getClass().getClassLoader();
     this.priority = priority;

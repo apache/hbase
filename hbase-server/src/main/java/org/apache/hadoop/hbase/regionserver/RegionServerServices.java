@@ -41,11 +41,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import com.google.protobuf.Service;
 
 /**
- * Services provided by {@link HRegionServer}
+ * A curated subset of services provided by {@link HRegionServer}.
+ * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
+ * full-on HRegionServer at test-time. Be judicious adding API. Changes cause ripples through
+ * the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices
-    extends Server, OnlineRegions, FavoredNodesForRegion, CoprocessorRegionServerServices {
+public interface RegionServerServices extends Server, OnlineRegions, FavoredNodesForRegion {
 
   /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */
