@@ -56,82 +56,12 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-
 /**
  * Class to test asynchronous region admin operations.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
-
-  @Test
-  public void testCloseRegion() throws Exception {
-    createTableWithDefaultConf(tableName);
-
-    RegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.getTable().isSystemTable()) {
-        info = regionInfo;
-        boolean closed = admin.closeRegion(regionInfo.getRegionName(),
-          Optional.of(rs.getServerName())).get();
-        assertTrue(closed);
-      }
-    }
-    boolean isInList = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices()).contains(info);
-    long timeout = System.currentTimeMillis() + 10000;
-    while ((System.currentTimeMillis() < timeout) && (isInList)) {
-      Thread.sleep(100);
-      isInList = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices()).contains(info);
-    }
-
-    assertFalse("The region should not be present in online regions list.", isInList);
-  }
-
-  @Test
-  public void testCloseRegionIfInvalidRegionNameIsPassed() throws Exception {
-    createTableWithDefaultConf(tableName);
-
-    RegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaRegion()) {
-        if (regionInfo.getRegionNameAsString().contains(tableName.getNameAsString())) {
-          info = regionInfo;
-          boolean catchNotServingException = false;
-          try {
-            admin.closeRegion(Bytes.toBytes("sample"), Optional.of(rs.getServerName()))
-                .get();
-          } catch (Exception e) {
-            catchNotServingException = true;
-            // expected, ignore it
-          }
-          assertTrue(catchNotServingException);
-        }
-      }
-    }
-    onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    assertTrue("The region should be present in online regions list.",
-      onlineRegions.contains(info));
-  }
-
-  @Test
-  public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
-    createTableWithDefaultConf(tableName);
-
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-    List<RegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
-    for (RegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaRegion()) {
-        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegionWhenServerNameIsEmpty")) {
-          admin.closeRegion(regionInfo.getRegionName(), Optional.empty()).get();
-        }
-      }
-    }
-  }
 
   @Test
   public void testGetRegionLocation() throws Exception {

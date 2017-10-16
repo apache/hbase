@@ -407,25 +407,6 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testDeleteTables() throws Exception {
-    TableName[] tables =
-        { TableName.valueOf(tableName.getNameAsString() + "1"),
-            TableName.valueOf(tableName.getNameAsString() + "2"),
-            TableName.valueOf(tableName.getNameAsString() + "3") };
-    Arrays.stream(tables).forEach((table) -> {
-      createTableWithDefaultConf(table);
-      admin.tableExists(table).thenAccept((exist) -> assertTrue(exist)).join();
-      admin.disableTable(table).join();
-    });
-    List<TableDescriptor> failed =
-        admin.deleteTables(Pattern.compile(tableName.getNameAsString() + ".*")).get();
-    assertEquals(0, failed.size());
-    Arrays.stream(tables).forEach((table) -> {
-      admin.tableExists(table).thenAccept((exist) -> assertFalse(exist)).join();
-    });
-  }
-
-  @Test
   public void testTruncateTable() throws Exception {
     testTruncateTable(tableName, false);
   }
@@ -536,7 +517,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     table1.get(get).get();
     table2.get(get).get();
 
-    this.admin.disableTables(Pattern.compile(tableName.getNameAsString() + ".*")).join();
+    admin.listTableNames(Optional.of(Pattern.compile(tableName.getNameAsString() + ".*")), false)
+        .get().forEach(t -> admin.disableTable(t).join());
 
     // Test that tables are disabled
     get = new Get(row);
@@ -559,7 +541,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName1));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName2));
 
-    this.admin.enableTables(Pattern.compile("testDisableAndEnableTables.*")).join();
+    admin.listTableNames(Optional.of(Pattern.compile(tableName.getNameAsString() + ".*")), false)
+        .get().forEach(t -> admin.enableTable(t).join());
 
     // Test that tables are enabled
     try {
