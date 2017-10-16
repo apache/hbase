@@ -117,11 +117,6 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> deleteTables(Pattern pattern) {
-    return wrap(rawAdmin.deleteTables(pattern));
-  }
-
-  @Override
   public CompletableFuture<Void> truncateTable(TableName tableName, boolean preserveSplits) {
     return wrap(rawAdmin.truncateTable(tableName, preserveSplits));
   }
@@ -132,18 +127,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> enableTables(Pattern pattern) {
-    return wrap(rawAdmin.enableTables(pattern));
-  }
-
-  @Override
   public CompletableFuture<Void> disableTable(TableName tableName) {
     return wrap(rawAdmin.disableTable(tableName));
-  }
-
-  @Override
-  public CompletableFuture<List<TableDescriptor>> disableTables(Pattern pattern) {
-    return wrap(rawAdmin.disableTables(pattern));
   }
 
   @Override
@@ -159,11 +144,6 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
     return wrap(rawAdmin.isTableAvailable(tableName, splitKeys));
-  }
-
-  @Override
-  public CompletableFuture<Pair<Integer, Integer>> getAlterStatus(TableName tableName) {
-    return wrap(rawAdmin.getAlterStatus(tableName));
   }
 
   @Override
@@ -206,11 +186,6 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<NamespaceDescriptor>> listNamespaceDescriptors() {
     return wrap(rawAdmin.listNamespaceDescriptors());
-  }
-
-  @Override
-  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> unused) {
-    return wrap(rawAdmin.closeRegion(regionName, unused));
   }
 
   @Override

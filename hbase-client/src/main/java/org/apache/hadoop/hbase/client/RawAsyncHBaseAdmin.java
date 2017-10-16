@@ -383,31 +383,6 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> operate(TableName table);
   }
 
-  private CompletableFuture<List<TableDescriptor>> batchTableOperations(Pattern pattern,
-      TableOperator operator, String operationType) {
-    CompletableFuture<List<TableDescriptor>> future = new CompletableFuture<>();
-    List<TableDescriptor> failed = new LinkedList<>();
-    listTables(Optional.ofNullable(pattern), false).whenComplete(
-      (tables, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-          return;
-        }
-        CompletableFuture[] futures =
-            tables.stream()
-                .map((table) -> operator.operate(table.getTableName()).whenComplete((v, ex) -> {
-                  if (ex != null) {
-                    LOG.info("Failed to " + operationType + " table " + table.getTableName(), ex);
-                    failed.add(table);
-                  }
-                })).<CompletableFuture> toArray(size -> new CompletableFuture[size]);
-        CompletableFuture.allOf(futures).thenAccept((v) -> {
-          future.complete(failed);
-        });
-      });
-    return future;
-  }
-
   @Override
   public CompletableFuture<Boolean> tableExists(TableName tableName) {
     return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
@@ -496,11 +471,6 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> deleteTables(Pattern pattern) {
-    return batchTableOperations(pattern, (table) -> deleteTable(table), "DELETE");
-  }
-
-  @Override
   public CompletableFuture<Void> truncateTable(TableName tableName, boolean preserveSplits) {
     return this.<TruncateTableRequest, TruncateTableResponse> procedureCall(
       RequestConverter.buildTruncateTableRequest(tableName, preserveSplits, ng.getNonceGroup(),
@@ -517,21 +487,11 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> enableTables(Pattern pattern) {
-    return batchTableOperations(pattern, (table) -> enableTable(table), "ENABLE");
-  }
-
-  @Override
   public CompletableFuture<Void> disableTable(TableName tableName) {
     return this.<DisableTableRequest, DisableTableResponse> procedureCall(RequestConverter
         .buildDisableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
       (s, c, req, done) -> s.disableTable(c, req, done), (resp) -> resp.getProcId(),
       new DisableTableProcedureBiConsumer(this, tableName));
-  }
-
-  @Override
-  public CompletableFuture<List<TableDescriptor>> disableTables(Pattern pattern) {
-    return batchTableOperations(pattern, (table) -> disableTable(table), "DISABLE");
   }
 
   @Override
@@ -641,18 +601,6 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Pair<Integer, Integer>> getAlterStatus(TableName tableName) {
-    return this
-        .<Pair<Integer, Integer>>newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<GetSchemaAlterStatusRequest, GetSchemaAlterStatusResponse, Pair<Integer, Integer>> call(
-                controller, stub, RequestConverter.buildGetSchemaAlterStatusRequest(tableName), (s,
-                    c, req, done) -> s.getSchemaAlterStatus(c, req, done), (resp) -> new Pair<>(
-                    resp.getYetToUpdateRegions(), resp.getTotalRegions()))).call();
-  }
-
-  @Override
   public CompletableFuture<Void> addColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily) {
     return this.<AddColumnRequest, AddColumnResponse> procedureCall(
       RequestConverter.buildAddColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
@@ -723,19 +671,6 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
                 controller, stub, ListNamespaceDescriptorsRequest.newBuilder().build(), (s, c, req,
                     done) -> s.listNamespaceDescriptors(c, req, done), (resp) -> ProtobufUtil
                     .toNamespaceDescriptorList(resp))).call();
-  }
-
-  @Override
-  public CompletableFuture<Boolean> closeRegion(byte[] regionName, Optional<ServerName> unused) {
-    CompletableFuture<Boolean> future = new CompletableFuture<>();
-    unassign(regionName, true).whenComplete((result, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-      } else {
-        future.complete(true);
-      }
-    });
-    return future;
   }
 
   @Override

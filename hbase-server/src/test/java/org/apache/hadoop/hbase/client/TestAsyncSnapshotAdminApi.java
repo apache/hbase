@@ -24,11 +24,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -42,15 +39,17 @@ import java.util.regex.Pattern;
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
 
+  private static final Pattern MATCH_ALL = Pattern.compile(".*");
+
   String snapshotName1 = "snapshotName1";
   String snapshotName2 = "snapshotName2";
   String snapshotName3 = "snapshotName3";
 
   @After
   public void cleanup() throws Exception {
-    admin.deleteSnapshots(Pattern.compile(".*")).get();
-    admin.disableTables(Pattern.compile(".*")).get();
-    admin.deleteTables(Pattern.compile(".*")).get();
+    admin.deleteSnapshots(MATCH_ALL).get();
+    admin.listTableNames().get().forEach(t -> admin.disableTable(t).join());
+    admin.listTableNames().get().forEach(t -> admin.deleteTable(t).join());
   }
 
   @Test
