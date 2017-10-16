@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -59,7 +61,9 @@ import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -107,13 +111,13 @@ public class RegionCoprocessorHost
    *
    * Encapsulation of the environment of each coprocessor
    */
-  static class RegionEnvironment extends BaseEnvironment<RegionCoprocessor>
+  private static class RegionEnvironment extends BaseEnvironment<RegionCoprocessor>
       implements RegionCoprocessorEnvironment {
-
     private Region region;
-    private RegionServerServices rsServices;
     ConcurrentMap<String, Object> sharedData;
     private final MetricRegistry metricRegistry;
+    private final Connection connection;
+    private final ServerName serverName;
 
     /**
      * Constructor
@@ -125,7 +129,9 @@ public class RegionCoprocessorHost
         final RegionServerServices services, final ConcurrentMap<String, Object> sharedData) {
       super(impl, priority, seq, conf);
       this.region = region;
-      this.rsServices = services;
+      // Mocks may have services as null at test time.
+      this.connection = services != null? services.getConnection(): null;
+      this.serverName = services != null? services.getServerName(): null;
       this.sharedData = sharedData;
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
@@ -137,10 +143,14 @@ public class RegionCoprocessorHost
       return region;
     }
 
-    /** @return reference to the region server services */
     @Override
-    public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
-      return rsServices;
+    public Connection getConnection() {
+      return this.connection;
+    }
+
+    @Override
+    public ServerName getServerName() {
+      return this.serverName;
     }
 
     @Override
@@ -162,6 +172,30 @@ public class RegionCoprocessorHost
     @Override
     public MetricRegistry getMetricRegistryForRegionServer() {
       return metricRegistry;
+    }
+  }
+
+  /**
+   * Special version of RegionEnvironment that exposes RegionServerServices for Core
+   * Coprocessors only. Temporary hack until Core Coprocessors are integrated into Core.
+   */
+  private static class RegionEnvironmentForCoreCoprocessors extends
+      RegionEnvironment implements HasRegionServerServices {
+    private final RegionServerServices rsServices;
+
+    public RegionEnvironmentForCoreCoprocessors(final RegionCoprocessor impl, final int priority,
+      final int seq, final Configuration conf, final Region region,
+      final RegionServerServices services, final ConcurrentMap<String, Object> sharedData) {
+      super(impl, priority, seq, conf, region, services, sharedData);
+      this.rsServices = services;
+    }
+
+    /**
+     * @return An instance of RegionServerServices, an object NOT for general user-space Coprocessor
+     * consumption.
+     */
+    public RegionServerServices getRegionServerServices() {
+      return this.rsServices;
     }
   }
 
@@ -405,8 +439,11 @@ public class RegionCoprocessorHost
           SHARED_DATA_MAP.computeIfAbsent(instance.getClass().getName(),
               k -> new ConcurrentHashMap<>());
     }
-    return new RegionEnvironment(instance, priority, seq, conf, region,
-        rsServices, classData);
+    // If a CoreCoprocessor, return a 'richer' environment, one laden with RegionServerServices.
+    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
+        new RegionEnvironmentForCoreCoprocessors(instance, priority, seq, conf, region,
+            rsServices, classData):
+        new RegionEnvironment(instance, priority, seq, conf, region, rsServices, classData);
   }
 
   @Override

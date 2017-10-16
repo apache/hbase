@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -70,6 +71,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.mockito.Mockito;
 
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorInterface {
@@ -387,7 +389,8 @@ public class TestCoprocessorInterface {
     // start a region server here, so just manually create cphost
     // and set it to region.
     Configuration conf = TEST_UTIL.getConfiguration();
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r,
+        Mockito.mock(RegionServerServices.class), conf);
     r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
@@ -421,7 +424,8 @@ public class TestCoprocessorInterface {
     HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 
     // this following piece is a hack.
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host =
+        new RegionCoprocessorHost(r, Mockito.mock(RegionServerServices.class), conf);
     r.setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {

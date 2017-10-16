@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -57,7 +58,6 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
-import org.apache.hadoop.hbase.regionserver.CoprocessorRegionServerServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -239,6 +239,16 @@ public class TestTokenAuthentication {
     }
 
     @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return this.stopped;
+    }
+
+    @Override
     public void abort(String reason, Throwable error) {
       LOG.fatal("Aborting on: "+reason, error);
       this.aborted = true;
@@ -267,10 +277,6 @@ public class TestTokenAuthentication {
 
         @Override
         public void shutdown() {}
-
-        public CoprocessorRegionServerServices getCoprocessorRegionServerServices() {
-          return mockServices;
-        }
 
         @Override
         public ConcurrentMap<String, Object> getSharedData() { return null; }
@@ -305,6 +311,16 @@ public class TestTokenAuthentication {
 
         @Override
         public HRegionInfo getRegionInfo() {
+          return null;
+        }
+
+        @Override
+        public ServerName getServerName() {
+          return null;
+        }
+
+        @Override
+        public Connection getConnection() {
           return null;
         }
       });

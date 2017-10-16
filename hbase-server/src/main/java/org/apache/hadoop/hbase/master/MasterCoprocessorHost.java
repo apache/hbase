@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,6 +42,8 @@ import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -76,14 +79,16 @@ public class MasterCoprocessorHost
    */
   private static class MasterEnvironment extends BaseEnvironment<MasterCoprocessor>
       implements MasterCoprocessorEnvironment {
-    private final MasterServices masterServices;
+    private final Connection connection;
+    private final ServerName serverName;
     private final boolean supportGroupCPs;
     private final MetricRegistry metricRegistry;
 
     public MasterEnvironment(final MasterCoprocessor impl, final int priority, final int seq,
         final Configuration conf, final MasterServices services) {
       super(impl, priority, seq, conf);
-      this.masterServices = services;
+      this.connection = services.getConnection();
+      this.serverName = services.getServerName();
       supportGroupCPs = !useLegacyMethod(impl.getClass(),
           "preBalanceRSGroup", ObserverContext.class, String.class);
       this.metricRegistry =
@@ -91,8 +96,13 @@ public class MasterCoprocessorHost
     }
 
     @Override
-    public MasterServices getMasterServices() {
-      return masterServices;
+    public ServerName getServerName() {
+      return this.serverName;
+    }
+
+    @Override
+    public Connection getConnection() {
+      return this.connection;
     }
 
     @Override
@@ -104,6 +114,29 @@ public class MasterCoprocessorHost
     public void shutdown() {
       super.shutdown();
       MetricsCoprocessor.removeRegistry(this.metricRegistry);
+    }
+  }
+
+  /**
+   * Special version of MasterEnvironment that exposes MasterServices for Core Coprocessors only.
+   * Temporary hack until Core Coprocessors are integrated into Core.
+   */
+  private static class MasterEnvironmentForCoreCoprocessors extends MasterEnvironment
+      implements HasMasterServices {
+    private final MasterServices masterServices;
+
+    public MasterEnvironmentForCoreCoprocessors(final MasterCoprocessor impl, final int priority,
+        final int seq, final Configuration conf, final MasterServices services) {
+      super(impl, priority, seq, conf, services);
+      this.masterServices = services;
+    }
+
+    /**
+     * @return An instance of MasterServices, an object NOT for general user-space Coprocessor
+     * consumption.
+     */
+    public MasterServices getMasterServices() {
+      return this.masterServices;
     }
   }
 
@@ -122,8 +155,6 @@ public class MasterCoprocessorHost
     loadSystemCoprocessors(conf, MASTER_COPROCESSOR_CONF_KEY);
   }
 
-
-
   @Override
   public MasterEnvironment createEnvironment(final MasterCoprocessor instance, final int priority,
       final int seq, final Configuration conf) {
@@ -131,7 +162,10 @@ public class MasterCoprocessorHost
     for (Service service : instance.getServices()) {
       masterServices.registerService(service);
     }
-    return new MasterEnvironment(instance, priority, seq, conf, masterServices);
+    // If a CoreCoprocessor, return a 'richer' environment, one laden with MasterServices.
+    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
+        new MasterEnvironmentForCoreCoprocessors(instance, priority, seq, conf, masterServices):
+        new MasterEnvironment(instance, priority, seq, conf, masterServices);
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
@@ -584,9 +583,8 @@ public abstract class RpcServer implements RpcServerInterface,
   }
 
   /**
-   * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)}
-   * and {@link #channelWrite(GatheringByteChannel, BufferChain)}. Only
-   * one of readCh or writeCh should be non-null.
+   * Helper for {@link #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer).
+   * Only one of readCh or writeCh should be non-null.
    *
    * @param readCh read channel
    * @param writeCh write channel
@@ -594,7 +592,6 @@ public abstract class RpcServer implements RpcServerInterface,
    * @return bytes written
    * @throws java.io.IOException e
    * @see #channelRead(java.nio.channels.ReadableByteChannel, java.nio.ByteBuffer)
-   * @see #channelWrite(GatheringByteChannel, BufferChain)
    */
   private static int channelIO(ReadableByteChannel readCh,
                                WritableByteChannel writeCh,

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -74,7 +74,7 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      try (Table table = e.getEnvironment().getCoprocessorRegionServerServices().getConnection().
+      try (Table table = e.getEnvironment().getConnection().
           getTable(otherTable)) {
         table.put(put);
         completed[0] = true;
@@ -112,8 +112,7 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      try (Table table = e.getEnvironment().getCoprocessorRegionServerServices().
-          getConnection().getTable(otherTable, getPool())) {
+      try (Table table = e.getEnvironment().getConnection().getTable(otherTable, getPool())) {
         Put p = new Put(new byte[]{'a'});
         p.addColumn(family, null, new byte[]{'a'});
         try {

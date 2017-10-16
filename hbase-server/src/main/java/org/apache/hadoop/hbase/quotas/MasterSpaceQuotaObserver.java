@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
 /**
@@ -64,9 +63,8 @@ public class MasterSpaceQuotaObserver implements MasterCoprocessor, MasterObserv
     if (!quotasEnabled) {
       return;
     }
-    final MasterServices master = ctx.getEnvironment().getMasterServices();
-    final Connection conn = master.getConnection();
-    Quotas quotas = QuotaUtil.getTableQuota(master.getConnection(), tableName);
+    final Connection conn = ctx.getEnvironment().getConnection();
+    Quotas quotas = QuotaUtil.getTableQuota(conn, tableName);
     if (quotas != null && quotas.hasSpace()) {
       QuotaSettings settings = QuotaSettingsFactory.removeTableSpaceLimit(tableName);
       try (Admin admin = conn.getAdmin()) {
@@ -82,9 +80,8 @@ public class MasterSpaceQuotaObserver implements MasterCoprocessor, MasterObserv
     if (!quotasEnabled) {
       return;
     }
-    final MasterServices master = ctx.getEnvironment().getMasterServices();
-    final Connection conn = master.getConnection();
-    Quotas quotas = QuotaUtil.getNamespaceQuota(master.getConnection(), namespace);
+    final Connection conn = ctx.getEnvironment().getConnection();
+    Quotas quotas = QuotaUtil.getNamespaceQuota(conn, namespace);
     if (quotas != null && quotas.hasSpace()) {
       QuotaSettings settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(namespace);
       try (Admin admin = conn.getAdmin()) {

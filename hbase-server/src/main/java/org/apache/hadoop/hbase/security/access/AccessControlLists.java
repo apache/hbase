@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -43,9 +44,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -63,13 +61,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
@@ -124,27 +119,6 @@ public class AccessControlLists {
   public static final char ACL_KEY_DELIMITER = ',';
 
   private static final Log LOG = LogFactory.getLog(AccessControlLists.class);
-
-  /**
-   * Create the ACL table
-   * @param master
-   * @throws IOException
-   */
-  static void createACLTable(MasterServices master) throws IOException {
-    /** Table descriptor for ACL table */
-    final HTableDescriptor ACL_TABLEDESC = new HTableDescriptor(ACL_TABLE_NAME)
-        .addFamily(new HColumnDescriptor(ACL_LIST_FAMILY)
-            .setMaxVersions(1)
-            .setInMemory(true)
-            .setBlockCacheEnabled(true)
-            .setBlocksize(8 * 1024)
-            .setBloomFilterType(BloomType.NONE)
-            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-            // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
-            // be the case if we are using CombinedBlockCache (Bucket Cache).
-            .setCacheDataInL1(true));
-    master.createSystemTable(ACL_TABLEDESC);
-  }
 
   /**
    * Stores a new user permission grant in the access control lists table.

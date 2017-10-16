@@ -27,6 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -54,6 +56,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Coprocessor service for bulk loads in secure mode.
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
  */
+@CoreCoprocessor
 @InterfaceAudience.Private
 @Deprecated
 public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements RegionCoprocessor {
@@ -68,8 +71,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
   @Override
   public void start(CoprocessorEnvironment env) {
     this.env = (RegionCoprocessorEnvironment)env;
-    assert this.env.getCoprocessorRegionServerServices() instanceof RegionServerServices;
-    rsServices = (RegionServerServices) this.env.getCoprocessorRegionServerServices();
+    rsServices = ((HasRegionServerServices)this.env).getRegionServerServices();
     LOG.warn("SecureBulkLoadEndpoint is deprecated. It will be removed in future releases.");
     LOG.warn("Secure bulk load has been integrated into HBase core.");
   }

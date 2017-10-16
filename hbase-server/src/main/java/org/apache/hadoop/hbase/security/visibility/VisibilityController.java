@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -85,7 +87,6 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
@@ -122,6 +123,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
  * visibility labels
  */
+@CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 // TODO: break out Observer functions into separate class/sub-class.
 public class VisibilityController implements MasterCoprocessor, RegionCoprocessor,
@@ -212,8 +214,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   @Override
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
     // Need to create the new system table for labels here
-    MasterServices master = ctx.getEnvironment().getMasterServices();
-    if (!MetaTableAccessor.tableExists(master.getConnection(), LABELS_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getConnection(), LABELS_TABLE_NAME)) {
       HTableDescriptor labelsTable = new HTableDescriptor(LABELS_TABLE_NAME);
       HColumnDescriptor labelsColumn = new HColumnDescriptor(LABELS_TABLE_FAMILY);
       labelsColumn.setBloomFilterType(BloomType.NONE);
@@ -226,7 +227,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
           DisabledRegionSplitPolicy.class.getName());
       labelsTable.setValue(Bytes.toBytes(HConstants.DISALLOW_WRITES_IN_RECOVERING),
           Bytes.toBytes(true));
-      master.createSystemTable(labelsTable);
+      try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+        admin.createTable(labelsTable);
+      }
     }
   }
 

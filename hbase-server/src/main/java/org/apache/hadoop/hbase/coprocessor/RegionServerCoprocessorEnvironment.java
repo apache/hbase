@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
-import org.apache.hadoop.hbase.regionserver.CoprocessorRegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -30,11 +31,24 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface RegionServerCoprocessorEnvironment
     extends CoprocessorEnvironment<RegionServerCoprocessor> {
   /**
-   * Gets the region server services.
-   *
-   * @return the region server services
+   * @return Hosting Server's ServerName
    */
-  CoprocessorRegionServerServices getCoprocessorRegionServerServices();
+  ServerName getServerName();
+
+  /**
+   * Be careful RPC'ing from a Coprocessor context.
+   * RPC's will fail, stall, retry, and/or crawl because the remote side is not online, is
+   * struggling or it is on the other side of a network partition. Any use of Connection from
+   * inside a Coprocessor must be able to handle all such hiccups.
+   *
+   * <p>Using a Connection to get at a local resource -- say a Region that is on the local
+   * Server or using Admin Interface from a Coprocessor hosted on the Master -- will result in a
+   * short-circuit of the RPC framework to make a direct invocation avoiding RPC (and
+   * protobuf marshalling/unmarshalling).
+   *
+   * @return The host's Connection to the Cluster.
+   */
+  Connection getConnection();
 
   /**
    * Returns a MetricRegistry that can be used to track metrics at the region server level.

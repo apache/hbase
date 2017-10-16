@@ -54,13 +54,14 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -75,9 +76,13 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
+import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
+import org.apache.hadoop.hbase.coprocessor.HasMasterServices;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
@@ -94,7 +99,6 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
@@ -105,11 +109,11 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -173,6 +177,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
  * commands.
  * </p>
  */
+@CoreCoprocessor
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     RegionServerCoprocessor, AccessControlService.Interface,
@@ -285,8 +290,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // to and fro conversion overhead. get req is converted to PB req
     // and results are converted to PB results 1st and then to POJOs
     // again. We could have avoided such at least in ACL table context..
-    try (Table t = e.getCoprocessorRegionServerServices().getConnection().
-        getTable(AccessControlLists.ACL_TABLE_NAME)) {
+    try (Table t = e.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME)) {
       for (byte[] entry : entries) {
         currentEntry = entry;
         ListMultimap<String, TablePermission> perms =
@@ -955,20 +959,24 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     ZooKeeperWatcher zk = null;
     if (env instanceof MasterCoprocessorEnvironment) {
       // if running on HMaster
-      MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) env;
-      zk = mEnv.getMasterServices().getZooKeeper();
+      MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment)env;
+      if (mEnv instanceof HasMasterServices) {
+        zk = ((HasMasterServices)mEnv).getMasterServices().getZooKeeper();
+      }
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
-      RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment) env;
-      assert rsEnv.getCoprocessorRegionServerServices() instanceof RegionServerServices;
-      zk = ((RegionServerServices) rsEnv.getCoprocessorRegionServerServices()).getZooKeeper();
+      RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment)env;
+      if (rsEnv instanceof HasRegionServerServices) {
+        zk = ((HasRegionServerServices)rsEnv).getRegionServerServices().getZooKeeper();
+      }
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
       conf.addBytesMap(regionEnv.getRegion().getTableDescriptor().getValues());
-      assert regionEnv.getCoprocessorRegionServerServices() instanceof RegionServerServices;
-      zk = ((RegionServerServices) regionEnv.getCoprocessorRegionServerServices()).getZooKeeper();
       compatibleEarlyTermination = conf.getBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT,
-        AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);
+          AccessControlConstants.DEFAULT_ATTRIBUTE_EARLY_OUT);
+      if (regionEnv instanceof HasRegionServerServices) {
+        zk = ((HasRegionServerServices)regionEnv).getRegionServerServices().getZooKeeper();
+      }
     }
 
     // set the user-provider.
@@ -1080,7 +1088,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            try (Table table = c.getEnvironment().getMasterServices().getConnection().
+            try (Table table = c.getEnvironment().getConnection().
                 getTable(AccessControlLists.ACL_TABLE_NAME)) {
               AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(),
                   userperm, table);
@@ -1106,7 +1114,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table = c.getEnvironment().getMasterServices().getConnection().
+        try (Table table = c.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.removeTablePermissions(conf, tableName, table);
         }
@@ -1145,7 +1153,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         List<UserPermission> perms = tableAcls.get(tableName);
         if (perms != null) {
           for (UserPermission perm : perms) {
-            try (Table table = ctx.getEnvironment().getMasterServices().getConnection().
+            try (Table table = ctx.getEnvironment().getConnection().
                 getTable(AccessControlLists.ACL_TABLE_NAME)) {
               AccessControlLists.addUserPermission(conf, perm, table);
             }
@@ -1176,7 +1184,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       public Void run() throws Exception {
         UserPermission userperm = new UserPermission(Bytes.toBytes(owner),
             htd.getTableName(), null, Action.values());
-        try (Table table = c.getEnvironment().getMasterServices().getConnection().
+        try (Table table = c.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.addUserPermission(conf, userperm, table);
         }
@@ -1215,7 +1223,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table = ctx.getEnvironment().getMasterServices().getConnection().
+        try (Table table = ctx.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.removeTablePermissions(conf, tableName, columnFamily, table);
         }
@@ -1370,13 +1378,35 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
-    if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getMasterServices()
-      .getConnection(), AccessControlLists.ACL_TABLE_NAME)) {
-      // initialize the ACL storage table
-      AccessControlLists.createACLTable(ctx.getEnvironment().getMasterServices());
-    } else {
-      aclTabAvailable = true;
+    try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      if (!admin.tableExists(AccessControlLists.ACL_TABLE_NAME)) {
+        createACLTable(admin);
+      } else {
+        this.aclTabAvailable = true;
+      }
     }
+  }
+  /**
+   * Create the ACL table
+   * @throws IOException
+   */
+  private static void createACLTable(Admin admin) throws IOException {
+    /** Table descriptor for ACL table */
+    ColumnFamilyDescriptor cfd =
+        ColumnFamilyDescriptorBuilder.newBuilder(AccessControlLists.ACL_LIST_FAMILY).
+        setMaxVersions(1).
+        setInMemory(true).
+        setBlockCacheEnabled(true).
+        setBlocksize(8 * 1024).
+        setBloomFilterType(BloomType.NONE).
+        setScope(HConstants.REPLICATION_SCOPE_LOCAL).
+        // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
+        // be the case if we are using CombinedBlockCache (Bucket Cache).
+        setCacheDataInL1(true).build();
+    TableDescriptor td =
+        TableDescriptorBuilder.newBuilder(AccessControlLists.ACL_TABLE_NAME).
+        addColumnFamily(cfd).build();
+    admin.createTable(td);
   }
 
   @Override
@@ -1463,7 +1493,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table = ctx.getEnvironment().getMasterServices().getConnection().
+        try (Table table = ctx.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.removeNamespacePermissions(conf, namespace, table);
         }
@@ -2309,7 +2339,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           @Override
           public Void run() throws Exception {
             // regionEnv is set at #start. Hopefully not null at this point.
-            try (Table table = regionEnv.getCoprocessorRegionServerServices().getConnection().
+            try (Table table = regionEnv.getConnection().
                 getTable(AccessControlLists.ACL_TABLE_NAME)) {
               AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm, table,
                   request.getMergeExistingPermissions());
@@ -2366,7 +2396,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           @Override
           public Void run() throws Exception {
             // regionEnv is set at #start. Hopefully not null here.
-            try (Table table = regionEnv.getCoprocessorRegionServerServices().getConnection().
+            try (Table table = regionEnv.getConnection().
                 getTable(AccessControlLists.ACL_TABLE_NAME)) {
               AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm, table);
             }
@@ -2593,13 +2623,16 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     if (regex == null && tableNamesList != null && !tableNamesList.isEmpty()) {
       // Otherwise, if the requestor has ADMIN or CREATE privs for all listed tables, the
       // request can be granted.
-      MasterServices masterServices = ctx.getEnvironment().getMasterServices();
-      for (TableName tableName: tableNamesList) {
-        // Skip checks for a table that does not exist
-        if (!masterServices.getTableStateManager().isTablePresent(tableName))
-          continue;
-        requirePermission(getActiveUser(ctx), "getTableDescriptors", tableName, null, null,
+      TableName [] sns = null;
+      try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+        sns = admin.listTableNames();
+        if (sns == null) return;
+        for (TableName tableName: tableNamesList) {
+          // Skip checks for a table that does not exist
+          if (!admin.tableExists(tableName)) continue;
+          requirePermission(getActiveUser(ctx), "getTableDescriptors", tableName, null, null,
             Action.ADMIN, Action.CREATE);
+        }
       }
     }
   }

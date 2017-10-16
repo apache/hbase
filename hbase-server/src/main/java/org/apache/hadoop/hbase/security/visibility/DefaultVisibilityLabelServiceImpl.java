@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,11 +46,11 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -112,9 +111,15 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
 
   @Override
   public void init(RegionCoprocessorEnvironment e) throws IOException {
-    assert e.getCoprocessorRegionServerServices() instanceof RegionServerServices;
-    ZooKeeperWatcher zk = ((RegionServerServices) e.getCoprocessorRegionServerServices())
-        .getZooKeeper();
+    /* So, presumption that the RegionCE has a ZK Connection is too much. Why would a RCE have
+     * a ZK instance? This is cheating presuming we have access to the RS ZKW. TODO: Fix.
+     *
+     * And what is going on here? This ain't even a Coprocessor? And its being passed a CP Env?
+     */
+    // This is a CoreCoprocessor. On creation, we should have gotten an environment that
+    // implements HasRegionServerServices so we can get at RSS. FIX!!!! Integrate this CP as
+    // native service.
+    ZooKeeperWatcher zk = ((HasRegionServerServices)e).getRegionServerServices().getZooKeeper();
     try {
       labelsCache = VisibilityLabelsCache.createAndGet(zk, this.conf);
     } catch (IOException ioe) {

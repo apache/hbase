@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -560,6 +560,15 @@ public class TestWALLockup {
       return null;
     }
 
+    @Override
+    public FileSystem getFileSystem() {
+      return null;
+    }
+
+    @Override
+    public boolean isStopping() {
+      return false;
+    }
   }
 
   static class DummyWALActionsListener extends WALActionsListener.Base {

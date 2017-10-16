@@ -23,9 +23,10 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
-import org.apache.hadoop.hbase.regionserver.CoprocessorRegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -39,11 +40,28 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
   /** @return region information for the region this coprocessor is running on */
   RegionInfo getRegionInfo();
 
-  /** @return reference to the region server services */
-  CoprocessorRegionServerServices getCoprocessorRegionServerServices();
-
   /** @return shared data between all instances of this coprocessor */
   ConcurrentMap<String, Object> getSharedData();
+
+  /**
+   * @return Hosting Server's ServerName
+   */
+  ServerName getServerName();
+
+  /**
+   * Be careful RPC'ing from a Coprocessor context.
+   * RPC's will fail, stall, retry, and/or crawl because the remote side is not online, is
+   * struggling or it is on the other side of a network partition. Any use of Connection from
+   * inside a Coprocessor must be able to handle all such hiccups.
+   *
+   * <p>Using a Connection to get at a local resource -- say a Region that is on the local
+   * Server or using Admin Interface from a Coprocessor hosted on the Master -- will result in a
+   * short-circuit of the RPC framework to make a direct invocation avoiding RPC (and
+   * protobuf marshalling/unmarshalling).
+   *
+   * @return The host's Connection to the Cluster.
+   */
+  Connection getConnection();
 
   /**
    * Returns a MetricRegistry that can be used to track metrics at the region server level. All

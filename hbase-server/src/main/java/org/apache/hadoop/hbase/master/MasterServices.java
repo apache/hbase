@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -55,7 +55,10 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 import com.google.protobuf.Service;
 
 /**
- * Services Master supplies
+ * A curated subset of services provided by {@link HMaster}.
+ * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
+ * full-on HMaster at test-time. Be judicious adding API. Changes cause ripples through
+ * the code base.
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
@@ -413,11 +416,6 @@ public interface MasterServices extends Server {
    * @return load balancer
    */
   public LoadBalancer getLoadBalancer();
-
-  /**
-   * @return True if this master is stopping.
-   */
-  boolean isStopping();
 
   boolean isSplitOrMergeEnabled(MasterSwitchType switchType);
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Server;
@@ -452,6 +453,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   @Override
   public ProcedureEvent getInitializedEvent() {
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public FileSystem getFileSystem() {
     return null;
   }
 }
