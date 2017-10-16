@@ -23,7 +23,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import javax.xml.bind.UnmarshalException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
@@ -37,6 +40,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestXmlParsing {
+  private static final Log LOG = LogFactory.getLog(TestXmlParsing.class);
 
   @Test
   public void testParsingClusterVersion() throws Exception {
@@ -68,8 +72,12 @@ public class TestXmlParsing {
       admin.getClusterVersion();
       fail("Expected getClusterVersion() to throw an exception");
     } catch (IOException e) {
+      assertEquals("Cause of exception ought to be a failure to parse the stream due to our " +
+          "invalid external entity. Make sure this isn't just a false positive due to " +
+          "implementation. see HBASE-19020.", UnmarshalException.class, e.getCause().getClass());
       final String exceptionText = StringUtils.stringifyException(e);
-      final String expectedText = "The entity \"xee\" was referenced, but not declared.";
+      final String expectedText = "\"xee\"";
+      LOG.debug("exception text: '" + exceptionText + "'", e);
       assertTrue("Exception does not contain expected text", exceptionText.contains(expectedText));
     }
   }
