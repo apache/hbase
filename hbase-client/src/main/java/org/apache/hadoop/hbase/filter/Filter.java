@@ -172,8 +172,12 @@ public abstract class Filter {
      */
     NEXT_COL,
     /**
-     * Done with columns, skip to next row. Note that filterRow() will
-     * still be called.
+     * Seek to next row in current family. It may still pass a cell whose family is different but
+     * row is the same as previous cell to {@link #filterKeyValue(Cell)} , even if we get a NEXT_ROW
+     * returned for previous cell. For more details see HBASE-18368. <br>
+     * Once reset() method was invoked, then we switch to the next row for all family, and you can
+     * catch the event by invoking CellUtils.matchingRows(previousCell, currentCell). <br>
+     * Note that filterRow() will still be called. <br>
      */
     NEXT_ROW,
     /**
@@ -181,7 +185,7 @@ public abstract class Filter {
      */
     SEEK_NEXT_USING_HINT,
     /**
-     * Include KeyValue and done with row, seek to next.
+     * Include KeyValue and done with row, seek to next. See NEXT_ROW.
      */
     INCLUDE_AND_SEEK_NEXT_ROW,
 }

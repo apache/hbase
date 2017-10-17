@@ -36,10 +36,10 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Tests filter Lists in ways that rely on a MiniCluster.
- * Where possible, favor tests in TestFilterList and TestFilterFromRegionSide instead.
+ * Tests filter Lists in ways that rely on a MiniCluster. Where possible, favor tests in
+ * TestFilterList and TestFilterFromRegionSide instead.
  */
-@Category({MediumTests.class, FilterTests.class})
+@Category({ MediumTests.class, FilterTests.class })
 public class TestFilterListOnMini {
 
   private static final Log LOG = LogFactory.getLog(TestFilterListOnMini.class);
@@ -58,7 +58,6 @@ public class TestFilterListOnMini {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore("HBASE-18410 Should not merge without this test running.")
   @Test
   public void testFiltersWithOR() throws Exception {
     TableName tn = TableName.valueOf(name.getMethodName());

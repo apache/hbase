@@ -74,7 +74,12 @@ public class FilterListWithOR extends FilterListBase {
    * as the previous cell even if filter-A has NEXT_COL returned for the previous cell. So we should
    * save the previous cell and the return code list when checking previous cell for every filter in
    * filter list, and verify if currentCell fit the previous return code, if fit then pass the
-   * currentCell to the corresponding filter. (HBASE-17678)
+   * currentCell to the corresponding filter. (HBASE-17678) <br>
+   * Note that: In StoreScanner level, NEXT_ROW will skip to the next row in current family, and in
+   * RegionScanner level, NEXT_ROW will skip to the next row in current family and switch to the
+   * next family for RegionScanner, INCLUDE_AND_NEXT_ROW is the same. so we should pass current cell
+   * to the filter, if row mismatch or row match but column family mismatch. (HBASE-18368)
+   * @see org.apache.hadoop.hbase.filter.Filter.ReturnCode
    */
   private boolean shouldPassCurrentCellToFilter(Cell prevCell, Cell currentCell, int filterIdx)
       throws IOException {
@@ -94,7 +99,8 @@ public class FilterListWithOR extends FilterListBase {
       return !CellUtil.matchingRowColumn(prevCell, currentCell);
     case NEXT_ROW:
     case INCLUDE_AND_SEEK_NEXT_ROW:
-      return !CellUtil.matchingRows(prevCell, currentCell);
+      return !CellUtil.matchingRows(prevCell, currentCell)
+          || !CellUtil.matchingFamily(prevCell, currentCell);
     default:
       throw new IllegalStateException("Received code is not valid.");
     }
