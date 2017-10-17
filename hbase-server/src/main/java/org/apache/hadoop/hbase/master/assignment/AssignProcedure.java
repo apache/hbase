@@ -198,6 +198,10 @@ public class AssignProcedure extends RegionTransitionProcedure {
           // Try and keep the location we had before we offlined.
           retain = true;
           regionNode.setRegionLocation(lastRegionLocation);
+        } else if (regionNode.getLastHost() != null) {
+          retain = true;
+          LOG.info("Setting lastHost as the region location " + regionNode.getLastHost());
+          regionNode.setRegionLocation(regionNode.getLastHost());
         }
       }
     }
