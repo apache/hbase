@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -28,6 +29,7 @@ import java.net.URL;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,6 +70,14 @@ public class TestInfoServers {
   @AfterClass
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testGetMasterInfoPort() throws Exception {
+    try (Admin admin = UTIL.getAdmin()) {
+      assertEquals(UTIL.getHBaseCluster().getMaster().getInfoServer().getPort(),
+        admin.getMasterInfoPort());
+    }
   }
 
   /**

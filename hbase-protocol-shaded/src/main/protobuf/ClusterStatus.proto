@@ -224,6 +224,7 @@ message ClusterStatus {
   optional ServerName master = 7;
   repeated ServerName backup_masters = 8;
   optional bool balancer_on = 9;
+  optional int32 master_info_port = 10 [default = -1];
 }
 
 enum Option {
@@ -236,4 +237,5 @@ enum Option {
   MASTER_COPROCESSORS = 6;
   REGIONS_IN_TRANSITION = 7;
   BALANCER_ON = 8;
+  MASTER_INFO_PORT = 9;
 }
