@@ -172,7 +172,7 @@ public class HFileOutputFormat2
   static final String MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY =
           "hbase.mapreduce.use.multi.table.hfileoutputformat";
 
-  public static final String STORAGE_POLICY_PROPERTY = "hbase.hstore.storagepolicy";
+  public static final String STORAGE_POLICY_PROPERTY = HStore.BLOCK_STORAGE_POLICY_KEY;
   public static final String STORAGE_POLICY_PROPERTY_CF_PREFIX = STORAGE_POLICY_PROPERTY + ".";
 
   @Override
