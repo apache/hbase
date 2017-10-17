@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -114,9 +115,7 @@ import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
-import org.apache.hadoop.hbase.master.procedure.AddColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
-import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
@@ -124,7 +123,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
-import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.RecoverMetaProcedure;
@@ -2158,37 +2156,22 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public long addColumn(
       final TableName tableName,
-      final ColumnFamilyDescriptor columnDescriptor,
+      final ColumnFamilyDescriptor column,
       final long nonceGroup,
       final long nonce)
       throws IOException {
     checkInitialized();
-    checkCompression(columnDescriptor);
-    checkEncryption(conf, columnDescriptor);
-    checkReplicationScope(columnDescriptor);
+    checkTableExists(tableName);
 
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
-        if (getMaster().getMasterCoprocessorHost().preAddColumn(tableName, columnDescriptor)) {
-          return;
-        }
+    TableDescriptor old = getTableDescriptors().get(tableName);
+    if (old.hasColumnFamily(column.getName())) {
+      throw new InvalidFamilyOperationException("Column family '" + column.getNameAsString()
+          + "' in table '" + tableName + "' already exists so cannot be added");
+    }
 
-        // Execute the operation synchronously, wait for the operation to complete before continuing
-        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
-        submitProcedure(new AddColumnFamilyProcedure(procedureExecutor.getEnvironment(),
-            tableName, columnDescriptor, latch));
-        latch.await();
-
-        getMaster().getMasterCoprocessorHost().postAddColumn(tableName, columnDescriptor);
-      }
-
-      @Override
-      protected String getDescription() {
-        return "AddColumnFamilyProcedure";
-      }
-    });
+    TableDescriptor newDesc = TableDescriptorBuilder
+        .newBuilder(old).addColumnFamily(column).build();
+    return modifyTable(tableName, newDesc, nonceGroup, nonce);
   }
 
   @Override
@@ -2199,35 +2182,20 @@ public class HMaster extends HRegionServer implements MasterServices {
       final long nonce)
       throws IOException {
     checkInitialized();
-    checkCompression(descriptor);
-    checkEncryption(conf, descriptor);
-    checkReplicationScope(descriptor);
+    checkTableExists(tableName);
 
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
-        if (getMaster().getMasterCoprocessorHost().preModifyColumn(tableName, descriptor)) {
-          return;
-        }
+    TableDescriptor old = getTableDescriptors().get(tableName);
+    if (! old.hasColumnFamily(descriptor.getName())) {
+      throw new InvalidFamilyOperationException("Family '" + descriptor.getNameAsString()
+          + "' does not exist, so it cannot be modified");
+    }
 
-        LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
+    TableDescriptor td = TableDescriptorBuilder
+        .newBuilder(old)
+        .modifyColumnFamily(descriptor)
+        .build();
 
-        // Execute the operation synchronously - wait for the operation to complete before
-        // continuing.
-        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
-        submitProcedure(new ModifyColumnFamilyProcedure(procedureExecutor.getEnvironment(),
-            tableName, descriptor, latch));
-        latch.await();
-
-        getMaster().getMasterCoprocessorHost().postModifyColumn(tableName, descriptor);
-      }
-
-      @Override
-      protected String getDescription() {
-        return "ModifyColumnFamilyProcedure";
-      }
-    });
+    return modifyTable(tableName, td, nonceGroup, nonce);
   }
 
   @Override
@@ -2238,31 +2206,22 @@ public class HMaster extends HRegionServer implements MasterServices {
       final long nonce)
       throws IOException {
     checkInitialized();
+    checkTableExists(tableName);
 
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-      @Override
-      protected void run() throws IOException {
-        if (getMaster().getMasterCoprocessorHost().preDeleteColumn(tableName, columnName)) {
-          return;
-        }
+    TableDescriptor old = getTableDescriptors().get(tableName);
 
-        LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
+    if (! old.hasColumnFamily(columnName)) {
+      throw new InvalidFamilyOperationException("Family '" + Bytes.toString(columnName)
+          + "' does not exist, so it cannot be deleted");
+    }
+    if (old.getColumnFamilyCount() == 1) {
+      throw new InvalidFamilyOperationException("Family '" + Bytes.toString(columnName)
+          + "' is the only column family in the table, so it cannot be deleted");
+    }
 
-        // Execute the operation synchronously - wait for the operation to complete before continuing.
-        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
-        submitProcedure(new DeleteColumnFamilyProcedure(procedureExecutor.getEnvironment(),
-            tableName, columnName, latch));
-        latch.await();
-
-        getMaster().getMasterCoprocessorHost().postDeleteColumn(tableName, columnName);
-      }
-
-      @Override
-      protected String getDescription() {
-        return "DeleteColumnFamilyProcedure";
-      }
-    });
+    TableDescriptor td = TableDescriptorBuilder
+        .newBuilder(old).removeColumnFamily(columnName).build();
+    return modifyTable(tableName, td, nonceGroup, nonce);
   }
 
   @Override
@@ -2441,15 +2400,20 @@ public class HMaster extends HRegionServer implements MasterServices {
     });
   }
 
+  private void checkTableExists(final TableName tableName)
+      throws IOException, TableNotFoundException {
+    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
+      throw new TableNotFoundException(tableName);
+    }
+  }
+
   @Override
   public void checkTableModifiable(final TableName tableName)
       throws IOException, TableNotFoundException, TableNotDisabledException {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
-      throw new TableNotFoundException(tableName);
-    }
+    checkTableExists(tableName);
     if (!getTableStateManager().isTableState(tableName, TableState.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }

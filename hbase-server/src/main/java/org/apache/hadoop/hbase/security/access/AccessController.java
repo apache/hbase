@@ -1168,6 +1168,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       TableDescriptor htd) throws IOException {
+    // TODO: potentially check if this is a add/modify/delete column operation
     requirePermission(getActiveUser(c), "modifyTable", tableName, null, null,
         Action.ADMIN, Action.CREATE);
   }
@@ -1187,45 +1188,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         try (Table table = c.getEnvironment().getConnection().
             getTable(AccessControlLists.ACL_TABLE_NAME)) {
           AccessControlLists.addUserPermission(conf, userperm, table);
-        }
-        return null;
-      }
-    });
-  }
-
-  @Override
-  public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 TableName tableName, ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    requireTablePermission(getActiveUser(ctx), "addColumn", tableName, columnFamily.getName(), null,
-        Action.ADMIN, Action.CREATE);
-  }
-
-  @Override
-  public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                    TableName tableName, ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    requirePermission(getActiveUser(ctx), "modifyColumn", tableName, columnFamily.getName(), null,
-        Action.ADMIN, Action.CREATE);
-  }
-
-  @Override
-  public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                    TableName tableName, byte[] columnFamily) throws IOException {
-    requirePermission(getActiveUser(ctx), "deleteColumn", tableName, columnFamily, null,
-        Action.ADMIN, Action.CREATE);
-  }
-
-  @Override
-  public void postDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final byte[] columnFamily) throws IOException {
-    final Configuration conf = ctx.getEnvironment().getConfiguration();
-    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        try (Table table = ctx.getEnvironment().getConnection().
-            getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          AccessControlLists.removeTablePermissions(conf, tableName, columnFamily, table);
         }
         return null;
       }
