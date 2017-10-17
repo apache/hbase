@@ -1920,25 +1920,17 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       final NavigableSet<byte []> targetCols, long readPt) throws IOException {
     lock.readLock().lock();
     try {
-      KeyValueScanner scanner = null;
-      if (this.getCoprocessorHost() != null) {
-        scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols, readPt);
-      }
-      scanner = createScanner(scan, targetCols, readPt, scanner);
-      return scanner;
+      return createScanner(scan, targetCols, readPt);
     } finally {
       lock.readLock().unlock();
     }
   }
 
   protected KeyValueScanner createScanner(Scan scan, final NavigableSet<byte[]> targetCols,
-      long readPt, KeyValueScanner scanner) throws IOException {
-    if (scanner == null) {
-      scanner = scan.isReversed() ? new ReversedStoreScanner(this,
-          getScanInfo(), scan, targetCols, readPt) : new StoreScanner(this,
-          getScanInfo(), scan, targetCols, readPt);
-    }
-    return scanner;
+      long readPt) throws IOException {
+    return scan.isReversed() ? new ReversedStoreScanner(this,
+      getScanInfo(), scan, targetCols, readPt) : new StoreScanner(this,
+      getScanInfo(), scan, targetCols, readPt);
   }
 
   /**

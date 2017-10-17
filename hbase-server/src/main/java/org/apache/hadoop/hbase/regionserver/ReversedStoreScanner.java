@@ -34,7 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * reversed scanning.
  */
 @InterfaceAudience.Private
-class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
+public class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
 
   /**
    * Opens a scanner across memstore, snapshot, and all StoreFiles. Assumes we
@@ -46,14 +46,14 @@ class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  ReversedStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
+  public ReversedStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
       NavigableSet<byte[]> columns, long readPt)
       throws IOException {
     super(store, scanInfo, scan, columns, readPt);
   }
 
   /** Constructor for testing. */
-  ReversedStoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
+  public ReversedStoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       List<? extends KeyValueScanner> scanners) throws IOException {
     super(scan, scanInfo, columns, scanners);
   }

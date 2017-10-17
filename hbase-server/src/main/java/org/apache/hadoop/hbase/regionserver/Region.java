@@ -131,9 +131,6 @@ public interface Region extends ConfigurationObserver {
    */
   public Map<byte[], Long> getMaxStoreSeqId();
 
-  /** @return readpoint considering given IsolationLevel; pass null for default*/
-  long getReadPoint(IsolationLevel isolationLevel);
-
   /**
    * @return The earliest time a store in the region was flushed. All
    *         other stores in the region would have been flushed either at, or
