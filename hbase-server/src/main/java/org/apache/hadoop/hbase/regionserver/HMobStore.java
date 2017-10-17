@@ -145,21 +145,19 @@ public class HMobStore extends HStore {
    */
   @Override
   protected KeyValueScanner createScanner(Scan scan, final NavigableSet<byte[]> targetCols,
-      long readPt, KeyValueScanner scanner) throws IOException {
-    if (scanner == null) {
-      if (MobUtils.isRefOnlyScan(scan)) {
-        Filter refOnlyFilter = new MobReferenceOnlyFilter();
-        Filter filter = scan.getFilter();
-        if (filter != null) {
-          scan.setFilter(new FilterList(filter, refOnlyFilter));
-        } else {
-          scan.setFilter(refOnlyFilter);
-        }
+      long readPt) throws IOException {
+    if (MobUtils.isRefOnlyScan(scan)) {
+      Filter refOnlyFilter = new MobReferenceOnlyFilter();
+      Filter filter = scan.getFilter();
+      if (filter != null) {
+        scan.setFilter(new FilterList(filter, refOnlyFilter));
+      } else {
+        scan.setFilter(refOnlyFilter);
       }
-      scanner = scan.isReversed() ? new ReversedMobStoreScanner(this, getScanInfo(), scan,
-          targetCols, readPt) : new MobStoreScanner(this, getScanInfo(), scan, targetCols, readPt);
     }
-    return scanner;
+    return scan.isReversed()
+        ? new ReversedMobStoreScanner(this, getScanInfo(), scan, targetCols, readPt)
+        : new MobStoreScanner(this, getScanInfo(), scan, targetCols, readPt);
   }
 
   /**

@@ -86,8 +86,8 @@ public abstract class Compactor<T extends CellSink> {
   protected static final String MINOR_COMPACTION_DROP_CACHE =
       "hbase.regionserver.minorcompaction.pagecache.drop";
 
-  private boolean dropCacheMajor;
-  private boolean dropCacheMinor;
+  private final boolean dropCacheMajor;
+  private final boolean dropCacheMinor;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(Configuration conf, HStore store) {
@@ -138,7 +138,7 @@ public abstract class Compactor<T extends CellSink> {
    * @param allFiles Whether all files are included for compaction
    * @return The result.
    */
-  protected FileDetails getFileDetails(
+  private FileDetails getFileDetails(
       Collection<HStoreFile> filesToCompact, boolean allFiles) throws IOException {
     FileDetails fd = new FileDetails();
     long oldestHFileTimeStampToKeepMVCC = System.currentTimeMillis() -
@@ -217,13 +217,13 @@ public abstract class Compactor<T extends CellSink> {
    * @param filesToCompact Files.
    * @return Scanners.
    */
-  protected List<StoreFileScanner> createFileScanners(Collection<HStoreFile> filesToCompact,
+  private List<StoreFileScanner> createFileScanners(Collection<HStoreFile> filesToCompact,
       long smallestReadPoint, boolean useDropBehind) throws IOException {
     return StoreFileScanner.getScannersForCompaction(filesToCompact, useDropBehind,
       smallestReadPoint);
   }
 
-  protected long getSmallestReadPoint() {
+  private long getSmallestReadPoint() {
     return store.getSmallestReadPoint();
   }
 
@@ -257,7 +257,7 @@ public abstract class Compactor<T extends CellSink> {
    * @return Writer for a new StoreFile in the tmp dir.
    * @throws IOException if creation failed
    */
-  protected StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind)
+  protected final StoreFileWriter createTmpWriter(FileDetails fd, boolean shouldDropBehind)
       throws IOException {
     // When all MVCC readpoints are 0, don't write them.
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
@@ -267,7 +267,7 @@ public abstract class Compactor<T extends CellSink> {
     /* includesTags = */fd.maxTagsLength > 0, shouldDropBehind);
   }
 
-  protected List<Path> compact(final CompactionRequestImpl request,
+  protected final List<Path> compact(final CompactionRequestImpl request,
       InternalScannerFactory scannerFactory, CellSinkFactory<T> sinkFactory,
       ThroughputController throughputController, User user) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
@@ -291,12 +291,8 @@ public abstract class Compactor<T extends CellSink> {
     try {
       /* Include deletes, unless we are doing a major compaction */
       ScanType scanType = scannerFactory.getScanType(request);
-      scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners, user,
-        smallestReadPoint);
-      if (scanner == null) {
-        scanner = scannerFactory.createScanner(scanners, scanType, fd, smallestReadPoint);
-      }
-      scanner = postCreateCoprocScanner(request, scanType, scanner, user);
+      scanner = postCreateCoprocScanner(request, scanType,
+        scannerFactory.createScanner(scanners, scanType, fd, smallestReadPoint), user);
       if (scanner == null) {
         // NULL scanner returned from coprocessor hooks means skip normal processing.
         return new ArrayList<>();
@@ -331,33 +327,13 @@ public abstract class Compactor<T extends CellSink> {
   protected abstract void abortWriter(T writer) throws IOException;
 
   /**
-   * Calls coprocessor, if any, to create compaction scanner - before normal scanner creation.
-   * @param request Compaction request.
-   * @param scanType Scan type.
-   * @param earliestPutTs Earliest put ts.
-   * @param scanners File scanners for compaction files.
-   * @param user the User
-   * @param readPoint the read point to help create scanner by Coprocessor if required.
-   * @return Scanner override by coprocessor; null if not overriding.
-   */
-  protected InternalScanner preCreateCoprocScanner(CompactionRequestImpl request, ScanType scanType,
-      long earliestPutTs, List<StoreFileScanner> scanners, User user, long readPoint)
-      throws IOException {
-    if (store.getCoprocessorHost() == null) {
-      return null;
-    }
-    return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
-      earliestPutTs, request.getTracker(), request, user, readPoint);
-  }
-
-  /**
    * Calls coprocessor, if any, to create scanners - after normal scanner creation.
    * @param request Compaction request.
    * @param scanType Scan type.
    * @param scanner The default scanner created for compaction.
    * @return Scanner scanner to use (usually the default); null if compaction should not proceed.
    */
-  protected InternalScanner postCreateCoprocScanner(CompactionRequestImpl request, ScanType scanType,
+  private InternalScanner postCreateCoprocScanner(CompactionRequestImpl request, ScanType scanType,
       InternalScanner scanner, User user) throws IOException {
     if (store.getCoprocessorHost() == null) {
       return scanner;

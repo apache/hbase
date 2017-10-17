@@ -19,18 +19,18 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
 import org.apache.commons.collections4.map.AbstractReferenceMap;
 import org.apache.commons.collections4.map.ReferenceMap;
 import org.apache.commons.logging.Log;
@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -77,15 +76,15 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -542,27 +541,6 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * See
-   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
-   *   InternalScanner, CompactionLifeCycleTracker, CompactionRequest, long)}
-   */
-  public InternalScanner preCompactScannerOpen(final HStore store,
-      final List<StoreFileScanner> scanners, final ScanType scanType, final long earliestPutTs,
-      final CompactionLifeCycleTracker tracker, final CompactionRequest request, final User user,
-      final long readPoint)
-      throws IOException {
-    return execOperationWithResult(null, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<RegionObserver, InternalScanner>(
-            regionObserverGetter, user) {
-          @Override
-          public InternalScanner call(RegionObserver observer) throws IOException {
-            return observer.preCompactScannerOpen(this, store, scanners, scanType,
-                earliestPutTs, getResult(), tracker, request, readPoint);
-          }
-        });
-  }
-
-  /**
    * Called prior to selecting the {@link HStoreFile}s for compaction from the list of currently
    * available candidates.
    * @param store The store where compaction is being requested
@@ -671,21 +649,6 @@ public class RegionCoprocessorHost
         observer.preFlush(this);
       }
     });
-  }
-
-  /**
-   * See
-   * {@link RegionObserver#preFlushScannerOpen(ObserverContext, Store, List, InternalScanner, long)}
-   */
-  public InternalScanner preFlushScannerOpen(final HStore store,
-      final List<KeyValueScanner> scanners, final long readPoint) throws IOException {
-    return execOperationWithResult(null, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<RegionObserver, InternalScanner>(regionObserverGetter) {
-          @Override
-          public InternalScanner call(RegionObserver observer) throws IOException {
-            return observer.preFlushScannerOpen(this, store, scanners, getResult(), readPoint);
-          }
-        });
   }
 
   /**
@@ -1154,21 +1117,6 @@ public class RegionCoprocessorHost
           @Override
           public RegionScanner call(RegionObserver observer) throws IOException {
             return observer.preScannerOpen(this, scan, getResult());
-          }
-        });
-  }
-
-  /**
-   * See
-   * {@link RegionObserver#preStoreScannerOpen(ObserverContext, Store, Scan, NavigableSet, KeyValueScanner, long)}
-   */
-  public KeyValueScanner preStoreScannerOpen(final HStore store, final Scan scan,
-      final NavigableSet<byte[]> targetCols, final long readPt) throws IOException {
-    return execOperationWithResult(null, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<RegionObserver, KeyValueScanner>(regionObserverGetter) {
-          @Override
-          public KeyValueScanner call(RegionObserver observer) throws IOException {
-            return observer.preStoreScannerOpen(this, store, scan, targetCols, getResult(), readPt);
           }
         });
   }

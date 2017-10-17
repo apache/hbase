@@ -1446,7 +1446,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return maxFlushedSeqId;
   }
 
-  @Override
+  /**
+   * @return readpoint considering given IsolationLevel. Pass {@code null} for default
+   */
   public long getReadPoint(IsolationLevel isolationLevel) {
     if (isolationLevel != null && isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
       // This scan can read even uncommitted transactions

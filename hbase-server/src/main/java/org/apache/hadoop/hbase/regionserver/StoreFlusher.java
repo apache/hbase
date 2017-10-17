@@ -79,15 +79,9 @@ abstract class StoreFlusher {
    */
   protected InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
       long smallestReadPoint) throws IOException {
-    InternalScanner scanner = null;
-    if (store.getCoprocessorHost() != null) {
-      scanner = store.getCoprocessorHost().preFlushScannerOpen(store, snapshotScanners,
-          smallestReadPoint);
-    }
-    if (scanner == null) {
-      scanner = new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), snapshotScanners,
-          ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
-    }
+    InternalScanner scanner =
+        new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), snapshotScanners,
+            ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
     assert scanner != null;
     if (store.getCoprocessorHost() != null) {
       try {

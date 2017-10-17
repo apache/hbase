@@ -24,12 +24,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
@@ -46,15 +43,13 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -67,10 +62,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+
 @Category({ LargeTests.class, ClientTests.class })
-@SuppressWarnings("deprecation")
 public class TestAvoidCellReferencesIntoShippedBlocks {
-  private static final Log LOG = LogFactory.getLog(TestAvoidCellReferencesIntoShippedBlocks.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static byte[][] ROWS = new byte[2][];
   private static byte[] ROW = Bytes.toBytes("testRow");
@@ -134,7 +129,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     try {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region =
           (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -190,10 +185,9 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       // Load cache
       Scan s = new Scan();
       s.setMaxResultSize(1000);
-      ResultScanner scanner = table.getScanner(s);
-      int count = 0;
-      for (Result result : scanner) {
-        count++;
+      int count;
+      try (ResultScanner scanner = table.getScanner(s)) {
+        count = Iterables.size(scanner);
       }
       assertEquals("Count all the rows ", count, 6);
       // all the cache is loaded
@@ -203,10 +197,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       region.compact(true);
       s = new Scan();
       s.setMaxResultSize(1000);
-      scanner = table.getScanner(s);
-      count = 0;
-      for (Result result : scanner) {
-        count++;
+      try (ResultScanner scanner = table.getScanner(s)) {
+        count = Iterables.size(scanner);
       }
       assertEquals("Count all the rows ", count, 6);
     } finally {
@@ -224,10 +216,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     }
 
     public void run() {
-      Scan s = new Scan();
-      s.setCaching(1);
-      s.setStartRow(ROW4);
-      s.setStopRow(ROW5);
+      Scan s = new Scan().withStartRow(ROW4).withStopRow(ROW5).setCaching(1);
       try {
         while(!doScan.get()) {
           try {
@@ -246,9 +235,9 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
           // evict what ever is available
           cache.evictBlock(cacheKey);
         }
-        ResultScanner scanner = table.getScanner(s);
-        for (Result res : scanner) {
-
+        try (ResultScanner scanner = table.getScanner(s)) {
+          while (scanner.next() != null) {
+          }
         }
         compactReadLatch.countDown();
       } catch (IOException e) {
@@ -264,35 +253,24 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     }
 
     @Override
-    public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
-        long earliestPutTs, InternalScanner s, CompactionLifeCycleTracker tracker,
-        CompactionRequest request, long readPoint)
-        throws IOException {
-      return createCompactorScanner((HStore) store, scanners, scanType, earliestPutTs);
-    }
-
-    private InternalScanner createCompactorScanner(HStore store,
-        List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs)
-        throws IOException {
-      return new CompactorStoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners,
-          scanType, store.getSmallestReadPoint(), earliestPutTs);
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+        CompactionRequest request) throws IOException {
+      return new CompactorInternalScanner(scanner);
     }
   }
 
-  private static class CompactorStoreScanner extends StoreScanner {
+  private static final class CompactorInternalScanner extends DelegatingInternalScanner {
 
-    public CompactorStoreScanner(HStore store, ScanInfo scanInfo, OptionalInt maxVersions,
-        List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
-        long earliestPutTs) throws IOException {
-      super(store, scanInfo, maxVersions, scanners, scanType, smallestReadPoint, earliestPutTs);
+    public CompactorInternalScanner(InternalScanner scanner) {
+      super(scanner);
     }
 
     @Override
-    public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
-      boolean next = super.next(outResult, scannerContext);
-      for (Cell cell : outResult) {
-        if(CellComparatorImpl.COMPARATOR.compareRows(cell, ROW2, 0, ROW2.length) == 0) {
+    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+      boolean next = scanner.next(result, scannerContext);
+      for (Cell cell : result) {
+        if (CellComparatorImpl.COMPARATOR.compareRows(cell, ROW2, 0, ROW2.length) == 0) {
           try {
             // hold the compaction
             // set doscan to true
@@ -314,7 +292,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     try {
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
-      String regionName = locator.getAllRegionLocations().get(0).getRegionInfo().getEncodedName();
+      String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = (HRegion) TEST_UTIL.getRSForFirstRegionInTable(tableName)
           .getRegion(regionName);
       HStore store = region.getStores().iterator().next();
@@ -364,10 +342,9 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       // Load cache
       Scan s = new Scan();
       s.setMaxResultSize(1000);
-      ResultScanner scanner = table.getScanner(s);
-      int count = 0;
-      for (Result result : scanner) {
-        count++;
+      int count;
+      try (ResultScanner scanner = table.getScanner(s)) {
+        count = Iterables.size(scanner);
       }
       assertEquals("Count all the rows ", count, 6);
 
@@ -375,77 +352,75 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       s = new Scan();
       // Start a scan from row3
       s.setCaching(1);
-      s.setStartRow(ROW1);
+      s.withStartRow(ROW1);
       // set partial as true so that the scan can send partial columns also
       s.setAllowPartialResults(true);
       s.setMaxResultSize(1000);
-      scanner = table.getScanner(s);
-      Thread evictorThread = new Thread() {
-        @Override
-        public void run() {
-          List<BlockCacheKey> cacheList = new ArrayList<>();
-          Iterator<CachedBlock> iterator = cache.iterator();
-          // evict all the blocks
-          while (iterator.hasNext()) {
-            CachedBlock next = iterator.next();
-            BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-            cacheList.add(cacheKey);
-            cache.evictBlock(cacheKey);
-          }
-          try {
-            Thread.sleep(1);
-          } catch (InterruptedException e1) {
-          }
-          iterator = cache.iterator();
-          int refBlockCount = 0;
-          while (iterator.hasNext()) {
-            iterator.next();
-            refBlockCount++;
-          }
-          assertEquals("One block should be there ", refBlockCount, 1);
-          // Rescan to prepopulate the data
-          // cache this row.
-          Scan s1 = new Scan();
-          // This scan will start from ROW1 and it will populate the cache with a
-          // row that is lower than ROW3.
-          s1.setStartRow(ROW3);
-          s1.setStopRow(ROW5);
-          s1.setCaching(1);
-          ResultScanner scanner;
-          try {
-            scanner = table.getScanner(s1);
-            int count = 0;
-            for (Result result : scanner) {
-              count++;
-            }
-            assertEquals("Count the rows", count, 2);
-            iterator = cache.iterator();
-            List<BlockCacheKey> newCacheList = new ArrayList<>();
+      try (ResultScanner scanner = table.getScanner(s)) {
+        Thread evictorThread = new Thread() {
+          @Override
+          public void run() {
+            List<BlockCacheKey> cacheList = new ArrayList<>();
+            Iterator<CachedBlock> iterator = cache.iterator();
+            // evict all the blocks
             while (iterator.hasNext()) {
               CachedBlock next = iterator.next();
               BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-              newCacheList.add(cacheKey);
+              cacheList.add(cacheKey);
+              cache.evictBlock(cacheKey);
             }
-            int newBlockRefCount = 0;
-            for (BlockCacheKey key : cacheList) {
-              if (newCacheList.contains(key)) {
-                newBlockRefCount++;
+            try {
+              Thread.sleep(1);
+            } catch (InterruptedException e1) {
+            }
+            iterator = cache.iterator();
+            int refBlockCount = 0;
+            while (iterator.hasNext()) {
+              iterator.next();
+              refBlockCount++;
+            }
+            assertEquals("One block should be there ", refBlockCount, 1);
+            // Rescan to prepopulate the data
+            // cache this row.
+            Scan s1 = new Scan();
+            // This scan will start from ROW1 and it will populate the cache with a
+            // row that is lower than ROW3.
+            s1.withStartRow(ROW3);
+            s1.withStopRow(ROW5);
+            s1.setCaching(1);
+            ResultScanner scanner;
+            try {
+              scanner = table.getScanner(s1);
+              int count = Iterables.size(scanner);
+              assertEquals("Count the rows", count, 2);
+              iterator = cache.iterator();
+              List<BlockCacheKey> newCacheList = new ArrayList<>();
+              while (iterator.hasNext()) {
+                CachedBlock next = iterator.next();
+                BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+                newCacheList.add(cacheKey);
               }
+              int newBlockRefCount = 0;
+              for (BlockCacheKey key : cacheList) {
+                if (newCacheList.contains(key)) {
+                  newBlockRefCount++;
+                }
+              }
+
+              assertEquals("old blocks should still be found ", newBlockRefCount, 6);
+              latch.countDown();
+
+            } catch (IOException e) {
             }
-
-            assertEquals("old blocks should still be found ", newBlockRefCount, 6);
-            latch.countDown();
-
-          } catch (IOException e) {
           }
-        }
-      };
-      count = 0;
-      for (Result result : scanner) {
-        count++;
-        if (count == 2) {
-          evictorThread.start();
-          latch.await();
+        };
+        count = 0;
+        while (scanner.next() != null) {
+          count++;
+          if (count == 2) {
+            evictorThread.start();
+            latch.await();
+          }
         }
       }
       assertEquals("Count should give all rows ", count, 10);

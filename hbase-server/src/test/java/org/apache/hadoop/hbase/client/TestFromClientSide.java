@@ -39,14 +39,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -57,7 +53,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -74,11 +69,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -104,15 +94,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
-import org.apache.hadoop.hbase.regionserver.DelegatingKeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -538,147 +523,6 @@ public class TestFromClientSide {
     countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, endKey,
       CompareOperator.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
-  }
-
-  /**
-   * This is a coprocessor to inject a test failure so that a store scanner.reseek() call will
-   * fail with an IOException() on the first call.
-   */
-  public static class ExceptionInReseekRegionObserver implements RegionCoprocessor, RegionObserver {
-    static AtomicLong reqCount = new AtomicLong(0);
-    static AtomicBoolean isDoNotRetry = new AtomicBoolean(false); // whether to throw DNRIOE
-    static AtomicBoolean throwOnce = new AtomicBoolean(true); // whether to only throw once
-
-    static void reset() {
-      reqCount.set(0);
-      isDoNotRetry.set(false);
-      throwOnce.set(true);
-    }
-
-    @Override
-    public Optional<RegionObserver> getRegionObserver() {
-      return Optional.of(this);
-    }
-
-    class MyStoreScanner extends StoreScanner {
-      public MyStoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
-          long readPt) throws IOException {
-        super(store, scanInfo, scan, columns, readPt);
-      }
-
-      @Override
-      protected List<KeyValueScanner> selectScannersFrom(HStore store,
-          List<? extends KeyValueScanner> allScanners) {
-        List<KeyValueScanner> scanners = super.selectScannersFrom(store, allScanners);
-        List<KeyValueScanner> newScanners = new ArrayList<>(scanners.size());
-        for (KeyValueScanner scanner : scanners) {
-          newScanners.add(new DelegatingKeyValueScanner(scanner) {
-            @Override
-            public boolean reseek(Cell key) throws IOException {
-              reqCount.incrementAndGet();
-              if (!throwOnce.get()||  reqCount.get() == 1) {
-                if (isDoNotRetry.get()) {
-                  throw new DoNotRetryIOException("Injected exception");
-                } else {
-                  throw new IOException("Injected exception");
-                }
-              }
-              return super.reseek(key);
-            }
-          });
-        }
-        return newScanners;
-      }
-    }
-
-    @Override
-    public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s,
-        final long readPt) throws IOException {
-      HStore hs = (HStore) store;
-      return new MyStoreScanner(hs, hs.getScanInfo(), scan, targetCols, readPt);
-    }
-  }
-
-  /**
-   * Tests the case where a Scan can throw an IOException in the middle of the seek / reseek
-   * leaving the server side RegionScanner to be in dirty state. The client has to ensure that the
-   * ClientScanner does not get an exception and also sees all the data.
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testClientScannerIsResetWhenScanThrowsIOException()
-  throws IOException, InterruptedException {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(tableName, FAMILY);
-    htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
-    TEST_UTIL.getAdmin().createTable(htd);
-    ExceptionInReseekRegionObserver.reset();
-    ExceptionInReseekRegionObserver.throwOnce.set(true); // throw exceptions only once
-    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-      int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
-      TEST_UTIL.getAdmin().flush(tableName);
-      int actualRowCount = TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
-      assertEquals(rowCount, actualRowCount);
-    }
-    assertTrue(ExceptionInReseekRegionObserver.reqCount.get() > 0);
-  }
-
-  /**
-   * Tests the case where a coprocessor throws a DoNotRetryIOException in the scan. The expectation
-   * is that the exception will bubble up to the client scanner instead of being retried.
-   */
-  @Test (timeout = 180000)
-  public void testScannerThrowsExceptionWhenCoprocessorThrowsDNRIOE()
-      throws IOException, InterruptedException {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(tableName, FAMILY);
-    htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
-    TEST_UTIL.getAdmin().createTable(htd);
-    ExceptionInReseekRegionObserver.reset();
-    ExceptionInReseekRegionObserver.isDoNotRetry.set(true);
-    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-      TEST_UTIL.loadTable(t, FAMILY, false);
-      TEST_UTIL.getAdmin().flush(tableName);
-      TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
-      fail("Should have thrown an exception");
-    } catch (DoNotRetryIOException expected) {
-      // expected
-    }
-    assertTrue(ExceptionInReseekRegionObserver.reqCount.get() > 0);
-  }
-
-  /**
-   * Tests the case where a coprocessor throws a regular IOException in the scan. The expectation
-   * is that the we will keep on retrying, but fail after the retries are exhausted instead of
-   * retrying indefinitely.
-   */
-  @Test (timeout = 180000)
-  public void testScannerFailsAfterRetriesWhenCoprocessorThrowsIOE()
-      throws IOException, InterruptedException {
-    TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(tableName, FAMILY);
-    htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
-    TEST_UTIL.getAdmin().createTable(htd);
-    ExceptionInReseekRegionObserver.reset();
-    ExceptionInReseekRegionObserver.throwOnce.set(false); // throw exceptions in every retry
-    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
-      TEST_UTIL.loadTable(t, FAMILY, false);
-      TEST_UTIL.getAdmin().flush(tableName);
-      TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
-      fail("Should have thrown an exception");
-    } catch (DoNotRetryIOException expected) {
-      assertTrue(expected instanceof ScannerResetException);
-      // expected
-    }
-    assertTrue(ExceptionInReseekRegionObserver.reqCount.get() >= 3);
   }
 
   /*

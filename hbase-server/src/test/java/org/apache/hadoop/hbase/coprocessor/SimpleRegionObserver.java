@@ -82,11 +82,9 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   final AtomicInteger ctPreClose = new AtomicInteger(0);
   final AtomicInteger ctPostClose = new AtomicInteger(0);
   final AtomicInteger ctPreFlush = new AtomicInteger(0);
-  final AtomicInteger ctPreFlushScannerOpen = new AtomicInteger(0);
   final AtomicInteger ctPostFlush = new AtomicInteger(0);
   final AtomicInteger ctPreCompactSelect = new AtomicInteger(0);
   final AtomicInteger ctPostCompactSelect = new AtomicInteger(0);
-  final AtomicInteger ctPreCompactScanner = new AtomicInteger(0);
   final AtomicInteger ctPreCompact = new AtomicInteger(0);
   final AtomicInteger ctPostCompact = new AtomicInteger(0);
   final AtomicInteger ctPreGet = new AtomicInteger(0);
@@ -114,7 +112,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   final AtomicInteger ctPreScannerClose = new AtomicInteger(0);
   final AtomicInteger ctPostScannerClose = new AtomicInteger(0);
   final AtomicInteger ctPreScannerOpen = new AtomicInteger(0);
-  final AtomicInteger ctPreStoreScannerOpen = new AtomicInteger(0);
   final AtomicInteger ctPostScannerOpen = new AtomicInteger(0);
   final AtomicInteger ctPreBulkLoadHFile = new AtomicInteger(0);
   final AtomicInteger ctPostBulkLoadHFile = new AtomicInteger(0);
@@ -181,14 +178,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, List<KeyValueScanner> scanners, InternalScanner s, long readPoint)
-      throws IOException {
-    ctPreFlushScannerOpen.incrementAndGet();
-    return s;
-  }
-
-  @Override
   public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, StoreFile resultFile) throws IOException {
     ctPostFlush.incrementAndGet();
@@ -223,15 +212,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
-      InternalScanner s, CompactionLifeCycleTracker tracker, CompactionRequest request,
-      long readPoint) throws IOException {
-    ctPreCompactScanner.incrementAndGet();
-    return s;
-  }
-
-  @Override
   public void postCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       StoreFile resultFile, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
@@ -248,14 +228,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
       final RegionScanner s) throws IOException {
     ctPreScannerOpen.incrementAndGet();
     return null;
-  }
-
-  @Override
-  public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
-      throws IOException {
-    ctPreStoreScannerOpen.incrementAndGet();
-    return s;
   }
 
   @Override
@@ -830,10 +802,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
     return ctPreFlush.get();
   }
 
-  public int getCtPreFlushScannerOpen() {
-    return ctPreFlushScannerOpen.get();
-  }
-
   public int getCtPostFlush() {
     return ctPostFlush.get();
   }
@@ -844,10 +812,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   public int getCtPostCompactSelect() {
     return ctPostCompactSelect.get();
-  }
-
-  public int getCtPreCompactScanner() {
-    return ctPreCompactScanner.get();
   }
 
   public int getCtPreCompact() {
