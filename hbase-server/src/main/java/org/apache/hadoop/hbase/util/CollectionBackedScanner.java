@@ -27,6 +27,7 @@ import java.util.SortedSet;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 
 /**
@@ -40,7 +41,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   private Cell current;
 
   public CollectionBackedScanner(SortedSet<Cell> set) {
-    this(set, CellComparator.COMPARATOR);
+    this(set, CellComparatorImpl.COMPARATOR);
   }
 
   public CollectionBackedScanner(SortedSet<Cell> set,
@@ -51,7 +52,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   }
 
   public CollectionBackedScanner(List<Cell> list) {
-    this(list, CellComparator.COMPARATOR);
+    this(list, CellComparatorImpl.COMPARATOR);
   }
 
   public CollectionBackedScanner(List<Cell> list,

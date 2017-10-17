@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -62,7 +63,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
    */
   protected CellChunkImmutableSegment(CSLMImmutableSegment segment, MemStoreSize memstoreSize) {
     super(segment); // initiailize the upper class
-    incSize(0,-CSLMImmutableSegment.DEEP_OVERHEAD_CSLM+ CellChunkImmutableSegment.DEEP_OVERHEAD_CCM);
+    incSize(0,-CSLMImmutableSegment.DEEP_OVERHEAD_CSLM + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM);
     int numOfCells = segment.getCellsCount();
     // build the new CellSet based on CellChunkMap
     reinitializeCellSet(numOfCells, segment.getScanner(Long.MAX_VALUE), segment.getCellSet());

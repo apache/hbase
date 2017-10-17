@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -500,7 +500,7 @@ final public class FilterList extends FilterBase {
           keyHint = curKeyHint;
           continue;
         }
-        if (CellComparator.COMPARATOR.compare(keyHint, curKeyHint) < 0) {
+        if (CellComparatorImpl.COMPARATOR.compare(keyHint, curKeyHint) < 0) {
           keyHint = curKeyHint;
         }
       }
@@ -523,7 +523,7 @@ final public class FilterList extends FilterBase {
         keyHint = curKeyHint;
         continue;
       }
-      if (CellComparator.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
+      if (CellComparatorImpl.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
         keyHint = curKeyHint;
       }
     }

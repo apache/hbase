@@ -33,6 +33,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.regionserver.querymatcher.NewVersionBehaviorTracker;
@@ -45,10 +46,10 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
 
   private static final Log LOG = LogFactory.getLog(VisibilityNewVersionBehaivorTracker.class);
 
-  public VisibilityNewVersionBehaivorTracker(NavigableSet<byte[]> columns, int minVersion,
-      int maxVersion,
-      int resultMaxVersions, long oldestUnexpiredTS) {
-    super(columns, minVersion, maxVersion, resultMaxVersions, oldestUnexpiredTS);
+  public VisibilityNewVersionBehaivorTracker(NavigableSet<byte[]> columns,
+      CellComparator cellComparator, int minVersion, int maxVersion, int resultMaxVersions,
+      long oldestUnexpiredTS) {
+    super(columns, cellComparator, minVersion, maxVersion, resultMaxVersions, oldestUnexpiredTS);
   }
 
   private static class TagInfo {

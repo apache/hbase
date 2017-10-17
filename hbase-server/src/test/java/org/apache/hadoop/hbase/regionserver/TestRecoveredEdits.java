@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -179,7 +179,7 @@ public class TestRecoveredEdits {
         Cell previous = null;
         for (Cell cell: val.getCells()) {
           if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
-          if (previous != null && CellComparator.COMPARATOR.compareRows(previous, cell) == 0)
+          if (previous != null && CellComparatorImpl.COMPARATOR.compareRows(previous, cell) == 0)
             continue;
           previous = cell;
           Get g = new Get(CellUtil.cloneRow(cell));
@@ -187,7 +187,7 @@ public class TestRecoveredEdits {
           boolean found = false;
           for (CellScanner scanner = r.cellScanner(); scanner.advance();) {
             Cell current = scanner.current();
-            if (CellComparator.COMPARATOR.compareKeyIgnoresMvcc(cell, current) == 0) {
+            if (CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, cell, current) == 0) {
               found = true;
               break;
             }

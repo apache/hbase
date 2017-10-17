@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -126,7 +125,7 @@ public class ColumnRangeFilter extends FilterBase {
     int cmpMin = 1;
 
     if (this.minColumn != null) {
-      cmpMin = CellComparator.compareQualifiers(kv, this.minColumn, 0, this.minColumn.length);
+      cmpMin = CellUtil.compareQualifiers(kv, this.minColumn, 0, this.minColumn.length);
     }
 
     if (cmpMin < 0) {
@@ -141,7 +140,7 @@ public class ColumnRangeFilter extends FilterBase {
       return ReturnCode.INCLUDE;
     }
 
-    int cmpMax = CellComparator.compareQualifiers(kv, this.maxColumn, 0, this.maxColumn.length);
+    int cmpMax = CellUtil.compareQualifiers(kv, this.maxColumn, 0, this.maxColumn.length);
 
     if (this.maxColumnInclusive && cmpMax <= 0 ||
         !this.maxColumnInclusive && cmpMax < 0) {

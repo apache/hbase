@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -125,7 +126,7 @@ public class TestHFileWriterV3 {
     HFile.Writer writer = new HFile.WriterFactory(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
             .withFileContext(context)
-            .withComparator(CellComparator.COMPARATOR)
+            .withComparator(CellComparatorImpl.COMPARATOR)
             .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.

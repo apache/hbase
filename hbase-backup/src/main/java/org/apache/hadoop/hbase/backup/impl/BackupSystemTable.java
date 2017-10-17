@@ -37,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -255,7 +254,7 @@ public final class BackupSystemTable implements Closeable {
         res.advance();
         byte[] row = CellUtil.cloneRow(res.listCells().get(0));
         for (Cell cell : res.listCells()) {
-          if (CellComparator.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+          if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
             BackupSystemTable.PATH_COL.length) == 0) {
             map.put(row, Bytes.toString(CellUtil.cloneValue(cell)));
           }
@@ -284,13 +283,13 @@ public final class BackupSystemTable implements Closeable {
         byte[] fam = null;
         String path = null;
         for (Cell cell : res.listCells()) {
-          if (CellComparator.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
+          if (CellUtil.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
             BackupSystemTable.TBL_COL.length) == 0) {
             tbl = TableName.valueOf(CellUtil.cloneValue(cell));
-          } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+          } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
             BackupSystemTable.FAM_COL.length) == 0) {
             fam = CellUtil.cloneValue(cell);
-          } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+          } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
             BackupSystemTable.PATH_COL.length) == 0) {
             path = Bytes.toString(CellUtil.cloneValue(cell));
           }
@@ -436,13 +435,13 @@ public final class BackupSystemTable implements Closeable {
             rows.add(row);
             String rowStr = Bytes.toString(row);
             region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
-            if (CellComparator.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+            if (CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
               BackupSystemTable.FAM_COL.length) == 0) {
               fam = Bytes.toString(CellUtil.cloneValue(cell));
-            } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+            } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
               BackupSystemTable.PATH_COL.length) == 0) {
               path = Bytes.toString(CellUtil.cloneValue(cell));
-            } else if (CellComparator.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
+            } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
               BackupSystemTable.STATE_COL.length) == 0) {
               byte[] state = CellUtil.cloneValue(cell);
               if (Bytes.equals(BackupSystemTable.BL_PREPARE, state)) {

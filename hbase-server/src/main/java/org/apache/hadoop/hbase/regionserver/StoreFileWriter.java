@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -345,7 +346,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private final CacheConfig cacheConf;
     private final FileSystem fs;
 
-    private CellComparator comparator = CellComparator.COMPARATOR;
+    private CellComparator comparator = CellComparatorImpl.COMPARATOR;
     private BloomType bloomType = BloomType.NONE;
     private long maxKeyCount = 0;
     private Path dir;
@@ -470,7 +471,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
 
       if (comparator == null) {
-        comparator = CellComparator.COMPARATOR;
+        comparator = CellComparatorImpl.COMPARATOR;
       }
       return new StoreFileWriter(fs, filePath,
           conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext,

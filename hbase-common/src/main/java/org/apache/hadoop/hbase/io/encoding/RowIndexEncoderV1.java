@@ -17,6 +17,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 
@@ -57,7 +58,7 @@ public class RowIndexEncoderV1 {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = CellComparator.COMPARATOR.compareRows(lastCell, cell);
+      int keyComp = CellComparatorImpl.COMPARATOR.compareRows(lastCell, cell);
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
             + " previous. Current cell = " + cell + ", lastCell = " + lastCell);

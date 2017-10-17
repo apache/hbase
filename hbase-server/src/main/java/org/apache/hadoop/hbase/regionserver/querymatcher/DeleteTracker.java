@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 
 /**
@@ -83,5 +84,11 @@ public interface DeleteTracker extends ShipperListener {
     VERSION_MASKED  // The KeyValue is masked by max number of versions which is considered as
                     // deleted in strong semantics of versions(See MvccTracker)
   }
+
+  /**
+   * Return the comparator passed to this delete tracker
+   * @return the cell comparator
+   */
+  CellComparator getCellComparator();
 
 }

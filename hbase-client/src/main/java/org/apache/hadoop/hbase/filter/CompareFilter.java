@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -137,7 +137,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareRow(cell, comparator);
+    int compareResult = CellUtil.compareRow(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -146,7 +146,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareRow(cell, comparator);
+    int compareResult = CellUtil.compareRow(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -160,7 +160,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareFamily(cell, comparator);
+    int compareResult = CellUtil.compareFamily(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -169,7 +169,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareFamily(cell, comparator);
+    int compareResult = CellUtil.compareFamily(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -184,7 +184,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareQualifier(cell, comparator);
+    int compareResult = CellUtil.compareQualifier(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -194,7 +194,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareQualifier(cell, comparator);
+    int compareResult = CellUtil.compareQualifier(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -209,7 +209,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareValue(cell, comparator);
+    int compareResult = CellUtil.compareValue(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -218,7 +218,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellComparator.compareValue(cell, comparator);
+    int compareResult = CellUtil.compareValue(cell, comparator);
     return compare(op, compareResult);
   }
 

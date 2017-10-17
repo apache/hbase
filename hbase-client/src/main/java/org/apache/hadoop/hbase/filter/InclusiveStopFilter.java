@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
@@ -60,7 +60,7 @@ public class InclusiveStopFilter extends FilterBase {
   public boolean filterRowKey(Cell firstRowCell) {
     // if stopRowKey is <= buffer, then true, filter row.
     if (filterAllRemaining()) return true;
-    int cmp = CellComparator.COMPARATOR.compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
+    int cmp = CellComparatorImpl.COMPARATOR.compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
     done = reversed ? cmp < 0 : cmp > 0;
     return done;
   }

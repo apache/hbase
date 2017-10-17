@@ -100,8 +100,7 @@ public interface DataBlockEncoder {
    * @param decodingCtx
    * @return A newly created seeker.
    */
-  EncodedSeeker createSeeker(CellComparator comparator, 
-      HFileBlockDecodingContext decodingCtx);
+  EncodedSeeker createSeeker(CellComparator comparator, HFileBlockDecodingContext decodingCtx);
 
   /**
    * Creates a encoder specific encoding context

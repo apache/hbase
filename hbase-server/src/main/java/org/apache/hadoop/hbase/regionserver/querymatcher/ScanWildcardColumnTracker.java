@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -84,7 +84,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       // do not count a delete marker as another version
       return checkVersion(type, timestamp);
     }
-    int cmp = CellComparator.compareQualifiers(cell, this.columnCell);
+    int cmp = CellComparatorImpl.COMPARATOR.compareQualifiers(cell, this.columnCell);
     if (cmp == 0) {
       if (ignoreCount) {
         return ScanQueryMatcher.MatchCode.INCLUDE;

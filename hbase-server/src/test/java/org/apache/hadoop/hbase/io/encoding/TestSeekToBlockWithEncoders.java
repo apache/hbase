@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -284,7 +284,7 @@ public class TestSeekToBlockWithEncoders {
           HFILEBLOCK_DUMMY_HEADER, meta);
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
           encodingContext, this.useOffheapData);
-      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
+      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparatorImpl.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);

@@ -318,8 +318,8 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
-    return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
-      HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+    return CellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
+      0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
   /**
@@ -330,10 +330,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
-        HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+      return CellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
+        0, 0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
-      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell,
+      return CellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
         currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),
         nextColumn.getOffset(), nextColumn.getLength(), HConstants.LATEST_TIMESTAMP,
         Type.Maximum.getCode());
@@ -380,16 +380,18 @@ public abstract class ScanQueryMatcher implements ShipperListener {
 
     DeleteTracker deleteTracker;
     if (scanInfo.isNewVersionBehavior() && (userScan == null || !userScan.isRaw())) {
-      deleteTracker = new NewVersionBehaviorTracker(columns, scanInfo.getMinVersions(),
-          scanInfo.getMaxVersions(), resultMaxVersion, oldestUnexpiredTS);
+      deleteTracker = new NewVersionBehaviorTracker(columns, scanInfo.getComparator(),
+          scanInfo.getMinVersions(), scanInfo.getMaxVersions(), resultMaxVersion,
+          oldestUnexpiredTS);
     } else {
-      deleteTracker = new ScanDeleteTracker();
+      deleteTracker = new ScanDeleteTracker(scanInfo.getComparator());
     }
     if (host != null) {
       deleteTracker = host.postInstantiateDeleteTracker(deleteTracker);
       if (deleteTracker instanceof VisibilityScanDeleteTracker && scanInfo.isNewVersionBehavior()) {
-        deleteTracker = new VisibilityNewVersionBehaivorTracker(columns, scanInfo.getMinVersions(),
-            scanInfo.getMaxVersions(), resultMaxVersion, oldestUnexpiredTS);
+        deleteTracker = new VisibilityNewVersionBehaivorTracker(columns, scanInfo.getComparator(),
+            scanInfo.getMinVersions(), scanInfo.getMaxVersions(), resultMaxVersion,
+            oldestUnexpiredTS);
       }
     }
 

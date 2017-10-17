@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -39,7 +40,7 @@ public class TestScanDeleteTracker {
 
   @Before
   public void setUp() throws Exception {
-    sdt = new ScanDeleteTracker();
+    sdt = new ScanDeleteTracker(CellComparatorImpl.COMPARATOR);
   }
 
   @Test

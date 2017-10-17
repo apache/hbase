@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -49,7 +48,7 @@ public interface Store {
   int NO_PRIORITY = Integer.MIN_VALUE;
 
   // General Accessors
-  Comparator<Cell> getComparator();
+  CellComparator getComparator();
 
   Collection<? extends StoreFile> getStorefiles();
 

@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -501,9 +502,11 @@ public class TestScannerHeartbeatMessages {
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap = new HeartbeatReversedKVHeap(scanners, region.getCellComparator());
+      this.storeHeap =
+          new HeartbeatReversedKVHeap(scanners, (CellComparatorImpl) region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new HeartbeatReversedKVHeap(joinedScanners, region.getCellComparator());
+        this.joinedHeap = new HeartbeatReversedKVHeap(joinedScanners,
+            (CellComparatorImpl) region.getCellComparator());
       }
     }
   }
@@ -528,9 +531,11 @@ public class TestScannerHeartbeatMessages {
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap = new HeartbeatKVHeap(scanners, region.getCellComparator());
+      this.storeHeap =
+          new HeartbeatKVHeap(scanners, region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
+        this.joinedHeap =
+            new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
       }
     }
   }
@@ -565,7 +570,7 @@ public class TestScannerHeartbeatMessages {
    */
   private static final class HeartbeatReversedKVHeap extends ReversedKeyValueHeap {
     public HeartbeatReversedKVHeap(List<? extends KeyValueScanner> scanners,
-        CellComparator comparator) throws IOException {
+        CellComparatorImpl comparator) throws IOException {
       super(scanners, comparator);
     }
 

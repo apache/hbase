@@ -917,7 +917,7 @@ class HBaseContext(@transient sc: SparkContext,
     new WriterLength(0,
       new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
         .withBloomType(BloomType.valueOf(familyOptions.bloomType))
-        .withComparator(CellComparator.COMPARATOR).withFileContext(hFileContext)
+        .withComparator(CellComparatorImpl.COMPARATOR).withFileContext(hFileContext)
         .withFilePath(new Path(familydir, "_" + UUID.randomUUID.toString.replaceAll("-", "")))
         .withFavoredNodes(favoredNodes).build())
 

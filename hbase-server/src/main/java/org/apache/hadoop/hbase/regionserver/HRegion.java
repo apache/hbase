@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -81,6 +80,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -3796,7 +3796,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         } else if (result.size() == 1 && !valueIsNull) {
           Cell kv = result.get(0);
           cellTs = kv.getTimestamp();
-          int compareResult = CellComparator.compareValue(kv, comparator);
+          int compareResult = CellUtil.compareValue(kv, comparator);
           matches = matches(op, compareResult);
         }
         // If matches put the new put or delete the new delete
@@ -7666,7 +7666,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * @return Sorted list of <code>cells</code> using <code>comparator</code>
    */
-  private static List<Cell> sort(List<Cell> cells, final Comparator<Cell> comparator) {
+  private static List<Cell> sort(List<Cell> cells, final CellComparator comparator) {
     Collections.sort(cells, comparator);
     return cells;
   }
@@ -8228,8 +8228,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public CellComparator getCellComparator() {
-    return this.getRegionInfo().isMetaRegion() ? CellComparator.META_COMPARATOR
-        : CellComparator.COMPARATOR;
+    return this.getRegionInfo().isMetaRegion() ? CellComparatorImpl.META_COMPARATOR
+        : CellComparatorImpl.COMPARATOR;
   }
 
   public long getMemStoreFlushSize() {

@@ -35,7 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -209,7 +209,7 @@ public class TestDataBlockEncoders {
                           .withIncludesTags(includesTags)
                           .withCompression(Compression.Algorithm.NONE)
                           .build();
-      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
+      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparatorImpl.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
@@ -285,14 +285,15 @@ public class TestDataBlockEncoders {
                           .withIncludesTags(includesTags)
                           .withCompression(Compression.Algorithm.NONE)
                           .build();
-      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
+      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparatorImpl.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       int i = 0;
       do {
         KeyValue expectedKeyValue = sampleKv.get(i);
         Cell cell = seeker.getCell();
-        if (CellComparator.COMPARATOR.compareKeyIgnoresMvcc(expectedKeyValue, cell) != 0) {
+        if (CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expectedKeyValue,
+          cell) != 0) {
           int commonPrefix = CellUtil
               .findCommonPrefixInFlatKey(expectedKeyValue, cell, false, true);
           fail(String.format("next() produces wrong results "
@@ -326,7 +327,7 @@ public class TestDataBlockEncoders {
           getEncodingContext(Compression.Algorithm.NONE, encoding), this.useOffheapData);
       Cell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
       KeyValue firstKv = sampleKv.get(0);
-      if (0 != CellComparator.COMPARATOR.compareKeyIgnoresMvcc(key, firstKv)) {
+      if (0 != CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, key, firstKv)) {
         int commonPrefix = CellUtil.findCommonPrefixInFlatKey(key, firstKv, false, true);
         fail(String.format("Bug in '%s' commonPrefix %d", encoder.toString(), commonPrefix));
       }

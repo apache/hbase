@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+//import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
@@ -766,7 +767,7 @@ public class HFileBlockIndex {
         // TODO avoid array call.
         nonRootIndex.asSubByteBuffer(midKeyOffset, midLength, pair);
         nonRootIndexkeyOnlyKV.setKey(pair.getFirst(), pair.getSecond(), midLength);
-        int cmp = comparator.compareKeyIgnoresMvcc(key, nonRootIndexkeyOnlyKV);
+        int cmp = CellUtil.compareKeyIgnoresMvcc(comparator, key, nonRootIndexkeyOnlyKV);
 
         // key lives above the midpoint
         if (cmp > 0)

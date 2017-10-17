@@ -28,7 +28,8 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -109,7 +110,7 @@ public class FixedFileTrailer {
 
   /** Raw key comparator class name in version 3 */
   // We could write the actual class name from 2.0 onwards and handle BC
-  private String comparatorClassName = CellComparator.COMPARATOR.getClass().getName();
+  private String comparatorClassName = CellComparatorImpl.COMPARATOR.getClass().getName();
 
   /** The encryption key */
   private byte[] encryptionKey;
@@ -559,11 +560,15 @@ public class FixedFileTrailer {
   private static Class<? extends CellComparator> getComparatorClass(String comparatorClassName)
       throws IOException {
     Class<? extends CellComparator> comparatorKlass;
+    // for BC
     if (comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())) {
-      comparatorKlass = CellComparator.class;
+        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
+        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))) {
+      comparatorKlass = CellComparatorImpl.class;
     } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
-        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())) {
+        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
+        || (comparatorClassName
+            .equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))) {
       comparatorKlass = MetaCellComparator.class;
     } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue.RawBytesComparator")
         || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")) {

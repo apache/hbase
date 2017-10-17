@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,14 +96,14 @@ public class KeyValue implements ExtendedCell {
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
-   * @deprecated Use {@link CellComparator#COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated Use {@link CellComparatorImpl#COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
-   * @deprecated Use {@link CellComparator#META_COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated Use {@link CellComparatorImpl#META_COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator META_COMPARATOR = new MetaComparator();
@@ -1608,7 +1607,7 @@ public class KeyValue implements ExtendedCell {
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
-   * @deprecated : {@link CellComparator#META_COMPARATOR} to be used. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated : {@link CellComparatorImpl#META_COMPARATOR} to be used. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static class MetaComparator extends KVComparator {
@@ -1618,7 +1617,7 @@ public class KeyValue implements ExtendedCell {
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      return CellComparator.META_COMPARATOR.compareKeyIgnoresMvcc(left, right);
+      return CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.META_COMPARATOR, left, right);
     }
 
     @Override
@@ -1723,7 +1722,7 @@ public class KeyValue implements ExtendedCell {
    * Compare KeyValues.  When we compare KeyValues, we only compare the Key
    * portion.  This means two KeyValues with same Key but different Values are
    * considered the same as far as this Comparator is concerned.
-   * @deprecated : Use {@link CellComparator}. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated : Use {@link CellComparatorImpl}. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static class KVComparator implements RawComparator<Cell>, SamePrefixComparator<byte[]> {
@@ -1751,7 +1750,7 @@ public class KeyValue implements ExtendedCell {
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     protected int compareRowKey(final Cell left, final Cell right) {
-      return CellComparator.COMPARATOR.compareRows(left, right);
+      return CellComparatorImpl.COMPARATOR.compareRows(left, right);
     }
 
     /**
@@ -1840,7 +1839,7 @@ public class KeyValue implements ExtendedCell {
     }
 
     public int compareOnlyKeyPortion(Cell left, Cell right) {
-      return CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, right);
+      return CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, right);
     }
 
     /**
@@ -1849,12 +1848,12 @@ public class KeyValue implements ExtendedCell {
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      int compare = CellComparator.COMPARATOR.compare(left, right);
+      int compare = CellComparatorImpl.COMPARATOR.compare(left, right);
       return compare;
     }
 
     public int compareTimestamps(final Cell left, final Cell right) {
-      return CellComparator.compareTimestamps(left, right);
+      return CellComparatorImpl.COMPARATOR.compareTimestamps(left, right);
     }
 
     /**
@@ -1884,7 +1883,7 @@ public class KeyValue implements ExtendedCell {
 
     int compareColumns(final Cell left, final short lrowlength, final Cell right,
         final short rrowlength) {
-      return CellComparator.compareColumns(left, right);
+      return CellComparatorImpl.COMPARATOR.compareColumns(left, right);
     }
 
     protected int compareColumns(

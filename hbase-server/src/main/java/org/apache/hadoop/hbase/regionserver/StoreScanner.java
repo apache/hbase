@@ -549,7 +549,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // Only do a sanity-check if store and comparator are available.
-    CellComparator comparator = store.map(s -> s.getComparator()).orElse(null);
+    CellComparator comparator =
+        store.map(s -> s.getComparator()).orElse(null);
 
     int count = 0;
     long totalBytesRead = 0;

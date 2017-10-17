@@ -623,7 +623,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     // visibility tags per cell. The covering cells are determined not only
     // based on the delete type and ts
     // but also on the visibility expression matching.
-    return new VisibilityScanDeleteTracker();
+    return new VisibilityScanDeleteTracker(delTracker.getCellComparator());
   }
 
   @Override

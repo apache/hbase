@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -542,7 +542,7 @@ public class TestDefaultMemStore {
 
   @Test
   public void testMultipleVersionsSimple() throws Exception {
-    DefaultMemStore m = new DefaultMemStore(new Configuration(), CellComparator.COMPARATOR);
+    DefaultMemStore m = new DefaultMemStore(new Configuration(), CellComparatorImpl.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -575,7 +575,7 @@ public class TestDefaultMemStore {
     Thread.sleep(1);
     addRows(this.memstore);
     Cell closestToEmpty = ((DefaultMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
-    assertTrue(CellComparator.COMPARATOR.compareRows(closestToEmpty,
+    assertTrue(CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
         new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((DefaultMemStore) this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
@@ -583,7 +583,7 @@ public class TestDefaultMemStore {
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
       } else {
-        assertTrue(CellComparator.COMPARATOR.compareRows(nr,
+        assertTrue(CellComparatorImpl.COMPARATOR.compareRows(nr,
             new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
       }
     }
@@ -602,7 +602,7 @@ public class TestDefaultMemStore {
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
           assertTrue("Row name",
-            CellComparator.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
+            CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
           assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
           List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {
@@ -825,7 +825,7 @@ public class TestDefaultMemStore {
   @Test
   public void testUpsertMemstoreSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    memstore = new DefaultMemStore(conf, CellComparator.COMPARATOR);
+    memstore = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
     MemStoreSize oldSize = memstore.size();
 
     List<Cell> l = new ArrayList<>();

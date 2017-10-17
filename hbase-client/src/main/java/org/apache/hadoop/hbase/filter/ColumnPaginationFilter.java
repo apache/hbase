@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -120,7 +119,7 @@ public class ColumnPaginationFilter extends FilterBase {
       int cmp = 0;
       // Only compare if no KV's have been seen so far.
       if (count == 0) {
-        cmp = CellComparator.compareQualifiers(v, this.columnOffset, 0, this.columnOffset.length);
+        cmp = CellUtil.compareQualifiers(v, this.columnOffset, 0, this.columnOffset.length);
       }
       if (cmp < 0) {
         return ReturnCode.SEEK_NEXT_USING_HINT;

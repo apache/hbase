@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
@@ -50,7 +50,7 @@ public class TestRowDataNumberStrings extends BaseTestRowData{
 
       d.add(new KeyValue(row, family, column, 0L, Type.Put, value));
     }
-    Collections.sort(d, CellComparator.COMPARATOR);
+    Collections.sort(d, CellComparatorImpl.COMPARATOR);
   }
 
   @Override

@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -328,7 +328,7 @@ public class TestReplicationWALEntryFilters {
     List<Cell> cells2 = e2.getEdit().getCells();
     Assert.assertEquals(cells1.size(), cells2.size());
     for (int i = 0; i < cells1.size(); i++) {
-      CellComparator.COMPARATOR.compare(cells1.get(i), cells2.get(i));
+      CellComparatorImpl.COMPARATOR.compare(cells1.get(i), cells2.get(i));
     }
   }
 }

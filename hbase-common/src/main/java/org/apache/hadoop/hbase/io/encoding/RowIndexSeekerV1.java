@@ -190,7 +190,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     }
     do {
       int comp;
-      comp = comparator.compareKeyIgnoresMvcc(seekCell, current.currentKey);
+      comp = CellUtil.compareKeyIgnoresMvcc(comparator, seekCell, current.currentKey);
       if (comp == 0) { // exact match
         if (seekBefore) {
           if (!previous.isValid()) {
@@ -244,7 +244,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   @Override
   public int compareKey(CellComparator comparator, Cell key) {
-    return comparator.compareKeyIgnoresMvcc(key, current.currentKey);
+    return CellUtil.compareKeyIgnoresMvcc(comparator, key, current.currentKey);
   }
 
   protected void decodeFirst() {

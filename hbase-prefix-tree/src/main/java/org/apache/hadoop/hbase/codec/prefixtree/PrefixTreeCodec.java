@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;

@@ -27,7 +27,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -144,7 +144,7 @@ public class TextSortReducer extends
         "reducer.row.threshold", 1L * (1<<30));
     Iterator<Text> iter = lines.iterator();
     while (iter.hasNext()) {
-      Set<KeyValue> kvs = new TreeSet<>(CellComparator.COMPARATOR);
+      Set<KeyValue> kvs = new TreeSet<>(CellComparatorImpl.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {

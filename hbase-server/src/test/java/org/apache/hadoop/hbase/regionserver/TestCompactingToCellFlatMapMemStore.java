@@ -76,7 +76,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         String.valueOf(MemoryCompactionPolicy.EAGER));
 
     this.memstore =
-        new CompactingMemStore(conf, CellComparator.COMPARATOR, store,
+        new CompactingMemStore(conf, CellComparatorImpl.COMPARATOR, store,
             regionServicesForStores, MemoryCompactionPolicy.EAGER);
   }
 
@@ -469,7 +469,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // Just doing the cnt operation here
     MemStoreSegmentsIterator itr = new MemStoreMergerSegmentsIterator(
         ((CompactingMemStore) memstore).getImmutableSegments().getStoreSegments(),
-        CellComparator.COMPARATOR, 10);
+        CellComparatorImpl.COMPARATOR, 10);
     int cnt = 0;
     try {
       while (itr.next() != null) {

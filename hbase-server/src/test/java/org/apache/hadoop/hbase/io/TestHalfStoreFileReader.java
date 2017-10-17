@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -164,7 +164,7 @@ public class TestHalfStoreFileReader {
     // Ugly code to get the item before the midkey
     KeyValue beforeMidKey = null;
     for (KeyValue item : items) {
-      if (CellComparator.COMPARATOR.compare(item, midKV) >= 0) {
+      if (CellComparatorImpl.COMPARATOR.compare(item, midKV) >= 0) {
         break;
       }
       beforeMidKey = item;

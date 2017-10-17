@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -140,7 +140,7 @@ public class CompressionTest {
       scanner.seekTo(); // position to the start of file
       // Scanner does not do Cells yet. Do below for now till fixed.
       cc = scanner.getCell();
-      if (CellComparator.COMPARATOR.compareRows(c, cc) != 0) {
+      if (CellComparatorImpl.COMPARATOR.compareRows(c, cc) != 0) {
         throw new Exception("Read back incorrect result: " + c.toString() + " vs " + cc.toString());
       }
     } finally {

@@ -32,7 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.logging.Log;
@@ -677,7 +677,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Comparator for meta row keys.
    */
   private static class MetaRowsComparator implements Comparator<byte []> {
-    private final CellComparator delegate = CellComparator.META_COMPARATOR;
+    private final CellComparatorImpl delegate = CellComparatorImpl.META_COMPARATOR;
     @Override
     public int compare(byte[] left, byte[] right) {
       return delegate.compareRows(new KeyValue.KeyOnlyKeyValue(left), right, 0, right.length);

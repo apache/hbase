@@ -36,10 +36,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -176,7 +177,7 @@ public class HFileWriterImpl implements HFile.Writer {
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
     }
-    this.comparator = comparator != null? comparator: CellComparator.COMPARATOR;
+    this.comparator = comparator != null? comparator: CellComparatorImpl.COMPARATOR;
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -238,7 +239,7 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = comparator.compareKeyIgnoresMvcc(lastCell, cell);
+      int keyComp = CellUtil.compareKeyIgnoresMvcc(comparator, lastCell, cell);
 
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
@@ -399,7 +400,7 @@ public class HFileWriterImpl implements HFile.Writer {
       return CellUtil.createFirstOnRow(midRow);
     }
     // Rows are same. Compare on families.
-    diff = CellComparator.compareFamilies(left, right);
+    diff = comparator.compareFamilies(left, right);
     if (diff > 0) {
       throw new IllegalArgumentException("Left family sorts after right family; left="
           + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
@@ -421,7 +422,7 @@ public class HFileWriterImpl implements HFile.Writer {
       return CellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
     }
     // Families are same. Compare on qualifiers.
-    diff = CellComparator.compareQualifiers(left, right);
+    diff = comparator.compareQualifiers(left, right);
     if (diff > 0) {
       throw new IllegalArgumentException("Left qualifier sorts after right qualifier; left="
           + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));

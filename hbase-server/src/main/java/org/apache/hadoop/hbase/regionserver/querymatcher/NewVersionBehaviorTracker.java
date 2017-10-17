@@ -28,6 +28,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -55,6 +56,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
   private byte[][] columns;
   private int minVersions;
   private long oldestStamp;
+  private CellComparator comparator;
 
   // These two maps have same structure.
   // Each node is a versions deletion (DeleteFamily or DeleteColumn). Key is the mvcc of the marker,
@@ -71,14 +73,15 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
    * Note maxVersion and minVersion must set according to cf's conf, not user's scan parameter.
    *
    * @param columns           columns specified user in query
+   * @param comparartor       the cell comparator
    * @param minVersion        The minimum number of versions to keep(used when TTL is set).
    * @param maxVersion        The maximum number of versions in CF's conf
    * @param resultMaxVersions maximum versions to return per column, which may be different from
    *                          maxVersion
    * @param oldestUnexpiredTS the oldest timestamp we are interested in, based on TTL
    */
-  public NewVersionBehaviorTracker(NavigableSet<byte[]> columns, int minVersion, int maxVersion,
-      int resultMaxVersions, long oldestUnexpiredTS) {
+  public NewVersionBehaviorTracker(NavigableSet<byte[]> columns, CellComparator comparartor,
+      int minVersion, int maxVersion, int resultMaxVersions, long oldestUnexpiredTS) {
     this.maxVersions = maxVersion;
     this.minVersions = minVersion;
     this.resultMaxVersions = resultMaxVersions;
@@ -90,6 +93,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
         this.columns[i++] = column;
       }
     }
+    this.comparator = comparartor;
     reset();
   }
 
@@ -371,6 +375,11 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
   public boolean isDone(long timestamp) {
     // We can not skip Cells with small ts.
     return false;
+  }
+
+  @Override
+  public CellComparator getCellComparator() {
+    return this.comparator;
   }
 
 }

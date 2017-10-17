@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -334,6 +334,6 @@ public class TestProtobufUtil {
     ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(dbb, kv1.getLength(), kv2.getLength());
     CellProtos.Cell cell = ProtobufUtil.toCell(offheapKV);
     Cell newOffheapKV = ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), cell);
-    assertTrue(CellComparator.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
+    assertTrue(CellComparatorImpl.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);
   }
 }
