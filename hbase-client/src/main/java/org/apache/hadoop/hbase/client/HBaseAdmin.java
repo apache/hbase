@@ -3185,18 +3185,6 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  @Override
-  public int getMasterInfoPort() throws IOException {
-    // TODO: Fix!  Reaching into internal implementation!!!!
-    ConnectionImplementation connection = (ConnectionImplementation)this.connection;
-    ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
-    try {
-      return MasterAddressTracker.getMasterInfoPort(zkw);
-    } catch (KeeperException e) {
-      throw new IOException("Failed to get master info port from MasterAddressTracker", e);
-    }
-  }
-
   private ServerName getMasterAddress() throws IOException {
     // TODO: Fix!  Reaching into internal implementation!!!!
     ConnectionImplementation connection = (ConnectionImplementation)this.connection;

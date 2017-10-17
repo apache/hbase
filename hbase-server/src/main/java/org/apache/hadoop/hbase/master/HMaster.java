@@ -2503,6 +2503,12 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
           break;
         }
+        case MASTER_INFO_PORT: {
+          if (infoServer != null) {
+            builder.setMasterInfoPort(infoServer.getPort());
+          }
+          break;
+        }
       }
     }
     return builder.build();

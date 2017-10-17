@@ -2194,7 +2194,9 @@ public interface Admin extends Abortable, Closeable {
    * @return master info port
    * @throws IOException
    */
-  int getMasterInfoPort() throws IOException;
+  default int getMasterInfoPort() throws IOException {
+    return getClusterStatus(EnumSet.of(Option.MASTER_INFO_PORT)).getMasterInfoPort();
+  }
 
   /**
    * Compact a table.  Asynchronous operation in that this method requests that a

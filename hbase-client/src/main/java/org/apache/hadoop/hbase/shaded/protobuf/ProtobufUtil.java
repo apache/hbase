@@ -3009,6 +3009,7 @@ public final class ProtobufUtil {
     if (proto.hasBalancerOn()) {
       balancerOn = proto.getBalancerOn();
     }
+
     builder.setHBaseVersion(hbaseVersion)
            .setClusterId(clusterId)
            .setLiveServers(servers)
@@ -3018,6 +3019,9 @@ public final class ProtobufUtil {
            .setRegionState(rit)
            .setMasterCoprocessors(masterCoprocessors)
            .setBalancerOn(balancerOn);
+    if (proto.hasMasterInfoPort()) {
+      builder.setMasterInfoPort(proto.getMasterInfoPort());
+    }
     return builder.build();
   }
 
@@ -3037,6 +3041,7 @@ public final class ProtobufUtil {
       case MASTER: return ClusterStatus.Option.MASTER;
       case BACKUP_MASTERS: return ClusterStatus.Option.BACKUP_MASTERS;
       case BALANCER_ON: return ClusterStatus.Option.BALANCER_ON;
+      case MASTER_INFO_PORT: return ClusterStatus.Option.MASTER_INFO_PORT;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -3058,6 +3063,7 @@ public final class ProtobufUtil {
       case MASTER: return ClusterStatusProtos.Option.MASTER;
       case BACKUP_MASTERS: return ClusterStatusProtos.Option.BACKUP_MASTERS;
       case BALANCER_ON: return ClusterStatusProtos.Option.BALANCER_ON;
+      case MASTER_INFO_PORT: return ClusterStatusProtos.Option.MASTER_INFO_PORT;
       // should not reach here
       default: throw new IllegalArgumentException("Invalid option: " + option);
     }
@@ -3155,6 +3161,7 @@ public final class ProtobufUtil {
       builder.setBalancerOn(status.getBalancerOn());
     }
 
+    builder.setMasterInfoPort(status.getMasterInfoPort());
     return builder.build();
   }
 

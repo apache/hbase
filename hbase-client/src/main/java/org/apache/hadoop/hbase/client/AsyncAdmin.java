@@ -815,6 +815,15 @@ public interface AsyncAdmin {
   }
 
   /**
+   * Get the info port of the current master if one is available.
+   * @return master info port
+   */
+  default CompletableFuture<Integer> getMasterInfoPort() {
+    return getClusterStatus(EnumSet.of(Option.MASTER_INFO_PORT)).thenApply(
+      ClusterStatus::getMasterInfoPort);
+  }
+
+  /**
    * Get a list of {@link RegionLoad} of all regions hosted on a region seerver.
    * @param serverName
    * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
