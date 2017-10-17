@@ -36,7 +36,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -608,7 +608,7 @@ public class TestStripeStoreFileManager {
       ArrayList<HStoreFile> sfs, Configuration conf) throws Exception {
     StripeStoreConfig config = new StripeStoreConfig(
         conf, Mockito.mock(StoreConfigInformation.class));
-    StripeStoreFileManager result = new StripeStoreFileManager(CellComparator.COMPARATOR, conf,
+    StripeStoreFileManager result = new StripeStoreFileManager(CellComparatorImpl.COMPARATOR, conf,
         config);
     result.loadFiles(sfs);
     return result;

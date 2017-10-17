@@ -37,7 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -145,7 +145,7 @@ public class TestCompoundBloomFilter {
     List<KeyValue> kvList = new ArrayList<>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(RandomKeyValueUtil.randomKeyValue(rand));
-    Collections.sort(kvList, CellComparator.COMPARATOR);
+    Collections.sort(kvList, CellComparatorImpl.COMPARATOR);
     return kvList;
   }
 

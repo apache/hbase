@@ -56,6 +56,11 @@ public class ScanDeleteTracker implements DeleteTracker {
   protected int deleteLength = 0;
   protected byte deleteType = 0;
   protected long deleteTimestamp = 0L;
+  protected final CellComparator comparator;
+
+  public ScanDeleteTracker(CellComparator comparator) {
+    this.comparator = comparator;
+  }
 
   /**
    * Add the specified KeyValue to the list of deletes to check against for this row operation.
@@ -108,7 +113,7 @@ public class ScanDeleteTracker implements DeleteTracker {
     }
 
     if (deleteCell != null) {
-      int ret = -(CellComparator.compareQualifiers(cell, deleteCell));
+      int ret = -(this.comparator.compareQualifiers(cell, deleteCell));
       if (ret == 0) {
         if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
           return DeleteResult.COLUMN_DELETED;
@@ -165,5 +170,10 @@ public class ScanDeleteTracker implements DeleteTracker {
     if (deleteCell != null) {
       deleteCell = KeyValueUtil.toNewKeyCell(deleteCell);
     }
+  }
+
+  @Override
+  public CellComparator getCellComparator() {
+    return this.comparator;
   }
 }

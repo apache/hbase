@@ -34,7 +34,7 @@ import java.util.OptionalLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -115,7 +115,7 @@ public class TestStripeStoreEngine {
 
   private static TestStoreEngine createEngine(Configuration conf) throws Exception {
     HStore store = mock(HStore.class);
-    CellComparator kvComparator = mock(CellComparator.class);
+    CellComparatorImpl kvComparator = mock(CellComparatorImpl.class);
     return (TestStoreEngine)StoreEngine.create(store, conf, kvComparator);
   }
 

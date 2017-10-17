@@ -37,7 +37,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -84,7 +84,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
   public TestName name = new TestName();
 
   protected static final Set<KeyValue> simple_expected =
-      new TreeSet<KeyValue>(CellComparator.COMPARATOR) {
+      new TreeSet<KeyValue>(CellComparatorImpl.COMPARATOR) {
     private static final long serialVersionUID = 1L;
     {
       byte[] family = Bytes.toBytes("d");
@@ -163,7 +163,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
           assertTrue(
             format("Scan produced surprising result. expected: <%s>, actual: %s",
               expected, actual),
-            CellComparator.COMPARATOR.compare(expected, actual) == 0);
+            CellComparatorImpl.COMPARATOR.compare(expected, actual) == 0);
         }
       }
       assertFalse("Did not consume all expected values.", expectedIt.hasNext());

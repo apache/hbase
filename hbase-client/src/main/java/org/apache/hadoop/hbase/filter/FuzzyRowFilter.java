@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -235,7 +235,7 @@ public class FuzzyRowFilter extends FilterBase {
 
     boolean lessThan(Cell currentCell, byte[] nextRowKey) {
       int compareResult =
-          CellComparator.COMPARATOR.compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
+          CellComparatorImpl.COMPARATOR.compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
       return (!isReversed() && compareResult < 0) || (isReversed() && compareResult > 0);
     }
 

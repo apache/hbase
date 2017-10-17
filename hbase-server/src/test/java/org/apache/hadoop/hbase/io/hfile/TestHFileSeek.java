@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -137,7 +137,7 @@ public class TestHFileSeek extends TestCase {
       Writer writer = HFile.getWriterFactoryNoCache(conf)
           .withOutputStream(fout)
           .withFileContext(context)
-          .withComparator(CellComparator.COMPARATOR)
+          .withComparator(CellComparatorImpl.COMPARATOR)
           .create();
       try {
         BytesWritable key = new BytesWritable();

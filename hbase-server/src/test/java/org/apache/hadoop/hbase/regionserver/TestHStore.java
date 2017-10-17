@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -579,7 +580,7 @@ public class TestHStore {
     //this.store.get(get, qualifiers, result);
 
     //Need to sort the result since multiple files
-    Collections.sort(result, CellComparator.COMPARATOR);
+    Collections.sort(result, CellComparatorImpl.COMPARATOR);
 
     //Compare
     assertCheck();
@@ -614,7 +615,7 @@ public class TestHStore {
         get.getRow(), qualifiers);
 
     //Need to sort the result since multiple files
-    Collections.sort(result, CellComparator.COMPARATOR);
+    Collections.sort(result, CellComparatorImpl.COMPARATOR);
 
     //Compare
     assertCheck();
@@ -1688,7 +1689,7 @@ public class TestHStore {
 
   public static class MyCompactingMemStoreWithCustomCompactor extends CompactingMemStore {
     private static final AtomicInteger RUNNER_COUNT = new AtomicInteger(0);
-    public MyCompactingMemStoreWithCustomCompactor(Configuration conf, CellComparator c,
+    public MyCompactingMemStoreWithCustomCompactor(Configuration conf, CellComparatorImpl c,
         HStore store, RegionServicesForStores regionServices,
         MemoryCompactionPolicy compactionPolicy) throws IOException {
       super(conf, c, store, regionServices, compactionPolicy);
@@ -1713,7 +1714,7 @@ public class TestHStore {
     private static final AtomicBoolean START_TEST = new AtomicBoolean(false);
     private final CountDownLatch getScannerLatch = new CountDownLatch(1);
     private final CountDownLatch snapshotLatch = new CountDownLatch(1);
-    public MyCompactingMemStore(Configuration conf, CellComparator c,
+    public MyCompactingMemStore(Configuration conf, CellComparatorImpl c,
         HStore store, RegionServicesForStores regionServices,
         MemoryCompactionPolicy compactionPolicy) throws IOException {
       super(conf, c, store, regionServices, compactionPolicy);

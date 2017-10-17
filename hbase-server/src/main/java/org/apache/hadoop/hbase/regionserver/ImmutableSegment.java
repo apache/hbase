@@ -19,9 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.TimeRange;
 
 import java.util.ArrayList;

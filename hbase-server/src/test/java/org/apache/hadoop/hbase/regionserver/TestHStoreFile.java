@@ -375,7 +375,7 @@ public class TestHStoreFile extends HBaseTestCase {
              (topScanner.isSeeked() && topScanner.next())) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
 
-        if ((topScanner.getReader().getComparator().compare(midKV, key.array(),
+        if ((CellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
           key.arrayOffset(), key.limit())) > 0) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" +
               midkey);
@@ -428,8 +428,8 @@ public class TestHStoreFile extends HBaseTestCase {
           topScanner.next()) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
         keyOnlyKV.setKey(key.array(), 0 + key.arrayOffset(), key.limit());
-        assertTrue(topScanner.getReader().getComparator()
-            .compare(keyOnlyKV, badmidkey, 0, badmidkey.length) >= 0);
+        assertTrue(CellUtil.compare(topScanner.getReader().getComparator(), keyOnlyKV, badmidkey, 0,
+          badmidkey.length) >= 0);
         if (first) {
           first = false;
           KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);

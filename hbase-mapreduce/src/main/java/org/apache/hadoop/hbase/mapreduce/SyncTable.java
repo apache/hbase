@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -52,7 +52,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterators;
 
 public class SyncTable extends Configured implements Tool {
 
@@ -588,18 +587,18 @@ public class SyncTable extends Configured implements Tool {
         return -1; // target missing cell
       }
 
-      int result = CellComparator.compareFamilies(c1, c2);
+      int result = CellComparatorImpl.COMPARATOR.compareFamilies(c1, c2);
       if (result != 0) {
         return result;
       }
 
-      result = CellComparator.compareQualifiers(c1, c2);
+      result = CellComparatorImpl.COMPARATOR.compareQualifiers(c1, c2);
       if (result != 0) {
         return result;
       }
 
       // note timestamp comparison is inverted - more recent cells first
-      return CellComparator.compareTimestamps(c1, c2);
+      return CellComparatorImpl.COMPARATOR.compareTimestamps(c1, c2);
     }
 
     @Override

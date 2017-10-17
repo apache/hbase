@@ -97,7 +97,7 @@ public class TestFixedFileTrailer {
 
     t.setLastDataBlockOffset(291);
     t.setNumDataIndexLevels(3);
-    t.setComparatorClass(CellComparator.COMPARATOR.getClass());
+    t.setComparatorClass(CellComparatorImpl.COMPARATOR.getClass());
     t.setFirstDataBlockOffset(9081723123L); // Completely unrealistic.
     t.setUncompressedDataIndexSize(827398717L); // Something random.
 
@@ -178,7 +178,7 @@ public class TestFixedFileTrailer {
       t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
       t.setLastDataBlockOffset(291);
       t.setNumDataIndexLevels(3);
-      t.setComparatorClass(CellComparator.COMPARATOR.getClass());
+      t.setComparatorClass(CellComparatorImpl.COMPARATOR.getClass());
       t.setFirstDataBlockOffset(9081723123L); // Completely unrealistic.
       t.setUncompressedDataIndexSize(827398717L); // Something random.
       t.setLoadOnOpenOffset(128);
@@ -276,7 +276,7 @@ public class TestFixedFileTrailer {
       assertEquals(expected.getFirstDataBlockOffset(),
           loaded.getFirstDataBlockOffset());
       assertTrue(
-          expected.createComparator() instanceof CellComparator);
+          expected.createComparator() instanceof CellComparatorImpl);
       assertEquals(expected.getUncompressedDataIndexSize(),
           loaded.getUncompressedDataIndexSize());
     }

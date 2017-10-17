@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -107,7 +108,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       dup.limit(sourceAsBuffer.position() + onDiskSize);
       return dup.slice();
     } else {
-      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparator.COMPARATOR,
+      RowIndexSeekerV1 seeker = new RowIndexSeekerV1(CellComparatorImpl.COMPARATOR,
           decodingCtx);
       seeker.setCurrentBuffer(new SingleByteBuff(sourceAsBuffer));
       List<Cell> kvs = new ArrayList<>();

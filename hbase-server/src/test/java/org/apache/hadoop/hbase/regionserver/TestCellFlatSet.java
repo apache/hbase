@@ -29,7 +29,7 @@ import java.util.SortedSet;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -112,9 +112,9 @@ public class TestCellFlatSet extends TestCase {
     lowerOuterCell = new KeyValue(Bytes.toBytes(10), f, q, 10, v);
     upperOuterCell = new KeyValue(Bytes.toBytes(50), f, q, 10, v);
     ascCells = new Cell[] {kv1,kv2,kv3,kv4};
-    ascCbOnHeap = new CellArrayMap(CellComparator.COMPARATOR,ascCells,0,NUM_OF_CELLS,false);
+    ascCbOnHeap = new CellArrayMap(CellComparatorImpl.COMPARATOR,ascCells,0,NUM_OF_CELLS,false);
     descCells = new Cell[] {kv4,kv3,kv2,kv1};
-    descCbOnHeap = new CellArrayMap(CellComparator.COMPARATOR,descCells,0,NUM_OF_CELLS,true);
+    descCbOnHeap = new CellArrayMap(CellComparatorImpl.COMPARATOR,descCells,0,NUM_OF_CELLS,true);
 
     CONF.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     CONF.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
@@ -315,6 +315,6 @@ public class TestCellFlatSet extends TestCase {
       idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId());     // seqId
     }
 
-    return new CellChunkMap(CellComparator.COMPARATOR,chunkArray,0,NUM_OF_CELLS,!asc);
+    return new CellChunkMap(CellComparatorImpl.COMPARATOR,chunkArray,0,NUM_OF_CELLS,!asc);
   }
 }

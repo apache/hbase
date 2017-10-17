@@ -38,8 +38,12 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience.Private;
+
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
@@ -2280,7 +2284,7 @@ public final class CellUtil {
   }
 
   public static boolean matchingTimestamp(Cell a, Cell b) {
-    return CellComparator.compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
+    return CellComparatorImpl.COMPARATOR.compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
   }
 
   public static boolean matchingType(Cell a, Cell b) {
@@ -2636,6 +2640,306 @@ public final class CellUtil {
       Dictionary.write(out, cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength(), dict);
     }
+  }
+
+  /**
+   * Compares only the key portion of a cell. It does not include the sequence id/mvcc of the cell
+   * @param left
+   * @param right
+   * @return an int greater than 0 if left &gt; than right lesser than 0 if left &lt; than right
+   *         equal to 0 if left is equal to right
+   */
+  public static final int compareKeyIgnoresMvcc(CellComparator comparator, Cell left, Cell right) {
+    return ((CellComparatorImpl) comparator).compare(left, right, true);
+  }
+
+  /**
+   * Used to compare two cells based on the column hint provided. This is specifically
+   * used when we need to optimize the seeks based on the next indexed key. This is an
+   * advanced usage API specifically needed for some optimizations.
+   * @param nextIndexedCell the next indexed cell
+   * @param currentCell the cell to be compared
+   * @param foff the family offset of the currentCell
+   * @param flen the family length of the currentCell
+   * @param colHint the column hint provided - could be null
+   * @param coff the offset of the column hint if provided, if not offset of the currentCell's
+   * qualifier
+   * @param clen the length of the column hint if provided, if not length of the currentCell's
+   * qualifier
+   * @param ts the timestamp to be seeked
+   * @param type the type to be seeked
+   * @return an int based on the given column hint
+   * TODO : To be moved out of here because this is a special API used in scan
+   * optimization.
+   */
+  // compare a key against row/fam/qual/ts/type
+  @InterfaceAudience.Private
+  public static final int compareKeyBasedOnColHint(CellComparator comparator, Cell nextIndexedCell,
+      Cell currentCell, int foff, int flen, byte[] colHint, int coff, int clen, long ts,
+      byte type) {
+    int compare = comparator.compareRows(nextIndexedCell, currentCell);
+    if (compare != 0) {
+      return compare;
+    }
+    // If the column is not specified, the "minimum" key type appears the
+    // latest in the sorted order, regardless of the timestamp. This is used
+    // for specifying the last key/value in a given row, because there is no
+    // "lexicographically last column" (it would be infinitely long). The
+    // "maximum" key type does not need this behavior.
+    if (nextIndexedCell.getFamilyLength() + nextIndexedCell.getQualifierLength() == 0
+        && nextIndexedCell.getTypeByte() == Type.Minimum.getCode()) {
+      // left is "bigger", i.e. it appears later in the sorted order
+      return 1;
+    }
+    if (flen + clen == 0 && type == Type.Minimum.getCode()) {
+      return -1;
+    }
+
+    compare = comparator.compareFamilies(nextIndexedCell, currentCell);
+    if (compare != 0) {
+      return compare;
+    }
+    if (colHint == null) {
+      compare = comparator.compareQualifiers(nextIndexedCell, currentCell);
+    } else {
+      compare = compareQualifiers(nextIndexedCell, colHint, coff, clen);
+    }
+    if (compare != 0) {
+      return compare;
+    }
+    // Next compare timestamps.
+    compare = comparator.compareTimestamps(nextIndexedCell.getTimestamp(), ts);
+    if (compare != 0) {
+      return compare;
+    }
+
+    // Compare types. Let the delete types sort ahead of puts; i.e. types
+    // of higher numbers sort before those of lesser numbers. Maximum (255)
+    // appears ahead of everything, and minimum (0) appears after
+    // everything.
+    return (0xff & type) - (0xff & nextIndexedCell.getTypeByte());
+  }
+
+  /**
+   * Compares the cell's qualifier with the given byte[]
+   * @param left the cell for which the qualifier has to be compared
+   * @param right the byte[] having the qualifier
+   * @param rOffset the offset of the qualifier
+   * @param rLength the length of the qualifier
+   * @return greater than 0 if left cell's qualifier is bigger than byte[], lesser than 0 if left
+   *         cell's qualifier is lesser than byte[] and 0 otherwise
+   */
+  public final static int compareQualifiers(Cell left, byte[] right, int rOffset, int rLength) {
+    if (left instanceof ByteBufferCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferCell) left).getQualifierByteBuffer(),
+          ((ByteBufferCell) left).getQualifierPosition(), left.getQualifierLength(),
+          right, rOffset, rLength);
+    }
+    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), right, rOffset, rLength);
+  }
+
+  /**
+   * Compare cell's row against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's row
+   */
+  @InterfaceAudience.Private
+  public static int compareRow(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferCell) {
+      return comparator.compareTo(((ByteBufferCell) cell).getRowByteBuffer(),
+        ((ByteBufferCell) cell).getRowPosition(), cell.getRowLength());
+    }
+    return comparator.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+  }
+
+  /**
+   * Compare cell's column family against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's column family
+   */
+  @InterfaceAudience.Private
+  public static int compareFamily(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferCell) {
+      return comparator.compareTo(((ByteBufferCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferCell) cell).getFamilyPosition(), cell.getFamilyLength());
+    }
+    return comparator.compareTo(cell.getFamilyArray(), cell.getFamilyOffset(),
+      cell.getFamilyLength());
+  }
+
+  /**
+   * Compare cell's qualifier against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's qualifier
+   */
+  @InterfaceAudience.Private
+  public static int compareQualifier(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferCell) {
+      return comparator.compareTo(((ByteBufferCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferCell) cell).getQualifierPosition(), cell.getQualifierLength());
+    }
+    return comparator.compareTo(cell.getQualifierArray(), cell.getQualifierOffset(),
+      cell.getQualifierLength());
+  }
+
+  /**
+   * Compare cell's value against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's value
+   */
+  @InterfaceAudience.Private
+  public static int compareValue(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferCell) {
+      return comparator.compareTo(((ByteBufferCell) cell).getValueByteBuffer(),
+        ((ByteBufferCell) cell).getValuePosition(), cell.getValueLength());
+    }
+    return comparator.compareTo(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+  }
+
+  /**
+   * Used when a cell needs to be compared with a key byte[] such as cases of
+   * finding the index from the index block, bloom keys from the bloom blocks
+   * This byte[] is expected to be serialized in the KeyValue serialization format
+   * If the KeyValue (Cell's) serialization format changes this method cannot be used.
+   * @param comparator the cell comparator
+   * @param left the cell to be compared
+   * @param key the serialized key part of a KeyValue
+   * @param offset the offset in the key byte[]
+   * @param length the length of the key byte[]
+   * @return an int greater than 0 if left is greater than right
+   *                lesser than 0 if left is lesser than right
+   *                equal to 0 if left is equal to right
+   */
+  @VisibleForTesting
+  public static final int compare(CellComparator comparator, Cell left, byte[] key, int offset,
+      int length) {
+    // row
+    short rrowlength = Bytes.toShort(key, offset);
+    int c = comparator.compareRows(left, key, offset + Bytes.SIZEOF_SHORT, rrowlength);
+    if (c != 0) return c;
+
+    // Compare the rest of the two KVs without making any assumptions about
+    // the common prefix. This function will not compare rows anyway, so we
+    // don't need to tell it that the common prefix includes the row.
+    return compareWithoutRow(comparator, left, key, offset, length, rrowlength);
+  }
+
+  /**
+   * Compare columnFamily, qualifier, timestamp, and key type (everything
+   * except the row). This method is used both in the normal comparator and
+   * the "same-prefix" comparator. Note that we are assuming that row portions
+   * of both KVs have already been parsed and found identical, and we don't
+   * validate that assumption here.
+   * @param commonPrefix
+   *          the length of the common prefix of the two key-values being
+   *          compared, including row length and row
+   */
+  private static final int compareWithoutRow(CellComparator comparator, Cell left,
+      byte[] right, int roffset, int rlength, short rowlength) {
+    /***
+     * KeyValue Format and commonLength:
+     * |_keyLen_|_valLen_|_rowLen_|_rowKey_|_famiLen_|_fami_|_Quali_|....
+     * ------------------|-------commonLength--------|--------------
+     */
+    int commonLength = KeyValue.ROW_LENGTH_SIZE + KeyValue.FAMILY_LENGTH_SIZE + rowlength;
+
+    // commonLength + TIMESTAMP_TYPE_SIZE
+    int commonLengthWithTSAndType = KeyValue.TIMESTAMP_TYPE_SIZE + commonLength;
+    // ColumnFamily + Qualifier length.
+    int lcolumnlength = left.getFamilyLength() + left.getQualifierLength();
+    int rcolumnlength = rlength - commonLengthWithTSAndType;
+
+    byte ltype = left.getTypeByte();
+    byte rtype = right[roffset + (rlength - 1)];
+
+    // If the column is not specified, the "minimum" key type appears the
+    // latest in the sorted order, regardless of the timestamp. This is used
+    // for specifying the last key/value in a given row, because there is no
+    // "lexicographically last column" (it would be infinitely long). The
+    // "maximum" key type does not need this behavior.
+    if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
+      // left is "bigger", i.e. it appears later in the sorted order
+      return 1;
+    }
+    if (rcolumnlength == 0 && rtype == Type.Minimum.getCode()) {
+      return -1;
+    }
+
+    int rfamilyoffset = commonLength + roffset;
+
+    // Column family length.
+    int lfamilylength = left.getFamilyLength();
+    int rfamilylength = right[rfamilyoffset - 1];
+    // If left family size is not equal to right family size, we need not
+    // compare the qualifiers.
+    boolean sameFamilySize = (lfamilylength == rfamilylength);
+    if (!sameFamilySize) {
+      // comparing column family is enough.
+      return compareFamilies(left, right, rfamilyoffset, rfamilylength);
+    }
+    // Compare family & qualifier together.
+    // Families are same. Compare on qualifiers.
+    int comparison = compareColumns(left, right, rfamilyoffset, rfamilylength,
+      rfamilyoffset + rfamilylength, (rcolumnlength - rfamilylength));
+    if (comparison != 0) {
+      return comparison;
+    }
+
+    // //
+    // Next compare timestamps.
+    long rtimestamp = Bytes.toLong(right, roffset + (rlength - KeyValue.TIMESTAMP_TYPE_SIZE));
+    int compare = comparator.compareTimestamps(left.getTimestamp(), rtimestamp);
+    if (compare != 0) {
+      return compare;
+    }
+
+    // Compare types. Let the delete types sort ahead of puts; i.e. types
+    // of higher numbers sort before those of lesser numbers. Maximum (255)
+    // appears ahead of everything, and minimum (0) appears after
+    // everything.
+    return (0xff & rtype) - (0xff & ltype);
+  }
+
+  /**
+   * Compares the cell's family with the given byte[]
+   * @param left the cell for which the family has to be compared
+   * @param right the byte[] having the family
+   * @param roffset the offset of the family
+   * @param rlength the length of the family
+   * @return greater than 0 if left cell's family is bigger than byte[], lesser than 0 if left
+   *         cell's family is lesser than byte[] and 0 otherwise
+   */
+  public final static int compareFamilies(Cell left, byte[] right, int roffset, int rlength) {
+    if (left instanceof ByteBufferCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferCell) left).getFamilyByteBuffer(),
+        ((ByteBufferCell) left).getFamilyPosition(), left.getFamilyLength(), right, roffset,
+        rlength);
+    }
+    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+      right, roffset, rlength);
+  }
+
+  /**
+   * Compares the cell's column (family and qualifier) with the given byte[]
+   * @param left the cell for which the column has to be compared
+   * @param right the byte[] having the column
+   * @param rfoffset the offset of the family
+   * @param rflength the length of the family
+   * @param rqoffset the offset of the qualifier
+   * @param rqlength the length of the qualifier
+   * @return greater than 0 if left cell's column is bigger than byte[], lesser than 0 if left
+   *         cell's column is lesser than byte[] and 0 otherwise
+   */
+  public final static int compareColumns(Cell left, byte[] right, int rfoffset, int rflength,
+      int rqoffset, int rqlength) {
+    int diff = compareFamilies(left, right, rfoffset, rflength);
+    if (diff != 0) return diff;
+    return compareQualifiers(left, right, rqoffset, rqlength);
   }
 
   @InterfaceAudience.Private

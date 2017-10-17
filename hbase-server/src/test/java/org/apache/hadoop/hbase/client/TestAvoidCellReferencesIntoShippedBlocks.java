@@ -32,7 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -292,7 +292,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
       boolean next = super.next(outResult, scannerContext);
       for (Cell cell : outResult) {
-        if(CellComparator.COMPARATOR.compareRows(cell, ROW2, 0, ROW2.length) == 0) {
+        if(CellComparatorImpl.COMPARATOR.compareRows(cell, ROW2, 0, ROW2.length) == 0) {
           try {
             // hold the compaction
             // set doscan to true

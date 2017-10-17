@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
@@ -34,14 +34,14 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
  * to be a store file scanner.
  */
 public class KeyValueScanFixture extends CollectionBackedScanner {
-  public KeyValueScanFixture(CellComparator comparator, Cell... cells) {
+  public KeyValueScanFixture(CellComparatorImpl comparator, Cell... cells) {
     super(comparator, cells);
   }
 
   public static List<KeyValueScanner> scanFixture(KeyValue[] ... kvArrays) {
     ArrayList<KeyValueScanner> scanners = new ArrayList<>();
     for (KeyValue [] kvs : kvArrays) {
-      scanners.add(new KeyValueScanFixture(CellComparator.COMPARATOR, kvs));
+      scanners.add(new KeyValueScanFixture(CellComparatorImpl.COMPARATOR, kvs));
     }
     return scanners;
   }

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -39,10 +41,11 @@ public class TestNewVersionBehaviorTracker {
   private final byte[] row = Bytes.toBytes("row");
   private final byte[] family = Bytes.toBytes("family");
   private final byte[] value = Bytes.toBytes("value");
-
+  private final CellComparator comparator = CellComparatorImpl.COMPARATOR;
   @Test
   public void testMaxVersionMask() {
-    NewVersionBehaviorTracker tracker = new NewVersionBehaviorTracker(null, 1, 3, 3, 10000);
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 10000);
 
     KeyValue keyValue = new KeyValue(row, family, col1, 20000, KeyValue.Type.Put, value);
     keyValue.setTimestamp(20000);
@@ -81,7 +84,8 @@ public class TestNewVersionBehaviorTracker {
 
   @Test
   public void testVersionsDelete() {
-    NewVersionBehaviorTracker tracker = new NewVersionBehaviorTracker(null, 1, 3, 3, 10000);
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 10000);
     KeyValue put = new KeyValue(row, family, col1, 20000, KeyValue.Type.Put, value);
     KeyValue delete = new KeyValue(row, family, col1, 20000, KeyValue.Type.DeleteColumn, value);
     delete.setSequenceId(1000);
@@ -109,7 +113,8 @@ public class TestNewVersionBehaviorTracker {
 
   @Test
   public void testVersionDelete() {
-    NewVersionBehaviorTracker tracker = new NewVersionBehaviorTracker(null, 1, 3, 3, 10000);
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 10000);
     KeyValue put = new KeyValue(row, family, col1, 20000, KeyValue.Type.Put, value);
     KeyValue delete = new KeyValue(row, family, col1, 20000, KeyValue.Type.Delete, value);
     delete.setSequenceId(1000);
@@ -143,7 +148,8 @@ public class TestNewVersionBehaviorTracker {
 
   @Test
   public void testFamilyVersionsDelete() {
-    NewVersionBehaviorTracker tracker = new NewVersionBehaviorTracker(null, 1, 3, 3, 10000);
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 10000);
 
     KeyValue delete = new KeyValue(row, family, null, 20000, KeyValue.Type.DeleteFamily, value);
     delete.setSequenceId(1000);
@@ -169,7 +175,8 @@ public class TestNewVersionBehaviorTracker {
 
   @Test
   public void testFamilyVersionDelete() {
-    NewVersionBehaviorTracker tracker = new NewVersionBehaviorTracker(null, 1, 3, 3, 10000);
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 10000);
 
     KeyValue delete = new KeyValue(row, family, null, 20000, KeyValue.Type.DeleteFamilyVersion,
         value);
@@ -202,7 +209,8 @@ public class TestNewVersionBehaviorTracker {
 
   @Test
   public void testMinVersionsAndTTL() throws IOException {
-    NewVersionBehaviorTracker tracker = new NewVersionBehaviorTracker(null, 1, 3, 3, 30000);
+    NewVersionBehaviorTracker tracker =
+        new NewVersionBehaviorTracker(null, comparator, 1, 3, 3, 30000);
 
     KeyValue keyValue = new KeyValue(row, family, col1, 20000, KeyValue.Type.Put, value);
     keyValue.setTimestamp(20000);

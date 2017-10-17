@@ -53,7 +53,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -379,7 +379,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     do {
       Cell cell = scanner.getCell();
       if (row != null && row.length != 0) {
-        int result = CellComparator.COMPARATOR.compareRows(cell, row, 0, row.length);
+        int result = CellComparatorImpl.COMPARATOR.compareRows(cell, row, 0, row.length);
         if (result > 0) {
           break;
         } else if (result < 0) {
@@ -408,7 +408,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // check if rows are in order
       if (checkRow && pCell != null) {
-        if (CellComparator.COMPARATOR.compareRows(pCell, cell) > 0) {
+        if (CellComparatorImpl.COMPARATOR.compareRows(pCell, cell) > 0) {
           err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
               + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
@@ -424,7 +424,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
               + CellUtil.getCellKeyAsString(cell));
         }
-        if (pCell != null && CellComparator.compareFamilies(pCell, cell) != 0) {
+        if (pCell != null && CellComparatorImpl.COMPARATOR.compareFamilies(pCell, cell) != 0) {
           err.println("WARNING, previous kv has different family"
               + " compared to current key\n\tfilename -> " + file
               + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell)
@@ -618,7 +618,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     public void collect(Cell cell) {
       valLen.update(cell.getValueLength());
       if (prevCell != null &&
-          CellComparator.COMPARATOR.compareRows(prevCell, cell) != 0) {
+          CellComparatorImpl.COMPARATOR.compareRows(prevCell, cell) != 0) {
         // new row
         collectRow();
       }

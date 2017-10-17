@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -34,7 +34,7 @@ import java.util.SortedSet;
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestCellSkipListSet extends TestCase {
   private final CellSet csls =
-    new CellSet(CellComparator.COMPARATOR);
+    new CellSet(CellComparatorImpl.COMPARATOR);
 
   protected void setUp() throws Exception {
     super.setUp();

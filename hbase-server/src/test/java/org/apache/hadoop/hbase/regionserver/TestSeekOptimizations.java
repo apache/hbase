@@ -35,7 +35,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -304,7 +304,7 @@ public class TestSeekOptimizations {
       }
     }
     expectedKVs = filteredKVs;
-    Collections.sort(expectedKVs, CellComparator.COMPARATOR);
+    Collections.sort(expectedKVs, CellComparatorImpl.COMPARATOR);
   }
 
   public void put(String qual, long ts) {
@@ -459,8 +459,9 @@ public class TestSeekOptimizations {
 
     int i;
     for (i = 0; i < minLen
-        && CellComparator.COMPARATOR.compareKeyIgnoresMvcc(expected.get(i), actual.get(i)) == 0;
-        ++i) {}
+        && CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expected.get(i),
+          actual.get(i)) == 0; ++i) {
+    }
 
     if (additionalMsg == null) {
       additionalMsg = "";

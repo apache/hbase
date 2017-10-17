@@ -26,7 +26,7 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -287,7 +287,7 @@ public class RedundantKVGenerator {
       }
     }
 
-    Collections.sort(result, CellComparator.COMPARATOR);
+    Collections.sort(result, CellComparatorImpl.COMPARATOR);
 
     return result;
   }
@@ -383,7 +383,7 @@ public class RedundantKVGenerator {
       }
     }
 
-    Collections.sort(result, CellComparator.COMPARATOR);
+    Collections.sort(result, CellComparatorImpl.COMPARATOR);
 
     return result;
   }

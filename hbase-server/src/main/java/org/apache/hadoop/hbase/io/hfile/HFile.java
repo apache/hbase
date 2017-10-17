@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -276,7 +277,7 @@ public class HFile {
     protected Path path;
     protected FSDataOutputStream ostream;
     protected CellComparator comparator =
-        CellComparator.COMPARATOR;
+        CellComparatorImpl.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
     protected boolean shouldDropBehind = false;

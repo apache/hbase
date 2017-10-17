@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -228,7 +228,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
-    Collections.sort(results, CellComparator.COMPARATOR);
+    Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -273,7 +273,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
-    Collections.sort(results, CellComparator.COMPARATOR);
+    Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -318,7 +318,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
-    Collections.sort(results, CellComparator.COMPARATOR);
+    Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -363,7 +363,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
-    Collections.sort(results, CellComparator.COMPARATOR);
+    Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -415,7 +415,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
-    Collections.sort(results, CellComparator.COMPARATOR);
+    Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -531,7 +531,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
-    Collections.sort(results, CellComparator.COMPARATOR);
+    Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
     Assert.assertEquals(expected.size(), results.size());
     for(int i=0; i<results.size(); i++) {

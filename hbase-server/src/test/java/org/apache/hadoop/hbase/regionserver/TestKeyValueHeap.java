@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -77,7 +77,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
   public List<Cell> assertCells(List<Cell> expected, List<KeyValueScanner> scanners)
       throws IOException {
     //Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     List<Cell> actual = new ArrayList<>();
     while(kvh.peek() != null){
@@ -106,7 +106,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Check if result is sorted according to Comparator
     for(int i=0; i<actual.size()-1; i++){
-      int ret = CellComparator.COMPARATOR.compare(actual.get(i), actual.get(i+1));
+      int ret = CellComparatorImpl.COMPARATOR.compare(actual.get(i), actual.get(i+1));
       assertTrue(ret < 0);
     }
   }
@@ -121,7 +121,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Creating KeyValueHeap
     KeyValueHeap kvh =
-      new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+      new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     Cell seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
@@ -140,7 +140,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     scanners.add(s4);
 
     //Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     while(kvh.next() != null);
     // Once the internal scanners go out of Cells, those will be removed from KVHeap's priority
@@ -168,7 +168,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     List<KeyValueScanner> scanners = new ArrayList<>(Arrays.asList(s1, s2, s3, s4));
 
     // Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     try {
       for (KeyValueScanner scanner : scanners) {

@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -213,7 +213,7 @@ public class TestHFileBlockIndex {
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
         new HFileBlockIndex.CellBasedKeyBlockIndexReader(
-            CellComparator.COMPARATOR, numLevels, brw);
+            CellComparatorImpl.COMPARATOR, numLevels, brw);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
         fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
@@ -230,7 +230,7 @@ public class TestHFileBlockIndex {
       HFileBlock b =
           indexReader.seekToDataBlock(keyOnlyKey, null, true,
             true, false, null);
-      if (CellComparator.COMPARATOR.compare(keyOnlyKey, firstKeyInFile,
+      if (CellUtil.compare(CellComparatorImpl.COMPARATOR, keyOnlyKey, firstKeyInFile,
           0, firstKeyInFile.length) < 0) {
         assertTrue(b == null);
         ++i;
@@ -375,7 +375,7 @@ public class TestHFileBlockIndex {
 
     // Make sure the keys are increasing.
     for (int i = 0; i < keys.size() - 1; ++i)
-      assertTrue(CellComparator.COMPARATOR.compare(
+      assertTrue(CellComparatorImpl.COMPARATOR.compare(
           new KeyValue.KeyOnlyKeyValue(keys.get(i), 0, keys.get(i).length),
           new KeyValue.KeyOnlyKeyValue(keys.get(i + 1), 0, keys.get(i + 1).length)) < 0);
 
@@ -414,7 +414,7 @@ public class TestHFileBlockIndex {
       KeyValue.KeyOnlyKeyValue cell = new KeyValue.KeyOnlyKeyValue(
           arrayHoldingKey, searchKey.length / 2, searchKey.length);
       int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell,
-          new MultiByteBuff(nonRootIndex), CellComparator.COMPARATOR);
+          new MultiByteBuff(nonRootIndex), CellComparatorImpl.COMPARATOR);
       String lookupFailureMsg = "Failed to look up key #" + i + " ("
           + Bytes.toStringBinary(searchKey) + ")";
 
@@ -440,7 +440,7 @@ public class TestHFileBlockIndex {
       // higher-level API function.s
       boolean locateBlockResult =
           (BlockIndexReader.locateNonRootIndexEntry(new MultiByteBuff(nonRootIndex), cell,
-          CellComparator.COMPARATOR) != -1);
+          CellComparatorImpl.COMPARATOR) != -1);
 
       if (i == 0) {
         assertFalse(locateBlockResult);
@@ -636,7 +636,7 @@ public class TestHFileBlockIndex {
           values[i] = CellUtil.cloneValue(kv);
           keyStrSet.add(Bytes.toStringBinary(k));
           if (i > 0) {
-            assertTrue((CellComparator.COMPARATOR.compare(kv, keys[i - 1],
+            assertTrue((CellUtil.compare(CellComparatorImpl.COMPARATOR, kv, keys[i - 1],
                 0, keys[i - 1].length)) > 0);
           }
         }

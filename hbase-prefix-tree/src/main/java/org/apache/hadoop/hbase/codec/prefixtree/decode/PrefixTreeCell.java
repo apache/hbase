@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -42,7 +43,7 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
 public class PrefixTreeCell extends ByteBufferCell implements SettableSequenceId,
     Comparable<Cell> {
   // Create a reference here? Can be removed too
-  protected CellComparator comparator = CellComparator.COMPARATOR;
+  protected CellComparator comparator = CellComparatorImpl.COMPARATOR;
 
   /********************** static **********************/
 
