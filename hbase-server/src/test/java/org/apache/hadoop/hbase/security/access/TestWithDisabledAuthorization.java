@@ -522,38 +522,6 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
 
-    // preAddColumnFamily
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-        ACCESS_CONTROLLER.preAddColumnFamily(ObserverContextImpl.createAndPrepare(CP_ENV),
-          TEST_TABLE.getTableName(), hcd);
-        return null;
-      }
-    }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
-
-    // preModifyColumnFamily
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-        ACCESS_CONTROLLER.preModifyColumnFamily(ObserverContextImpl.createAndPrepare(CP_ENV),
-          TEST_TABLE.getTableName(), hcd);
-        return null;
-      }
-    }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
-
-    // preDeleteColumnFamily
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteColumnFamily(ObserverContextImpl.createAndPrepare(CP_ENV),
-          TEST_TABLE.getTableName(), TEST_FAMILY2);
-        return null;
-      }
-    }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
-
     // preEnableTable
     verifyAllowed(new AccessTestAction() {
       @Override

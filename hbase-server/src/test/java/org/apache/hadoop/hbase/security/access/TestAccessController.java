@@ -447,57 +447,6 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test (timeout=180000)
-  public void testAddColumn() throws Exception {
-    final HColumnDescriptor hcd = new HColumnDescriptor("fam_new");
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAddColumnFamily(ObserverContextImpl.createAndPrepare(CP_ENV), TEST_TABLE,
-          hcd);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
-      USER_GROUP_ADMIN);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
-  }
-
-  @Test (timeout=180000)
-  public void testModifyColumn() throws Exception {
-    final HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
-    hcd.setMaxVersions(10);
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preModifyColumnFamily(ObserverContextImpl.createAndPrepare(CP_ENV),
-          TEST_TABLE, hcd);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
-      USER_GROUP_CREATE, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
-  }
-
-  @Test (timeout=180000)
-  public void testDeleteColumn() throws Exception {
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteColumnFamily(ObserverContextImpl.createAndPrepare(CP_ENV),
-          TEST_TABLE, TEST_FAMILY);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
-        USER_GROUP_CREATE, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
-  }
-
-  @Test (timeout=180000)
   public void testTableDisable() throws Exception {
     AccessTestAction disableTable = new AccessTestAction() {
       @Override

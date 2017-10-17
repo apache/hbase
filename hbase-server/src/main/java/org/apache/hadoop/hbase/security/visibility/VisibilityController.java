@@ -245,40 +245,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 TableName tableName, ColumnFamilyDescriptor columnFamily)
-      throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-    if (LABELS_TABLE_NAME.equals(tableName)) {
-      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
-    }
-  }
-
-  @Override
-  public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-    if (LABELS_TABLE_NAME.equals(tableName)) {
-      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
-    }
-  }
-
-  @Override
-  public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] columnFamily) throws IOException {
-    if (!authorizationEnabled) {
-      return;
-    }
-    if (LABELS_TABLE_NAME.equals(tableName)) {
-      throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
-    }
-  }
-
-  @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
     if (!authorizationEnabled) {

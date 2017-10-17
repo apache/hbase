@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
@@ -516,77 +514,6 @@ public class TestMasterObserver {
 
     public boolean preListNamespaceDescriptorsCalledOnly() {
       return preListNamespaceDescriptorsCalled && !postListNamespaceDescriptorsCalled;
-    }
-
-    @Override
-    public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, ColumnFamilyDescriptor columnFamily
-    ) throws IOException {
-      if (bypass) {
-        ctx.bypass();
-      }
-      preAddColumnCalled = true;
-    }
-
-    @Override
-    public void postAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
-      postAddColumnCalled = true;
-    }
-
-    public boolean wasAddColumnCalled() {
-      return preAddColumnCalled && postAddColumnCalled;
-    }
-
-    public boolean preAddColumnCalledOnly() {
-      return preAddColumnCalled && !postAddColumnCalled;
-    }
-
-    @Override
-    public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
-      if (bypass) {
-        ctx.bypass();
-      }
-      preModifyColumnCalled = true;
-    }
-
-    @Override
-    public void postModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, ColumnFamilyDescriptor columnFamily) throws IOException {
-      postModifyColumnCalled = true;
-    }
-
-    public boolean wasModifyColumnCalled() {
-      return preModifyColumnCalled && postModifyColumnCalled;
-    }
-
-    public boolean preModifyColumnCalledOnly() {
-      return preModifyColumnCalled && !postModifyColumnCalled;
-    }
-
-    @Override
-    public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, byte[] columnFamily) throws IOException {
-      if (bypass) {
-        ctx.bypass();
-      }
-      preDeleteColumnCalled = true;
-    }
-
-    @Override
-    public void postDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, byte[] columnFamily) throws IOException {
-      postDeleteColumnCalled = true;
-    }
-
-
-    public boolean wasDeleteColumnCalled() {
-      return preDeleteColumnCalled && postDeleteColumnCalled;
-    }
-
-    public boolean preDeleteColumnCalledOnly() {
-      return preDeleteColumnCalled && !postDeleteColumnCalled;
     }
 
     @Override
@@ -1084,87 +1011,6 @@ public class TestMasterObserver {
       return preModifyTableActionCalled && !postCompletedModifyTableActionCalled;
     }
 
-    @Override
-    public void preAddColumnFamilyAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName,
-        final ColumnFamilyDescriptor columnFamily) throws IOException {
-      if (bypass) {
-        ctx.bypass();
-      }
-      preAddColumnFamilyActionCalled = true;
-    }
-
-    @Override
-    public void postCompletedAddColumnFamilyAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName,
-        final ColumnFamilyDescriptor columnFamily) throws IOException {
-      postCompletedAddColumnFamilyActionCalled = true;
-    }
-
-    public boolean wasAddColumnFamilyActionCalled() {
-      return preAddColumnFamilyActionCalled && postCompletedAddColumnFamilyActionCalled;
-    }
-
-    public boolean preAddColumnFamilyActionCalledOnly() {
-      return preAddColumnFamilyActionCalled && !postCompletedAddColumnFamilyActionCalled;
-    }
-
-    @Override
-    public void preModifyColumnFamilyAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName,
-        final ColumnFamilyDescriptor columnFamily) throws IOException {
-      if (bypass) {
-        ctx.bypass();
-      }
-      preModifyColumnFamilyActionCalled = true;
-    }
-
-    @Override
-    public void postCompletedModifyColumnFamilyAction(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-        ColumnFamilyDescriptor columnFamily) throws IOException {
-      postCompletedModifyColumnFamilyActionCalled = true;
-    }
-
-    public boolean wasModifyColumnFamilyActionCalled() {
-      return preModifyColumnFamilyActionCalled && postCompletedModifyColumnFamilyActionCalled;
-    }
-
-    public boolean preModifyColumnFamilyActionCalledOnly() {
-      return preModifyColumnFamilyActionCalled && !postCompletedModifyColumnFamilyActionCalled;
-    }
-
-    @Override
-    public void preDeleteColumnFamilyAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName,
-        final byte[] columnFamily) throws IOException {
-      if (bypass) {
-        ctx.bypass();
-      }
-      preDeleteColumnFamilyActionCalled = true;
-    }
-
-    @Override
-    public void postCompletedDeleteColumnFamilyAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName,
-        final byte[] columnFamily) throws IOException {
-      postCompletedDeleteColumnFamilyActionCalled = true;
-    }
-
-    public boolean wasDeleteColumnFamilyActionCalled() {
-      return preDeleteColumnFamilyActionCalled && postCompletedDeleteColumnFamilyActionCalled;
-    }
-
-    public boolean preDeleteColumnFamilyActionCalledOnly() {
-      return preDeleteColumnFamilyActionCalled && !postCompletedDeleteColumnFamilyActionCalled;
-    }
-
-    @Override
     public void preEnableTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
         throws IOException {
@@ -1580,18 +1426,6 @@ public class TestMasterObserver {
       assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
 
-      // add a column family
-      admin.addColumnFamily(tableName, new HColumnDescriptor(TEST_FAMILY2));
-      assertTrue("New column family shouldn't have been added to test table",
-        cp.preAddColumnCalledOnly());
-
-      // modify a column family
-      HColumnDescriptor hcd1 = new HColumnDescriptor(TEST_FAMILY2);
-      hcd1.setMaxVersions(25);
-      admin.modifyColumnFamily(tableName, hcd1);
-      assertTrue("Second column family should be modified",
-        cp.preModifyColumnCalledOnly());
-
       // truncate table
       admin.truncateTable(tableName, false);
 
@@ -1634,21 +1468,6 @@ public class TestMasterObserver {
       modifyTableSync(admin, tableName, htd);
       assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
-      // add a column family
-      admin.addColumnFamily(tableName, new HColumnDescriptor(TEST_FAMILY2));
-      assertTrue("New column family should have been added to test table",
-        cp.wasAddColumnCalled());
-      assertTrue("Add column handler should be called.",
-        cp.wasAddColumnFamilyActionCalled());
-
-      // modify a column family
-      HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
-      hcd.setMaxVersions(25);
-      admin.modifyColumnFamily(tableName, hcd);
-      assertTrue("Second column family should be modified",
-        cp.wasModifyColumnCalled());
-      assertTrue("Modify table handler should be called.",
-        cp.wasModifyColumnFamilyActionCalled());
 
       // enable
       assertFalse(cp.wasEnableTableCalled());
@@ -1663,19 +1482,6 @@ public class TestMasterObserver {
       // disable again
       admin.disableTable(tableName);
       assertTrue(admin.isTableDisabled(tableName));
-
-      // delete column
-      assertFalse("No column family deleted yet", cp.wasDeleteColumnCalled());
-      assertFalse("Delete table column handler should not be called.",
-        cp.wasDeleteColumnFamilyActionCalled());
-      admin.deleteColumnFamily(tableName, TEST_FAMILY2);
-      HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
-      assertNull("'"+Bytes.toString(TEST_FAMILY2)+"' should have been removed",
-        tableDesc.getFamily(TEST_FAMILY2));
-      assertTrue("Coprocessor should have been called on column delete",
-        cp.wasDeleteColumnCalled());
-      assertTrue("Delete table column handler should be called.",
-        cp.wasDeleteColumnFamilyActionCalled());
 
       // delete table
       assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
