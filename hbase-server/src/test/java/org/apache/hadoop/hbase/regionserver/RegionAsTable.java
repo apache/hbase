@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -353,6 +353,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public int getOperationTimeout() {
     throw new UnsupportedOperationException();
   }
@@ -364,10 +365,25 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  public long getReadRpcTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void setWriteRpcTimeout(int writeRpcTimeout) {throw new UnsupportedOperationException(); }
 
   @Override
+  public long getOperationTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void setReadRpcTimeout(int readRpcTimeout) {throw new UnsupportedOperationException(); }
+
+  @Override
+  public long getWriteRpcTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   @Deprecated
@@ -376,8 +392,15 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  public long getRpcTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  @Deprecated
   public int getWriteRpcTimeout() { throw new UnsupportedOperationException(); }
 
   @Override
+  @Deprecated
   public int getReadRpcTimeout() { throw new UnsupportedOperationException(); }
 }

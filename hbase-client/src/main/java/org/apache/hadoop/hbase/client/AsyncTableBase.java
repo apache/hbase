@@ -63,27 +63,37 @@ public interface AsyncTableBase {
    * specific rpc timeout config such as readRpcTimeout or writeRpcTimeout.
    * @see #getReadRpcTimeout(TimeUnit)
    * @see #getWriteRpcTimeout(TimeUnit)
+   * @param unit the unit of time the timeout to be represented in
+   * @return rpc timeout in the specified time unit
    */
   long getRpcTimeout(TimeUnit unit);
 
   /**
    * Get timeout of each rpc read request in this Table instance.
+   * @param unit the unit of time the timeout to be represented in
+   * @return read rpc timeout in the specified time unit
    */
   long getReadRpcTimeout(TimeUnit unit);
 
   /**
    * Get timeout of each rpc write request in this Table instance.
+   * @param unit the unit of time the timeout to be represented in
+   * @return write rpc timeout in the specified time unit
    */
   long getWriteRpcTimeout(TimeUnit unit);
 
   /**
    * Get timeout of each operation in Table instance.
+   * @param unit the unit of time the timeout to be represented in
+   * @return operation rpc timeout in the specified time unit
    */
   long getOperationTimeout(TimeUnit unit);
 
   /**
    * Get the timeout of a single operation in a scan. It works like operation timeout for other
    * operations.
+   * @param unit the unit of time the timeout to be represented in
+   * @return scan rpc timeout in the specified time unit
    */
   long getScanTimeout(TimeUnit unit);
 

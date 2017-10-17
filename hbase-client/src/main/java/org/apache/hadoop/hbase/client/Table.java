@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -660,29 +661,21 @@ public interface Table extends Closeable {
                          byte[] value, RowMutations mutation) throws IOException;
 
   /**
-   * Set timeout (millisecond) of each operation in this Table instance, will override the value
-   * of hbase.client.operation.timeout in configuration.
-   * Operation timeout is a top-level restriction that makes sure a blocking method will not be
-   * blocked more than this. In each operation, if rpc request fails because of timeout or
-   * other reason, it will retry until success or throw a RetriesExhaustedException. But if the
-   * total time being blocking reach the operation timeout before retries exhausted, it will break
-   * early and throw SocketTimeoutException.
-   * @param operationTimeout the total timeout of each operation in millisecond.
-   * @deprecated since 2.0.0, use {@link TableBuilder#setOperationTimeout} instead
+   * Get timeout of each rpc request in this Table instance. It will be overridden by a more
+   * specific rpc timeout config such as readRpcTimeout or writeRpcTimeout.
+   * @see #getReadRpcTimeout(TimeUnit)
+   * @see #getWriteRpcTimeout(TimeUnit)
+   * @param unit the unit of time the timeout to be represented in
+   * @return rpc timeout in the specified time unit
    */
-  @Deprecated
-  void setOperationTimeout(int operationTimeout);
-
-  /**
-   * Get timeout (millisecond) of each operation for in Table instance.
-   */
-  int getOperationTimeout();
+  long getRpcTimeout(TimeUnit unit);
 
   /**
    * Get timeout (millisecond) of each rpc request in this Table instance.
    *
    * @return Currently configured read timeout
-   * @deprecated Use getReadRpcTimeout or getWriteRpcTimeout instead
+   * @deprecated use {@link #getReadRpcTimeout(TimeUnit)} or
+   *             {@link #getWriteRpcTimeout(TimeUnit)} instead
    */
   @Deprecated
   int getRpcTimeout();
@@ -703,8 +696,18 @@ public interface Table extends Closeable {
   void setRpcTimeout(int rpcTimeout);
 
   /**
-   * Get timeout (millisecond) of each rpc read request in this Table instance.
+   * Get timeout of each rpc read request in this Table instance.
+   * @param unit the unit of time the timeout to be represented in
+   * @return read rpc timeout in the specified time unit
    */
+  long getReadRpcTimeout(TimeUnit unit);
+
+  /**
+   * Get timeout (millisecond) of each rpc read request in this Table instance.
+   * @deprecated since 2.0 and will be removed in 3.0 version
+   *             use {@link #getReadRpcTimeout(TimeUnit)} instead
+   */
+  @Deprecated
   int getReadRpcTimeout();
 
   /**
@@ -713,15 +716,25 @@ public interface Table extends Closeable {
    * If a rpc read request waiting too long, it will stop waiting and send a new request to retry
    * until retries exhausted or operation timeout reached.
    *
-   * @param readRpcTimeout
+   * @param readRpcTimeout the timeout for read rpc request in milliseconds
    * @deprecated since 2.0.0, use {@link TableBuilder#setReadRpcTimeout} instead
    */
   @Deprecated
   void setReadRpcTimeout(int readRpcTimeout);
 
   /**
-   * Get timeout (millisecond) of each rpc write request in this Table instance.
+   * Get timeout of each rpc write request in this Table instance.
+   * @param unit the unit of time the timeout to be represented in
+   * @return write rpc timeout in the specified time unit
    */
+  long getWriteRpcTimeout(TimeUnit unit);
+
+  /**
+   * Get timeout (millisecond) of each rpc write request in this Table instance.
+   * @deprecated since 2.0 and will be removed in 3.0 version
+   *             use {@link #getWriteRpcTimeout(TimeUnit)} instead
+   */
+  @Deprecated
   int getWriteRpcTimeout();
 
   /**
@@ -730,9 +743,38 @@ public interface Table extends Closeable {
    * If a rpc write request waiting too long, it will stop waiting and send a new request to retry
    * until retries exhausted or operation timeout reached.
    *
-   * @param writeRpcTimeout
+   * @param writeRpcTimeout the timeout for write rpc request in milliseconds
    * @deprecated since 2.0.0, use {@link TableBuilder#setWriteRpcTimeout} instead
    */
   @Deprecated
   void setWriteRpcTimeout(int writeRpcTimeout);
+
+  /**
+   * Get timeout of each operation in Table instance.
+   * @param unit the unit of time the timeout to be represented in
+   * @return operation rpc timeout in the specified time unit
+   */
+  long getOperationTimeout(TimeUnit unit);
+
+  /**
+   * Get timeout (millisecond) of each operation for in Table instance.
+   * @deprecated since 2.0 and will be removed in 3.0 version
+   *             use {@link #getOperationTimeout(TimeUnit)} instead
+   */
+  @Deprecated
+  int getOperationTimeout();
+
+  /**
+   * Set timeout (millisecond) of each operation in this Table instance, will override the value
+   * of hbase.client.operation.timeout in configuration.
+   * Operation timeout is a top-level restriction that makes sure a blocking method will not be
+   * blocked more than this. In each operation, if rpc request fails because of timeout or
+   * other reason, it will retry until success or throw a RetriesExhaustedException. But if the
+   * total time being blocking reach the operation timeout before retries exhausted, it will break
+   * early and throw SocketTimeoutException.
+   * @param operationTimeout the total timeout of each operation in millisecond.
+   * @deprecated since 2.0.0, use {@link TableBuilder#setOperationTimeout} instead
+   */
+  @Deprecated
+  void setOperationTimeout(int operationTimeout);
 }

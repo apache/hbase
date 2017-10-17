@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
@@ -864,6 +865,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public int getOperationTimeout() {
     throw new UnsupportedOperationException();
   }
@@ -875,12 +877,23 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  public long getReadRpcTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   @Deprecated
   public int getRpcTimeout() {
     throw new UnsupportedOperationException();
   }
 
   @Override
+  public long getRpcTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  @Deprecated
   public int getReadRpcTimeout() {
     throw new UnsupportedOperationException();
   }
@@ -891,12 +904,23 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  public long getWriteRpcTimeout(TimeUnit unit) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  @Deprecated
   public int getWriteRpcTimeout() {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public void setWriteRpcTimeout(int writeRpcTimeout) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public long getOperationTimeout(TimeUnit unit) {
     throw new UnsupportedOperationException();
   }
 

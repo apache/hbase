@@ -112,10 +112,10 @@ public class HTable implements Table {
   private final int scannerCaching;
   private final long scannerMaxResultSize;
   private final ExecutorService pool;  // For Multi & Scan
-  private int operationTimeout; // global timeout for each blocking method with retrying rpc
-  private final int rpcTimeout; // FIXME we should use this for rpc like batch and checkAndXXX
-  private int readRpcTimeout; // timeout for each read rpc request
-  private int writeRpcTimeout; // timeout for each write rpc request
+  private int operationTimeoutMs; // global timeout for each blocking method with retrying rpc
+  private final int rpcTimeoutMs; // FIXME we should use this for rpc like batch and checkAndXXX
+  private int readRpcTimeoutMs; // timeout for each read rpc request
+  private int writeRpcTimeoutMs; // timeout for each write rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final HRegionLocator locator;
 
@@ -187,10 +187,10 @@ public class HTable implements Table {
     }
 
     this.tableName = builder.tableName;
-    this.operationTimeout = builder.operationTimeout;
-    this.rpcTimeout = builder.rpcTimeout;
-    this.readRpcTimeout = builder.readRpcTimeout;
-    this.writeRpcTimeout = builder.writeRpcTimeout;
+    this.operationTimeoutMs = builder.operationTimeout;
+    this.rpcTimeoutMs = builder.rpcTimeout;
+    this.readRpcTimeoutMs = builder.readRpcTimeout;
+    this.writeRpcTimeoutMs = builder.writeRpcTimeout;
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
 
@@ -235,7 +235,7 @@ public class HTable implements Table {
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     HTableDescriptor htd = HBaseAdmin.getHTableDescriptor(tableName, connection, rpcCallerFactory,
-      rpcControllerFactory, operationTimeout, readRpcTimeout);
+      rpcControllerFactory, operationTimeoutMs, readRpcTimeoutMs);
     if (htd != null) {
       return new ImmutableHTableDescriptor(htd);
     }
@@ -245,7 +245,7 @@ public class HTable implements Table {
   @Override
   public TableDescriptor getDescriptor() throws IOException {
     return HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory,
-      rpcControllerFactory, operationTimeout, readRpcTimeout);
+      rpcControllerFactory, operationTimeoutMs, readRpcTimeoutMs);
   }
 
   /**
@@ -392,17 +392,16 @@ public class HTable implements Table {
             ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
         }
       };
-      return rpcCallerFactory.<Result>newCaller(readRpcTimeout).callWithRetries(callable,
-          this.operationTimeout);
+      return rpcCallerFactory.<Result>newCaller(readRpcTimeoutMs).callWithRetries(callable,
+          this.operationTimeoutMs);
     }
 
     // Call that takes into account the replica
     RpcRetryingCallerWithReadReplicas callable = new RpcRetryingCallerWithReadReplicas(
         rpcControllerFactory, tableName, this.connection, get, pool,
-        connConfiguration.getRetriesNumber(),
-        operationTimeout, readRpcTimeout,
+        connConfiguration.getRetriesNumber(), operationTimeoutMs, readRpcTimeoutMs,
         connConfiguration.getPrimaryCallTimeoutMicroSecond());
-    return callable.call(operationTimeout);
+    return callable.call(operationTimeoutMs);
   }
 
   /**
@@ -415,7 +414,7 @@ public class HTable implements Table {
     }
     try {
       Object[] r1 = new Object[gets.size()];
-      batch((List<? extends Row>)gets, r1, readRpcTimeout);
+      batch((List<? extends Row>)gets, r1, readRpcTimeoutMs);
       // Translate.
       Result [] results = new Result[r1.length];
       int i = 0;
@@ -435,7 +434,7 @@ public class HTable implements Table {
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    int rpcTimeout = writeRpcTimeout;
+    int rpcTimeout = writeRpcTimeoutMs;
     boolean hasRead = false;
     boolean hasWrite = false;
     for (Row action : actions) {
@@ -449,7 +448,7 @@ public class HTable implements Table {
       }
     }
     if (hasRead && !hasWrite) {
-      rpcTimeout = readRpcTimeout;
+      rpcTimeout = readRpcTimeoutMs;
     }
     batch(actions, results, rpcTimeout);
   }
@@ -462,7 +461,7 @@ public class HTable implements Table {
             .setRowAccess(actions)
             .setResults(results)
             .setRpcTimeout(rpcTimeout)
-            .setOperationTimeout(operationTimeout)
+            .setOperationTimeout(operationTimeoutMs)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
     AsyncRequestFuture ars = multiAp.submit(task);
@@ -514,7 +513,7 @@ public class HTable implements Table {
     CancellableRegionServerCallable<SingleResponse> callable =
         new CancellableRegionServerCallable<SingleResponse>(
             connection, getName(), delete.getRow(), this.rpcControllerFactory.newController(),
-            writeRpcTimeout, new RetryingTimeTracker().start(), delete.getPriority()) {
+            writeRpcTimeoutMs, new RetryingTimeTracker().start(), delete.getPriority()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
@@ -529,8 +528,8 @@ public class HTable implements Table {
             .setTableName(tableName)
             .setRowAccess(rows)
             .setCallable(callable)
-            .setRpcTimeout(writeRpcTimeout)
-            .setOperationTimeout(operationTimeout)
+            .setRpcTimeout(writeRpcTimeoutMs)
+            .setOperationTimeout(operationTimeoutMs)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
     AsyncRequestFuture ars = multiAp.submit(task);
@@ -548,7 +547,7 @@ public class HTable implements Table {
   throws IOException {
     Object[] results = new Object[deletes.size()];
     try {
-      batch(deletes, results, writeRpcTimeout);
+      batch(deletes, results, writeRpcTimeoutMs);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     } finally {
@@ -584,8 +583,8 @@ public class HTable implements Table {
             return null;
           }
         };
-    rpcCallerFactory.<Void> newCaller(this.writeRpcTimeout).callWithRetries(callable,
-      this.operationTimeout);
+    rpcCallerFactory.<Void> newCaller(this.writeRpcTimeoutMs).callWithRetries(callable,
+      this.operationTimeoutMs);
   }
 
   /**
@@ -599,7 +598,7 @@ public class HTable implements Table {
     }
     Object[] results = new Object[puts.size()];
     try {
-      batch(puts, results, writeRpcTimeout);
+      batch(puts, results, writeRpcTimeoutMs);
     } catch (InterruptedException e) {
       throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
@@ -612,7 +611,8 @@ public class HTable implements Table {
   public void mutateRow(final RowMutations rm) throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
-          rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start(), rm.getMaxPriority()){
+          rpcControllerFactory.newController(), writeRpcTimeoutMs,
+          new RetryingTimeTracker().start(), rm.getMaxPriority()) {
       @Override
       protected MultiResponse rpcCall() throws Exception {
         RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
@@ -637,8 +637,8 @@ public class HTable implements Table {
             .setTableName(tableName)
             .setRowAccess(rm.getMutations())
             .setCallable(callable)
-            .setRpcTimeout(writeRpcTimeout)
-            .setOperationTimeout(operationTimeout)
+            .setRpcTimeout(writeRpcTimeoutMs)
+            .setOperationTimeout(operationTimeoutMs)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
     AsyncRequestFuture ars = multiAp.submit(task);
@@ -666,8 +666,8 @@ public class HTable implements Table {
         return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
       }
     };
-    return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeoutMs).
+        callWithRetries(callable, this.operationTimeoutMs);
   }
 
   /**
@@ -688,8 +688,8 @@ public class HTable implements Table {
         return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
       }
     };
-    return rpcCallerFactory.<Result> newCaller(writeRpcTimeout).callWithRetries(callable,
-        this.operationTimeout);
+    return rpcCallerFactory.<Result> newCaller(writeRpcTimeoutMs).callWithRetries(callable,
+        this.operationTimeoutMs);
   }
 
   /**
@@ -733,8 +733,8 @@ public class HTable implements Table {
         return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
       }
     };
-    return rpcCallerFactory.<Long> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Long> newCaller(this.writeRpcTimeoutMs).
+        callWithRetries(callable, this.operationTimeoutMs);
   }
 
   /**
@@ -765,8 +765,8 @@ public class HTable implements Table {
         return Boolean.valueOf(response.getProcessed());
       }
     };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
-    callWithRetries(callable, this.operationTimeout);
+    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeoutMs).
+    callWithRetries(callable, this.operationTimeoutMs);
   }
 
   /**
@@ -808,8 +808,8 @@ public class HTable implements Table {
   throws IOException {
     CancellableRegionServerCallable<SingleResponse> callable =
     new CancellableRegionServerCallable<SingleResponse>(
-    this.connection, getName(), row, this.rpcControllerFactory.newController(),
-    writeRpcTimeout, new RetryingTimeTracker().start(), delete.getPriority()) {
+    this.connection, getName(), row, this.rpcControllerFactory.newController(), writeRpcTimeoutMs,
+        new RetryingTimeTracker().start(), delete.getPriority()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(opName);
@@ -828,8 +828,8 @@ public class HTable implements Table {
     .setRowAccess(rows)
     .setCallable(callable)
     // TODO any better timeout?
-    .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
-    .setOperationTimeout(operationTimeout)
+    .setRpcTimeout(Math.max(readRpcTimeoutMs, writeRpcTimeoutMs))
+    .setOperationTimeout(operationTimeoutMs)
     .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
     .setResults(results)
     .build();
@@ -868,7 +868,8 @@ public class HTable implements Table {
   throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
     new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
-    rpcControllerFactory.newController(), writeRpcTimeout, new RetryingTimeTracker().start(), rm.getMaxPriority()) {
+    rpcControllerFactory.newController(), writeRpcTimeoutMs, new RetryingTimeTracker().start(),
+        rm.getMaxPriority()) {
       @Override
       protected MultiResponse rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(opName);
@@ -901,8 +902,8 @@ public class HTable implements Table {
     .setResults(results)
     .setCallable(callable)
     // TODO any better timeout?
-    .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
-    .setOperationTimeout(operationTimeout)
+    .setRpcTimeout(Math.max(readRpcTimeoutMs, writeRpcTimeoutMs))
+    .setOperationTimeout(operationTimeoutMs)
     .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
     .build();
     AsyncRequestFuture ars = multiAp.submit(task);
@@ -961,7 +962,7 @@ public class HTable implements Table {
 
     Object[] r1= new Object[exists.size()];
     try {
-      batch(exists, r1, readRpcTimeout);
+      batch(exists, r1, readRpcTimeoutMs);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
@@ -1134,20 +1135,14 @@ public class HTable implements Table {
   }
 
   @Override
-  @Deprecated
-  public void setOperationTimeout(int operationTimeout) {
-    this.operationTimeout = operationTimeout;
-  }
-
-  @Override
-  public int getOperationTimeout() {
-    return operationTimeout;
+  public long getRpcTimeout(TimeUnit unit) {
+    return unit.convert(rpcTimeoutMs, TimeUnit.MILLISECONDS);
   }
 
   @Override
   @Deprecated
   public int getRpcTimeout() {
-    return rpcTimeout;
+    return rpcTimeoutMs;
   }
 
   @Override
@@ -1158,23 +1153,54 @@ public class HTable implements Table {
   }
 
   @Override
+  public long getReadRpcTimeout(TimeUnit unit) {
+    return unit.convert(readRpcTimeoutMs, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  @Deprecated
+  public int getReadRpcTimeout() {
+    return readRpcTimeoutMs;
+  }
+
+  @Override
+  @Deprecated
+  public void setReadRpcTimeout(int readRpcTimeout) {
+    this.readRpcTimeoutMs = readRpcTimeout;
+  }
+
+  @Override
+  public long getWriteRpcTimeout(TimeUnit unit) {
+    return unit.convert(writeRpcTimeoutMs, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  @Deprecated
   public int getWriteRpcTimeout() {
-    return writeRpcTimeout;
+    return writeRpcTimeoutMs;
   }
 
   @Override
   @Deprecated
   public void setWriteRpcTimeout(int writeRpcTimeout) {
-    this.writeRpcTimeout = writeRpcTimeout;
+    this.writeRpcTimeoutMs = writeRpcTimeout;
   }
 
   @Override
-  public int getReadRpcTimeout() { return readRpcTimeout; }
+  public long getOperationTimeout(TimeUnit unit) {
+    return unit.convert(operationTimeoutMs, TimeUnit.MILLISECONDS);
+  }
 
   @Override
   @Deprecated
-  public void setReadRpcTimeout(int readRpcTimeout) {
-    this.readRpcTimeout = readRpcTimeout;
+  public int getOperationTimeout() {
+    return operationTimeoutMs;
+  }
+
+  @Override
+  @Deprecated
+  public void setOperationTimeout(int operationTimeout) {
+    this.operationTimeoutMs = operationTimeout;
   }
 
   @Override
@@ -1272,13 +1298,14 @@ public class HTable implements Table {
         callbackErrorServers.add("null");
       }
     };
-    AsyncProcessTask<ClientProtos.CoprocessorServiceResult> task = AsyncProcessTask.newBuilder(resultsCallback)
+    AsyncProcessTask<ClientProtos.CoprocessorServiceResult> task =
+        AsyncProcessTask.newBuilder(resultsCallback)
             .setPool(pool)
             .setTableName(tableName)
             .setRowAccess(execs)
             .setResults(results)
-            .setRpcTimeout(readRpcTimeout)
-            .setOperationTimeout(operationTimeout)
+            .setRpcTimeout(readRpcTimeoutMs)
+            .setOperationTimeout(operationTimeoutMs)
             .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
             .build();
     AsyncRequestFuture future = asyncProcess.submit(task);
