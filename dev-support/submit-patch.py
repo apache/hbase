@@ -205,12 +205,12 @@ def get_credentials():
     return creds
 
 
-def attach_patch_to_jira(issue_url, patch_filepath, creds):
+def attach_patch_to_jira(issue_url, patch_filepath, patch_filename, creds):
     # Upload patch to jira using REST API.
     headers = {'X-Atlassian-Token': 'no-check'}
-    files = {'file': open(patch_filepath, 'rb')}
+    files = {'file': (patch_filename, open(patch_filepath, 'rb'), 'text/plain')}
     jira_auth = requests.auth.HTTPBasicAuth(creds['jira_username'], creds['jira_password'])
-    attachment_url = issue_url +  "/attachments"
+    attachment_url = issue_url + "/attachments"
     r = requests.post(attachment_url, headers = headers, files = files, auth = jira_auth)
     assert_status_code(r, 200, "uploading patch to jira")
 
@@ -256,7 +256,7 @@ if args.jira_id is not None:
     creds = get_credentials()
     issue_url = "https://issues.apache.org/jira/rest/api/2/issue/" + args.jira_id
 
-    attach_patch_to_jira(issue_url, patch_filepath, creds)
+    attach_patch_to_jira(issue_url, patch_filepath, patch_filename, creds)
 
     if not args.skip_review_board:
         rb_auth = requests.auth.HTTPBasicAuth(creds['rb_username'], creds['rb_password'])
