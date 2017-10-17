@@ -936,5 +936,31 @@ public class TestFilterList {
     assertEquals(ReturnCode.INCLUDE, filterList.filterKeyValue(kv));
     assertEquals(kv, filterList.transformCell(kv));
   }
+
+  private static class MockNextRowFilter extends FilterBase {
+    private int hitCount = 0;
+
+    public ReturnCode filterKeyValue(Cell v) throws IOException {
+      hitCount++;
+      return ReturnCode.NEXT_ROW;
+    }
+
+    public int getHitCount() {
+      return hitCount;
+    }
+  }
+
+  @Test
+  public void testRowCountFilter() throws IOException {
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam1"), Bytes.toBytes("a"), 1,
+        Bytes.toBytes("value"));
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam2"), Bytes.toBytes("a"), 2,
+        Bytes.toBytes("value"));
+    MockNextRowFilter mockNextRowFilter = new MockNextRowFilter();
+    FilterList filter = new FilterList(Operator.MUST_PASS_ONE, mockNextRowFilter);
+    filter.filterKeyValue(kv1);
+    filter.filterKeyValue(kv2);
+    assertEquals(2, mockNextRowFilter.getHitCount());
+  }
 }
 
