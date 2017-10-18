@@ -84,9 +84,7 @@ function personality_modules
 
   extra="-DHBasePatchProcess"
 
-  if [[ ${repostatus} == branch
-     && ${testtype} == mvninstall ]] ||
-     [[ "${BUILDMODE}" == full ]];then
+  if [[ ${testtype} == mvninstall ]] || [[ "${BUILDMODE}" == full ]]; then
     personality_enqueue_module . ${extra}
     return
   fi
