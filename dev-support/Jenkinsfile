@@ -169,7 +169,6 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       post {
         always {
-          junit 'output-jdk7/**/target/**/TEST-*.xml'
           // zip surefire reports.
           sh '''#!/bin/bash -e
             if [ -d "${OUTPUTDIR}/archiver" ]; then
@@ -187,6 +186,7 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
           // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
           archive 'output-jdk7/*'
           archive 'output-jdk7/**/*'
+          junit 'output-jdk7/**/target/**/TEST-*.xml'
           publishHTML target: [
             allowMissing: true,
             keepAll: true,
@@ -219,7 +219,6 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       post {
         always {
-          junit 'output-jdk8/**/target/**/TEST-*.xml'
           // zip surefire reports.
           sh '''#!/bin/bash -e
             if [ -d "${OUTPUTDIR}/archiver" ]; then
@@ -237,6 +236,7 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
           // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
           archive 'output-jdk8/*'
           archive 'output-jdk8/**/*'
+          junit 'output-jdk8/**/target/**/TEST-*.xml'
           publishHTML target: [
             allowMissing: true,
             keepAll: true,
