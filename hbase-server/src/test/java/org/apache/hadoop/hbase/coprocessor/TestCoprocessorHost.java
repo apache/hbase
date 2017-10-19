@@ -18,15 +18,12 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
@@ -104,16 +101,6 @@ public class TestCoprocessorHost {
           @Override
           public Configuration getConfiguration() {
             return cpHostConf;
-          }
-
-          @Override
-          public Table getTable(TableName tableName) throws IOException {
-            return null;
-          }
-
-          @Override
-          public Table getTable(TableName tableName, ExecutorService service) throws IOException {
-            return null;
           }
 
           @Override

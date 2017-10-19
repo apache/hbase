@@ -277,18 +277,26 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
     ZKPermissionWatcher zkw = this.authManager.getZKPermissionWatcher();
     Configuration conf = regionEnv.getConfiguration();
-    for (byte[] entry: entries) {
-      try {
-        try (Table t = regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          ListMultimap<String,TablePermission> perms =
-              AccessControlLists.getPermissions(conf, entry, t);
-          byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
-          zkw.writeToZookeeper(entry, serialized);
-        }
-      } catch (IOException ex) {
-        LOG.error("Failed updating permissions mirror for '" + Bytes.toString(entry) + "'",
-            ex);
+    byte [] currentEntry = null;
+    // TODO: Here we are already on the ACL region. (And it is single
+    // region) We can even just get the region from the env and do get
+    // directly. The short circuit connection would avoid the RPC overhead
+    // so no socket communication, req write/read ..  But we have the PB
+    // to and fro conversion overhead. get req is converted to PB req
+    // and results are converted to PB results 1st and then to POJOs
+    // again. We could have avoided such at least in ACL table context..
+    try (Table t = e.getCoprocessorRegionServerServices().getConnection().
+        getTable(AccessControlLists.ACL_TABLE_NAME)) {
+      for (byte[] entry : entries) {
+        currentEntry = entry;
+        ListMultimap<String, TablePermission> perms =
+            AccessControlLists.getPermissions(conf, entry, t);
+        byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+        zkw.writeToZookeeper(entry, serialized);
       }
+    } catch(IOException ex) {
+          LOG.error("Failed updating permissions mirror for '" +
+                  (currentEntry == null? "null": Bytes.toString(currentEntry)) + "'", ex);
     }
   }
 
@@ -1072,8 +1080,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(),
-                userperm, c.getEnvironment().getTable(AccessControlLists.ACL_TABLE_NAME));
+            try (Table table = c.getEnvironment().getMasterServices().getConnection().
+                getTable(AccessControlLists.ACL_TABLE_NAME)) {
+              AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(),
+                  userperm, table);
+            }
             return null;
           }
         });
@@ -1095,8 +1106,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        AccessControlLists.removeTablePermissions(conf, tableName,
-            c.getEnvironment().getTable(AccessControlLists.ACL_TABLE_NAME));
+        try (Table table = c.getEnvironment().getMasterServices().getConnection().
+            getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          AccessControlLists.removeTablePermissions(conf, tableName, table);
+        }
         return null;
       }
     });
@@ -1132,8 +1145,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         List<UserPermission> perms = tableAcls.get(tableName);
         if (perms != null) {
           for (UserPermission perm : perms) {
-            AccessControlLists.addUserPermission(conf, perm,
-                ctx.getEnvironment().getTable(AccessControlLists.ACL_TABLE_NAME));
+            try (Table table = ctx.getEnvironment().getMasterServices().getConnection().
+                getTable(AccessControlLists.ACL_TABLE_NAME)) {
+              AccessControlLists.addUserPermission(conf, perm, table);
+            }
           }
         }
         tableAcls.remove(tableName);
@@ -1161,8 +1176,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       public Void run() throws Exception {
         UserPermission userperm = new UserPermission(Bytes.toBytes(owner),
             htd.getTableName(), null, Action.values());
-        AccessControlLists.addUserPermission(conf, userperm,
-            c.getEnvironment().getTable(AccessControlLists.ACL_TABLE_NAME));
+        try (Table table = c.getEnvironment().getMasterServices().getConnection().
+            getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          AccessControlLists.addUserPermission(conf, userperm, table);
+        }
         return null;
       }
     });
@@ -1198,8 +1215,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        AccessControlLists.removeTablePermissions(conf, tableName, columnFamily,
-            ctx.getEnvironment().getTable(AccessControlLists.ACL_TABLE_NAME));
+        try (Table table = ctx.getEnvironment().getMasterServices().getConnection().
+            getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          AccessControlLists.removeTablePermissions(conf, tableName, columnFamily, table);
+        }
         return null;
       }
     });
@@ -1444,8 +1463,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        AccessControlLists.removeNamespacePermissions(conf, namespace,
-            ctx.getEnvironment().getTable(AccessControlLists.ACL_TABLE_NAME));
+        try (Table table = ctx.getEnvironment().getMasterServices().getConnection().
+            getTable(AccessControlLists.ACL_TABLE_NAME)) {
+          AccessControlLists.removeNamespacePermissions(conf, namespace, table);
+        }
         return null;
       }
     });
@@ -2287,8 +2308,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm,
-              regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME), request.getMergeExistingPermissions());
+            // regionEnv is set at #start. Hopefully not null at this point.
+            try (Table table = regionEnv.getCoprocessorRegionServerServices().getConnection().
+                getTable(AccessControlLists.ACL_TABLE_NAME)) {
+              AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm, table,
+                  request.getMergeExistingPermissions());
+            }
             return null;
           }
         });
@@ -2340,8 +2365,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm,
-                regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME));
+            // regionEnv is set at #start. Hopefully not null here.
+            try (Table table = regionEnv.getCoprocessorRegionServerServices().getConnection().
+                getTable(AccessControlLists.ACL_TABLE_NAME)) {
+              AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm, table);
+            }
             return null;
           }
         });
