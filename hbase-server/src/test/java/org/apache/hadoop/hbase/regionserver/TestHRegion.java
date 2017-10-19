@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -130,6 +130,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.HRegion.MutationBatchOperation;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestHStore.FaultyFileSystem;
@@ -165,6 +166,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.mockito.ArgumentCaptor;
@@ -200,6 +202,7 @@ public class TestHRegion {
   @ClassRule
   public static final TestRule timeout =
       CategoryBasedTimeout.forClass(TestHRegion.class);
+  @Rule public final ExpectedException thrown = ExpectedException.none();
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte [] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
@@ -215,9 +218,11 @@ public class TestHRegion {
   // Test names
   protected TableName tableName;
   protected String method;
+  protected final byte[] qual = Bytes.toBytes("qual");
   protected final byte[] qual1 = Bytes.toBytes("qual1");
   protected final byte[] qual2 = Bytes.toBytes("qual2");
   protected final byte[] qual3 = Bytes.toBytes("qual3");
+  protected final byte[] value = Bytes.toBytes("value");
   protected final byte[] value1 = Bytes.toBytes("value1");
   protected final byte[] value2 = Bytes.toBytes("value2");
   protected final byte[] row = Bytes.toBytes("rowA");
@@ -1522,21 +1527,10 @@ public class TestHRegion {
 
   @Test
   public void testBatchPut_whileNoRowLocksHeld() throws IOException {
-    byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
-    byte[] qual = Bytes.toBytes("qual");
-    byte[] val = Bytes.toBytes("val");
-    this.region = initHRegion(tableName, method, CONF, cf);
+    final Put[] puts = new Put[10];
     MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
     try {
-      long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
-      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
-
-      LOG.info("First a batch put with all valid puts");
-      final Put[] puts = new Put[10];
-      for (int i = 0; i < 10; i++) {
-        puts[i] = new Put(Bytes.toBytes("row_" + i));
-        puts[i].addColumn(cf, qual, val);
-      }
+      long syncs = prepareRegionForBachPut(puts, source, false);
 
       OperationStatus[] codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
@@ -1546,7 +1540,7 @@ public class TestHRegion {
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 1, source);
 
       LOG.info("Next a batch put with one invalid family");
-      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, val);
+      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, value);
       codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
       for (int i = 0; i < 10; i++) {
@@ -1563,28 +1557,18 @@ public class TestHRegion {
 
   @Test
   public void testBatchPut_whileMultipleRowLocksHeld() throws Exception {
-    byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
-    byte[] qual = Bytes.toBytes("qual");
-    byte[] val = Bytes.toBytes("val");
-    this.region = initHRegion(tableName, method, CONF, cf);
+    final Put[] puts = new Put[10];
     MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
     try {
-      long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
-      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
+      long syncs = prepareRegionForBachPut(puts, source, false);
 
-      final Put[] puts = new Put[10];
-      for (int i = 0; i < 10; i++) {
-        puts[i] = new Put(Bytes.toBytes("row_" + i));
-        puts[i].addColumn(cf, qual, val);
-      }
-      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, val);
+      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, value);
 
       LOG.info("batchPut will have to break into four batches to avoid row locks");
       RowLock rowLock1 = region.getRowLock(Bytes.toBytes("row_2"));
       RowLock rowLock2 = region.getRowLock(Bytes.toBytes("row_1"));
       RowLock rowLock3 = region.getRowLock(Bytes.toBytes("row_3"));
       RowLock rowLock4 = region.getRowLock(Bytes.toBytes("row_3"), true);
-
 
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
       final AtomicReference<OperationStatus[]> retFromThread = new AtomicReference<>();
@@ -1658,31 +1642,89 @@ public class TestHRegion {
       Thread.sleep(100);
       if (System.currentTimeMillis() - startWait > 10000) {
         fail(String.format("Timed out waiting for '%s' >= '%s', currentCount=%s", metricName,
-          expectedCount, currentCount));
+            expectedCount, currentCount));
       }
     }
   }
 
   @Test
-  public void testBatchPutWithTsSlop() throws Exception {
-    byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
-    byte[] qual = Bytes.toBytes("qual");
-    byte[] val = Bytes.toBytes("val");
+  public void testAtomicBatchPut() throws IOException {
+    final Put[] puts = new Put[10];
+    MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    try {
+      long syncs = prepareRegionForBachPut(puts, source, false);
 
+      // 1. Straight forward case, should succeed
+      MutationBatchOperation batchOp = new MutationBatchOperation(region, puts, true,
+          HConstants.NO_NONCE, HConstants.NO_NONCE);
+      OperationStatus[] codes = this.region.batchMutate(batchOp);
+      assertEquals(10, codes.length);
+      for (int i = 0; i < 10; i++) {
+        assertEquals(OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
+      }
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 1, source);
+
+      // 2. Failed to get lock
+      RowLock lock = region.getRowLock(Bytes.toBytes("row_" + 3));
+      // Method {@link HRegion#getRowLock(byte[])} is reentrant. As 'row_3' is locked in this
+      // thread, need to run {@link HRegion#batchMutate(HRegion.BatchOperation)} in different thread
+      MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
+      final AtomicReference<IOException> retFromThread = new AtomicReference<>();
+      final CountDownLatch finishedPuts = new CountDownLatch(1);
+      final MutationBatchOperation finalBatchOp = new MutationBatchOperation(region, puts, true,
+          HConstants
+          .NO_NONCE,
+          HConstants.NO_NONCE);
+      TestThread putter = new TestThread(ctx) {
+        @Override
+        public void doWork() throws IOException {
+          try {
+            region.batchMutate(finalBatchOp);
+          } catch (IOException ioe) {
+            LOG.error("test failed!", ioe);
+            retFromThread.set(ioe);
+          }
+          finishedPuts.countDown();
+        }
+      };
+      LOG.info("...starting put thread while holding locks");
+      ctx.addThread(putter);
+      ctx.startThreads();
+      LOG.info("...waiting for batch puts while holding locks");
+      try {
+        finishedPuts.await();
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted!", e);
+      } finally {
+        if (lock != null) {
+          lock.release();
+        }
+      }
+      assertNotNull(retFromThread.get());
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 1, source);
+
+      // 3. Exception thrown in validation
+      LOG.info("Next a batch put with one invalid family");
+      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, value);
+      batchOp = new MutationBatchOperation(region, puts, true, HConstants.NO_NONCE,
+          HConstants.NO_NONCE);
+      thrown.expect(NoSuchColumnFamilyException.class);
+      this.region.batchMutate(batchOp);
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test
+  public void testBatchPutWithTsSlop() throws Exception {
     // add data with a timestamp that is too recent for range. Ensure assert
     CONF.setInt("hbase.hregion.keyvalue.timestamp.slop.millisecs", 1000);
-    this.region = initHRegion(tableName, method, CONF, cf);
+    final Put[] puts = new Put[10];
+    MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
 
     try {
-      MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
-      long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
-      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
-
-      final Put[] puts = new Put[10];
-      for (int i = 0; i < 10; i++) {
-        puts[i] = new Put(Bytes.toBytes("row_" + i), Long.MAX_VALUE - 100);
-        puts[i].addColumn(cf, qual, val);
-      }
+      long syncs = prepareRegionForBachPut(puts, source, true);
 
       OperationStatus[] codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
@@ -1690,12 +1732,29 @@ public class TestHRegion {
         assertEquals(OperationStatusCode.SANITY_CHECK_FAILURE, codes[i].getOperationStatusCode());
       }
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
-
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
+  }
 
+  /**
+   * @return syncs initial syncTimeNumOps
+   */
+  private long prepareRegionForBachPut(final Put[] puts, final MetricsWALSource source,
+      boolean slop) throws IOException {
+    this.region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);
+
+    LOG.info("First a batch put with all valid puts");
+    for (int i = 0; i < puts.length; i++) {
+      puts[i] = slop ? new Put(Bytes.toBytes("row_" + i), Long.MAX_VALUE - 100) :
+          new Put(Bytes.toBytes("row_" + i));
+      puts[i].addColumn(COLUMN_FAMILY_BYTES, qual, value);
+    }
+
+    long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
+    metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
+    return syncs;
   }
 
   // ////////////////////////////////////////////////////////////////////////////
