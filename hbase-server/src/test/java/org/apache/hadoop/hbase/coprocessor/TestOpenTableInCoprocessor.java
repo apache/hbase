@@ -74,10 +74,11 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      Table table = e.getEnvironment().getTable(otherTable);
-      table.put(put);
-      completed[0] = true;
-      table.close();
+      try (Table table = e.getEnvironment().getCoprocessorRegionServerServices().getConnection().
+          getTable(otherTable)) {
+        table.put(put);
+        completed[0] = true;
+      }
     }
 
   }
@@ -111,16 +112,17 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      Table table = e.getEnvironment().getTable(otherTable, getPool());
-      Put p = new Put(new byte[] { 'a' });
-      p.addColumn(family, null, new byte[]{'a'});
-      try {
-        table.batch(Collections.singletonList(put), null);
-      } catch (InterruptedException e1) {
-        throw new IOException(e1);
+      try (Table table = e.getEnvironment().getCoprocessorRegionServerServices().
+          getConnection().getTable(otherTable, getPool())) {
+        Put p = new Put(new byte[]{'a'});
+        p.addColumn(family, null, new byte[]{'a'});
+        try {
+          table.batch(Collections.singletonList(put), null);
+        } catch (InterruptedException e1) {
+          throw new IOException(e1);
+        }
+        completedWithPool[0] = true;
       }
-      completedWithPool[0] = true;
-      table.close();
     }
   }
 

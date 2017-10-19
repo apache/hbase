@@ -20,11 +20,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Table;
 
 /**
  * Coprocessor environment state.
@@ -49,19 +47,6 @@ public interface CoprocessorEnvironment<C extends Coprocessor> {
 
   /** @return the configuration */
   Configuration getConfiguration();
-
-  /**
-   * @return an interface for accessing the given table
-   * @throws IOException
-   */
-  Table getTable(TableName tableName) throws IOException;
-
-  /**
-   * @return an interface for accessing the given table using the passed executor to run batch
-   *         operations
-   * @throws IOException
-   */
-  Table getTable(TableName tableName, ExecutorService service) throws IOException;
 
   /**
    * @return the classloader for the loaded coprocessor instance
