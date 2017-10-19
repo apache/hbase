@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -604,9 +604,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   /**
    * Mutate a list of rows atomically.
-   *
    * @param cellScanner if non-null, the mutation data -- the Cell content.
-   * @param comparator @throws IOException
    */
   private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
                                     final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
@@ -757,10 +755,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /**
    * Run through the regionMutation <code>rm</code> and per Mutation, do the work, and then when
    * done, add an instance of a {@link ResultOrException} that corresponds to each Mutation.
-   * @param region
-   * @param actions
-   * @param cellScanner
-   * @param builder
    * @param cellsToReturn  Could be null. May be allocated in this method.  This is what this
    * method returns as a 'result'.
    * @param closeCallBack the callback to be used with multigets
@@ -864,7 +858,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (type != MutationType.PUT && type != MutationType.DELETE && mutations != null &&
               !mutations.isEmpty()) {
             // Flush out any Puts or Deletes already collected.
-            doBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement);
+            doBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement, false);
             mutations.clear();
           }
           switch (type) {
@@ -925,7 +919,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     // Finish up any outstanding mutations
     if (mutations != null && !mutations.isEmpty()) {
-      doBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement);
+      try {
+        doBatchOp(builder, region, quota, mutations, cellScanner, spaceQuotaEnforcement, false);
+      } catch (IOException ioe) {
+        rpcServer.getMetrics().exception(ioe);
+        NameBytesPair pair = ResponseConverter.buildException(ioe);
+        resultOrExceptionBuilder.setException(pair);
+        context.incrementResponseExceptionSize(pair.getSerializedSize());
+        builder.addResultOrException(resultOrExceptionBuilder.build());
+      }
     }
     return cellsToReturn;
   }
@@ -955,7 +957,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
       final OperationQuota quota, final List<ClientProtos.Action> mutations,
-      final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement) {
+      final CellScanner cells, ActivePolicyEnforcement spaceQuotaEnforcement, boolean atomic)
+      throws IOException {
     Mutation[] mArray = new Mutation[mutations.size()];
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
@@ -967,7 +970,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
        * is the mutation belong to. We can't sort ClientProtos.Action array, since they
        * are bonded to cellscanners.
        */
-      Map<Mutation, ClientProtos.Action> mutationActionMap = new HashMap<Mutation, ClientProtos.Action>();
+      Map<Mutation, ClientProtos.Action> mutationActionMap = new HashMap<>();
       int i = 0;
       for (ClientProtos.Action action: mutations) {
         MutationProto m = action.getMutation();
@@ -995,7 +998,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       // sort to improve lock efficiency
       Arrays.sort(mArray);
 
-      OperationStatus[] codes = region.batchMutate(mArray, HConstants.NO_NONCE,
+      OperationStatus[] codes = region.batchMutate(mArray, atomic, HConstants.NO_NONCE,
         HConstants.NO_NONCE);
       for (i = 0; i < codes.length; i++) {
         Mutation currentMutation = mArray[i];
@@ -1025,6 +1028,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
     } catch (IOException ie) {
+      if (atomic) {
+        throw ie;
+      }
       for (int i = 0; i < mutations.size(); i++) {
         builder.addResultOrException(getResultOrException(ie, mutations.get(i).getIndex()));
       }
@@ -1130,7 +1136,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   // Exposed for testing
-  static interface LogDelegate {
+  interface LogDelegate {
     void logBatchWarning(String firstRegionName, int sum, int rowSizeWarnThreshold);
   }
 
@@ -3229,7 +3235,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException e) {
       addScannerLeaseBack(lease);
       throw new ServiceException(e);
-    };
+    }
     try {
       checkScanNextCallSeq(request, rsh);
     } catch (OutOfOrderScannerNextException e) {

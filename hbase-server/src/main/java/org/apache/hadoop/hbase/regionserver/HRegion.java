@@ -2952,6 +2952,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final ObservedExceptionsInBatch observedExceptions;
     //Durability of the batch (highest durability of all operations)
     protected Durability durability;
+    protected boolean atomic = false;
 
     public BatchOperation(final HRegion region, T[] operations) {
       this.operations = operations;
@@ -3067,6 +3068,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return getMutation(0).getClusterIds();
     }
 
+    boolean isAtomic() {
+      return atomic;
+    }
+
     /**
      * Helper method that checks and prepares only one mutation. This can be used to implement
      * {@link #checkAndPrepare()} for entire Batch.
@@ -3097,16 +3102,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (tmpDur.ordinal() > durability.ordinal()) {
           durability = tmpDur;
         }
-      } catch (NoSuchColumnFamilyException nscf) {
+      } catch (NoSuchColumnFamilyException nscfe) {
         final String msg = "No such column family in batch mutation. ";
         if (observedExceptions.hasSeenNoSuchFamily()) {
-          LOG.warn(msg + nscf.getMessage());
+          LOG.warn(msg + nscfe.getMessage());
         } else {
-          LOG.warn(msg, nscf);
+          LOG.warn(msg, nscfe);
           observedExceptions.sawNoSuchFamily();
         }
         retCodeDetails[index] = new OperationStatus(
-            OperationStatusCode.BAD_FAMILY, nscf.getMessage());
+            OperationStatusCode.BAD_FAMILY, nscfe.getMessage());
+        if (isAtomic()) { // fail, atomic means all or none
+          throw nscfe;
+        }
       } catch (FailedSanityCheckException fsce) {
         final String msg = "Batch Mutation did not pass sanity check. ";
         if (observedExceptions.hasSeenFailedSanityCheck()) {
@@ -3117,6 +3125,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         retCodeDetails[index] = new OperationStatus(
             OperationStatusCode.SANITY_CHECK_FAILURE, fsce.getMessage());
+        if (isAtomic()) {
+          throw fsce;
+        }
       } catch (WrongRegionException we) {
         final String msg = "Batch mutation had a row that does not belong to this region. ";
         if (observedExceptions.hasSeenWrongRegion()) {
@@ -3127,6 +3138,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         retCodeDetails[index] = new OperationStatus(
             OperationStatusCode.SANITY_CHECK_FAILURE, we.getMessage());
+        if (isAtomic()) {
+          throw we;
+        }
       }
     }
 
@@ -3150,15 +3164,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // If we haven't got any rows in our batch, we should block to get the next one.
         RowLock rowLock = null;
         try {
-          rowLock = region.getRowLockInternal(mutation.getRow(), true);
+          // if atomic then get exclusive lock, else shared lock
+          rowLock = region.getRowLockInternal(mutation.getRow(), !isAtomic());
         } catch (TimeoutIOException e) {
           // We will retry when other exceptions, but we should stop if we timeout .
           throw e;
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock, row=" + Bytes.toStringBinary(mutation.getRow()), ioe);
+          if (isAtomic()) { // fail, atomic means all or none
+            throw ioe;
+          }
         }
         if (rowLock == null) {
           // We failed to grab another lock
+          if (isAtomic()) {
+            throw new IOException("Can't apply all operations atomically!");
+          }
           break; // Stop acquiring more rows for this batch
         } else {
           acquiredRowLocks.add(rowLock);
@@ -3279,12 +3300,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Batch of mutation operations. Base class is shared with {@link ReplayBatchOperation} as most
    * of the logic is same.
    */
-  private static class MutationBatchOperation extends BatchOperation<Mutation> {
+  static class MutationBatchOperation extends BatchOperation<Mutation> {
     private long nonceGroup;
     private long nonce;
-    public MutationBatchOperation(final HRegion region, Mutation[] operations, long nonceGroup,
-        long nonce) {
+    public MutationBatchOperation(final HRegion region, Mutation[] operations, boolean atomic,
+        long nonceGroup, long nonce) {
       super(region, operations);
+      this.atomic = atomic;
       this.nonceGroup = nonceGroup;
       this.nonce = nonce;
     }
@@ -3522,11 +3544,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           retCodeDetails[index] = OperationStatus.SUCCESS;
         }
       } else {
+        String msg = "Put/Delete mutations only supported in a batch";
         // In case of passing Append mutations along with the Puts and Deletes in batchMutate
         // mark the operation return code as failure so that it will not be considered in
         // the doMiniBatchMutation
-        retCodeDetails[index] = new OperationStatus(OperationStatusCode.FAILURE,
-            "Put/Delete mutations only supported in batchMutate() now");
+        retCodeDetails[index] = new OperationStatus(OperationStatusCode.FAILURE, msg);
+
+        if (isAtomic()) { // fail, atomic means all or none
+          throw new IOException(msg);
+        }
       }
     }
 
@@ -3582,7 +3608,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Batch of mutations for replay. Base class is shared with {@link MutationBatchOperation} as most
    * of the logic is same.
    */
-  private static class ReplayBatchOperation extends BatchOperation<MutationReplay> {
+  static class ReplayBatchOperation extends BatchOperation<MutationReplay> {
     private long origLogSeqNum = 0;
     public ReplayBatchOperation(final HRegion region, MutationReplay[] operations,
         long origLogSeqNum) {
@@ -3695,11 +3721,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public OperationStatus[] batchMutate(Mutation[] mutations, long nonceGroup, long nonce)
       throws IOException {
+    return batchMutate(mutations, false, nonceGroup, nonce);
+  }
+
+  public OperationStatus[] batchMutate(Mutation[] mutations, boolean atomic, long nonceGroup,
+      long nonce) throws IOException {
     // As it stands, this is used for 3 things
     //  * batchMutate with single mutation - put/delete, separate or from checkAndMutate.
     //  * coprocessor calls (see ex. BulkDeleteEndpoint).
     // So nonces are not really ever used by HBase. They could be by coprocs, and checkAnd...
-    return batchMutate(new MutationBatchOperation(this, mutations, nonceGroup, nonce));
+    return batchMutate(new MutationBatchOperation(this, mutations, atomic, nonceGroup, nonce));
   }
 
   public OperationStatus[] batchMutate(Mutation[] mutations) throws IOException {
