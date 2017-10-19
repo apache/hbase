@@ -65,18 +65,18 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     zlib1g-dev
 
 #######
-# Oracle Java
+# OpenJDK 8
 #######
 
 RUN echo "dot_style = mega" > "/root/.wgetrc"
 RUN echo "quiet = on" >> "/root/.wgetrc"
 
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y software-properties-common
-RUN add-apt-repository -y ppa:webupd8team/java
-
-# Auto-accept the Oracle JDK license
-RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
-RUN apt-get -q update && apt-get -q install --no-install-recommends -y oracle-java8-installer
+RUN add-apt-repository -y ppa:openjdk-r/ppa
+RUN apt-get -q update
+RUN apt-get -q install --no-install-recommends -y openjdk-8-jdk
+RUN update-alternatives --config java
+RUN update-alternatives --config javac
 
 ####
 # Apps that require Java
@@ -131,23 +131,16 @@ RUN pip install python-dateutil
 # Install Ruby 2, based on Yetus 0.4.0 dockerfile
 ###
 RUN echo 'gem: --no-rdoc --no-ri' >> /root/.gemrc
-RUN apt-get -q install -y ruby2.0
-#
-# on trusty, the above installs ruby2.0 and ruby (1.9.3) exes
-# but update-alternatives is broken, so we need to do some work
-# to make 2.0 actually the default without the system flipping out
-#
-# See https://bugs.launchpad.net/ubuntu/+source/ruby2.0/+bug/1310292
-#
-RUN dpkg-divert --add --rename --divert /usr/bin/ruby.divert /usr/bin/ruby
-RUN dpkg-divert --add --rename --divert /usr/bin/gem.divert /usr/bin/gemrc
-RUN update-alternatives --install /usr/bin/ruby ruby /usr/bin/ruby2.0 1
-RUN update-alternatives --install /usr/bin/gem gem /usr/bin/gem2.0 1
+RUN apt-add-repository ppa:brightbox/ruby-ng
+RUN apt-get -q update
 
+RUN apt-get -q install --no-install-recommends -y ruby2.2 ruby-switch
+RUN ruby-switch --set ruby2.2
 
 ####
 # Install rubocop
 ###
+RUN gem install rake
 RUN gem install rubocop
 
 ####
