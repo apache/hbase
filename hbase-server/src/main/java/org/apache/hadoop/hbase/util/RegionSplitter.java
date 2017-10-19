@@ -274,6 +274,12 @@ public class RegionSplitter {
    * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -c 60 -f test:rs
    * myTable HexStringSplit
    * </ul>
+   * <li>create a table named 'myTable' with 50 pre-split regions,
+   * assuming the keys are decimal-encoded ASCII:
+   * <ul>
+   * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -c 50
+   * myTable DecimalStringSplit
+   * </ul>
    * <li>perform a rolling split of 'myTable' (i.e. 60 =&gt; 120 regions), # 2
    * outstanding splits at a time, assuming keys are uniformly distributed
    * bytes:
@@ -283,9 +289,9 @@ public class RegionSplitter {
    * </ul>
    * </ul>
    *
-   * There are two SplitAlgorithms built into RegionSplitter, HexStringSplit
-   * and UniformSplit. These are different strategies for choosing region
-   * boundaries. See their source code for details.
+   * There are three SplitAlgorithms built into RegionSplitter, HexStringSplit,
+   * DecimalStringSplit, and UniformSplit. These are different strategies for
+   * choosing region boundaries. See their source code for details.
    *
    * @param args
    *          Usage: RegionSplitter &lt;TABLE&gt; &lt;SPLITALGORITHM&gt;
@@ -353,9 +359,10 @@ public class RegionSplitter {
     if (2 != cmd.getArgList().size() || !oneOperOnly || cmd.hasOption("h")) {
       new HelpFormatter().printHelp("RegionSplitter <TABLE> <SPLITALGORITHM>\n"+
           "SPLITALGORITHM is a java class name of a class implementing " +
-          "SplitAlgorithm, or one of the special strings HexStringSplit " +
-          "or UniformSplit, which are built-in split algorithms. " +
+          "SplitAlgorithm, or one of the special strings HexStringSplit or " +
+          "DecimalStringSplit or UniformSplit, which are built-in split algorithms. " +
           "HexStringSplit treats keys as hexadecimal ASCII, and " +
+          "DecimalStringSplit treats keys as decimal ASCII, and " +
           "UniformSplit treats keys as arbitrary bytes.", opt);
       return;
     }
@@ -660,6 +667,8 @@ public class RegionSplitter {
     // their simple class name instead of a fully qualified class name.
     if(splitClassName.equals(HexStringSplit.class.getSimpleName())) {
       splitClass = HexStringSplit.class;
+    } else if (splitClassName.equals(DecimalStringSplit.class.getSimpleName())) {
+      splitClass = DecimalStringSplit.class;
     } else if (splitClassName.equals(UniformSplit.class.getSimpleName())) {
       splitClass = UniformSplit.class;
     } else {
@@ -893,15 +902,52 @@ public class RegionSplitter {
    * Since this split algorithm uses hex strings as keys, it is easy to read &amp;
    * write in the shell but takes up more space and may be non-intuitive.
    */
-  public static class HexStringSplit implements SplitAlgorithm {
+  public static class HexStringSplit extends NumberStringSplit {
     final static String DEFAULT_MIN_HEX = "00000000";
     final static String DEFAULT_MAX_HEX = "FFFFFFFF";
+    final static int RADIX_HEX = 16;
 
-    String firstRow = DEFAULT_MIN_HEX;
-    BigInteger firstRowInt = BigInteger.ZERO;
-    String lastRow = DEFAULT_MAX_HEX;
-    BigInteger lastRowInt = new BigInteger(lastRow, 16);
-    int rowComparisonLength = lastRow.length();
+    public HexStringSplit() {
+      super(DEFAULT_MIN_HEX, DEFAULT_MAX_HEX, RADIX_HEX);
+    }
+
+  }
+
+  /**
+   * The format of a DecimalStringSplit region boundary is the ASCII representation of
+   * reversed sequential number, or any other uniformly distributed decimal value.
+   * Row are decimal-encoded long values in the range
+   * <b>"00000000" =&gt; "99999999"</b> and are left-padded with zeros to keep the
+   * same order lexicographically as if they were binary.
+   */
+  public static class DecimalStringSplit extends NumberStringSplit {
+    final static String DEFAULT_MIN_DEC = "00000000";
+    final static String DEFAULT_MAX_DEC = "99999999";
+    final static int RADIX_DEC = 10;
+
+    public DecimalStringSplit() {
+      super(DEFAULT_MIN_DEC, DEFAULT_MAX_DEC, RADIX_DEC);
+    }
+
+  }
+
+  public abstract static class NumberStringSplit implements SplitAlgorithm {
+
+    String firstRow;
+    BigInteger firstRowInt;
+    String lastRow;
+    BigInteger lastRowInt;
+    int rowComparisonLength;
+    int radix;
+
+    NumberStringSplit(String minRow, String maxRow, int radix) {
+      this.firstRow = minRow;
+      this.lastRow = maxRow;
+      this.radix = radix;
+      this.firstRowInt = BigInteger.ZERO;
+      this.lastRowInt = new BigInteger(lastRow, this.radix);
+      this.rowComparisonLength = lastRow.length();
+    }
 
     public byte[] split(byte[] start, byte[] end) {
       BigInteger s = convertToBigInteger(start);
@@ -973,18 +1019,18 @@ public class RegionSplitter {
 
     public void setFirstRow(String userInput) {
       firstRow = userInput;
-      firstRowInt = new BigInteger(firstRow, 16);
+      firstRowInt = new BigInteger(firstRow, radix);
     }
 
     public void setLastRow(String userInput) {
       lastRow = userInput;
-      lastRowInt = new BigInteger(lastRow, 16);
+      lastRowInt = new BigInteger(lastRow, radix);
       // Precondition: lastRow > firstRow, so last's length is the greater
       rowComparisonLength = lastRow.length();
     }
 
     public byte[] strToRow(String in) {
-      return convertToByte(new BigInteger(in, 16));
+      return convertToByte(new BigInteger(in, radix));
     }
 
     public String rowToStr(byte[] row) {
@@ -1037,8 +1083,8 @@ public class RegionSplitter {
      * @param pad padding length
      * @return byte corresponding to input BigInteger
      */
-    public static byte[] convertToByte(BigInteger bigInteger, int pad) {
-      String bigIntegerString = bigInteger.toString(16);
+    public byte[] convertToByte(BigInteger bigInteger, int pad) {
+      String bigIntegerString = bigInteger.toString(radix);
       bigIntegerString = StringUtils.leftPad(bigIntegerString, pad, '0');
       return Bytes.toBytes(bigIntegerString);
     }
@@ -1060,7 +1106,7 @@ public class RegionSplitter {
      * @return the corresponding BigInteger
      */
     public BigInteger convertToBigInteger(byte[] row) {
-      return (row.length > 0) ? new BigInteger(Bytes.toString(row), 16)
+      return (row.length > 0) ? new BigInteger(Bytes.toString(row), radix)
           : BigInteger.ZERO;
     }
 
