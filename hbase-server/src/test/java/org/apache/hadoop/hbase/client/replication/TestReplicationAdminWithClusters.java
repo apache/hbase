@@ -67,23 +67,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   }
 
   @Test(timeout = 300000)
-  public void disableNotFullReplication() throws Exception {
-    HTableDescriptor table = admin2.getTableDescriptor(tableName);
-    HColumnDescriptor f = new HColumnDescriptor("notReplicatedFamily");
-    table.addFamily(f);
-    admin1.disableTable(tableName);
-    admin1.modifyTable(tableName, table);
-    admin1.enableTable(tableName);
-
-
-    admin.disableTableRep(tableName);
-    table = admin1.getTableDescriptor(tableName);
-    for (HColumnDescriptor fam : table.getColumnFamilies()) {
-      assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
-    }
-  }
-
-  @Test(timeout = 300000)
   public void testEnableReplicationWhenSlaveClusterDoesntHaveTable() throws Exception {
     admin2.disableTable(tableName);
     admin2.deleteTable(tableName);
