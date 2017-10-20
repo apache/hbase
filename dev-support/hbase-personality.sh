@@ -218,7 +218,7 @@ function hadoopcheck_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ \.java$ ]]; then
+  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]]; then
     add_test hadoopcheck
   fi
 }
@@ -238,6 +238,10 @@ function hadoopcheck_rebuild
   local hbase_hadoop3_versions
 
   if [[ "${repostatus}" = branch ]]; then
+    return 0
+  fi
+
+  if ! verify_needed_test hadoopcheck; then
     return 0
   fi
 
@@ -317,7 +321,7 @@ function hbaseprotoc_filefilter
   fi
 }
 
-## @description  hadoopcheck test
+## @description  check hbase proto compilation
 ## @audience     private
 ## @stability    evolving
 ## @param        repostatus
