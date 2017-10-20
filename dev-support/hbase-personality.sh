@@ -171,12 +171,19 @@ function shadedjars_initialize
 {
   yetus_debug "initializing shaded client checks."
   maven_add_install shadedjars
-  add_test shadedjars
 }
 
-function shadedjars_clean
+## @description  only run the test if java changes.
+## @audience     private
+## @stability    evolving
+## @param        filename
+function shadedjars_filefilter
 {
-  "${MAVEN}" "${MAVEN_ARGS[@]}" clean -fae -pl hbase_shaded/hbase-shaded-check-invariants -am -Prelease
+  local filename=$1
+
+  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]]; then
+    add_test shadedjars
+  fi
 }
 
 ## @description test the shaded client artifacts
@@ -187,6 +194,10 @@ function shadedjars_rebuild
 {
   local repostatus=$1
   local logfile="${PATCH_DIR}/${repostatus}-shadedjars.txt"
+
+  if ! verify_needed_test shadedjars; then
+    return 0
+  fi
 
   big_console_header "Checking shaded client builds on ${repostatus}"
 
