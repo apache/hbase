@@ -126,6 +126,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateName
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
@@ -136,8 +138,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
@@ -180,8 +180,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrM
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
@@ -200,8 +200,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
@@ -1935,41 +1935,37 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> drainRegionServers(List<ServerName> servers) {
-    return this
-        .<Void> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<DrainRegionServersRequest, DrainRegionServersResponse, Void> call(controller, stub,
-                RequestConverter.buildDrainRegionServersRequest(servers),
-                (s, c, req, done) -> s.drainRegionServers(c, req, done), resp -> null)).call();
+  public CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers, boolean offload) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this
+          .<DecommissionRegionServersRequest, DecommissionRegionServersResponse, Void> call(
+            controller, stub, RequestConverter.buildDecommissionRegionServersRequest(servers, offload),
+            (s, c, req, done) -> s.decommissionRegionServers(c, req, done), resp -> null))
+        .call();
   }
 
   @Override
-  public CompletableFuture<List<ServerName>> listDrainingRegionServers() {
-    return this
-        .<List<ServerName>> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<ListDrainingRegionServersRequest, ListDrainingRegionServersResponse, List<ServerName>> call(
-                controller,
-                stub,
-                ListDrainingRegionServersRequest.newBuilder().build(),
-                (s, c, req, done) -> s.listDrainingRegionServers(c, req, done),
-                resp -> resp.getServerNameList().stream().map(ProtobufUtil::toServerName)
-                    .collect(Collectors.toList()))).call();
+  public CompletableFuture<List<ServerName>> listDecommissionedRegionServers() {
+    return this.<List<ServerName>> newMasterCaller()
+        .action((controller, stub) -> this
+          .<ListDecommissionedRegionServersRequest, ListDecommissionedRegionServersResponse,
+            List<ServerName>> call(
+              controller, stub, ListDecommissionedRegionServersRequest.newBuilder().build(),
+              (s, c, req, done) -> s.listDecommissionedRegionServers(c, req, done),
+              resp -> resp.getServerNameList().stream().map(ProtobufUtil::toServerName)
+                  .collect(Collectors.toList())))
+        .call();
   }
 
   @Override
-  public CompletableFuture<Void> removeDrainFromRegionServers(List<ServerName> servers) {
-    return this
-        .<Void> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<RemoveDrainFromRegionServersRequest, RemoveDrainFromRegionServersResponse, Void> call(
-                controller, stub, RequestConverter
-                    .buildRemoveDrainFromRegionServersRequest(servers), (s, c, req, done) -> s
-                    .removeDrainFromRegionServers(c, req, done), resp -> null)).call();
+  public CompletableFuture<Void> recommissionRegionServer(ServerName server,
+      List<byte[]> encodedRegionNames) {
+    return this.<Void> newMasterCaller()
+        .action((controller, stub) -> this
+          .<RecommissionRegionServerRequest, RecommissionRegionServerResponse, Void> call(controller,
+            stub, RequestConverter.buildRecommissionRegionServerRequest(server, encodedRegionNames),
+            (s, c, req, done) -> s.recommissionRegionServer(c, req, done), resp -> null))
+        .call();
   }
 
   /**

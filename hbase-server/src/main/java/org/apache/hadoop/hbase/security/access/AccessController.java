@@ -1504,6 +1504,23 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     requirePermission(getActiveUser(ctx), "clearDeadServers", Action.ADMIN);
   }
 
+  @Override
+  public void preDecommissionRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, boolean offload) throws IOException {
+    requirePermission(getActiveUser(ctx), "decommissionRegionServers", Action.ADMIN);
+  }
+
+  @Override
+  public void preListDecommissionedRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+    requirePermission(getActiveUser(ctx), "listDecommissionedRegionServers", Action.ADMIN);
+  }
+
+  @Override
+  public void preRecommissionRegionServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ServerName server, List<byte[]> encodedRegionNames) throws IOException {
+    requirePermission(getActiveUser(ctx), "recommissionRegionServers", Action.ADMIN);
+  }
+
   /* ---- RegionObserver implementation ---- */
 
   @Override

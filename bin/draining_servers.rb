@@ -17,6 +17,8 @@
 #
 
 # Add or remove servers from draining mode via zookeeper
+# Deprecated in 2.0, and will be removed in 3.0. Use Admin decommission
+# API instead.
 
 require 'optparse'
 include Java

@@ -325,19 +325,19 @@ public class TestZooKeeperACL {
     if (!secureZKAvailable) {
       return;
     }
-    List<ServerName> drainingServers = new ArrayList<>(1);
-    drainingServers.add(ServerName.parseServerName("ZZZ,123,123"));
+    List<ServerName> decommissionedServers = new ArrayList<>(1);
+    decommissionedServers.add(ServerName.parseServerName("ZZZ,123,123"));
 
     // If unable to connect to secure ZK cluster then this operation would fail.
-    TEST_UTIL.getAdmin().drainRegionServers(drainingServers);
+    TEST_UTIL.getAdmin().decommissionRegionServers(decommissionedServers, false);
 
-    drainingServers = TEST_UTIL.getAdmin().listDrainingRegionServers();
-    assertEquals(1, drainingServers.size());
-    assertEquals(ServerName.parseServerName("ZZZ,123,123"), drainingServers.get(0));
+    decommissionedServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
+    assertEquals(1, decommissionedServers.size());
+    assertEquals(ServerName.parseServerName("ZZZ,123,123"), decommissionedServers.get(0));
 
-    TEST_UTIL.getAdmin().removeDrainFromRegionServers(drainingServers);
-    drainingServers = TEST_UTIL.getAdmin().listDrainingRegionServers();
-    assertEquals(0, drainingServers.size());
+    TEST_UTIL.getAdmin().recommissionRegionServer(decommissionedServers.get(0), null);
+    decommissionedServers = TEST_UTIL.getAdmin().listDecommissionedRegionServers();
+    assertEquals(0, decommissionedServers.size());
   }
 
 }

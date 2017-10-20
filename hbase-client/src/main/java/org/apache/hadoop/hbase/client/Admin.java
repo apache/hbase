@@ -2425,22 +2425,30 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Mark a region server as draining to prevent additional regions from getting assigned to it.
-   * @param servers List of region servers to drain.
+   * Mark region server(s) as decommissioned to prevent additional regions from getting
+   * assigned to them. Optionally unload the regions on the servers. If there are multiple servers
+   * to be decommissioned, decommissioning them at the same time can prevent wasteful region
+   * movements. Region unloading is asynchronous.
+   * @param servers The list of servers to decommission.
+   * @param offload True to offload the regions from the decommissioned servers
    */
-  void drainRegionServers(List<ServerName> servers) throws IOException;
+  void decommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException;
 
   /**
-   * List region servers marked as draining to not get additional regions assigned to them.
-   * @return List of draining region servers.
+   * List region servers marked as decommissioned, which can not be assigned regions.
+   * @return List of decommissioned region servers.
    */
-  List<ServerName> listDrainingRegionServers() throws IOException;
+  List<ServerName> listDecommissionedRegionServers() throws IOException;
 
   /**
-   * Remove drain from a region server to allow additional regions assignments.
-   * @param servers List of region servers to remove drain from.
+   * Remove decommission marker from a region server to allow regions assignments.
+   * Load regions onto the server if a list of regions is given. Region loading is
+   * asynchronous.
+   * @param server The server to recommission.
+   * @param encodedRegionNames Regions to load onto the server.
    */
-  void removeDrainFromRegionServers(List<ServerName> servers) throws IOException;
+  void recommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
+      throws IOException;
 
   /**
    * Find all table and column families that are replicated from this cluster

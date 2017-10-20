@@ -89,18 +89,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
@@ -1727,22 +1727,22 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
-      public ListDrainingRegionServersResponse listDrainingRegionServers(RpcController controller,
-          ListDrainingRegionServersRequest request) throws ServiceException {
-        return stub.listDrainingRegionServers(controller, request);
+      public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(RpcController controller,
+          ListDecommissionedRegionServersRequest request) throws ServiceException {
+        return stub.listDecommissionedRegionServers(controller, request);
       }
 
       @Override
-      public DrainRegionServersResponse drainRegionServers(RpcController controller,
-          DrainRegionServersRequest request) throws ServiceException {
-        return stub.drainRegionServers(controller, request);
+      public DecommissionRegionServersResponse decommissionRegionServers(RpcController controller,
+          DecommissionRegionServersRequest request) throws ServiceException {
+        return stub.decommissionRegionServers(controller, request);
       }
 
       @Override
-      public RemoveDrainFromRegionServersResponse removeDrainFromRegionServers(
-          RpcController controller, RemoveDrainFromRegionServersRequest request)
+      public RecommissionRegionServerResponse recommissionRegionServer(
+          RpcController controller, RecommissionRegionServerRequest request)
           throws ServiceException {
-        return stub.removeDrainFromRegionServers(controller, request);
+        return stub.recommissionRegionServer(controller, request);
       }
 
       @Override

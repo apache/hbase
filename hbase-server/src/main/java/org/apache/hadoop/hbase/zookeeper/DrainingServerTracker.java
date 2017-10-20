@@ -44,6 +44,9 @@ import org.apache.zookeeper.KeeperException;
  * <p>If an RS gets added to the draining list, we add a watcher to it and call
  * {@link ServerManager#addServerToDrainList(ServerName)}
  *
+ * <p>This class is deprecated in 2.0 because decommission/draining API goes through
+ * master in 2.0. Can remove this class in 3.0.
+ *
  */
 @InterfaceAudience.Private
 public class DrainingServerTracker extends ZooKeeperListener {

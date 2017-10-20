@@ -1461,4 +1461,40 @@ public interface MasterObserver {
    */
   default void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {}
+
+  /**
+   * Called before decommission region servers.
+   */
+  default void preDecommissionRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, boolean offload) throws IOException {}
+
+  /**
+   * Called after decommission region servers.
+   */
+  default void postDecommissionRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, boolean offload) throws IOException {}
+
+  /**
+   * Called before list decommissioned region servers.
+   */
+  default void preListDecommissionedRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called after list decommissioned region servers.
+   */
+  default void postListDecommissionedRegionServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called before recommission region server.
+   */
+  default void preRecommissionRegionServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ServerName server, List<byte[]> encodedRegionNames) throws IOException {}
+
+  /**
+   * Called after recommission region server.
+   */
+  default void postRecommissionRegionServer(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ServerName server, List<byte[]> encodedRegionNames) throws IOException {}
 }

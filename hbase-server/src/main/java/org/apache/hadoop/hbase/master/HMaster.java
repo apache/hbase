@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.RegionStates.ServerStateNode;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
@@ -3435,53 +3436,97 @@ public class HMaster extends HRegionServer implements MasterServices {
     return peers;
   }
 
-  @Override
-  public void drainRegionServer(final ServerName server) {
+  /**
+   * Mark region server(s) as decommissioned (previously called 'draining') to prevent additional
+   * regions from getting assigned to them. Also unload the regions on the servers asynchronously.0
+   * @param servers Region servers to decommission.
+   * @throws HBaseIOException
+   */
+  public void decommissionRegionServers(final List<ServerName> servers, final boolean offload)
+      throws HBaseIOException {
+    List<ServerName> serversAdded = new ArrayList<>(servers.size());
+    // Place the decommission marker first.
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
-    try {
-      String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
-      ZKUtil.createAndFailSilent(getZooKeeper(), node);
-    } catch (KeeperException ke) {
-      LOG.warn(this.zooKeeper.prefix("Unable to add drain for '" + server.getServerName() + "'."),
-        ke);
-    }
-  }
-
-  @Override
-  public List<ServerName> listDrainingRegionServers() {
-    String parentZnode = getZooKeeper().znodePaths.drainingZNode;
-    List<ServerName> serverNames = new ArrayList<>();
-    List<String> serverStrs = null;
-    try {
-      serverStrs = ZKUtil.listChildrenNoWatch(getZooKeeper(), parentZnode);
-    } catch (KeeperException ke) {
-      LOG.warn(this.zooKeeper.prefix("Unable to list draining servers."), ke);
-    }
-    // No nodes is empty draining list or ZK connectivity issues.
-    if (serverStrs == null) {
-      return serverNames;
-    }
-
-    // Skip invalid ServerNames in result
-    for (String serverStr : serverStrs) {
+    for (ServerName server : servers) {
       try {
-        serverNames.add(ServerName.parseServerName(serverStr));
-      } catch (IllegalArgumentException iae) {
-        LOG.warn("Unable to cast '" + serverStr + "' to ServerName.", iae);
+        String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
+        ZKUtil.createAndFailSilent(getZooKeeper(), node);
+      } catch (KeeperException ke) {
+        throw new HBaseIOException(
+            this.zooKeeper.prefix("Unable to decommission '" + server.getServerName() + "'."), ke);
+      }
+      if (this.serverManager.addServerToDrainList(server)) {
+        serversAdded.add(server);
+      };
+    }
+    // Move the regions off the decommissioned servers.
+    if (offload) {
+      final List<ServerName> destServers = this.serverManager.createDestinationServersList();
+      for (ServerName server : serversAdded) {
+        final List<RegionInfo> regionsOnServer =
+            this.assignmentManager.getRegionStates().getServerRegionInfoSet(server);
+        for (RegionInfo hri : regionsOnServer) {
+          ServerName dest = balancer.randomAssignment(hri, destServers);
+          if (dest == null) {
+            throw new HBaseIOException("Unable to determine a plan to move " + hri);
+          }
+          RegionPlan rp = new RegionPlan(hri, server, dest);
+          this.assignmentManager.moveAsync(rp);
+        }
       }
     }
-    return serverNames;
   }
 
-  @Override
-  public void removeDrainFromRegionServer(ServerName server) {
+  /**
+   * List region servers marked as decommissioned (previously called 'draining') to not get regions
+   * assigned to them.
+   * @return List of decommissioned servers.
+   */
+  public List<ServerName> listDecommissionedRegionServers() {
+    return this.serverManager.getDrainingServersList();
+  }
+
+  /**
+   * Remove decommission marker (previously called 'draining') from a region server to allow regions
+   * assignments. Load regions onto the server asynchronously if a list of regions is given
+   * @param server Region server to remove decommission marker from.
+   * @throws HBaseIOException
+   */
+  public void recommissionRegionServer(final ServerName server,
+      final List<byte[]> encodedRegionNames) throws HBaseIOException {
+    // Remove the server from decommissioned (draining) server list.
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
     String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
     try {
       ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);
     } catch (KeeperException ke) {
-      LOG.warn(
-        this.zooKeeper.prefix("Unable to remove drain for '" + server.getServerName() + "'."), ke);
+      throw new HBaseIOException(
+          this.zooKeeper.prefix("Unable to recommission '" + server.getServerName() + "'."), ke);
+    }
+    this.serverManager.removeServerFromDrainList(server);
+
+    // Load the regions onto the server if we are given a list of regions.
+    if (encodedRegionNames == null || encodedRegionNames.isEmpty()) {
+      return;
+    }
+    if (!this.serverManager.isServerOnline(server)) {
+      return;
+    }
+    for (byte[] encodedRegionName : encodedRegionNames) {
+      RegionState regionState =
+          assignmentManager.getRegionStates().getRegionState(Bytes.toString(encodedRegionName));
+      if (regionState == null) {
+        LOG.warn("Unknown region " + Bytes.toStringBinary(encodedRegionName));
+        continue;
+      }
+      RegionInfo hri = regionState.getRegion();
+      if (server.equals(regionState.getServerName())) {
+        LOG.info("Skipping move of region " + hri.getRegionNameAsString()
+          + " because region already assigned to the same server " + server + ".");
+        continue;
+      }
+      RegionPlan rp = new RegionPlan(hri, regionState.getServerName(), server);
+      this.assignmentManager.moveAsync(rp);
     }
   }
 

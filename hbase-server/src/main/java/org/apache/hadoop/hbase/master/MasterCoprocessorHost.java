@@ -1684,4 +1684,60 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preDecommissionRegionServers(this, servers, offload);
+      }
+    });
+  }
+
+  public void postDecommissionRegionServers(List<ServerName> servers, boolean offload) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postDecommissionRegionServers(this, servers, offload);
+      }
+    });
+  }
+
+  public void preListDecommissionedRegionServers() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preListDecommissionedRegionServers(this);
+      }
+    });
+  }
+
+  public void postListDecommissionedRegionServers() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postListDecommissionedRegionServers(this);
+      }
+    });
+  }
+
+  public void preRecommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preRecommissionRegionServer(this, server, encodedRegionNames);
+      }
+    });
+  }
+
+  public void postRecommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postRecommissionRegionServer(this, server, encodedRegionNames);
+      }
+    });
+  }
 }

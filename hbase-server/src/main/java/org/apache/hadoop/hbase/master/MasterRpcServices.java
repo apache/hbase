@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -119,6 +120,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateName
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
@@ -129,8 +132,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
@@ -177,8 +178,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrM
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
@@ -203,8 +204,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
@@ -1902,15 +1903,21 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public ListDrainingRegionServersResponse listDrainingRegionServers(RpcController controller,
-      ListDrainingRegionServersRequest request) throws ServiceException {
-    ListDrainingRegionServersResponse.Builder response =
-        ListDrainingRegionServersResponse.newBuilder();
+  public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(
+      RpcController controller, ListDecommissionedRegionServersRequest request)
+      throws ServiceException {
+    ListDecommissionedRegionServersResponse.Builder response =
+        ListDecommissionedRegionServersResponse.newBuilder();
     try {
       master.checkInitialized();
-      List<ServerName> servers = master.listDrainingRegionServers();
-      for (ServerName server : servers) {
-        response.addServerName(ProtobufUtil.toServerName(server));
+      if (master.cpHost != null) {
+        master.cpHost.preListDecommissionedRegionServers();
+      }
+      List<ServerName> servers = master.listDecommissionedRegionServers();
+      response.addAllServerName((servers.stream().map(server -> ProtobufUtil.toServerName(server)))
+          .collect(Collectors.toList()));
+      if (master.cpHost != null) {
+        master.cpHost.postListDecommissionedRegionServers();
       }
     } catch (IOException io) {
       throw new ServiceException(io);
@@ -1920,36 +1927,48 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public DrainRegionServersResponse drainRegionServers(RpcController controller,
-      DrainRegionServersRequest request) throws ServiceException {
-    DrainRegionServersResponse.Builder response = DrainRegionServersResponse.newBuilder();
+  public DecommissionRegionServersResponse decommissionRegionServers(RpcController controller,
+      DecommissionRegionServersRequest request) throws ServiceException {
     try {
       master.checkInitialized();
-      for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
-        master.drainRegionServer(ProtobufUtil.toServerName(pbServer));
+      List<ServerName> servers = request.getServerNameList().stream()
+          .map(pbServer -> ProtobufUtil.toServerName(pbServer)).collect(Collectors.toList());
+      boolean offload = request.getOffload();
+      if (master.cpHost != null) {
+        master.cpHost.preDecommissionRegionServers(servers, offload);
+      }
+      master.decommissionRegionServers(servers, offload);
+      if (master.cpHost != null) {
+        master.cpHost.postDecommissionRegionServers(servers, offload);
       }
     } catch (IOException io) {
       throw new ServiceException(io);
     }
 
-    return response.build();
+    return DecommissionRegionServersResponse.newBuilder().build();
   }
 
   @Override
-  public RemoveDrainFromRegionServersResponse removeDrainFromRegionServers(RpcController controller,
-      RemoveDrainFromRegionServersRequest request) throws ServiceException {
-    RemoveDrainFromRegionServersResponse.Builder response =
-        RemoveDrainFromRegionServersResponse.newBuilder();
+  public RecommissionRegionServerResponse recommissionRegionServer(RpcController controller,
+      RecommissionRegionServerRequest request) throws ServiceException {
     try {
       master.checkInitialized();
-      for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
-        master.removeDrainFromRegionServer(ProtobufUtil.toServerName(pbServer));
+      ServerName server = ProtobufUtil.toServerName(request.getServerName());
+      List<byte[]> encodedRegionNames = request.getRegionList().stream()
+          .map(regionSpecifier -> regionSpecifier.getValue().toByteArray())
+          .collect(Collectors.toList());
+      if (master.cpHost != null) {
+        master.cpHost.preRecommissionRegionServer(server, encodedRegionNames);
+      }
+      master.recommissionRegionServer(server, encodedRegionNames);
+      if (master.cpHost != null) {
+        master.cpHost.postRecommissionRegionServer(server, encodedRegionNames);
       }
     } catch (IOException io) {
       throw new ServiceException(io);
     }
 
-    return response.build();
+    return RecommissionRegionServerResponse.newBuilder().build();
   }
 
   @Override
