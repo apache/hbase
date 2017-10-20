@@ -660,15 +660,17 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Set the table's replication switch if the table's replication switch is already not set.
    * @param tableName name of the table
-   * @param isRepEnabled is replication switch enable or disable
+   * @param enableRep is replication switch enable or disable
    * @throws IOException if a remote or network exception occurs
    */
-  private void setTableRep(final TableName tableName, boolean isRepEnabled) throws IOException {
+  private void setTableRep(final TableName tableName, boolean enableRep) throws IOException {
     Admin admin = null;
     try {
       admin = this.connection.getAdmin();
       HTableDescriptor htd = admin.getTableDescriptor(tableName);
-      if (isTableRepEnabled(htd) ^ isRepEnabled) {
+      ReplicationState currentReplicationState = getTableReplicationState(htd);
+      if (enableRep && currentReplicationState != ReplicationState.ENABLED
+          || !enableRep && currentReplicationState != ReplicationState.DISABLED) {
         boolean isOnlineSchemaUpdateEnabled =
             this.connection.getConfiguration()
                 .getBoolean("hbase.online.schema.update.enable", true);
@@ -676,7 +678,7 @@ public class ReplicationAdmin implements Closeable {
           admin.disableTable(tableName);
         }
         for (HColumnDescriptor hcd : htd.getFamilies()) {
-          hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
+          hcd.setScope(enableRep ? HConstants.REPLICATION_SCOPE_GLOBAL
               : HConstants.REPLICATION_SCOPE_LOCAL);
         }
         admin.modifyTable(tableName, htd);
@@ -697,15 +699,32 @@ public class ReplicationAdmin implements Closeable {
   }
 
   /**
-   * @param htd table descriptor details for the table to check
-   * @return true if table's replication switch is enabled
+   * This enum indicates the current state of the replication for a given table.
    */
-  private boolean isTableRepEnabled(HTableDescriptor htd) {
+  private enum ReplicationState {
+    ENABLED, // all column families enabled
+    MIXED, // some column families enabled, some disabled
+    DISABLED // all column families disabled
+  }
+
+  /**
+   * @param htd table descriptor details for the table to check
+   * @return ReplicationState the current state of the table.
+   */
+  private ReplicationState getTableReplicationState(HTableDescriptor htd) {
+    boolean hasEnabled = false;
+    boolean hasDisabled = false;
+
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL) {
-        return false;
+        hasDisabled = true;
+      } else {
+        hasEnabled = true;
       }
     }
-    return true;
+
+    if (hasEnabled && hasDisabled) return ReplicationState.MIXED;
+    if (hasEnabled) return ReplicationState.ENABLED;
+    return ReplicationState.DISABLED;
   }
 }
