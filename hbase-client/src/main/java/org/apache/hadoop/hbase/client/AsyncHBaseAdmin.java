@@ -446,18 +446,20 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> drainRegionServers(List<ServerName> servers) {
-    return wrap(rawAdmin.drainRegionServers(servers));
+  public CompletableFuture<Void> decommissionRegionServers(List<ServerName> servers,
+      boolean offload) {
+    return wrap(rawAdmin.decommissionRegionServers(servers, offload));
   }
 
   @Override
-  public CompletableFuture<List<ServerName>> listDrainingRegionServers() {
-    return wrap(rawAdmin.listDrainingRegionServers());
+  public CompletableFuture<List<ServerName>> listDecommissionedRegionServers() {
+    return wrap(rawAdmin.listDecommissionedRegionServers());
   }
 
   @Override
-  public CompletableFuture<Void> removeDrainFromRegionServers(List<ServerName> servers) {
-    return wrap(rawAdmin.removeDrainFromRegionServers(servers));
+  public CompletableFuture<Void> recommissionRegionServer(ServerName server,
+      List<byte[]> encodedRegionNames) {
+    return wrap(rawAdmin.recommissionRegionServer(server, encodedRegionNames));
   }
 
   @Override

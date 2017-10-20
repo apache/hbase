@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -474,24 +475,6 @@ public interface MasterServices extends Server {
    */
   List<ReplicationPeerDescription> listReplicationPeers(String regex) throws ReplicationException,
       IOException;
-
-  /**
-   * Mark a region server as draining to prevent additional regions from getting assigned to it.
-   * @param server Region servers to drain.
-   */
-  void drainRegionServer(final ServerName server);
-
-  /**
-   * List region servers marked as draining to not get additional regions assigned to them.
-   * @return List of draining servers.
-   */
-  List<ServerName> listDrainingRegionServers();
-
-  /**
-   * Remove drain from a region server to allow additional regions assignments.
-   * @param server Region server to remove drain from.
-   */
-  void removeDrainFromRegionServer(final ServerName server);
 
   /**
    * @return {@link LockManager} to lock namespaces/tables/regions.

@@ -96,11 +96,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClearDeadServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
@@ -122,7 +122,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -1851,15 +1851,21 @@ public final class RequestConverter {
     return GET_QUOTA_STATES_REQUEST;
   }
 
-  public static DrainRegionServersRequest buildDrainRegionServersRequest(List<ServerName> servers) {
-    return DrainRegionServersRequest.newBuilder().addAllServerName(toProtoServerNames(servers))
-        .build();
+  public static DecommissionRegionServersRequest
+      buildDecommissionRegionServersRequest(List<ServerName> servers, boolean offload) {
+    return DecommissionRegionServersRequest.newBuilder()
+        .addAllServerName(toProtoServerNames(servers)).setOffload(offload).build();
   }
 
-  public static RemoveDrainFromRegionServersRequest buildRemoveDrainFromRegionServersRequest(
-      List<ServerName> servers) {
-    return RemoveDrainFromRegionServersRequest.newBuilder()
-        .addAllServerName(toProtoServerNames(servers)).build();
+  public static RecommissionRegionServerRequest
+      buildRecommissionRegionServerRequest(ServerName server, List<byte[]> encodedRegionNames) {
+    RecommissionRegionServerRequest.Builder builder = RecommissionRegionServerRequest.newBuilder();
+    if (encodedRegionNames != null) {
+      for (byte[] name : encodedRegionNames) {
+        builder.addRegion(buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME, name));
+      }
+    }
+    return builder.setServerName(ProtobufUtil.toServerName(server)).build();
   }
 
   private static List<HBaseProtos.ServerName> toProtoServerNames(List<ServerName> servers) {

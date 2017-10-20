@@ -42,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLoad;
@@ -91,6 +92,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * the server cannot be fully processed, and be queued up for further processing.
  * A server is fully processed only after the handler is fully enabled
  * and has completed the handling.
+ */
+/**
+ *
  */
 @InterfaceAudience.Private
 public class ServerManager {
@@ -664,7 +668,7 @@ public class ServerManager {
   /*
    * Remove the server from the drain list.
    */
-  public boolean removeServerFromDrainList(final ServerName sn) {
+  public synchronized boolean removeServerFromDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online.  ServerName is of the form:
     // <hostname> , <port> , <startcode>
 
@@ -676,10 +680,12 @@ public class ServerManager {
     return this.drainingServers.remove(sn);
   }
 
-  /*
+  /**
    * Add the server to the drain list.
+   * @param sn
+   * @return True if the server is added or the server is already on the drain list.
    */
-  public boolean addServerToDrainList(final ServerName sn) {
+  public synchronized boolean addServerToDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online.  ServerName is of the form:
     // <hostname> , <port> , <startcode>
 
@@ -693,7 +699,7 @@ public class ServerManager {
     if (this.drainingServers.contains(sn)) {
       LOG.warn("Server " + sn + " is already in the draining server list." +
                "Ignoring request to add it again.");
-      return false;
+      return true;
     }
     LOG.info("Server " + sn + " added to draining server list.");
     return this.drainingServers.add(sn);

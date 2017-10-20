@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -34,6 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -695,65 +697,62 @@ public class TestAdmin2 {
     assertTrue(lockList.startsWith("["));
   }
 
-  /*
-   * This test drains all regions so cannot be run in parallel with other tests.
-   */
-  @Ignore @Test(timeout = 30000)
-  public void testDrainRegionServers() throws Exception {
-    List<ServerName> drainingServers = admin.listDrainingRegionServers();
-    assertTrue(drainingServers.isEmpty());
+  @Test(timeout = 30000)
+  public void testDecommissionRegionServers() throws Exception {
+    List<ServerName> decommissionedRegionServers = admin.listDecommissionedRegionServers();
+    assertTrue(decommissionedRegionServers.isEmpty());
 
-    // Drain all region servers.
-    Collection<ServerName> clusterServers =
-        admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
-    drainingServers = new ArrayList<>();
-    for (ServerName server : clusterServers) {
-      drainingServers.add(server);
-    }
-    admin.drainRegionServers(drainingServers);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createMultiRegionTable(tableName, "f".getBytes(), 6);
 
-    // Check that drain lists all region servers.
-    drainingServers = admin.listDrainingRegionServers();
-    assertEquals(clusterServers.size(), drainingServers.size());
-    for (ServerName server : clusterServers) {
-      assertTrue(drainingServers.contains(server));
-    }
+    ArrayList<ServerName> clusterRegionServers =
+        new ArrayList<>(admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
 
-    // Try for 20 seconds to create table (new region). Will not complete because all RSs draining.
-    final TableName hTable = TableName.valueOf(name.getMethodName());
-    final HTableDescriptor htd = new HTableDescriptor(hTable);
-    htd.addFamily(new HColumnDescriptor("cf"));
+    assertEquals(clusterRegionServers.size(), 3);
 
-    final Runnable createTable = new Thread() {
-      @Override
-      public void run() {
-        try {
-          admin.createTable(htd);
-        } catch (IOException ioe) {
-          assertTrue(false); // Should not get IOException.
-        }
+    HashMap<ServerName, List<RegionInfo>> serversToDecommssion = new HashMap<>();
+    // Get a server that has regions. We will decommission two of the servers,
+    // leaving one online.
+    int i;
+    for (i = 0; i < clusterRegionServers.size(); i++) {
+      List<RegionInfo> regionsOnServer = admin.getRegions(clusterRegionServers.get(i));
+      if (regionsOnServer.size() > 0) {
+        serversToDecommssion.put(clusterRegionServers.get(i), regionsOnServer);
+        break;
       }
-    };
-
-    final ExecutorService executor = Executors.newSingleThreadExecutor();
-    final java.util.concurrent.Future<?> future = executor.submit(createTable);
-    executor.shutdown();
-    try {
-      future.get(20, TimeUnit.SECONDS);
-    } catch (TimeoutException ie) {
-      assertTrue(true); // Expecting timeout to happen.
     }
 
-    // Kill executor if still processing.
-    if (!executor.isTerminated()) {
-      executor.shutdownNow();
-      assertTrue(true);
+    clusterRegionServers.remove(i);
+    // Get another server to decommission.
+    serversToDecommssion.put(clusterRegionServers.get(0),
+      admin.getRegions(clusterRegionServers.get(0)));
+
+    ServerName remainingServer = clusterRegionServers.get(1);
+
+    // Decommission
+    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommssion.keySet()), true);
+    assertEquals(2, admin.listDecommissionedRegionServers().size());
+
+    // Verify the regions have been off the decommissioned servers, all on the one
+    // remaining server.
+    for (ServerName server : serversToDecommssion.keySet()) {
+      for (RegionInfo region : serversToDecommssion.get(server)) {
+        TEST_UTIL.assertRegionOnServer(region, remainingServer, 10000);
+      }
     }
 
-    // Remove drain list.
-    admin.removeDrainFromRegionServers(drainingServers);
-    drainingServers = admin.listDrainingRegionServers();
-    assertTrue(drainingServers.isEmpty());
-
+    // Recommission and load the regions.
+    for (ServerName server : serversToDecommssion.keySet()) {
+      List<byte[]> encodedRegionNames = serversToDecommssion.get(server).stream()
+          .map(region -> region.getEncodedNameAsBytes()).collect(Collectors.toList());
+      admin.recommissionRegionServer(server, encodedRegionNames);
+    }
+    assertTrue(admin.listDecommissionedRegionServers().isEmpty());
+    // Verify the regions have been moved to the recommissioned servers
+    for (ServerName server : serversToDecommssion.keySet()) {
+      for (RegionInfo region : serversToDecommssion.get(server)) {
+        TEST_UTIL.assertRegionOnServer(region, server, 10000);
+      }
+    }
   }
 }
