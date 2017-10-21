@@ -62,7 +62,8 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python-pip \
     rsync \
     snappy \
-    zlib1g-dev
+    zlib1g-dev \
+    wget
 
 #######
 # OpenJDK 8
