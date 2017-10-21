@@ -63,6 +63,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     rsync \
     snappy \
     zlib1g-dev \
+    wget \
     openjdk-7-jdk
 
 #######
