@@ -124,10 +124,9 @@ public class TestMetaShutdownHandler {
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {
 
-    public MyRegionServer(Configuration conf, CoordinatedStateManager cp)
-      throws IOException, KeeperException,
+    public MyRegionServer(Configuration conf) throws IOException, KeeperException,
         InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override

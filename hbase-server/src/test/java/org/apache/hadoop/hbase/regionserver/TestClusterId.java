@@ -27,8 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -75,11 +73,9 @@ public class TestClusterId {
     TEST_UTIL.startMiniDFSCluster(1);
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     //start region server, needs to be separate
     //so we get an unset clusterId
-    rst = JVMClusterUtil.createRegionServerThread(conf,cp,
-        HRegionServer.class, 0);
+    rst = JVMClusterUtil.createRegionServerThread(conf, HRegionServer.class, 0);
     rst.start();
     //Make sure RS is in blocking state
     Thread.sleep(10000);
@@ -92,7 +88,7 @@ public class TestClusterId {
     assertNotNull(clusterId);
     assertEquals(clusterId, rst.getRegionServer().getClusterId());
   }
-  
+
   @Test
   public void testRewritingClusterIdToPB() throws Exception {
     TEST_UTIL.startMiniZKCluster();
@@ -115,6 +111,6 @@ public class TestClusterId {
     int expected = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 2: 1;
     assertEquals(expected, master.getServerManager().getOnlineServersList().size());
   }
-  
+
 }
 

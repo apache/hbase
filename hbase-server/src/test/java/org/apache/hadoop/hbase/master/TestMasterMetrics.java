@@ -51,9 +51,8 @@ public class TestMasterMetrics {
   private static HBaseTestingUtility TEST_UTIL;
 
   public static class MyMaster extends HMaster {
-    public MyMaster(Configuration conf, CoordinatedStateManager cp) throws IOException,
-        KeeperException, InterruptedException {
-      super(conf, cp);
+    public MyMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
+      super(conf);
     }
 /*
     @Override

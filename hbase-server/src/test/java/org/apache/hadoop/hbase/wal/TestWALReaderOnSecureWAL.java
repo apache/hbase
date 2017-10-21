@@ -134,7 +134,7 @@ public class TestWALReaderOnSecureWAL {
       wal.sync();
       final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
       wal.shutdown();
-      
+
       return walPath;
     } finally {
       // restore the cell codec class
@@ -182,11 +182,11 @@ public class TestWALReaderOnSecureWAL {
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
+    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null, mode);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null, null, mode);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
@@ -229,11 +229,11 @@ public class TestWALReaderOnSecureWAL {
     }
 
     FileStatus[] listStatus = fs.listStatus(walPath.getParent());
-    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
+    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null, mode);
+      WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, null, null, null, mode);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");

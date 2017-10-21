@@ -198,9 +198,9 @@ public class TestMetaCache {
   public static class RegionServerWithFakeRpcServices extends HRegionServer {
     private FakeRSRpcServices rsRpcServices;
 
-    public RegionServerWithFakeRpcServices(Configuration conf, CoordinatedStateManager cp)
+    public RegionServerWithFakeRpcServices(Configuration conf)
       throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override

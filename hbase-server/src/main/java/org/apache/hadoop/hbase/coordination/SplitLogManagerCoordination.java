@@ -58,7 +58,7 @@ public interface SplitLogManagerCoordination {
   /**
    * Detail class that shares data between coordination and split log manager
    */
-  public static class SplitLogManagerDetails {
+  class SplitLogManagerDetails {
     final private ConcurrentMap<String, Task> tasks;
     final private MasterServices master;
     final private Set<String> failedDeletions;
@@ -156,7 +156,7 @@ public interface SplitLogManagerCoordination {
    * @throws InterruptedIOException
    * @throws IOException in case of failure
    */
-  void setRecoveryMode(boolean b) throws InterruptedIOException, IOException;
+  void setRecoveryMode(boolean b) throws IOException;
 
   /**
    * Removes known stale servers

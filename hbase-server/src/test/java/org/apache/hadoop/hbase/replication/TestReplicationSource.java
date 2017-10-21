@@ -277,11 +277,6 @@ public class TestReplicationSource {
       super(conf);
     }
 
-    public ShutdownDelayRegionServer(Configuration conf, CoordinatedStateManager csm)
-        throws IOException, InterruptedException {
-      super(conf, csm);
-    }
-
     @Override
     protected void stopServiceThreads() {
       // Add a delay before service threads are shutdown.

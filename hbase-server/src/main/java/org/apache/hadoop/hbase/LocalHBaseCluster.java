@@ -173,14 +173,8 @@ public class LocalHBaseCluster {
     // Create each regionserver with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager).
-
-    // Also, create separate CoordinatedStateManager instance per Server.
-    // This is special case when we have to have more than 1 CoordinatedStateManager
-    // within 1 process.
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
-
     JVMClusterUtil.RegionServerThread rst =
-        JVMClusterUtil.createRegionServerThread(config, cp, (Class<? extends HRegionServer>) conf
+        JVMClusterUtil.createRegionServerThread(config, (Class<? extends HRegionServer>) conf
             .getClass(HConstants.REGION_SERVER_IMPL, this.regionServerClass), index);
 
     this.regionThreads.add(rst);
@@ -208,13 +202,7 @@ public class LocalHBaseCluster {
     // Create each master with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager.
-
-    // Also, create separate CoordinatedStateManager instance per Server.
-    // This is special case when we have to have more than 1 CoordinatedStateManager
-    // within 1 process.
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
-
-    JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c, cp,
+    JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c,
         (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
     this.masterThreads.add(mt);
     return mt;

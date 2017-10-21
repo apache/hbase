@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
+import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -82,7 +85,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -146,7 +148,8 @@ public class WALSplitter {
 
   private Map<TableName, TableState> tableStatesCache =
       new ConcurrentHashMap<>();
-  private BaseCoordinatedStateManager csm;
+  private SplitLogWorkerCoordination splitLogWorkerCoordination;
+  private Connection connection;
   private final WALFactory walFactory;
 
   private MonitoredTask status;
@@ -177,7 +180,8 @@ public class WALSplitter {
   @VisibleForTesting
   WALSplitter(final WALFactory factory, Configuration conf, Path rootDir,
       FileSystem fs, LastSequenceId idChecker,
-      CoordinatedStateManager csm, RecoveryMode mode) {
+      SplitLogWorkerCoordination splitLogWorkerCoordination, Connection connection,
+      RecoveryMode mode) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName = conf
         .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
@@ -185,7 +189,9 @@ public class WALSplitter {
     this.rootDir = rootDir;
     this.fs = fs;
     this.sequenceIdChecker = idChecker;
-    this.csm = (BaseCoordinatedStateManager)csm;
+    this.splitLogWorkerCoordination = splitLogWorkerCoordination;
+    this.connection = connection;
+
     this.walFactory = factory;
     this.controller = new PipelineController();
 
@@ -199,7 +205,7 @@ public class WALSplitter {
     this.distributedLogReplay = (RecoveryMode.LOG_REPLAY == mode);
 
     this.numWriterThreads = this.conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
-    if (csm != null && this.distributedLogReplay) {
+    if (this.splitLogWorkerCoordination != null && this.distributedLogReplay) {
       outputSink = new LogReplayOutputSink(controller, entryBuffers, numWriterThreads);
     } else {
       if (this.distributedLogReplay) {
@@ -217,20 +223,14 @@ public class WALSplitter {
    * <p>
    * If the log file has N regions then N recovered.edits files will be produced.
    * <p>
-   * @param rootDir
-   * @param logfile
-   * @param fs
-   * @param conf
-   * @param reporter
-   * @param idChecker
-   * @param cp coordination state manager
    * @return false if it is interrupted by the progress-able.
-   * @throws IOException
    */
   public static boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      CoordinatedStateManager cp, RecoveryMode mode, final WALFactory factory) throws IOException {
-    WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, idChecker, cp, mode);
+      SplitLogWorkerCoordination splitLogWorkerCoordination, Connection connection,
+      RecoveryMode mode, final WALFactory factory) throws IOException {
+    WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, idChecker,
+        splitLogWorkerCoordination, connection, mode);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -246,7 +246,7 @@ public class WALSplitter {
     List<Path> splits = new ArrayList<>();
     if (logfiles != null && logfiles.length > 0) {
       for (FileStatus logfile: logfiles) {
-        WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, null, null,
+        WALSplitter s = new WALSplitter(factory, conf, rootDir, fs, null, null, null,
             RecoveryMode.LOG_SPLITTING);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
@@ -317,9 +317,8 @@ public class WALSplitter {
         lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
           if (this.distributedLogReplay) {
-            RegionStoreSequenceIds ids =
-                csm.getSplitLogWorkerCoordination().getRegionFlushedSequenceId(failedServerName,
-                  encodedRegionNameAsStr);
+            RegionStoreSequenceIds ids = splitLogWorkerCoordination.getRegionFlushedSequenceId(
+                failedServerName, encodedRegionNameAsStr);
             if (ids != null) {
               lastFlushedSequenceId = ids.getLastFlushedSequenceId();
               if (LOG.isDebugEnabled()) {
@@ -377,10 +376,9 @@ public class WALSplitter {
       throw iie;
     } catch (CorruptedLogFileException e) {
       LOG.warn("Could not parse, corrupted WAL=" + logPath, e);
-      if (this.csm != null) {
+      if (splitLogWorkerCoordination != null) {
         // Some tests pass in a csm of null.
-        this.csm.getSplitLogWorkerCoordination().markCorrupted(rootDir,
-          logfile.getPath().getName(), fs);
+        splitLogWorkerCoordination.markCorrupted(rootDir, logfile.getPath().getName(), fs);
       } else {
         // for tests only
         ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
@@ -1952,7 +1950,7 @@ public class WALSplitter {
         // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
         // update the value for the region
         RegionStoreSequenceIds ids =
-            csm.getSplitLogWorkerCoordination().getRegionFlushedSequenceId(failedServerName,
+            splitLogWorkerCoordination.getRegionFlushedSequenceId(failedServerName,
               loc.getRegionInfo().getEncodedName());
         if (ids != null) {
           lastFlushedSequenceId = ids.getLastFlushedSequenceId();
@@ -2185,15 +2183,14 @@ public class WALSplitter {
     }
 
     private boolean isTableDisabledOrDisabling(TableName tableName) {
-      if (csm == null)
+      if (connection == null)
         return false; // we can't get state without CoordinatedStateManager
       if (tableName.isSystemTable())
         return false; // assume that system tables never can be disabled
       TableState tableState = tableStatesCache.get(tableName);
       if (tableState == null) {
         try {
-          tableState =
-              MetaTableAccessor.getTableState(csm.getServer().getConnection(), tableName);
+          tableState = MetaTableAccessor.getTableState(connection, tableName);
           if (tableState != null)
             tableStatesCache.put(tableName, tableState);
         } catch (IOException e) {

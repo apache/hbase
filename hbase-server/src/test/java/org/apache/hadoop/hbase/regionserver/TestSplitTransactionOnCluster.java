@@ -951,10 +951,8 @@ public class TestSplitTransactionOnCluster {
 
   // Make it public so that JVMClusterUtil can access it.
   public static class MyMaster extends HMaster {
-    public MyMaster(Configuration conf, CoordinatedStateManager cp)
-      throws IOException, KeeperException,
-        InterruptedException {
-      super(conf, cp);
+    public MyMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
+      super(conf);
     }
 
     @Override

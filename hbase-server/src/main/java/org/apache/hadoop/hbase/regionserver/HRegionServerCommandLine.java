@@ -23,10 +23,8 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 
 /**
@@ -52,7 +50,6 @@ public class HRegionServerCommandLine extends ServerCommandLine {
 
   private int start() throws Exception {
     Configuration conf = getConf();
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     try {
       // If 'local', don't start a region server here. Defer to
       // LocalHBaseCluster. It manages 'local' clusters.
@@ -61,7 +58,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
             + HConstants.CLUSTER_DISTRIBUTED + " is false");
       } else {
         logProcessInfo(getConf());
-        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf, cp);
+        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
         hrs.start();
         hrs.join();
         if (hrs.isAborted()) {

@@ -33,8 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -47,7 +45,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -133,9 +130,7 @@ public class TestMasterNoCluster {
   @Test
   public void testStopDuringStart()
   throws IOException, KeeperException, InterruptedException {
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
-      TESTUTIL.getConfiguration());
-    HMaster master = new HMaster(TESTUTIL.getConfiguration(), cp);
+    HMaster master = new HMaster(TESTUTIL.getConfiguration());
     master.start();
     // Immediately have it stop.  We used hang in assigning meta.
     master.stopMaster();
@@ -148,7 +143,7 @@ public class TestMasterNoCluster {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException 
+   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException
    */
   @Ignore @Test // Disabled since HBASE-18511. Reenable when master can carry regions.
   public void testFailover() throws Exception {
@@ -186,15 +181,13 @@ public class TestMasterNoCluster {
     // and get notification on transitions.  We need to fake out any rpcs the
     // master does opening/closing regions.  Also need to fake out the address
     // of the 'remote' mocked up regionservers.
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
-      TESTUTIL.getConfiguration());
     // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
     // the conf from the master; the conf will already have an ClusterConnection
     // associate so the below mocking of a connection will fail.
     final ClusterConnection mockedConnection = HConnectionTestingUtility.getMockedConnectionAndDecorate(
         TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
         HRegionInfo.FIRST_META_REGIONINFO);
-    HMaster master = new HMaster(conf, cp) {
+    HMaster master = new HMaster(conf) {
       InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
       throws UnknownHostException {
         // Return different address dependent on port passed.
@@ -262,9 +255,7 @@ public class TestMasterNoCluster {
     final ServerName deadServer = ServerName.valueOf("test.sample", 1, 100);
     final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
 
-    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
-      TESTUTIL.getConfiguration());
-    HMaster master = new HMaster(conf, cp) {
+    HMaster master = new HMaster(conf) {
       @Override
       MasterMetaBootstrap createMetaBootstrap(final HMaster master, final MonitoredTask status) {
         return new MasterMetaBootstrap(this, status) {

@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -92,8 +91,8 @@ import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -505,7 +504,7 @@ public class HRegionServer extends HasThread implements
 
   protected final RSRpcServices rpcServices;
 
-  protected BaseCoordinatedStateManager csm;
+  protected CoordinatedStateManager csm;
 
   /**
    * Configuration manager is used to register/deregister and notify the configuration observers
@@ -533,21 +532,13 @@ public class HRegionServer extends HasThread implements
   private final boolean masterless;
   static final String MASTERLESS_CONFIG_NAME = "hbase.masterless";
 
-  /**
-   * Starts a HRegionServer at the default location.
-   */
-  public HRegionServer(Configuration conf) throws IOException, InterruptedException {
-    this(conf, CoordinatedStateManagerFactory.getCoordinatedStateManager(conf));
-  }
 
   /**
    * Starts a HRegionServer at the default location
-   *
-   * @param csm implementation of CoordinatedStateManager to be used
    */
-  // Don't start any services or managers in here in the Consructor.
+  // Don't start any services or managers in here in the Constructor.
   // Defer till after we register with the Master as much as possible. See #startServices.
-  public HRegionServer(Configuration conf, CoordinatedStateManager csm) throws IOException {
+  public HRegionServer(Configuration conf) throws IOException {
     super("RegionServer");  // thread name
     try {
       this.startcode = System.currentTimeMillis();
@@ -642,9 +633,7 @@ public class HRegionServer extends HasThread implements
 
         // If no master in cluster, skip trying to track one or look for a cluster status.
         if (!this.masterless) {
-          this.csm = (BaseCoordinatedStateManager) csm;
-          this.csm.initialize(this);
-          this.csm.start();
+          this.csm = new ZkCoordinatedStateManager(this);
 
           masterAddressTracker = new MasterAddressTracker(getZooKeeper(), this);
           masterAddressTracker.start();
@@ -2924,7 +2913,7 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public BaseCoordinatedStateManager getCoordinatedStateManager() {
+  public CoordinatedStateManager getCoordinatedStateManager() {
     return csm;
   }
 
@@ -3020,11 +3009,11 @@ public class HRegionServer extends HasThread implements
    */
   public static HRegionServer constructRegionServer(
       Class<? extends HRegionServer> regionServerClass,
-      final Configuration conf2, CoordinatedStateManager cp) {
+      final Configuration conf2) {
     try {
       Constructor<? extends HRegionServer> c = regionServerClass
-          .getConstructor(Configuration.class, CoordinatedStateManager.class);
-      return c.newInstance(conf2, cp);
+          .getConstructor(Configuration.class);
+      return c.newInstance(conf2);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " + "Regionserver: "
           + regionServerClass.toString(), e);

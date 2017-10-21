@@ -397,11 +397,6 @@ public class TestScannerHeartbeatMessages {
       super(conf);
     }
 
-    public HeartbeatHRegionServer(Configuration conf, CoordinatedStateManager csm)
-        throws IOException {
-      super(conf, csm);
-    }
-
     @Override
     protected RSRpcServices createRpcServices() throws IOException {
       return new HeartbeatRPCServices(this);

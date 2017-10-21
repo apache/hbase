@@ -72,23 +72,18 @@ public class JVMClusterUtil {
    * Creates a {@link RegionServerThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
-   * @param cp consensus provider to use
    * @param hrsc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Region server added.
    */
-  public static JVMClusterUtil.RegionServerThread createRegionServerThread(
-      final Configuration c, CoordinatedStateManager cp, final Class<? extends HRegionServer> hrsc,
-      final int index)
-  throws IOException {
+  public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
+      final Class<? extends HRegionServer> hrsc, final int index) throws IOException {
     HRegionServer server;
     try {
-
-      Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class,
-      CoordinatedStateManager.class);
+      Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class);
       ctor.setAccessible(true);
-      server = ctor.newInstance(c, cp);
+      server = ctor.newInstance(c);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of RegionServer: " +
@@ -124,20 +119,16 @@ public class JVMClusterUtil {
    * Creates a {@link MasterThread}.
    * Call 'start' on the returned thread to make it run.
    * @param c Configuration to use.
-   * @param cp consensus provider to use
    * @param hmc Class to create.
    * @param index Used distinguishing the object returned.
    * @throws IOException
    * @return Master added.
    */
-  public static JVMClusterUtil.MasterThread createMasterThread(
-      final Configuration c, CoordinatedStateManager cp, final Class<? extends HMaster> hmc,
-      final int index)
-  throws IOException {
+  public static JVMClusterUtil.MasterThread createMasterThread(final Configuration c,
+      final Class<? extends HMaster> hmc, final int index) throws IOException {
     HMaster server;
     try {
-      server = hmc.getConstructor(Configuration.class, CoordinatedStateManager.class).
-        newInstance(c, cp);
+      server = hmc.getConstructor(Configuration.class).newInstance(c);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();
       throw new RuntimeException("Failed construction of Master: " +

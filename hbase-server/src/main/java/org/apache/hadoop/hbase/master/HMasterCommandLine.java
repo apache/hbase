@@ -29,8 +29,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -230,9 +228,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         waitOnMasterThreads(cluster);
       } else {
         logProcessInfo(getConf());
-        CoordinatedStateManager csm =
-          CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
-        HMaster master = HMaster.constructMaster(masterClass, conf, csm);
+        HMaster master = HMaster.constructMaster(masterClass, conf);
         if (master.isStopped()) {
           LOG.info("Won't bring the Master up as a shutdown is requested");
           return 1;
@@ -302,9 +298,9 @@ public class HMasterCommandLine extends ServerCommandLine {
   public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
-    public LocalHMaster(Configuration conf, CoordinatedStateManager csm)
+    public LocalHMaster(Configuration conf)
     throws IOException, KeeperException, InterruptedException {
-      super(conf, csm);
+      super(conf);
     }
 
     @Override

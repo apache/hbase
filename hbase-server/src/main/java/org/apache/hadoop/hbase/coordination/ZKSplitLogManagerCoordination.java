@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -101,14 +102,14 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   private boolean isDrainingDone = false;
 
-  public ZKSplitLogManagerCoordination(final CoordinatedStateManager manager,
-      ZooKeeperWatcher watcher) {
+  public ZKSplitLogManagerCoordination(Configuration conf, ZooKeeperWatcher watcher) {
     super(watcher);
+    this.conf = conf;
     taskFinisher = new TaskFinisher() {
       @Override
       public Status finish(ServerName workerName, String logfile) {
         try {
-          WALSplitter.finishSplitLogFile(logfile, manager.getServer().getConfiguration());
+          WALSplitter.finishSplitLogFile(logfile, conf);
         } catch (IOException e) {
           LOG.warn("Could not finish splitting of log file " + logfile, e);
           return Status.ERR;
@@ -116,7 +117,6 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         return Status.DONE;
       }
     };
-    this.conf = manager.getServer().getConfiguration();
   }
 
   @Override
@@ -1122,6 +1122,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   /**
    * Temporary function that is used by unit tests only
    */
+  @VisibleForTesting
   public void setIgnoreDeleteForTesting(boolean b) {
     ignoreZKDeleteForTesting = b;
   }

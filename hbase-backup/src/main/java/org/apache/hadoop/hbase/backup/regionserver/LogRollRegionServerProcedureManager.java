@@ -24,12 +24,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
@@ -159,12 +159,8 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
           + " setting");
       return;
     }
-    BaseCoordinatedStateManager coordManager =
-        (BaseCoordinatedStateManager) CoordinatedStateManagerFactory.
-          getCoordinatedStateManager(rss.getConfiguration());
-    coordManager.initialize(rss);
-    this.memberRpcs =
-        coordManager
+    CoordinatedStateManager coordManager = new ZkCoordinatedStateManager(rss);
+    this.memberRpcs = coordManager
             .getProcedureMemberRpcs(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE);
 
     // read in the backup handler configuration properties
