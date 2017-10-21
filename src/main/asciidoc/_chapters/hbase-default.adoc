@@ -2024,17 +2024,6 @@ A comma-separated list of
 .Default
 ``
 
-
-[[hbase.coordinated.state.manager.class]]
-*`hbase.coordinated.state.manager.class`*::
-+
-.Description
-Fully qualified name of class implementing coordinated state manager.
-+
-.Default
-`org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager`
-
-
 [[hbase.regionserver.storefile.refresh.period]]
 *`hbase.regionserver.storefile.refresh.period`*::
 +

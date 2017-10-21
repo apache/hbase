@@ -26,12 +26,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -95,10 +95,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
 
     // setup the default procedure coordinator
     ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, opThreads);
-    BaseCoordinatedStateManager coordManager =
-        (BaseCoordinatedStateManager) CoordinatedStateManagerFactory
-        .getCoordinatedStateManager(master.getConfiguration());
-    coordManager.initialize(master);
+    CoordinatedStateManager coordManager = new ZkCoordinatedStateManager(master);
     ProcedureCoordinatorRpcs comms =
         coordManager.getProcedureCoordinatorRpcs(getProcedureSignature(), name);
     this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);

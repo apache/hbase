@@ -109,9 +109,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     private Thread shutdownThread = null;
     private User user = null;
 
-    public MiniHBaseClusterRegionServer(Configuration conf, CoordinatedStateManager cp)
+    public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
       this.user = User.getCurrent();
     }
 

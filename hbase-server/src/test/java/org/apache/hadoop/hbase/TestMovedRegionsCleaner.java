@@ -44,9 +44,8 @@ import java.io.IOException;
 
   private static class TestMockRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
-    public TestMockRegionServer(Configuration conf, CoordinatedStateManager cp)
-        throws IOException, InterruptedException {
-      super(conf, cp);
+    public TestMockRegionServer(Configuration conf) throws IOException, InterruptedException {
+      super(conf);
     }
 
     protected int movedRegionCleanerPeriod() {

@@ -906,7 +906,7 @@ public abstract class AbstractTestWALReplay {
     assertNotNull(listStatus);
     assertTrue(listStatus.length > 0);
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
-        this.fs, this.conf, null, null, null, mode, wals);
+        this.fs, this.conf, null, null, null, null, mode, wals);
     FileStatus[] listStatus1 = this.fs.listStatus(
       new Path(FSUtils.getTableDir(hbaseRootDir, tableName), new Path(hri.getEncodedName(),
           "recovered.edits")), new PathFilter() {
@@ -1059,9 +1059,9 @@ public abstract class AbstractTestWALReplay {
       first = fs.getFileStatus(smallFile);
       second = fs.getFileStatus(largeFile);
     }
-    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null,
+    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null, null,
       RecoveryMode.LOG_SPLITTING, wals);
-    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null,
+    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null, null,
       RecoveryMode.LOG_SPLITTING, wals);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     region = HRegion.openHRegion(conf, this.fs, hbaseRootDir, hri, htd, wal);

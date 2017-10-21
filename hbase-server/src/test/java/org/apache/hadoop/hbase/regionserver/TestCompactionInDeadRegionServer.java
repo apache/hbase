@@ -75,10 +75,6 @@ public class TestCompactionInDeadRegionServer {
       super(conf);
     }
 
-    public IgnoreYouAreDeadRS(Configuration conf, CoordinatedStateManager csm) throws IOException {
-      super(conf, csm);
-    }
-
     @Override
     protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
         throws IOException {

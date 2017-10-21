@@ -66,10 +66,9 @@ public class TestLocalHBaseCluster {
    * running in local mode.
    */
   public static class MyHMaster extends HMaster {
-    public MyHMaster(Configuration conf, CoordinatedStateManager cp)
-      throws IOException, KeeperException,
+    public MyHMaster(Configuration conf) throws IOException, KeeperException,
         InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     public int echo(int val) {
@@ -82,9 +81,8 @@ public class TestLocalHBaseCluster {
    */
   public static class MyHRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
-    public MyHRegionServer(Configuration conf, CoordinatedStateManager cp) throws IOException,
-        InterruptedException {
-      super(conf, cp);
+    public MyHRegionServer(Configuration conf) throws IOException, InterruptedException {
+      super(conf);
     }
 
     public int echo(int val) {

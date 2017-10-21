@@ -164,10 +164,9 @@ public class TestRegionServerReportForDuty {
     private boolean rpcStubCreatedFlag = false;
     private boolean masterChanged = false;
 
-    public MyRegionServer(Configuration conf, CoordinatedStateManager cp)
-      throws IOException, KeeperException,
+    public MyRegionServer(Configuration conf) throws IOException, KeeperException,
         InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override

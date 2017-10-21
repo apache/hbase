@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.coordination;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
@@ -33,24 +36,16 @@ import org.apache.zookeeper.KeeperException;
  * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.CoordinatedStateManager}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
-  protected Server server;
+public class ZkCoordinatedStateManager implements CoordinatedStateManager {
   protected ZooKeeperWatcher watcher;
   protected SplitLogWorkerCoordination splitLogWorkerCoordination;
   protected SplitLogManagerCoordination splitLogManagerCoordination;
 
-  @Override
-  public void initialize(Server server) {
-    this.server = server;
+  public ZkCoordinatedStateManager(Server server) {
     this.watcher = server.getZooKeeper();
-    splitLogWorkerCoordination = new ZkSplitLogWorkerCoordination(this, watcher);
-    splitLogManagerCoordination = new ZKSplitLogManagerCoordination(this, watcher);
-
-  }
-
-  @Override
-  public Server getServer() {
-    return server;
+    splitLogWorkerCoordination = new ZkSplitLogWorkerCoordination(server.getServerName(), watcher);
+    splitLogManagerCoordination = new ZKSplitLogManagerCoordination(server.getConfiguration(),
+        watcher);
   }
 
   @Override

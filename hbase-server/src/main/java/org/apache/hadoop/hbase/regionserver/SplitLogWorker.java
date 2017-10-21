@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -45,8 +44,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 
 /**
  * This worker is spawned in every regionserver, including master. The Worker waits for log
- * splitting tasks to be put up by the {@link org.apache.hadoop.hbase.master.SplitLogManager} 
- * running in the master and races with other workers in other serves to acquire those tasks. 
+ * splitting tasks to be put up by the {@link org.apache.hadoop.hbase.master.SplitLogManager}
+ * running in the master and races with other workers in other serves to acquire those tasks.
  * The coordination is done via coordination engine.
  * <p>
  * If a worker has successfully moved the task from state UNASSIGNED to OWNED then it owns the task.
@@ -75,9 +74,7 @@ public class SplitLogWorker implements Runnable {
       TaskExecutor splitTaskExecutor) {
     this.server = server;
     this.conf = conf;
-    this.coordination =
-        ((BaseCoordinatedStateManager) hserver.getCoordinatedStateManager())
-            .getSplitLogWorkerCoordination();
+    this.coordination = hserver.getCoordinatedStateManager().getSplitLogWorkerCoordination();
     this.server = server;
     coordination.init(server, conf, splitTaskExecutor, this);
   }
@@ -102,7 +99,9 @@ public class SplitLogWorker implements Runnable {
         // encountered a bad non-retry-able persistent error.
         try {
           if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
-            fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode, factory)) {
+            fs, conf, p, sequenceIdChecker,
+              server.getCoordinatedStateManager().getSplitLogWorkerCoordination(),
+              server.getConnection(), mode, factory)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -186,7 +185,7 @@ public class SplitLogWorker implements Runnable {
    * acquired by a {@link SplitLogWorker}. Since there isn't a water-tight
    * guarantee that two workers will not be executing the same task therefore it
    * is better to have workers prepare the task and then have the
-   * {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in 
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in
    * SplitLogManager.TaskFinisher
    */
   public interface TaskExecutor {

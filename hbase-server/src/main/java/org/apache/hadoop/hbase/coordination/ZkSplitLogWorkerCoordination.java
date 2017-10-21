@@ -90,13 +90,11 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   protected final AtomicInteger tasksInProgress = new AtomicInteger(0);
   private int maxConcurrentTasks = 0;
 
-  private final ZkCoordinatedStateManager manager;
+  private final ServerName serverName;
 
-  public ZkSplitLogWorkerCoordination(ZkCoordinatedStateManager zkCoordinatedStateManager,
-      ZooKeeperWatcher watcher) {
+  public ZkSplitLogWorkerCoordination(ServerName serverName, ZooKeeperWatcher watcher) {
     super(watcher);
-    manager = zkCoordinatedStateManager;
-
+    this.serverName = serverName;
   }
 
   /**
@@ -185,7 +183,6 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         // currentTask can change but that's ok
         String taskpath = currentTask;
         if (taskpath != null && taskpath.equals(path)) {
-          ServerName serverName = manager.getServer().getServerName();
           // have to compare data. cannot compare version because then there
           // will be race with attemptToOwnTask()
           // cannot just check whether the node has been transitioned to

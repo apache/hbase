@@ -71,7 +71,7 @@ public class TestRegionServerHostname {
     TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, invalidHostname);
     HRegionServer hrs = null;
     try {
-      hrs = new HRegionServer(TEST_UTIL.getConfiguration(), null);
+      hrs = new HRegionServer(TEST_UTIL.getConfiguration());
     } catch (IllegalArgumentException iae) {
       assertTrue(iae.getMessage(),
         iae.getMessage().contains("Failed resolve of " + invalidHostname) ||

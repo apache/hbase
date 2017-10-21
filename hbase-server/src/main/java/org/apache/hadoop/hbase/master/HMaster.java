@@ -468,13 +468,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    * #finishActiveMasterInitialization(MonitoredTask) after
    * the master becomes the active one.
    */
-  public HMaster(final Configuration conf, CoordinatedStateManager csm)
+  public HMaster(final Configuration conf)
       throws IOException, KeeperException {
-    super(conf, csm);
+    super(conf);
     try {
       this.rsFatals = new MemoryBoundedLogMessageBuffer(
           conf.getLong("hbase.master.buffer.for.rs.fatals", 1 * 1024 * 1024));
-
       LOG.info("hbase.rootdir=" + getRootDir() +
           ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
@@ -2828,11 +2827,10 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return HMaster instance.
    */
   public static HMaster constructMaster(Class<? extends HMaster> masterClass,
-      final Configuration conf, final CoordinatedStateManager cp)  {
+      final Configuration conf)  {
     try {
-      Constructor<? extends HMaster> c =
-        masterClass.getConstructor(Configuration.class, CoordinatedStateManager.class);
-      return c.newInstance(conf, cp);
+      Constructor<? extends HMaster> c = masterClass.getConstructor(Configuration.class);
+      return c.newInstance(conf);
     } catch(Exception e) {
       Throwable error = e;
       if (e instanceof InvocationTargetException &&

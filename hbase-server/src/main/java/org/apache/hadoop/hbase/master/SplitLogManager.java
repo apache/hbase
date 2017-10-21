@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -153,8 +152,7 @@ public class SplitLogManager {
   }
 
   private SplitLogManagerCoordination getSplitLogManagerCoordination() {
-    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitLogManagerCoordination();
+    return server.getCoordinatedStateManager().getSplitLogManagerCoordination();
   }
 
   private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {

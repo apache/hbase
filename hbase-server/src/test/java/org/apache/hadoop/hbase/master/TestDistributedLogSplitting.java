@@ -82,7 +82,6 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -1151,8 +1150,8 @@ public class TestDistributedLogSplitting {
       out.write(Bytes.toBytes("corrupted bytes"));
       out.close();
       ZKSplitLogManagerCoordination coordination =
-          (ZKSplitLogManagerCoordination) ((BaseCoordinatedStateManager) master
-              .getCoordinatedStateManager()).getSplitLogManagerCoordination();
+          (ZKSplitLogManagerCoordination) (master.getCoordinatedStateManager())
+              .getSplitLogManagerCoordination();
       coordination.setIgnoreDeleteForTesting(true);
       executor = Executors.newSingleThreadExecutor();
       Runnable runnable = new Runnable() {

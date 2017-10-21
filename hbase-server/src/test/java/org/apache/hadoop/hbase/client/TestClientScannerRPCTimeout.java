@@ -141,9 +141,9 @@ public class TestClientScannerRPCTimeout {
   }
 
   private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
-    public RegionServerWithScanTimeout(Configuration conf, CoordinatedStateManager cp)
+    public RegionServerWithScanTimeout(Configuration conf)
         throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     protected RSRpcServices createRpcServices() throws IOException {
@@ -168,7 +168,7 @@ public class TestClientScannerRPCTimeout {
         throws ServiceException {
       if (request.hasScannerId()) {
         ScanResponse scanResponse = super.scan(controller, request);
-        if (this.tableScannerId == request.getScannerId() && 
+        if (this.tableScannerId == request.getScannerId() &&
             (sleepAlways || (!slept && seqNoToSleepOn == request.getNextCallSeq()))) {
           try {
             LOG.info("SLEEPING " + (rpcTimeout + 500));

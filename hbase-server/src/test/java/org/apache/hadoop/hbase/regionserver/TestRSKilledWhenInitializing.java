@@ -191,9 +191,9 @@ public class TestRSKilledWhenInitializing {
    * notices and so removes the region from its set of online regionservers.
    */
   static class RegisterAndDieRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
-    public RegisterAndDieRegionServer(Configuration conf, CoordinatedStateManager cp)
+    public RegisterAndDieRegionServer(Configuration conf)
     throws IOException, InterruptedException {
-      super(conf, cp);
+      super(conf);
     }
 
     @Override
