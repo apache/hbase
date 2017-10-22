@@ -21,12 +21,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Optional;
 
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Writables;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -62,8 +64,8 @@ public class TestSimpleTimeRangeTracker {
   @Test
   public void testTimeRangeTrackerNullIsSameAsTimeRangeNull() throws IOException {
     TimeRangeTracker src = getTimeRangeTracker(1, 2);
-    byte [] bytes = Writables.getBytes(src);
-    TimeRange tgt = TimeRangeTracker.getTimeRange(bytes);
+    byte[] bytes = TimeRangeTracker.toByteArray(src);
+    TimeRange tgt = TimeRangeTracker.parseFrom(bytes).toTimeRange();
     assertEquals(src.getMin(), tgt.getMin());
     assertEquals(src.getMax(), tgt.getMax());
   }
@@ -71,10 +73,20 @@ public class TestSimpleTimeRangeTracker {
   @Test
   public void testSerialization() throws IOException {
     TimeRangeTracker src = getTimeRangeTracker(1, 2);
-    TimeRangeTracker tgt = getTimeRangeTracker();
-    Writables.copyWritable(src, tgt);
+    TimeRangeTracker tgt = TimeRangeTracker.parseFrom(TimeRangeTracker.toByteArray(src));
     assertEquals(src.getMin(), tgt.getMin());
     assertEquals(src.getMax(), tgt.getMax());
+  }
+
+  @Test
+  public void testLegacySerialization() throws IOException {
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    DataOutputStream output = new DataOutputStream(data);
+    output.writeLong(100);
+    output.writeLong(200);
+    TimeRangeTracker tgt = TimeRangeTracker.parseFrom(data.toByteArray());
+    assertEquals(100, tgt.getMin());
+    assertEquals(200, tgt.getMax());
   }
 
   @Test

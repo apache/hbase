@@ -197,8 +197,7 @@ public abstract class Compactor<T extends CellSink> {
         }
       }
       tmp = fileInfo.get(TIMERANGE_KEY);
-      TimeRangeTracker trt = TimeRangeTracker.getTimeRangeTracker(tmp);
-      fd.latestPutTs = trt == null? HConstants.LATEST_TIMESTAMP: trt.getMax();
+      fd.latestPutTs = tmp == null ? HConstants.LATEST_TIMESTAMP: TimeRangeTracker.parseFrom(tmp).getMax();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Compacting " + file +
           ", keycount=" + keyCount +
