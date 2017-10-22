@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.rest;
 
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.EnumSet;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -46,7 +44,7 @@ import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.DNS;
-import org.apache.hadoop.hbase.util.HttpServerUtil;
+import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;

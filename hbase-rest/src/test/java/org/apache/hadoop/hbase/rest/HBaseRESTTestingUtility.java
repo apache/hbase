@@ -24,7 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.util.HttpServerUtil;
+import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -99,7 +99,7 @@ public class HBaseRESTTestingUtility {
     // get the port
     testServletPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
 
-    LOG.info("started " + server.getClass().getName() + " on port " + 
+    LOG.info("started " + server.getClass().getName() + " on port " +
       testServletPort);
   }
 
