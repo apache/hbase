@@ -87,7 +87,6 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -606,7 +605,7 @@ public class RegionCoprocessorHost
    * @param request the compaction request
    * @param user the user
    */
-  public void postCompactSelection(final HStore store, final ImmutableList<HStoreFile> selected,
+  public void postCompactSelection(final HStore store, final List<HStoreFile> selected,
       final CompactionLifeCycleTracker tracker, final CompactionRequest request,
       final User user) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation(user) {
