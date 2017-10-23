@@ -411,4 +411,9 @@ public interface MasterServices extends Server {
   public String getRegionServerVersion(final ServerName sn);
 
   public void checkIfShouldMoveSystemRegionAsync();
+
+  /**
+   * @return load balancer
+   */
+  public LoadBalancer getLoadBalancer();
 }

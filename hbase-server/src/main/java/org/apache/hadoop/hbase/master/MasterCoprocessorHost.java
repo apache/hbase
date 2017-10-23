@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
@@ -67,6 +69,7 @@ public class MasterCoprocessorHost
       implements MasterCoprocessorEnvironment {
     private final MasterServices masterServices;
     private final MetricRegistry metricRegistry;
+    private final boolean supportGroupCPs;
 
     public MasterEnvironment(final Class<?> implClass, final Coprocessor impl,
         final int priority, final int seq, final Configuration conf,
@@ -75,6 +78,8 @@ public class MasterCoprocessorHost
       this.masterServices = services;
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForMasterCoprocessor(implClass.getName());
+      supportGroupCPs = !useLegacyMethod(impl.getClass(),
+          "preBalanceRSGroup", ObserverContext.class, String.class);
     }
 
     @Override
@@ -1212,6 +1217,161 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preMoveServers(final Set<Address> servers, final String targetGroup)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preMoveServers(ctx, servers, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void postMoveServers(final Set<Address> servers, final String targetGroup)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postMoveServers(ctx, servers, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void preMoveTables(final Set<TableName> tables, final String targetGroup)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preMoveTables(ctx, tables, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void postMoveTables(final Set<TableName> tables, final String targetGroup)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postMoveTables(ctx, tables, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void preMoveServersAndTables(final Set<Address> servers, final Set<TableName> tables,
+      final String targetGroup) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+                       ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preMoveServersAndTables(ctx, servers, tables, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void postMoveServersAndTables(final Set<Address> servers, final Set<TableName> tables,
+      final String targetGroup) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+                       ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postMoveServersAndTables(ctx, servers, tables, targetGroup);
+        }
+      }
+    });
+  }
+
+  public void preAddRSGroup(final String name)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preAddRSGroup(ctx, name);
+        }
+      }
+    });
+  }
+
+  public void postAddRSGroup(final String name)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if (((MasterEnvironment) ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postAddRSGroup(ctx, name);
+        }
+      }
+    });
+  }
+
+  public void preRemoveRSGroup(final String name)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preRemoveRSGroup(ctx, name);
+        }
+      }
+    });
+  }
+
+  public void postRemoveRSGroup(final String name)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postRemoveRSGroup(ctx, name);
+        }
+      }
+    });
+  }
+
+  public void preBalanceRSGroup(final String name)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.preBalanceRSGroup(ctx, name);
+        }
+      }
+    });
+  }
+
+  public void postBalanceRSGroup(final String name, final boolean balanceRan)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)ctx.getEnvironment()).supportGroupCPs) {
+          oserver.postBalanceRSGroup(ctx, name, balanceRan);
+        }
+      }
+    });
+  }
 
   private static abstract class CoprocessorOperation
       extends ObserverContext<MasterCoprocessorEnvironment> {

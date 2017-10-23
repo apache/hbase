@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -1277,6 +1278,66 @@ public class TestMasterObserver {
     @Override
     public void postSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
         final String namespace, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void postMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void preMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<TableName> tables, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void postMoveTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<TableName> tables, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void preMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void postMoveServersAndTables(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+    }
+
+    @Override
+    public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
+        throws IOException {
+    }
+
+    @Override
+    public void postAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
+        throws IOException {
+    }
+
+    @Override
+    public void preRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
+        throws IOException {
+    }
+
+    @Override
+    public void postRemoveRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx, String name)
+        throws IOException {
+    }
+
+    @Override
+    public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String groupName) throws IOException {
+    }
+
+    @Override
+    public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String groupName, boolean balancerRan) throws IOException {
     }
   }
 

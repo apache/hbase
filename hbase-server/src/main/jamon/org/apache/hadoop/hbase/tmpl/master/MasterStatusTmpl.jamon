@@ -395,6 +395,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         } else if (tableName.equals(QuotaUtil.QUOTA_TABLE_NAME)){
             description = "The hbase:quota table holds quota information about number" +
             " or size of requests in a given time frame.";
+        } else if (tableName.equals(TableName.valueOf("hbase:rsgroup"))){
+            description = "The hbase:rsgroup table holds information about regionserver groups";
         }
     </%java>
     <td><% description %></td>

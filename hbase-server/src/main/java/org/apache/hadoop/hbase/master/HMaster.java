@@ -3217,4 +3217,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   public SplitOrMergeTracker getSplitOrMergeTracker() {
     return splitOrMergeTracker;
   }
+
+  @Override
+  public LoadBalancer getLoadBalancer() {
+    return balancer;
+  }
 }
