@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -219,7 +220,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public boolean isStopped() {
-    // TODO Auto-generated method stub
     return false;
   }
 
@@ -264,18 +264,15 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public void addRegion(HRegion r) {
-    // TODO Auto-generated method stub
   }
 
   @Override
   public boolean removeRegion(HRegion r, ServerName destination) {
-    // TODO Auto-generated method stub
     return false;
   }
 
   @Override
   public HRegion getRegion(String encodedRegionName) {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -316,13 +313,14 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public FlushRequester getFlushRequester() {
-    // TODO Auto-generated method stub
     return null;
   }
-
+  @Override
+  public CompactionRequester getCompactionRequestor() {
+    return null;
+  }
   @Override
   public RegionServerAccounting getRegionServerAccounting() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -334,24 +332,20 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public void postOpenDeployTasks(PostOpenDeployContext context) throws KeeperException,
       IOException {
-    // TODO Auto-generated method stub
   }
 
   @Override
   public RpcServerInterface getRpcServer() {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public FileSystem getFileSystem() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -371,7 +365,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public MutateResponse mutate(RpcController controller, MutateRequest request)
       throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -410,7 +403,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
       BulkLoadHFileRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -423,7 +415,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public ClientProtos.MultiResponse multi(
       RpcController controller, MultiRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -451,14 +442,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public GetStoreFileResponse getStoreFile(RpcController controller,
       GetStoreFileRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public GetOnlineRegionResponse getOnlineRegion(RpcController controller,
       GetOnlineRegionRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -470,74 +459,63 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public OpenRegionResponse openRegion(RpcController controller,
       OpenRegionRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public WarmupRegionResponse warmupRegion(RpcController controller,
       WarmupRegionRequest request) throws ServiceException {
-    //TODO Auto-generated method stub
     return null;
   }
   @Override
   public CloseRegionResponse closeRegion(RpcController controller,
       CloseRegionRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public FlushRegionResponse flushRegion(RpcController controller,
       FlushRegionRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public CompactRegionResponse compactRegion(RpcController controller,
       CompactRegionRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public ReplicateWALEntryResponse replicateWALEntry(RpcController controller,
       ReplicateWALEntryRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public RollWALWriterResponse rollWALWriter(RpcController controller,
       RollWALWriterRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public GetServerInfoResponse getServerInfo(RpcController controller,
       GetServerInfoRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public StopServerResponse stopServer(RpcController controller,
       StopServerRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public List<Region> getRegions(TableName tableName) throws IOException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public Leases getLeases() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -575,13 +553,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public ReplicateWALEntryResponse
       replay(RpcController controller, ReplicateWALEntryRequest request)
       throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public Map<String, HRegion> getRecoveringRegions() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -603,14 +579,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public boolean registerService(com.google.protobuf.Service service) {
-    // TODO Auto-generated method stub
     return false;
   }
 
   @Override
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
       CoprocessorServiceRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 

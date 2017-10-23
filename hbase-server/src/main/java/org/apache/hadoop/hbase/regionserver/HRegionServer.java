@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
@@ -1686,9 +1687,9 @@ public class HRegionServer extends HasThread implements
     int totalStaticBloomSizeKB = 0;
     long totalCompactingKVs = 0;
     long currentCompactedKVs = 0;
-    List<? extends Store> storeList = r.getStores();
+    List<HStore> storeList = r.getStores();
     stores += storeList.size();
-    for (Store store : storeList) {
+    for (HStore store : storeList) {
       storefiles += store.getStorefilesCount();
       storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed() / 1024 / 1024);
       storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
@@ -2777,6 +2778,11 @@ public class HRegionServer extends HasThread implements
   @Override
   public FlushRequester getFlushRequester() {
     return this.cacheFlusher;
+  }
+
+  @Override
+  public CompactionRequester getCompactionRequestor() {
+    return this.compactSplitThread;
   }
 
   /**

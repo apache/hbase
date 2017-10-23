@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,9 +60,16 @@ public interface RegionServerServices extends Server, OnlineRegions, FavoredNode
   List<WAL> getWALs() throws IOException;
 
   /**
-   * @return Implementation of {@link FlushRequester} or null.
+   * @return Implementation of {@link FlushRequester} or null. Usually it will not be null unless
+   *         during intialization.
    */
   FlushRequester getFlushRequester();
+
+  /**
+   * @return Implementation of {@link CompactionRequester} or null. Usually it will not be null
+   *         unless during intialization.
+   */
+  CompactionRequester getCompactionRequestor();
 
   /**
    * @return the RegionServerAccounting for this Region Server

@@ -1952,11 +1952,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   protected void doRegionCompactionPrep() throws IOException {
   }
 
-  @Override
-  public void triggerMajorCompaction() throws IOException {
-    stores.values().forEach(HStore::triggerMajorCompaction);
-  }
-
   /**
    * Synchronously compact all stores in the region.
    * <p>This operation could block for a long time, so don't call it from a
@@ -1972,7 +1967,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public void compact(boolean majorCompaction) throws IOException {
     if (majorCompaction) {
-      triggerMajorCompaction();
+      stores.values().forEach(HStore::triggerMajorCompaction);
     }
     for (HStore s : stores.values()) {
       Optional<CompactionContext> compaction = s.requestCompaction();
@@ -8212,16 +8207,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public void requestCompaction(String why, int priority, CompactionLifeCycleTracker tracker,
-      User user) throws IOException {
-    ((HRegionServer) rsServices).compactSplitThread.requestCompaction(this, why, priority, tracker,
-      user);
+  public void requestCompaction(String why, int priority, boolean major,
+      CompactionLifeCycleTracker tracker) throws IOException {
+    if (major) {
+      stores.values().forEach(HStore::triggerMajorCompaction);
+    }
+    rsServices.getCompactionRequestor().requestCompaction(this, why, priority, tracker,
+      RpcServer.getRequestUser().orElse(null));
   }
 
   @Override
-  public void requestCompaction(byte[] family, String why, int priority,
-      CompactionLifeCycleTracker tracker, User user) throws IOException {
-    ((HRegionServer) rsServices).compactSplitThread.requestCompaction(this,
-      Preconditions.checkNotNull(stores.get(family)), why, priority, tracker, user);
+  public void requestCompaction(byte[] family, String why, int priority, boolean major,
+      CompactionLifeCycleTracker tracker) throws IOException {
+    HStore store = stores.get(family);
+    if (store == null) {
+      throw new NoSuchColumnFamilyException("column family " + Bytes.toString(family) +
+          " does not exist in region " + getRegionInfo().getRegionNameAsString());
+    }
+    if (major) {
+      store.triggerMajorCompaction();
+    }
+    rsServices.getCompactionRequestor().requestCompaction(this, store, why, priority, tracker,
+      RpcServer.getRequestUser().orElse(null));
   }
 }

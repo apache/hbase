@@ -706,7 +706,7 @@ public class TestCompaction {
     }
 
     @Override
-    public void afterExecute(Store store) {
+    public void afterExecution(Store store) {
       done.countDown();
     }
   }

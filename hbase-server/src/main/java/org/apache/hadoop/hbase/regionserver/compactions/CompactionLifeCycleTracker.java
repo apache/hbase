@@ -33,12 +33,18 @@ public interface CompactionLifeCycleTracker {
   };
 
   /**
+   * Called if the compaction request is failed for some reason.
+   */
+  default void notExecuted(Store store, String reason) {
+  }
+
+  /**
    * Called before compaction is executed by CompactSplitThread.
    * <p>
    * Requesting compaction on a region can lead to multiple compactions on different stores, so we
    * will pass the {@link Store} in to tell you the store we operate on.
    */
-  default void beforeExecute(Store store) {
+  default void beforeExecution(Store store) {
   }
 
   /**
@@ -47,6 +53,15 @@ public interface CompactionLifeCycleTracker {
    * Requesting compaction on a region can lead to multiple compactions on different stores, so we
    * will pass the {@link Store} in to tell you the store we operate on.
    */
-  default void afterExecute(Store store) {
+  default void afterExecution(Store store) {
+  }
+
+  /**
+   * Called after all the requested compactions are completed.
+   * <p>
+   * The compaction scheduling is per Store so if you request a compaction on a region it may lead
+   * to multiple compactions.
+   */
+  default void completed() {
   }
 }
