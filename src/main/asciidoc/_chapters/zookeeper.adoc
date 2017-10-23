@@ -181,7 +181,7 @@ We'll refer to this JAAS configuration file as _$CLIENT_CONF_        below.
 
 === HBase-managed ZooKeeper Configuration
 
-On each node that will run a zookeeper, a master, or a regionserver, create a link:http://docs.oracle.com/javase/1.4.2/docs/guide/security/jgss/tutorials/LoginConfigFile.html[JAAS]        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
+On each node that will run a zookeeper, a master, or a regionserver, create a link:http://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/LoginConfigFile.html[JAAS]        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
 
 [source,java]
 ----

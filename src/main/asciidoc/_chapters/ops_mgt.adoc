@@ -766,7 +766,7 @@ The LoadTestTool has received many updates in recent HBase releases, including s
 [[ops.regionmgt.majorcompact]]
 === Major Compaction
 
-Major compactions can be requested via the HBase shell or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact%28java.lang.String%29[Admin.majorCompact].
+Major compactions can be requested via the HBase shell or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
 
 Note: major compactions do NOT do region merges.
 See <<compaction,compaction>> for more information about compactions.
@@ -783,7 +783,7 @@ $ bin/hbase org.apache.hadoop.hbase.util.Merge <tablename> <region1> <region2>
 
 If you feel you have too many regions and want to consolidate them, Merge is the utility you need.
 Merge must run be done when the cluster is down.
-See the link:http://ofps.oreilly.com/titles/9781449396107/performance.html[O'Reilly HBase
+See the link:https://web.archive.org/web/20111231002503/http://ofps.oreilly.com/titles/9781449396107/performance.html[O'Reilly HBase
           Book] for an example of usage.
 
 You will need to pass 3 parameters to this application.
@@ -1050,7 +1050,7 @@ In this case, or if you are in a OLAP environment and require having locality, t
 [[hbase_metrics]]
 == HBase Metrics
 
-HBase emits metrics which adhere to the link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[Hadoop metrics] API.
+HBase emits metrics which adhere to the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Metrics.html[Hadoop Metrics] API.
 Starting with HBase 0.95footnote:[The Metrics system was redone in
           HBase 0.96. See Migration
             to the New Metrics Hotness – Metrics2 by Elliot Clark for detail], HBase is configured to emit a default set of metrics with a default sampling period of every 10 seconds.
@@ -1331,7 +1331,7 @@ Have a look in the Web UI.
 == Cluster Replication
 
 NOTE: This information was previously available at
-link:http://hbase.apache.org#replication[Cluster Replication].
+link:https://hbase.apache.org/0.94/replication.html[Cluster Replication].
 
 HBase provides a cluster replication mechanism which allows you to keep one cluster's state synchronized with that of another cluster, using the write-ahead log (WAL) of the source cluster to propagate the changes.
 Some use cases for cluster replication include:
@@ -2093,7 +2093,7 @@ The act of copying these files creates new HDFS metadata, which is why a restore
 === Live Cluster Backup - Replication
 
 This approach assumes that there is a second cluster.
-See the HBase page on link:http://hbase.apache.org/book.html#replication[replication] for more information.
+See the HBase page on link:http://hbase.apache.org/book.html#_cluster_replication[replication] for more information.
 
 [[ops.backup.live.copytable]]
 === Live Cluster Backup - CopyTable

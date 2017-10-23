@@ -820,7 +820,7 @@ See the entry for `hbase.hregion.majorcompaction` in the <<compaction.parameters
 ====
 Major compactions are absolutely necessary for StoreFile clean-up.
 Do not disable them altogether.
-You can run major compactions manually via the HBase shell or via the http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)[Admin API].
+You can run major compactions manually via the HBase shell or via the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin API].
 ====
 
 For more information about compactions and the compaction file selection process, see <<compaction,compaction>>

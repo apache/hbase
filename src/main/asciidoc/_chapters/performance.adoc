@@ -587,7 +587,7 @@ If all your data is being written to one region at a time, then re-read the sect
 
 Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy.
 There are a variety of reasons that regions may appear "well split" but won't work with your data.
-As the HBase client communicates directly with the RegionServers, this can be obtained via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#getRegionLocation(byte%5B%5D)[Table.getRegionLocation].
+As the HBase client communicates directly with the RegionServers, this can be obtained via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/RegionLocator.html#getRegionLocation-byte:A-[RegionLocator.getRegionLocation].
 
 See <<precreate.regions>>, as well as <<perf.configurations>>
 
@@ -699,7 +699,7 @@ Enabling Bloom Filters can save your having to go to disk and can help improve r
 link:http://en.wikipedia.org/wiki/Bloom_filter[Bloom filters] were developed over in link:https://issues.apache.org/jira/browse/HBASE-1200[HBase-1200 Add bloomfilters].
 For description of the development process -- why static blooms rather than dynamic -- and for an overview of the unique properties that pertain to blooms in HBase, as well as possible future directions, see the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters in HBase] attached to link:https://issues.apache.org/jira/browse/HBASE-1200[HBASE-1200].
 The bloom filters described here are actually version two of blooms in HBase.
-In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the link:http://www.one-lab.org/[European Commission One-Lab Project 034819].
+In versions up to 0.19.x, HBase had a dynamic bloom option based on work done by the link:http://www.onelab.org[European Commission One-Lab Project 034819].
 The core of the HBase bloom work was later pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile.
 Version 1 of HBase blooms never worked that well.
 Version 2 is a rewrite from scratch though again it starts with the one-lab work.
@@ -816,7 +816,7 @@ In this case, special care must be taken to regularly perform major compactions 
 As is documented in <<datamodel>>, marking rows as deleted creates additional StoreFiles which then need to be processed on reads.
 Tombstones only get cleaned up with major compactions.
 
-See also <<compaction>> and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact%28java.lang.String%29[Admin.majorCompact].
+See also <<compaction>> and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
 
 [[perf.deleting.rpc]]
 === Delete RPC Behavior
@@ -825,8 +825,7 @@ Be aware that `Table.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
 For a large number of deletes, consider `Table.delete(List)`.
 
-See
-+++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29">hbase.client.Delete</a>+++.
+See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete-org.apache.hadoop.hbase.client.Delete-[hbase.client.Delete]
 
 [[perf.hdfs]]
 == HDFS

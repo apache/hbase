@@ -47,9 +47,9 @@ The below policy is something we put in place 09/2012.
 It is a suggested policy rather than a hard requirement.
 We want to try it first to see if it works before we cast it in stone.
 
-Apache HBase is made of link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components].
+Apache HBase is made of link:https://issues.apache.org/jira/projects/HBASE?selectedItem=com.atlassian.jira.jira-projects-plugin:components-page[components].
 Components have one or more <<owner,OWNER>>s.
-See the 'Description' field on the link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components]        JIRA page for who the current owners are by component.
+See the 'Description' field on the link:https://issues.apache.org/jira/projects/HBASE?selectedItem=com.atlassian.jira.jira-projects-plugin:components-page[components] JIRA page for who the current owners are by component.
 
 Patches that fit within the scope of a single Apache HBase component require, at least, a +1 by one of the component's owners before commit.
 If owners are absent -- busy or otherwise -- two +1s by non-owners will suffice.
@@ -88,7 +88,7 @@ We also are currently in violation of this basic tenet -- replication at least k
 [[owner]]
 .Component Owner/Lieutenant
 
-Component owners are listed in the description field on this Apache HBase JIRA link:https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel[components]        page.
+Component owners are listed in the description field on this Apache HBase JIRA link:https://issues.apache.org/jira/projects/HBASE?selectedItem=com.atlassian.jira.jira-projects-plugin:components-page[components] page.
 The owners are listed in the 'Description' field rather than in the 'Component Lead' field because the latter only allows us list one individual whereas it is encouraged that components have multiple owners.
 
 Owners or component lieutenants are volunteers who are (usually, but not necessarily) expert in their component domain and may have an agenda on how they think their Apache HBase component should evolve.
