@@ -331,7 +331,10 @@ public class HStoreFile implements StoreFile {
         : OptionalLong.of(Bytes.toLong(bulkLoadTimestamp));
   }
 
-  @Override
+  /**
+   * @return the cached value of HDFS blocks distribution. The cached value is calculated when store
+   *         file is opened.
+   */
   public HDFSBlocksDistribution getHDFSBlockDistribution() {
     return this.fileInfo.getHDFSBlockDistribution();
   }
