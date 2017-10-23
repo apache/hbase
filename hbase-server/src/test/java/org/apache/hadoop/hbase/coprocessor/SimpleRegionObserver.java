@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -198,7 +197,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   @Override
   public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      ImmutableList<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+      List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {
     ctPostCompactSelect.incrementAndGet();
   }
