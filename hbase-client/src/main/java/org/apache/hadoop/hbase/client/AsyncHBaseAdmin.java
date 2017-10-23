@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import com.google.protobuf.RpcChannel;
@@ -84,13 +83,23 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> listTables(Optional<Pattern> pattern,
+  public CompletableFuture<List<TableDescriptor>> listTables(boolean includeSysTables) {
+    return wrap(rawAdmin.listTables(includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTables(Pattern pattern,
       boolean includeSysTables) {
     return wrap(rawAdmin.listTables(pattern, includeSysTables));
   }
 
   @Override
-  public CompletableFuture<List<TableName>> listTableNames(Optional<Pattern> pattern,
+  public CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables) {
+    return wrap(rawAdmin.listTableNames(includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNames(Pattern pattern,
       boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(pattern, includeSysTables));
   }
@@ -101,13 +110,18 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> createTable(TableDescriptor desc) {
+    return wrap(rawAdmin.createTable(desc));
+  }
+
+  @Override
   public CompletableFuture<Void> createTable(TableDescriptor desc, byte[] startKey, byte[] endKey,
       int numRegions) {
     return wrap(rawAdmin.createTable(desc, startKey, endKey, numRegions));
   }
 
   @Override
-  public CompletableFuture<Void> createTable(TableDescriptor desc, Optional<byte[][]> splitKeys) {
+  public CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys) {
     return wrap(rawAdmin.createTable(desc, splitKeys));
   }
 
@@ -139,6 +153,11 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isTableDisabled(TableName tableName) {
     return wrap(rawAdmin.isTableDisabled(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
+    return wrap(rawAdmin.isTableAvailable(tableName));
   }
 
   @Override
@@ -209,23 +228,42 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> compact(TableName tableName) {
+    return wrap(rawAdmin.compact(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
     return wrap(rawAdmin.compact(tableName, columnFamily));
   }
 
   @Override
-  public CompletableFuture<Void> compactRegion(byte[] regionName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> compactRegion(byte[] regionName) {
+    return wrap(rawAdmin.compactRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily) {
     return wrap(rawAdmin.compactRegion(regionName, columnFamily));
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> majorCompact(TableName tableName) {
+    return wrap(rawAdmin.majorCompact(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
     return wrap(rawAdmin.majorCompact(tableName, columnFamily));
   }
 
   @Override
-  public CompletableFuture<Void>
-      majorCompactRegion(byte[] regionName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName) {
+    return wrap(rawAdmin.majorCompactRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily) {
     return wrap(rawAdmin.majorCompactRegion(regionName, columnFamily));
   }
 
@@ -276,7 +314,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> splitRegion(byte[] regionName, Optional<byte[]> splitPoint) {
+  public CompletableFuture<Void> splitRegion(byte[] regionName) {
+    return wrap(rawAdmin.splitRegion(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint) {
     return wrap(rawAdmin.splitRegion(regionName, splitPoint));
   }
 
@@ -296,7 +339,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> move(byte[] regionName, Optional<ServerName> destServerName) {
+  public CompletableFuture<Void> move(byte[] regionName) {
+    return wrap(rawAdmin.move(regionName));
+  }
+
+  @Override
+  public CompletableFuture<Void> move(byte[] regionName, ServerName destServerName) {
     return wrap(rawAdmin.move(regionName, destServerName));
   }
 
@@ -355,8 +403,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(
-      Optional<Pattern> pattern) {
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers() {
+    return wrap(rawAdmin.listReplicationPeers());
+  }
+
+  @Override
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern) {
     return wrap(rawAdmin.listReplicationPeers(pattern));
   }
 
@@ -391,8 +443,18 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<SnapshotDescription>> listSnapshots(Optional<Pattern> pattern) {
+  public CompletableFuture<List<SnapshotDescription>> listSnapshots() {
+    return wrap(rawAdmin.listSnapshots());
+  }
+
+  @Override
+  public CompletableFuture<List<SnapshotDescription>> listSnapshots(Pattern pattern) {
     return wrap(rawAdmin.listSnapshots(pattern));
+  }
+
+  @Override
+  public CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern) {
+    return wrap(rawAdmin.listTableSnapshots(tableNamePattern));
   }
 
   @Override
@@ -404,6 +466,21 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> deleteSnapshot(String snapshotName) {
     return wrap(rawAdmin.deleteSnapshot(snapshotName));
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteSnapshots() {
+    return wrap(rawAdmin.deleteSnapshots());
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteSnapshots(Pattern pattern) {
+    return wrap(rawAdmin.deleteSnapshots(pattern));
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern) {
+    return wrap(rawAdmin.deleteTableSnapshots(tableNamePattern));
   }
 
   @Override
@@ -513,8 +590,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName) {
+    return wrap(rawAdmin.getRegionLoads(serverName));
+  }
+
+  @Override
   public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
-      Optional<TableName> tableName) {
+      TableName tableName) {
     return wrap(rawAdmin.getRegionLoads(serverName, tableName));
   }
 

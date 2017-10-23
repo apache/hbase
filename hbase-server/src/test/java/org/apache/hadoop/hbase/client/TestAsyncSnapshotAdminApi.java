@@ -32,7 +32,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 @RunWith(Parameterized.class)
@@ -169,13 +168,10 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     admin.snapshot(snapshotName3, tableName).get();
     Assert.assertEquals(admin.listSnapshots().get().size(), 3);
 
-    Assert.assertEquals(admin.listSnapshots(Optional.of(Pattern.compile("(.*)"))).get().size(), 3);
-    Assert.assertEquals(admin.listSnapshots(Optional.of(Pattern.compile("snapshotName(\\d+)")))
-        .get().size(), 3);
-    Assert.assertEquals(admin.listSnapshots(Optional.of(Pattern.compile("snapshotName[1|3]")))
-        .get().size(), 2);
-    Assert.assertEquals(admin.listSnapshots(Optional.of(Pattern.compile("snapshot(.*)"))).get()
-        .size(), 3);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("(.*)")).get().size(), 3);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshotName(\\d+)")).get().size(), 3);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshotName[1|3]")).get().size(), 2);
+    Assert.assertEquals(admin.listSnapshots(Pattern.compile("snapshot(.*)")).get().size(), 3);
     Assert.assertEquals(
       admin.listTableSnapshots(Pattern.compile("testListSnapshots"), Pattern.compile("s(.*)")).get()
           .size(),

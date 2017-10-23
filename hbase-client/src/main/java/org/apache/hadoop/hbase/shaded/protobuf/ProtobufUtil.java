@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -158,6 +159,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -1733,7 +1735,7 @@ public final class ProtobufUtil {
       final RpcController controller, final AdminService.BlockingInterface admin,
       final TableName tableName) throws IOException {
     GetRegionLoadRequest request =
-        RequestConverter.buildGetRegionLoadRequest(Optional.ofNullable(tableName));
+        RequestConverter.buildGetRegionLoadRequest(tableName);
     GetRegionLoadResponse response;
     try {
       response = admin.getRegionLoad(controller, request);
@@ -3375,5 +3377,12 @@ public final class ProtobufUtil {
       rib.setOffline(proto.getOffline());
     }
     return rib.build();
+  }
+
+  public static List<SnapshotDescription> toSnapshotDescriptionList(
+      GetCompletedSnapshotsResponse response, Pattern pattern) {
+    return response.getSnapshotsList().stream().map(ProtobufUtil::createSnapshotDesc)
+        .filter(snap -> pattern != null ? pattern.matcher(snap.getName()).matches() : true)
+        .collect(Collectors.toList());
   }
 }

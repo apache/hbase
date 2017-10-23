@@ -19,11 +19,9 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -824,132 +822,112 @@ public final class RequestConverter {
    * Create a protocol buffer GetRegionLoadRequest for all regions/regions of a table.
    * @param tableName the table for which regionLoad should be obtained from RS
    * @return a protocol buffer GetRegionLoadRequest
-   * @deprecated use {@link #buildGetRegionLoadRequest(Optional)} instead.
    */
-  @Deprecated
   public static GetRegionLoadRequest buildGetRegionLoadRequest(final TableName tableName) {
-    return buildGetRegionLoadRequest(Optional.ofNullable(tableName));
-  }
-
-  /**
-   * Create a protocol buffer GetRegionLoadRequest for all regions/regions of a table.
-   * @param tableName the table for which regionLoad should be obtained from RS
-   * @return a protocol buffer GetRegionLoadRequest
-   */
-  public static GetRegionLoadRequest buildGetRegionLoadRequest(Optional<TableName> tableName) {
     GetRegionLoadRequest.Builder builder = GetRegionLoadRequest.newBuilder();
-    tableName.ifPresent(table -> builder.setTableName(ProtobufUtil.toProtoTableName(table)));
+    if (tableName != null) {
+      builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    }
     return builder.build();
   }
 
- /**
-  * Create a protocol buffer GetOnlineRegionRequest
-  *
-  * @return a protocol buffer GetOnlineRegionRequest
-  */
- public static GetOnlineRegionRequest buildGetOnlineRegionRequest() {
-   return GetOnlineRegionRequest.newBuilder().build();
- }
-
- /**
-  * Create a protocol buffer FlushRegionRequest for a given region name
-  *
-  * @param regionName the name of the region to get info
-  * @return a protocol buffer FlushRegionRequest
-  */
- public static FlushRegionRequest
-     buildFlushRegionRequest(final byte[] regionName) {
-   return buildFlushRegionRequest(regionName, false);
- }
-
- /**
-  * Create a protocol buffer FlushRegionRequest for a given region name
-  *
-  * @param regionName the name of the region to get info
-  * @return a protocol buffer FlushRegionRequest
-  */
- public static FlushRegionRequest
-     buildFlushRegionRequest(final byte[] regionName, boolean writeFlushWALMarker) {
-   FlushRegionRequest.Builder builder = FlushRegionRequest.newBuilder();
-   RegionSpecifier region = buildRegionSpecifier(
-     RegionSpecifierType.REGION_NAME, regionName);
-   builder.setRegion(region);
-   builder.setWriteFlushWalMarker(writeFlushWALMarker);
-   return builder.build();
- }
-
- /**
-  * Create a protocol buffer OpenRegionRequest to open a list of regions
-  *
-  * @param server the serverName for the RPC
-  * @param regionOpenInfos info of a list of regions to open
-  * @param openForReplay
-  * @return a protocol buffer OpenRegionRequest
-  */
- public static OpenRegionRequest
-     buildOpenRegionRequest(ServerName server, final List<Pair<RegionInfo,
-         List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
-   OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   for (Pair<RegionInfo, List<ServerName>> regionOpenInfo: regionOpenInfos) {
-     builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
-       regionOpenInfo.getSecond(), openForReplay));
-   }
-   if (server != null) {
-     builder.setServerStartCode(server.getStartcode());
-   }
-   // send the master's wall clock time as well, so that the RS can refer to it
-   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
-   return builder.build();
- }
-
- /**
-  * Create a protocol buffer OpenRegionRequest for a given region
-  *
-  * @param server the serverName for the RPC
-  * @param region the region to open
-  * @param favoredNodes
-  * @param openForReplay
-  * @return a protocol buffer OpenRegionRequest
-  */
- public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
-     final RegionInfo region, List<ServerName> favoredNodes,
-     Boolean openForReplay) {
-   OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes,
-     openForReplay));
-   if (server != null) {
-     builder.setServerStartCode(server.getStartcode());
-   }
-   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
-   return builder.build();
- }
-
- /**
-  * Create a protocol buffer UpdateFavoredNodesRequest to update a list of favorednode mappings
-  * @param updateRegionInfos
-  * @return a protocol buffer UpdateFavoredNodesRequest
-  */
- public static UpdateFavoredNodesRequest buildUpdateFavoredNodesRequest(
-     final List<Pair<RegionInfo, List<ServerName>>> updateRegionInfos) {
-   UpdateFavoredNodesRequest.Builder ubuilder = UpdateFavoredNodesRequest.newBuilder();
-   if (updateRegionInfos != null && !updateRegionInfos.isEmpty()) {
-     RegionUpdateInfo.Builder builder = RegionUpdateInfo.newBuilder();
-    for (Pair<RegionInfo, List<ServerName>> pair : updateRegionInfos) {
-      builder.setRegion(ProtobufUtil.toRegionInfo(pair.getFirst()));
-      for (ServerName server : pair.getSecond()) {
-        builder.addFavoredNodes(ProtobufUtil.toServerName(server));
-      }
-      ubuilder.addUpdateInfo(builder.build());
-      builder.clear();
-    }
-   }
-   return ubuilder.build();
- }
+  /**
+   * Create a protocol buffer GetOnlineRegionRequest
+   * @return a protocol buffer GetOnlineRegionRequest
+   */
+  public static GetOnlineRegionRequest buildGetOnlineRegionRequest() {
+    return GetOnlineRegionRequest.newBuilder().build();
+  }
 
   /**
-   *  Create a WarmupRegionRequest for a given region name
-   *
-   *  @param regionInfo Region we are warming up
+   * Create a protocol buffer FlushRegionRequest for a given region name
+   * @param regionName the name of the region to get info
+   * @return a protocol buffer FlushRegionRequest
+   */
+  public static FlushRegionRequest buildFlushRegionRequest(final byte[] regionName) {
+    return buildFlushRegionRequest(regionName, false);
+  }
+
+  /**
+   * Create a protocol buffer FlushRegionRequest for a given region name
+   * @param regionName the name of the region to get info
+   * @return a protocol buffer FlushRegionRequest
+   */
+  public static FlushRegionRequest buildFlushRegionRequest(final byte[] regionName,
+      boolean writeFlushWALMarker) {
+    FlushRegionRequest.Builder builder = FlushRegionRequest.newBuilder();
+    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+    builder.setRegion(region);
+    builder.setWriteFlushWalMarker(writeFlushWALMarker);
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer OpenRegionRequest to open a list of regions
+   * @param server the serverName for the RPC
+   * @param regionOpenInfos info of a list of regions to open
+   * @param openForReplay whether open for replay
+   * @return a protocol buffer OpenRegionRequest
+   */
+  public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
+      final List<Pair<RegionInfo, List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
+    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
+    for (Pair<RegionInfo, List<ServerName>> regionOpenInfo : regionOpenInfos) {
+      builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
+        regionOpenInfo.getSecond(), openForReplay));
+    }
+    if (server != null) {
+      builder.setServerStartCode(server.getStartcode());
+    }
+    // send the master's wall clock time as well, so that the RS can refer to it
+    builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer OpenRegionRequest for a given region
+   * @param server the serverName for the RPC
+   * @param region the region to open
+   * @param favoredNodes a list of favored nodes
+   * @param openForReplay whether open for replay
+   * @return a protocol buffer OpenRegionRequest
+   */
+  public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
+      final RegionInfo region, List<ServerName> favoredNodes, Boolean openForReplay) {
+    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
+    builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes, openForReplay));
+    if (server != null) {
+      builder.setServerStartCode(server.getStartcode());
+    }
+    builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer UpdateFavoredNodesRequest to update a list of favorednode mappings
+   * @param updateRegionInfos a list of favored node mappings
+   * @return a protocol buffer UpdateFavoredNodesRequest
+   */
+  public static UpdateFavoredNodesRequest buildUpdateFavoredNodesRequest(
+      final List<Pair<RegionInfo, List<ServerName>>> updateRegionInfos) {
+    UpdateFavoredNodesRequest.Builder ubuilder = UpdateFavoredNodesRequest.newBuilder();
+    if (updateRegionInfos != null && !updateRegionInfos.isEmpty()) {
+      RegionUpdateInfo.Builder builder = RegionUpdateInfo.newBuilder();
+      for (Pair<RegionInfo, List<ServerName>> pair : updateRegionInfos) {
+        builder.setRegion(ProtobufUtil.toRegionInfo(pair.getFirst()));
+        for (ServerName server : pair.getSecond()) {
+          builder.addFavoredNodes(ProtobufUtil.toServerName(server));
+        }
+        ubuilder.addUpdateInfo(builder.build());
+        builder.clear();
+      }
+    }
+    return ubuilder.build();
+  }
+
+  /**
+   * Create a WarmupRegionRequest for a given region name
+   * @param regionInfo Region we are warming up
    */
   public static WarmupRegionRequest buildWarmupRegionRequest(final RegionInfo regionInfo) {
     WarmupRegionRequest.Builder builder = WarmupRegionRequest.newBuilder();
@@ -963,72 +941,57 @@ public final class RequestConverter {
    * @param major indicator if it is a major compaction
    * @param columnFamily
    * @return a CompactRegionRequest
-   * @deprecated Use {@link #buildCompactRegionRequest(byte[], boolean, Optional)} instead.
    */
-  @Deprecated
   public static CompactRegionRequest buildCompactRegionRequest(byte[] regionName, boolean major,
       byte[] columnFamily) {
-    return buildCompactRegionRequest(regionName, major, Optional.ofNullable(columnFamily));
-  }
-
-  /**
-   * Create a CompactRegionRequest for a given region name
-   * @param regionName the name of the region to get info
-   * @param major indicator if it is a major compaction
-   * @param columnFamily
-   * @return a CompactRegionRequest
-   */
-  public static CompactRegionRequest buildCompactRegionRequest(byte[] regionName, boolean major,
-      Optional<byte[]> columnFamily) {
     CompactRegionRequest.Builder builder = CompactRegionRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
     builder.setMajor(major);
-    columnFamily.ifPresent(family -> builder.setFamily(UnsafeByteOperations.unsafeWrap(family)));
+    if (columnFamily != null) {
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    }
     return builder.build();
   }
 
- /**
-  * @see {@link #buildRollWALWriterRequest()}
-  */
- private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST =
-     RollWALWriterRequest.newBuilder().build();
+  /**
+   * @see {@link #buildRollWALWriterRequest()}
+   */
+  private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST = RollWALWriterRequest.newBuilder()
+      .build();
 
   /**
-  * Create a new RollWALWriterRequest
-  *
-  * @return a ReplicateWALEntryRequest
-  */
- public static RollWALWriterRequest buildRollWALWriterRequest() {
-   return ROLL_WAL_WRITER_REQUEST;
- }
+   * Create a new RollWALWriterRequest
+   * @return a ReplicateWALEntryRequest
+   */
+  public static RollWALWriterRequest buildRollWALWriterRequest() {
+    return ROLL_WAL_WRITER_REQUEST;
+  }
 
- /**
-  * @see {@link #buildGetServerInfoRequest()}
-  */
- private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
-   GetServerInfoRequest.newBuilder().build();
+  /**
+   * @see {@link #buildGetServerInfoRequest()}
+   */
+  private static GetServerInfoRequest GET_SERVER_INFO_REQUEST = GetServerInfoRequest.newBuilder()
+      .build();
 
- /**
-  * Create a new GetServerInfoRequest
-  *
-  * @return a GetServerInfoRequest
-  */
- public static GetServerInfoRequest buildGetServerInfoRequest() {
-   return GET_SERVER_INFO_REQUEST;
- }
+  /**
+   * Create a new GetServerInfoRequest
+   * @return a GetServerInfoRequest
+   */
+  public static GetServerInfoRequest buildGetServerInfoRequest() {
+    return GET_SERVER_INFO_REQUEST;
+  }
 
- /**
-  * Create a new StopServerRequest
-  *
-  * @param reason the reason to stop the server
-  * @return a StopServerRequest
-  */
- public static StopServerRequest buildStopServerRequest(final String reason) {
-   StopServerRequest.Builder builder = StopServerRequest.newBuilder();
-   builder.setReason(reason);
-   return builder.build();
- }
+  /**
+   * Create a new StopServerRequest
+   * @param reason the reason to stop the server
+   * @return a StopServerRequest
+   */
+  public static StopServerRequest buildStopServerRequest(final String reason) {
+    StopServerRequest.Builder builder = StopServerRequest.newBuilder();
+    builder.setReason(reason);
+    return builder.build();
+  }
 
 //End utilities for Admin
 
@@ -1136,36 +1099,15 @@ public final class RequestConverter {
    * @param encodedRegionName
    * @param destServerName
    * @return A MoveRegionRequest
-   * @throws DeserializationException
-   * @deprecated Use {@link #buildMoveRegionRequest(byte[], Optional)} instead.
-   */
-  @Deprecated
-  public static MoveRegionRequest buildMoveRegionRequest(
-      final byte [] encodedRegionName, final byte [] destServerName) throws
-      DeserializationException {
-    MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
-    builder.setRegion(
-      buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,encodedRegionName));
-    if (destServerName != null) {
-      builder.setDestServerName(
-        ProtobufUtil.toServerName(ServerName.valueOf(Bytes.toString(destServerName))));
-    }
-    return builder.build();
-  }
-
-  /**
-   * Create a protocol buffer MoveRegionRequest
-   * @param encodedRegionName
-   * @param destServerName
-   * @return A MoveRegionRequest
    */
   public static MoveRegionRequest buildMoveRegionRequest(byte[] encodedRegionName,
-      Optional<ServerName> destServerName) {
+      ServerName destServerName) {
     MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
     builder.setRegion(buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,
       encodedRegionName));
-    destServerName.ifPresent(serverName -> builder.setDestServerName(ProtobufUtil
-        .toServerName(serverName)));
+    if (destServerName != null) {
+      builder.setDestServerName(ProtobufUtil.toServerName(destServerName));
+    }
     return builder.build();
   }
 
@@ -1320,21 +1262,13 @@ public final class RequestConverter {
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) {
-    return buildCreateTableRequest(tableDescriptor, Optional.ofNullable(splitKeys), nonceGroup, nonce);
-  }
-
-  /**
-   * Creates a protocol buffer CreateTableRequest
-   * @param tableDescriptor
-   * @param splitKeys
-   * @return a CreateTableRequest
-   */
-  public static CreateTableRequest buildCreateTableRequest(TableDescriptor tableDescriptor,
-      Optional<byte[][]> splitKeys, long nonceGroup, long nonce) {
     CreateTableRequest.Builder builder = CreateTableRequest.newBuilder();
     builder.setTableSchema(ProtobufUtil.toTableSchema(tableDescriptor));
-    splitKeys.ifPresent(keys -> Arrays.stream(keys).forEach(
-      key -> builder.addSplitKeys(UnsafeByteOperations.unsafeWrap(key))));
+    if (splitKeys != null) {
+      for(byte[] key : splitKeys) {
+        builder.addSplitKeys(UnsafeByteOperations.unsafeWrap(key));
+      }
+    }
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
@@ -1396,25 +1330,13 @@ public final class RequestConverter {
    * @param pattern The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
    * @return a GetTableDescriptorsRequest
-   * @deprecated Use {@link #buildGetTableDescriptorsRequest(Optional, boolean)} instead.
    */
-  @Deprecated
   public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(final Pattern pattern,
       boolean includeSysTables) {
-    return buildGetTableDescriptorsRequest(Optional.ofNullable(pattern), includeSysTables);
-  }
-
-  /**
-   * Creates a protocol buffer GetTableDescriptorsRequest
-   *
-   * @param pattern The compiled regular expression to match against
-   * @param includeSysTables False to match only against userspace tables
-   * @return a GetTableDescriptorsRequest
-   */
-  public static GetTableDescriptorsRequest
-      buildGetTableDescriptorsRequest(Optional<Pattern> pattern, boolean includeSysTables) {
     GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
-    pattern.ifPresent(p -> builder.setRegex(p.toString()));
+    if (pattern != null) {
+      builder.setRegex(pattern.toString());
+    }
     builder.setIncludeSysTables(includeSysTables);
     return builder.build();
   }
@@ -1425,25 +1347,13 @@ public final class RequestConverter {
    * @param pattern The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
    * @return a GetTableNamesRequest
-   * @deprecated Use {@link #buildGetTableNamesRequest(Optional, boolean)} instead.
    */
-  @Deprecated
   public static GetTableNamesRequest buildGetTableNamesRequest(final Pattern pattern,
       boolean includeSysTables) {
-    return buildGetTableNamesRequest(Optional.ofNullable(pattern), includeSysTables);
-  }
-
-  /**
-   * Creates a protocol buffer GetTableNamesRequest
-   *
-   * @param pattern The compiled regular expression to match against
-   * @param includeSysTables False to match only against userspace tables
-   * @return a GetTableNamesRequest
-   */
-  public static GetTableNamesRequest buildGetTableNamesRequest(Optional<Pattern> pattern,
-      boolean includeSysTables) {
     GetTableNamesRequest.Builder builder = GetTableNamesRequest.newBuilder();
-    pattern.ifPresent(p -> builder.setRegex(p.toString()));
+    if (pattern != null) {
+      builder.setRegex(pattern.toString());
+    }
     builder.setIncludeSysTables(includeSysTables);
     return builder.build();
   }
@@ -1745,18 +1655,11 @@ public final class RequestConverter {
     return builder.build();
   }
 
-  /**
-   * @deprecated Use {@link #buildListReplicationPeersRequest(Optional)} instead.
-   */
-  @Deprecated
   public static ListReplicationPeersRequest buildListReplicationPeersRequest(Pattern pattern) {
-    return buildListReplicationPeersRequest(Optional.ofNullable(pattern));
-  }
-
-  public static ListReplicationPeersRequest
-      buildListReplicationPeersRequest(Optional<Pattern> pattern) {
     ListReplicationPeersRequest.Builder builder = ListReplicationPeersRequest.newBuilder();
-    pattern.ifPresent(p -> builder.setRegex(p.toString()));
+    if (pattern != null) {
+      builder.setRegex(pattern.toString());
+    }
     return builder.build();
   }
 
