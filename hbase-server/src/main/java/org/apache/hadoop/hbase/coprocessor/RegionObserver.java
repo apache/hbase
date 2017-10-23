@@ -958,6 +958,8 @@ public interface RegionObserver {
    * @deprecated For Phoenix only, StoreFileReader is not a stable interface.
    */
   @Deprecated
+  // Passing InterfaceAudience.Private args FSDataInputStreamWrapper, CacheConfig and Reference.
+  // This is fine as the hook is deprecated any way.
   default StoreFileReader preStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
       Reference r, StoreFileReader reader) throws IOException {
@@ -979,6 +981,8 @@ public interface RegionObserver {
    * @deprecated For Phoenix only, StoreFileReader is not a stable interface.
    */
   @Deprecated
+  // Passing InterfaceAudience.Private args FSDataInputStreamWrapper, CacheConfig and Reference.
+  // This is fine as the hook is deprecated any way.
   default StoreFileReader postStoreFileReaderOpen(ObserverContext<RegionCoprocessorEnvironment> ctx,
       FileSystem fs, Path p, FSDataInputStreamWrapper in, long size, CacheConfig cacheConf,
       Reference r, StoreFileReader reader) throws IOException {

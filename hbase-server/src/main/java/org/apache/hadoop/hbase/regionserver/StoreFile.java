@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -116,12 +115,6 @@ public interface StoreFile {
    * Return the timestamp at which this bulk load file was generated.
    */
   OptionalLong getBulkLoadTimestamp();
-
-  /**
-   * @return the cached value of HDFS blocks distribution. The cached value is calculated when store
-   *         file is opened.
-   */
-  HDFSBlocksDistribution getHDFSBlockDistribution();
 
   /**
    * @return a length description of this StoreFile, suitable for debug output
