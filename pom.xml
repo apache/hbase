@@ -458,6 +458,12 @@
       <timezone>0</timezone>
     </developer>
     <developer>
+      <id>openinx</id>
+      <name>Zheng Hu</name>
+      <email>openinx@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>rajeshbabu</id>
       <name>Rajeshbabu Chintaguntla</name>
       <email>rajeshbabu@apache.org</email>
