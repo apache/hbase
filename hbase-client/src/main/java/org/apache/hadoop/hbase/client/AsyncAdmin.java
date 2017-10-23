@@ -64,11 +64,17 @@ public interface AsyncAdmin {
   /**
    * List all the userspace tables.
    * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
-   * @see #listTables(Optional, boolean)
    */
   default CompletableFuture<List<TableDescriptor>> listTables() {
-    return listTables(Optional.empty(), false);
+    return listTables(false);
   }
+
+  /**
+   * List all the tables.
+   * @param includeSysTables False to match only against userspace tables
+   * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableDescriptor>> listTables(boolean includeSysTables);
 
   /**
    * List all the tables matching the given pattern.
@@ -76,17 +82,23 @@ public interface AsyncAdmin {
    * @param includeSysTables False to match only against userspace tables
    * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<List<TableDescriptor>> listTables(Optional<Pattern> pattern,
-      boolean includeSysTables);
+  CompletableFuture<List<TableDescriptor>> listTables(Pattern pattern, boolean includeSysTables);
 
   /**
    * List all of the names of userspace tables.
    * @return a list of table names wrapped by a {@link CompletableFuture}.
-   * @see #listTableNames(Optional, boolean)
+   * @see #listTableNames(Pattern, boolean)
    */
   default CompletableFuture<List<TableName>> listTableNames() {
-    return listTableNames(Optional.empty(), false);
+    return listTableNames(false);
   }
+
+  /**
+   * List all of the names of tables.
+   * @param includeSysTables False to match only against userspace tables
+   * @return a list of table names wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables);
 
   /**
    * List all of the names of userspace tables.
@@ -94,8 +106,7 @@ public interface AsyncAdmin {
    * @param includeSysTables False to match only against userspace tables
    * @return a list of table names wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<List<TableName>> listTableNames(Optional<Pattern> pattern,
-      boolean includeSysTables);
+  CompletableFuture<List<TableName>> listTableNames(Pattern pattern, boolean includeSysTables);
 
   /**
    * Method for getting the tableDescriptor
@@ -108,9 +119,7 @@ public interface AsyncAdmin {
    * Creates a new table.
    * @param desc table descriptor for table
    */
-  default CompletableFuture<Void> createTable(TableDescriptor desc) {
-    return createTable(desc, Optional.empty());
-  }
+  CompletableFuture<Void> createTable(TableDescriptor desc);
 
   /**
    * Creates a new table with the specified number of regions. The start key specified will become
@@ -133,7 +142,7 @@ public interface AsyncAdmin {
    * @param desc table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table
    */
-  CompletableFuture<Void> createTable(TableDescriptor desc, Optional<byte[][]> splitKeys);
+  CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys);
 
   /**
    * Deletes a table.
@@ -179,9 +188,7 @@ public interface AsyncAdmin {
    * @return true if all regions of the table are available. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  default CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
-    return isTableAvailable(tableName, null);
-  }
+  CompletableFuture<Boolean> isTableAvailable(TableName tableName);
 
   /**
    * Use this api to check if the table has been created with the specified number of splitkeys
@@ -274,9 +281,7 @@ public interface AsyncAdmin {
    * was sent to HBase and may need some time to finish the compact operation.
    * @param tableName table to compact
    */
-  default CompletableFuture<Void> compact(TableName tableName) {
-    return compact(tableName, Optional.empty());
-  }
+  CompletableFuture<Void> compact(TableName tableName);
 
   /**
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
@@ -286,16 +291,14 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a table. If not present, compact the table's all
    *          column families.
    */
-  CompletableFuture<Void> compact(TableName tableName, Optional<byte[]> columnFamily);
+  CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily);
 
   /**
    * Compact an individual region. When the returned CompletableFuture is done, it only means the
    * compact request was sent to HBase and may need some time to finish the compact operation.
    * @param regionName region to compact
    */
-  default CompletableFuture<Void> compactRegion(byte[] regionName) {
-    return compactRegion(regionName, Optional.empty());
-  }
+  CompletableFuture<Void> compactRegion(byte[] regionName);
 
   /**
    * Compact a column family within a region. When the returned CompletableFuture is done, it only
@@ -305,16 +308,14 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a region. If not present, compact the region's all
    *          column families.
    */
-  CompletableFuture<Void> compactRegion(byte[] regionName, Optional<byte[]> columnFamily);
+  CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily);
 
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
    * request was sent to HBase and may need some time to finish the compact operation.
    * @param tableName table to major compact
    */
-  default CompletableFuture<Void> majorCompact(TableName tableName) {
-    return majorCompact(tableName, Optional.empty());
-  }
+  CompletableFuture<Void> majorCompact(TableName tableName);
 
   /**
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
@@ -324,16 +325,14 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a table. If not present, major compact the table's all
    *          column families.
    */
-  CompletableFuture<Void> majorCompact(TableName tableName, Optional<byte[]> columnFamily);
+  CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily);
 
   /**
    * Major compact a region. When the returned CompletableFuture is done, it only means the compact
    * request was sent to HBase and may need some time to finish the compact operation.
    * @param regionName region to major compact
    */
-  default CompletableFuture<Void> majorCompactRegion(byte[] regionName) {
-    return majorCompactRegion(regionName, Optional.empty());
-  }
+  CompletableFuture<Void> majorCompactRegion(byte[] regionName);
 
   /**
    * Major compact a column family within region. When the returned CompletableFuture is done, it
@@ -343,7 +342,7 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a region. If not present, major compact the region's
    *          all column families.
    */
-  CompletableFuture<Void> majorCompactRegion(byte[] regionName, Optional<byte[]> columnFamily);
+  CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily);
 
   /**
    * Compact all regions on the region server.
@@ -405,9 +404,7 @@ public interface AsyncAdmin {
    * Split an individual region.
    * @param regionName region to split
    */
-  default CompletableFuture<Void> splitRegion(byte[] regionName) {
-    return splitRegion(regionName, Optional.empty());
-  }
+  CompletableFuture<Void> splitRegion(byte[] regionName);
 
   /**
    * Split a table.
@@ -422,7 +419,7 @@ public interface AsyncAdmin {
    * @param splitPoint the explicit position to split on. If not present, it will decide by region
    *          server.
    */
-  CompletableFuture<Void> splitRegion(byte[] regionName, Optional<byte[]> splitPoint);
+  CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
 
   /**
    * @param regionName Encoded or full name of region to assign.
@@ -432,7 +429,7 @@ public interface AsyncAdmin {
   /**
    * Unassign a region from current hosting regionserver. Region will then be assigned to a
    * regionserver chosen at random. Region could be reassigned back to the same server. Use
-   * {@link #move(byte[], Optional)} if you want to control the region movement.
+   * {@link #move(byte[], ServerName)} if you want to control the region movement.
    * @param regionName Encoded or full name of region to unassign. Will clear any existing
    *          RegionPlan if one found.
    * @param forcible If true, force unassign (Will remove region from regions-in-transition too if
@@ -452,13 +449,19 @@ public interface AsyncAdmin {
   CompletableFuture<Void> offline(byte[] regionName);
 
   /**
+   * Move the region <code>r</code> to a random server.
+   * @param regionName Encoded or full name of region to move.
+   */
+  CompletableFuture<Void> move(byte[] regionName);
+
+  /**
    * Move the region <code>r</code> to <code>dest</code>.
    * @param regionName Encoded or full name of region to move.
    * @param destServerName The servername of the destination regionserver. If not present, we'll
    *          assign to a random server. A server name is made of host, port and startcode. Here is
    *          an example: <code> host187.example.com,60020,1289493121758</code>
    */
-  CompletableFuture<Void> move(byte[] regionName, Optional<ServerName> destServerName);
+  CompletableFuture<Void> move(byte[] regionName, ServerName destServerName);
 
   /**
    * Apply the new quota settings.
@@ -535,9 +538,7 @@ public interface AsyncAdmin {
    * @return a list of replication peers description. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  default CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers() {
-    return listReplicationPeers(Optional.empty());
-  }
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers();
 
   /**
    * Return a list of replication peers.
@@ -545,8 +546,7 @@ public interface AsyncAdmin {
    * @return a list of replication peers description. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  CompletableFuture<List<ReplicationPeerDescription>>
-      listReplicationPeers(Optional<Pattern> pattern);
+  CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern);
 
   /**
    * Find all table and column families that are replicated from this cluster
@@ -652,16 +652,22 @@ public interface AsyncAdmin {
    * @return a list of snapshot descriptors for completed snapshots wrapped by a
    *         {@link CompletableFuture}
    */
-  default CompletableFuture<List<SnapshotDescription>> listSnapshots() {
-    return listSnapshots(Optional.empty());
-  }
+  CompletableFuture<List<SnapshotDescription>> listSnapshots();
 
   /**
    * List all the completed snapshots matching the given pattern.
    * @param pattern The compiled regular expression to match against
    * @return - returns a List of SnapshotDescription wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<List<SnapshotDescription>> listSnapshots(Optional<Pattern> pattern);
+  CompletableFuture<List<SnapshotDescription>> listSnapshots(Pattern pattern);
+
+  /**
+   * List all the completed snapshots matching the given table name pattern.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @return - returns a List of completed SnapshotDescription wrapped by a
+   *         {@link CompletableFuture}
+   */
+  CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern);
 
   /**
    * List all the completed snapshots matching the given table name regular expression and snapshot
@@ -681,12 +687,21 @@ public interface AsyncAdmin {
   CompletableFuture<Void> deleteSnapshot(String snapshotName);
 
   /**
+   * Delete all existing snapshots.
+   */
+  CompletableFuture<Void> deleteSnapshots();
+
+  /**
    * Delete existing snapshots whose names match the pattern passed.
    * @param pattern pattern for names of the snapshot to match
    */
-  default CompletableFuture<Void> deleteSnapshots(Pattern pattern) {
-    return deleteTableSnapshots(null, pattern);
-  }
+  CompletableFuture<Void> deleteSnapshots(Pattern pattern);
+
+  /**
+   * Delete all existing snapshots matching the given table name pattern.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   */
+  CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern);
 
   /**
    * Delete all existing snapshots matching the given table name regular expression and snapshot
@@ -823,15 +838,6 @@ public interface AsyncAdmin {
   }
 
   /**
-   * Get a list of {@link RegionLoad} of all regions hosted on a region seerver.
-   * @param serverName
-   * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
-   */
-  default CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName) {
-    return getRegionLoads(serverName, Optional.empty());
-  }
-
-  /**
    * Shuts down the HBase cluster.
    */
   CompletableFuture<Void> shutdown();
@@ -878,13 +884,19 @@ public interface AsyncAdmin {
   CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
 
   /**
+   * Get a list of {@link RegionLoad} of all regions hosted on a region seerver.
+   * @param serverName
+   * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
+   */
+  CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName);
+
+  /**
    * Get a list of {@link RegionLoad} of all regions hosted on a region seerver for a table.
    * @param serverName
    * @param tableName
    * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
-      Optional<TableName> tableName);
+  CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName, TableName tableName);
 
   /**
    * Check whether master is in maintenance mode

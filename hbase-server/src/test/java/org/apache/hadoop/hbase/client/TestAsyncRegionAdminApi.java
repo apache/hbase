@@ -200,7 +200,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
 
     assertTrue(destServerName != null && !destServerName.equals(serverName));
-    admin.move(hri.getRegionName(), Optional.of(destServerName)).get();
+    admin.move(hri.getRegionName(), destServerName).get();
 
     long timeoutTime = System.currentTimeMillis() + 30000;
     while (true) {
@@ -362,7 +362,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   @Test
   public void testMergeRegions() throws Exception {
     byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
-    createTableWithDefaultConf(tableName, Optional.of(splitRows));
+    createTableWithDefaultConf(tableName, splitRows);
 
     RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
@@ -419,8 +419,11 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     table.putAll(puts).join();
 
     if (isSplitRegion) {
-      admin.splitRegion(regionLocations.get(0).getRegionInfo().getRegionName(),
-        Optional.ofNullable(splitPoint)).get();
+      if (splitPoint == null) {
+        admin.splitRegion(regionLocations.get(0).getRegionInfo().getRegionName()).get();
+      } else {
+        admin.splitRegion(regionLocations.get(0).getRegionInfo().getRegionName(), splitPoint).get();
+      }
     } else {
       if (splitPoint == null) {
         admin.split(tableName).get();
@@ -450,7 +453,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   @Test
   public void testCompactRegionServer() throws Exception {
     byte[][] families = { Bytes.toBytes("f1"), Bytes.toBytes("f2"), Bytes.toBytes("f3") };
-    createTableWithDefaultConf(tableName, Optional.empty(), families);
+    createTableWithDefaultConf(tableName, null, families);
     loadData(tableName, families, 3000, 8);
 
     List<HRegionServer> rsList =
@@ -491,7 +494,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[] family = Bytes.toBytes("family");
     byte[][] families =
         { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
-    createTableWithDefaultConf(tableName, Optional.empty(), families);
+    createTableWithDefaultConf(tableName, null, families);
     loadData(tableName, families, 3000, flushes);
 
     List<Region> regions = new ArrayList<>();
@@ -506,15 +509,15 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     assertTrue(countBefore > 0); // there should be some data files
     if (expectedState == CompactionState.MINOR) {
       if (singleFamily) {
-        admin.compact(tableName, Optional.of(family)).get();
+        admin.compact(tableName, family).get();
       } else {
-        admin.compact(tableName, Optional.empty()).get();
+        admin.compact(tableName).get();
       }
     } else {
       if (singleFamily) {
-        admin.majorCompact(tableName, Optional.of(family)).get();
+        admin.majorCompact(tableName, family).get();
       } else {
-        admin.majorCompact(tableName, Optional.empty()).get();
+        admin.majorCompact(tableName).get();
       }
     }
 

@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,9 +81,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
 import org.apache.hadoop.hbase.shaded.io.netty.util.TimerTask;
@@ -245,6 +242,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcChannel;
 
@@ -385,28 +383,54 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<TableDescriptor>> listTables(Optional<Pattern> pattern,
+  public CompletableFuture<List<TableDescriptor>> listTables(boolean includeSysTables) {
+    return getTableDescriptors(RequestConverter.buildGetTableDescriptorsRequest(null,
+      includeSysTables));
+  }
+
+  /**
+   * {@link #listTables(boolean)}
+   */
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTables(Pattern pattern,
       boolean includeSysTables) {
+    Preconditions.checkNotNull(pattern,
+      "pattern is null. If you don't specify a pattern, use listTables(boolean) instead");
+    return getTableDescriptors(RequestConverter.buildGetTableDescriptorsRequest(pattern,
+      includeSysTables));
+  }
+
+  private CompletableFuture<List<TableDescriptor>>
+      getTableDescriptors(GetTableDescriptorsRequest request) {
     return this.<List<TableDescriptor>> newMasterCaller()
         .action((controller, stub) -> this
             .<GetTableDescriptorsRequest, GetTableDescriptorsResponse, List<TableDescriptor>> call(
-              controller, stub,
-              RequestConverter.buildGetTableDescriptorsRequest(pattern, includeSysTables),
-              (s, c, req, done) -> s.getTableDescriptors(c, req, done),
+              controller, stub, request, (s, c, req, done) -> s.getTableDescriptors(c, req, done),
               (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
         .call();
   }
 
   @Override
-  public CompletableFuture<List<TableName>> listTableNames(Optional<Pattern> pattern,
-      boolean includeSysTables) {
-    return this.<List<TableName>> newMasterCaller()
-        .action((controller, stub) -> this
-            .<GetTableNamesRequest, GetTableNamesResponse, List<TableName>> call(controller, stub,
-              RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables),
-              (s, c, req, done) -> s.getTableNames(c, req, done),
-              (resp) -> ProtobufUtil.toTableNameList(resp.getTableNamesList())))
-        .call();
+  public CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables) {
+    return getTableNames(RequestConverter.buildGetTableNamesRequest(null, includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>>
+      listTableNames(Pattern pattern, boolean includeSysTables) {
+    Preconditions.checkNotNull(pattern,
+        "pattern is null. If you don't specify a pattern, use listTableNames(boolean) instead");
+    return getTableNames(RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables));
+  }
+
+  private CompletableFuture<List<TableName>> getTableNames(GetTableNamesRequest request) {
+    return this
+        .<List<TableName>> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<GetTableNamesRequest, GetTableNamesResponse, List<TableName>> call(controller,
+                stub, request, (s, c, req, done) -> s.getTableNames(c, req, done),
+                (resp) -> ProtobufUtil.toTableNameList(resp.getTableNamesList()))).call();
   }
 
   @Override
@@ -433,29 +457,39 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> createTable(TableDescriptor desc) {
+    return createTable(desc.getTableName(),
+      RequestConverter.buildCreateTableRequest(desc, null, ng.getNonceGroup(), ng.newNonce()));
+  }
+
+  @Override
   public CompletableFuture<Void> createTable(TableDescriptor desc, byte[] startKey, byte[] endKey,
       int numRegions) {
     try {
-      return createTable(desc, Optional.of(getSplitKeys(startKey, endKey, numRegions)));
+      return createTable(desc, getSplitKeys(startKey, endKey, numRegions));
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
   }
 
   @Override
-  public CompletableFuture<Void> createTable(TableDescriptor desc, Optional<byte[][]> splitKeys) {
-    if (desc.getTableName() == null) {
-      return failedFuture(new IllegalArgumentException("TableName cannot be null"));
-    }
+  public CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys) {
+    Preconditions.checkNotNull(splitKeys, "splitKeys is null. If you don't specify splitKeys,"
+        + " use createTable(TableDescriptor) instead");
     try {
-      splitKeys.ifPresent(keys -> verifySplitKeys(keys));
-      return this.<CreateTableRequest, CreateTableResponse> procedureCall(RequestConverter
-          .buildCreateTableRequest(desc, splitKeys, ng.getNonceGroup(), ng.newNonce()), (s, c, req,
-          done) -> s.createTable(c, req, done), (resp) -> resp.getProcId(),
-        new CreateTableProcedureBiConsumer(this, desc.getTableName()));
+      verifySplitKeys(splitKeys);
+      return createTable(desc.getTableName(), RequestConverter.buildCreateTableRequest(desc,
+        splitKeys, ng.getNonceGroup(), ng.newNonce()));
     } catch (IllegalArgumentException e) {
       return failedFuture(e);
     }
+  }
+
+  private CompletableFuture<Void> createTable(TableName tableName, CreateTableRequest request) {
+    Preconditions.checkNotNull(tableName, "table name is null");
+    return this.<CreateTableRequest, CreateTableResponse> procedureCall(request,
+      (s, c, req, done) -> s.createTable(c, req, done), (resp) -> resp.getProcId(),
+      new CreateTableProcedureBiConsumer(this, tableName));
   }
 
   @Override
@@ -526,11 +560,18 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> isTableAvailable(TableName tableName) {
-    return isTableAvailable(tableName, null);
+    return isTableAvailable(tableName, Optional.empty());
   }
 
   @Override
   public CompletableFuture<Boolean> isTableAvailable(TableName tableName, byte[][] splitKeys) {
+    Preconditions.checkNotNull(splitKeys, "splitKeys is null. If you don't specify splitKeys,"
+        + " use isTableAvailable(TableName) instead");
+    return isTableAvailable(tableName, Optional.of(splitKeys));
+  }
+
+  private CompletableFuture<Boolean> isTableAvailable(TableName tableName,
+      Optional<byte[][]> splitKeys) {
     CompletableFuture<Boolean> future = new CompletableFuture<>();
     isTableEnabled(tableName).whenComplete(
       (enabled, error) -> {
@@ -548,52 +589,44 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
                     future.completeExceptionally(error1);
                     return;
                   }
-                  int notDeployed = 0;
-                  int regionCount = 0;
-                  for (HRegionLocation location : locations) {
-                    RegionInfo info = location.getRegionInfo();
-                    if (location.getServerName() == null) {
-                      if (LOG.isDebugEnabled()) {
-                        LOG.debug("Table " + tableName + " has not deployed region "
-                            + info.getEncodedName());
-                      }
-                      notDeployed++;
-                    } else if (splitKeys != null
-                        && !Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-                      for (byte[] splitKey : splitKeys) {
-                        // Just check if the splitkey is available
-                        if (Bytes.equals(info.getStartKey(), splitKey)) {
-                          regionCount++;
-                          break;
-                        }
-                      }
-                    } else {
-                      // Always empty start row should be counted
-                      regionCount++;
-                    }
-                  }
-                  if (notDeployed > 0) {
+                  List<HRegionLocation> notDeployedRegions =
+                      locations.stream().filter(loc -> loc.getServerName() == null)
+                          .collect(Collectors.toList());
+                  if (notDeployedRegions.size() > 0) {
                     if (LOG.isDebugEnabled()) {
-                      LOG.debug("Table " + tableName + " has " + notDeployed + " regions");
+                      LOG.debug("Table " + tableName + " has " + notDeployedRegions.size()
+                          + " regions");
                     }
                     future.complete(false);
-                  } else if (splitKeys != null && regionCount != splitKeys.length + 1) {
-                    if (LOG.isDebugEnabled()) {
-                      LOG.debug("Table " + tableName + " expected to have "
-                          + (splitKeys.length + 1) + " regions, but only " + regionCount
-                          + " available");
-                    }
-                    future.complete(false);
-                  } else {
-                    if (LOG.isDebugEnabled()) {
-                      LOG.debug("Table " + tableName + " should be available");
-                    }
-                    future.complete(true);
+                    return;
                   }
+
+                  Optional<Boolean> available =
+                      splitKeys.map(keys -> compareRegionsWithSplitKeys(locations, keys));
+                  future.complete(available.orElse(true));
                 });
         }
       });
     return future;
+  }
+
+  private boolean compareRegionsWithSplitKeys(List<HRegionLocation> locations, byte[][] splitKeys) {
+    int regionCount = 0;
+    for (HRegionLocation location : locations) {
+      RegionInfo info = location.getRegion();
+      if (Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
+        regionCount++;
+        continue;
+      }
+      for (byte[] splitKey : splitKeys) {
+        // Just check if the splitkey is available
+        if (Bytes.equals(info.getStartKey(), splitKey)) {
+          regionCount++;
+          break;
+        }
+      }
+    }
+    return regionCount == splitKeys.length + 1;
   }
 
   @Override
@@ -757,22 +790,50 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> compact(TableName tableName) {
+    return compact(tableName, null, false, CompactType.NORMAL);
+  }
+
+  @Override
+  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily,
+      "columnFamily is null. If you don't specify a columnFamily, use compact(TableName) instead");
     return compact(tableName, columnFamily, false, CompactType.NORMAL);
   }
 
   @Override
-  public CompletableFuture<Void> compactRegion(byte[] regionName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> compactRegion(byte[] regionName) {
+    return compactRegion(regionName, null, false);
+  }
+
+  @Override
+  public CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily, "columnFamily is null."
+        + " If you don't specify a columnFamily, use compactRegion(regionName) instead");
     return compactRegion(regionName, columnFamily, false);
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> majorCompact(TableName tableName) {
+    return compact(tableName, null, true, CompactType.NORMAL);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily, "columnFamily is null."
+        + " If you don't specify a columnFamily, use majorCompact(TableName) instead");
     return compact(tableName, columnFamily, true, CompactType.NORMAL);
   }
 
   @Override
-  public CompletableFuture<Void> majorCompactRegion(byte[] regionName, Optional<byte[]> columnFamily) {
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName) {
+    return compactRegion(regionName, null, true);
+  }
+
+  @Override
+  public CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily) {
+    Preconditions.checkNotNull(columnFamily, "columnFamily is null."
+        + " If you don't specify a columnFamily, use majorCompactRegion(regionName) instead");
     return compactRegion(regionName, columnFamily, true);
   }
 
@@ -795,7 +856,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
       if (hRegionInfos != null) {
-        hRegionInfos.forEach(region -> compactFutures.add(compact(sn, region, major, Optional.empty())));
+        hRegionInfos.forEach(region -> compactFutures.add(compact(sn, region, major, null)));
       }
       CompletableFuture
           .allOf(compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()]))
@@ -810,7 +871,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private CompletableFuture<Void> compactRegion(byte[] regionName, Optional<byte[]> columnFamily,
+  private CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily,
       boolean major) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     getRegionLocation(regionName).whenComplete(
@@ -868,7 +929,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   /**
    * Compact column family of a table, Asynchronous operation even if CompletableFuture.get()
    */
-  private CompletableFuture<Void> compact(final TableName tableName, Optional<byte[]> columnFamily,
+  private CompletableFuture<Void> compact(final TableName tableName, byte[] columnFamily,
       final boolean major, CompactType compactType) {
     if (CompactType.MOB.equals(compactType)) {
       // TODO support MOB compact.
@@ -905,7 +966,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
    * Compact the region at specific region server.
    */
   private CompletableFuture<Void> compact(final ServerName sn, final RegionInfo hri,
-      final boolean major, Optional<byte[]> columnFamily) {
+      final boolean major, byte[] columnFamily) {
     return this
         .<Void> newAdminCaller()
         .serverName(sn)
@@ -1078,7 +1139,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
                       if (hri == null || hri.isSplitParent()
                           || hri.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID)
                         continue;
-                      splitFutures.add(split(hri, Optional.empty()));
+                      splitFutures.add(split(hri, null));
                     }
                   }
                 }
@@ -1114,7 +1175,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
             result.completeExceptionally(new IllegalArgumentException(
                 "Region does not found: rowKey=" + Bytes.toStringBinary(splitPoint)));
           } else {
-            splitRegion(loc.getRegionInfo().getRegionName(), Optional.of(splitPoint))
+            splitRegion(loc.getRegionInfo().getRegionName(), splitPoint)
                 .whenComplete((ret, err2) -> {
                   if (err2 != null) {
                     result.completeExceptionally(err2);
@@ -1129,11 +1190,11 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> splitRegion(byte[] regionName, Optional<byte[]> splitPoint) {
+  public CompletableFuture<Void> splitRegion(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     getRegionLocation(regionName).whenComplete(
       (location, err) -> {
-        RegionInfo regionInfo = location.getRegionInfo();
+        RegionInfo regionInfo = location.getRegion();
         if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
           future.completeExceptionally(new IllegalArgumentException(
               "Can't split replicas directly. "
@@ -1144,6 +1205,43 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
         if (serverName == null) {
           future.completeExceptionally(new NoServerForRegionException(Bytes
               .toStringBinary(regionName)));
+          return;
+        }
+        split(regionInfo, null).whenComplete((ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }
+        });
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint) {
+    Preconditions.checkNotNull(splitPoint,
+      "splitPoint is null. If you don't specify a splitPoint, use splitRegion(byte[]) instead");
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegionLocation(regionName).whenComplete(
+      (location, err) -> {
+        RegionInfo regionInfo = location.getRegion();
+        if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+          future.completeExceptionally(new IllegalArgumentException(
+              "Can't split replicas directly. "
+                  + "Replicas are auto-split when their primary is split."));
+          return;
+        }
+        ServerName serverName = location.getServerName();
+        if (serverName == null) {
+          future.completeExceptionally(new NoServerForRegionException(Bytes
+              .toStringBinary(regionName)));
+          return;
+        }
+        if (regionInfo.getStartKey() != null
+            && Bytes.compareTo(regionInfo.getStartKey(), splitPoint) == 0) {
+          future.completeExceptionally(new IllegalArgumentException(
+              "should not give a splitkey which equals to startkey!"));
           return;
         }
         split(regionInfo, splitPoint).whenComplete((ret, err2) -> {
@@ -1157,20 +1255,13 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private CompletableFuture<Void> split(final RegionInfo hri,
-      Optional<byte[]> splitPoint) {
-    if (hri.getStartKey() != null && splitPoint.isPresent()
-        && Bytes.compareTo(hri.getStartKey(), splitPoint.get()) == 0) {
-      return failedFuture(new IllegalArgumentException(
-          "should not give a splitkey which equals to startkey!"));
-    }
-
+  private CompletableFuture<Void> split(final RegionInfo hri, byte[] splitPoint) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     TableName tableName = hri.getTable();
     SplitTableRegionRequest request = null;
     try {
       request = RequestConverter
-          .buildSplitTableRegionRequest(hri, splitPoint.isPresent() ? splitPoint.get() : null,
+          .buildSplitTableRegionRequest(hri, splitPoint,
               ng.getNonceGroup(), ng.newNonce());
     } catch (DeserializationException e) {
       future.completeExceptionally(e);
@@ -1266,7 +1357,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> move(byte[] regionName, Optional<ServerName> destServerName) {
+  public CompletableFuture<Void> move(byte[] regionName) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     getRegionInfo(regionName).whenComplete(
       (regionInfo, err) -> {
@@ -1274,12 +1365,9 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
           future.completeExceptionally(err);
           return;
         }
-        this.<Void> newMasterCaller()
-            .action(
-              (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(
-                controller, stub, RequestConverter.buildMoveRegionRequest(
-                  regionInfo.getEncodedNameAsBytes(), destServerName), (s, c, req, done) -> s
-                    .moveRegion(c, req, done), resp -> null)).call().whenComplete((ret, err2) -> {
+        moveRegion(
+          RequestConverter.buildMoveRegionRequest(regionInfo.getEncodedNameAsBytes(), null))
+            .whenComplete((ret, err2) -> {
               if (err2 != null) {
                 future.completeExceptionally(err2);
               } else {
@@ -1288,6 +1376,37 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
             });
       });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> move(byte[] regionName, ServerName destServerName) {
+    Preconditions.checkNotNull(destServerName,
+      "destServerName is null. If you don't specify a destServerName, use move(byte[]) instead");
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegionInfo(regionName).whenComplete((regionInfo, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      moveRegion(
+        RequestConverter.buildMoveRegionRequest(regionInfo.getEncodedNameAsBytes(), destServerName))
+            .whenComplete((ret, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(ret);
+              }
+            });
+    });
+    return future;
+  }
+
+  private CompletableFuture<Void> moveRegion(MoveRegionRequest request) {
+    return this
+        .<Void> newMasterCaller()
+        .action(
+          (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(controller,
+            stub, request, (s, c, req, done) -> s.moveRegion(c, req, done), resp -> null)).call();
   }
 
   @Override
@@ -1452,7 +1571,19 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Optional<Pattern> pattern) {
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers() {
+    return listReplicationPeers(RequestConverter.buildListReplicationPeersRequest(null));
+  }
+
+  @Override
+  public CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(Pattern pattern) {
+    Preconditions.checkNotNull(pattern,
+      "pattern is null. If you don't specify a pattern, use listReplicationPeers() instead");
+    return listReplicationPeers(RequestConverter.buildListReplicationPeersRequest(pattern));
+  }
+
+  private CompletableFuture<List<ReplicationPeerDescription>> listReplicationPeers(
+      ListReplicationPeersRequest request) {
     return this
         .<List<ReplicationPeerDescription>> newMasterCaller()
         .action(
@@ -1460,7 +1591,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
               .<ListReplicationPeersRequest, ListReplicationPeersResponse, List<ReplicationPeerDescription>> call(
                 controller,
                 stub,
-                RequestConverter.buildListReplicationPeersRequest(pattern),
+                request,
                 (s, c, req, done) -> s.listReplicationPeers(c, req, done),
                 (resp) -> resp.getPeerDescList().stream()
                     .map(ReplicationSerDeHelper::toReplicationPeerDescription)
@@ -1570,7 +1701,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    listSnapshots(Optional.of(Pattern.compile(snapshotName))).whenComplete(
+    listSnapshots(Pattern.compile(snapshotName)).whenComplete(
       (snapshotDescriptions, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
@@ -1715,37 +1846,47 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<List<SnapshotDescription>> listSnapshots(Optional<Pattern> pattern) {
-    CompletableFuture<List<SnapshotDescription>> future = new CompletableFuture<>();
-    this.<GetCompletedSnapshotsResponse> newMasterCaller()
-        .action(
-          (controller, stub) -> this
-              .<GetCompletedSnapshotsRequest, GetCompletedSnapshotsResponse, GetCompletedSnapshotsResponse> call(
-                controller, stub, GetCompletedSnapshotsRequest.newBuilder().build(), (s, c, req,
-                    done) -> s.getCompletedSnapshots(c, req, done), resp -> resp))
-        .call()
-        .whenComplete(
-          (resp, err) -> {
-            if (err != null) {
-              future.completeExceptionally(err);
-              return;
-            }
-            future.complete(resp
-                .getSnapshotsList()
-                .stream()
-                .map(ProtobufUtil::createSnapshotDesc)
-                .filter(
-                  snap -> pattern.isPresent() ? pattern.get().matcher(snap.getName()).matches()
-                      : true).collect(Collectors.toList()));
-          });
-    return future;
+  public CompletableFuture<List<SnapshotDescription>> listSnapshots() {
+    return getCompletedSnapshots(null);
+  }
+
+  @Override
+  public CompletableFuture<List<SnapshotDescription>> listSnapshots(Pattern pattern) {
+    Preconditions.checkNotNull(pattern,
+      "pattern is null. If you don't specify a pattern, use listSnapshots() instead");
+    return getCompletedSnapshots(pattern);
+  }
+
+  private CompletableFuture<List<SnapshotDescription>> getCompletedSnapshots(Pattern pattern) {
+    return this.<List<SnapshotDescription>> newMasterCaller().action((controller, stub) -> this
+        .<GetCompletedSnapshotsRequest, GetCompletedSnapshotsResponse, List<SnapshotDescription>>
+        call(controller, stub, GetCompletedSnapshotsRequest.newBuilder().build(),
+          (s, c, req, done) -> s.getCompletedSnapshots(c, req, done),
+          resp -> ProtobufUtil.toSnapshotDescriptionList(resp, pattern)))
+        .call();
+  }
+
+  @Override
+  public CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern) {
+    Preconditions.checkNotNull(tableNamePattern, "tableNamePattern is null."
+        + " If you don't specify a tableNamePattern, use listSnapshots() instead");
+    return getCompletedSnapshots(tableNamePattern, null);
   }
 
   @Override
   public CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern,
       Pattern snapshotNamePattern) {
+    Preconditions.checkNotNull(tableNamePattern, "tableNamePattern is null."
+        + " If you don't specify a tableNamePattern, use listSnapshots(Pattern) instead");
+    Preconditions.checkNotNull(snapshotNamePattern, "snapshotNamePattern is null."
+        + " If you don't specify a snapshotNamePattern, use listTableSnapshots(Pattern) instead");
+    return getCompletedSnapshots(tableNamePattern, snapshotNamePattern);
+  }
+
+  private CompletableFuture<List<SnapshotDescription>> getCompletedSnapshots(
+      Pattern tableNamePattern, Pattern snapshotNamePattern) {
     CompletableFuture<List<SnapshotDescription>> future = new CompletableFuture<>();
-    listTableNames(Optional.ofNullable(tableNamePattern), false).whenComplete(
+    listTableNames(tableNamePattern, false).whenComplete(
       (tableNames, err) -> {
         if (err != null) {
           future.completeExceptionally(err);
@@ -1755,7 +1896,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
           future.complete(Collections.emptyList());
           return;
         }
-        listSnapshots(Optional.ofNullable(snapshotNamePattern)).whenComplete(
+        getCompletedSnapshots(snapshotNamePattern).whenComplete(
           (snapshotDescList, err2) -> {
             if (err2 != null) {
               future.completeExceptionally(err2);
@@ -1779,31 +1920,59 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> deleteSnapshots() {
+    return internalDeleteSnapshots(null, null);
+  }
+
+  @Override
   public CompletableFuture<Void> deleteSnapshots(Pattern snapshotNamePattern) {
-    return deleteTableSnapshots(null, snapshotNamePattern);
+    Preconditions.checkNotNull(snapshotNamePattern, "snapshotNamePattern is null."
+        + " If you don't specify a snapshotNamePattern, use deleteSnapshots() instead");
+    return internalDeleteSnapshots(null, snapshotNamePattern);
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern) {
+    Preconditions.checkNotNull(tableNamePattern, "tableNamePattern is null."
+        + " If you don't specify a tableNamePattern, use deleteSnapshots() instead");
+    return internalDeleteSnapshots(tableNamePattern, null);
   }
 
   @Override
   public CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern,
       Pattern snapshotNamePattern) {
+    Preconditions.checkNotNull(tableNamePattern, "tableNamePattern is null."
+        + " If you don't specify a tableNamePattern, use deleteSnapshots(Pattern) instead");
+    Preconditions.checkNotNull(snapshotNamePattern, "snapshotNamePattern is null."
+        + " If you don't specify a snapshotNamePattern, use deleteSnapshots(Pattern) instead");
+    return internalDeleteSnapshots(tableNamePattern, snapshotNamePattern);
+  }
+
+  private CompletableFuture<Void> internalDeleteSnapshots(Pattern tableNamePattern,
+      Pattern snapshotNamePattern) {
+    CompletableFuture<List<SnapshotDescription>> listSnapshotsFuture;
+    if (tableNamePattern == null) {
+      listSnapshotsFuture = getCompletedSnapshots(snapshotNamePattern);
+    } else {
+      listSnapshotsFuture = getCompletedSnapshots(tableNamePattern, snapshotNamePattern);
+    }
     CompletableFuture<Void> future = new CompletableFuture<>();
-    listTableSnapshots(tableNamePattern, snapshotNamePattern).whenComplete(
-      ((snapshotDescriptions, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-          return;
-        }
-        if (snapshotDescriptions == null || snapshotDescriptions.isEmpty()) {
-          future.complete(null);
-          return;
-        }
-        List<CompletableFuture<Void>> deleteSnapshotFutures = new ArrayList<>();
-        snapshotDescriptions.forEach(snapDesc -> deleteSnapshotFutures
-            .add(internalDeleteSnapshot(snapDesc)));
-        CompletableFuture.allOf(
-          deleteSnapshotFutures.toArray(new CompletableFuture<?>[deleteSnapshotFutures.size()]))
-            .thenAccept(v -> future.complete(v));
-      }));
+    listSnapshotsFuture.whenComplete(((snapshotDescriptions, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      if (snapshotDescriptions == null || snapshotDescriptions.isEmpty()) {
+        future.complete(null);
+        return;
+      }
+      List<CompletableFuture<Void>> deleteSnapshotFutures = new ArrayList<>();
+      snapshotDescriptions.forEach(snapDesc -> deleteSnapshotFutures
+          .add(internalDeleteSnapshot(snapDesc)));
+      CompletableFuture.allOf(
+        deleteSnapshotFutures.toArray(new CompletableFuture<?>[deleteSnapshotFutures.size()]))
+          .thenAccept(v -> future.complete(v));
+    }));
     return future;
   }
 
@@ -2485,16 +2654,26 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName) {
+    return getRegionLoad(GetRegionLoadRequest.newBuilder().build(), serverName);
+  }
+
+  @Override
   public CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName,
-      Optional<TableName> tableName) {
-    return this
-        .<List<RegionLoad>> newAdminCaller()
-        .action(
-          (controller, stub) -> this
-              .<GetRegionLoadRequest, GetRegionLoadResponse, List<RegionLoad>> adminCall(
-                controller, stub, RequestConverter.buildGetRegionLoadRequest(tableName), (s, c,
-                    req, done) -> s.getRegionLoad(controller, req, done),
-                ProtobufUtil::getRegionLoadInfo)).serverName(serverName).call();
+      TableName tableName) {
+    Preconditions.checkNotNull(tableName,
+      "tableName is null. If you don't specify a tableName, use getRegionLoads() instead");
+    return getRegionLoad(RequestConverter.buildGetRegionLoadRequest(tableName), serverName);
+  }
+
+  private CompletableFuture<List<RegionLoad>> getRegionLoad(GetRegionLoadRequest request,
+      ServerName serverName) {
+    return this.<List<RegionLoad>> newAdminCaller()
+        .action((controller, stub) -> this
+            .<GetRegionLoadRequest, GetRegionLoadResponse, List<RegionLoad>> adminCall(controller,
+              stub, request, (s, c, req, done) -> s.getRegionLoad(controller, req, done),
+              ProtobufUtil::getRegionLoadInfo))
+        .serverName(serverName).call();
   }
 
   @Override

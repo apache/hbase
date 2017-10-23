@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -138,7 +137,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
               conn.getAdmin(getLocation().getServerName());
             CompactRegionRequest request =
               RequestConverter.buildCompactRegionRequest(
-                getLocation().getRegionInfo().getRegionName(), true, Optional.empty());
+                getLocation().getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;

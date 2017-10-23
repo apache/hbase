@@ -242,7 +242,7 @@ public class TestHRegionServerBulkLoad {
             AdminProtos.AdminService.BlockingInterface server =
               conn.getAdmin(getLocation().getServerName());
             CompactRegionRequest request = RequestConverter.buildCompactRegionRequest(
-                getLocation().getRegionInfo().getRegionName(), true, Optional.empty());
+                getLocation().getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;

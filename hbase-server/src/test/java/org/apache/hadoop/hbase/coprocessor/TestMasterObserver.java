@@ -1543,7 +1543,7 @@ public class TestMasterObserver {
       assertTrue("Found server", found);
       LOG.info("Found " + destName);
       master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
-          firstGoodPair.getRegionInfo().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
+          firstGoodPair.getRegionInfo().getEncodedNameAsBytes(), ServerName.valueOf(destName)));
       assertTrue("Coprocessor should have been called on region move",
         cp.wasMoveCalled());
 
@@ -1565,11 +1565,12 @@ public class TestMasterObserver {
       UTIL.waitUntilNoRegionsInTransition();
       List<RegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
       int moveCnt = openRegions.size()/2;
-      for (int i=0; i<moveCnt; i++) {
+      for (int i = 0; i < moveCnt; i++) {
         RegionInfo info = openRegions.get(i);
         if (!info.isMetaRegion()) {
-          master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
-              openRegions.get(i).getEncodedNameAsBytes(), destRS));
+          master.getMasterRpcServices().moveRegion(null,
+            RequestConverter.buildMoveRegionRequest(openRegions.get(i).getEncodedNameAsBytes(),
+              ServerName.valueOf(Bytes.toString(destRS))));
         }
       }
       //Make sure no regions are in transition now

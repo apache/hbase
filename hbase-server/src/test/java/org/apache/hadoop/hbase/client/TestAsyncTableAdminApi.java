@@ -120,9 +120,9 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       admin.deleteTable(tables[i]).join();
     }
 
-    tableDescs = admin.listTables(Optional.empty(), true).get();
+    tableDescs = admin.listTables(true).get();
     assertTrue("Not found system tables", tableDescs.size() > 0);
-    tableNames = admin.listTableNames(Optional.empty(), true).get();
+    tableNames = admin.listTableNames(true).get();
     assertTrue("Not found system tables", tableNames.size() > 0);
   }
 
@@ -169,7 +169,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals("Table should have only 1 region", 1, regionLocations.size());
 
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
-    createTableWithDefaultConf(tableName2, Optional.of(new byte[][] { new byte[] { 42 } }));
+    createTableWithDefaultConf(tableName2, new byte[][] { new byte[] { 42 } });
     regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
     assertEquals("Table should have only 2 region", 2, regionLocations.size());
@@ -208,7 +208,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
         new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
     int expectedRegions = splitKeys.length + 1;
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
-    createTableWithDefaultConf(tableName, Optional.of(splitKeys));
+    createTableWithDefaultConf(tableName, splitKeys);
 
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
@@ -342,7 +342,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
         new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
     final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");;
     try {
-      createTableWithDefaultConf(tableName4, Optional.of(splitKeys));
+      createTableWithDefaultConf(tableName4, splitKeys);
       fail("Should not be able to create this table because of " + "duplicate split keys");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
@@ -376,7 +376,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     try {
-      createTableWithDefaultConf(tableName, Optional.of(splitKeys));
+      createTableWithDefaultConf(tableName, splitKeys);
       fail("Test case should fail as empty split key is passed.");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
@@ -390,7 +390,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
     splitKeys[2] = "region2".getBytes();
     try {
-      createTableWithDefaultConf(tableName, Optional.of(splitKeys));
+      createTableWithDefaultConf(tableName, splitKeys);
       fail("Test case should fail as empty split key is passed.");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
@@ -423,7 +423,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     splitKeys[1] = Bytes.toBytes(8);
 
     // Create & Fill the table
-    createTableWithDefaultConf(tableName, Optional.of(splitKeys));
+    createTableWithDefaultConf(tableName, splitKeys);
     RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
     int expectedRows = 10;
     for (int i = 0; i < expectedRows; i++) {
@@ -517,7 +517,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     table1.get(get).get();
     table2.get(get).get();
 
-    admin.listTableNames(Optional.of(Pattern.compile(tableName.getNameAsString() + ".*")), false)
+    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
         .get().forEach(t -> admin.disableTable(t).join());
 
     // Test that tables are disabled
@@ -541,7 +541,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName1));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName2));
 
-    admin.listTableNames(Optional.of(Pattern.compile(tableName.getNameAsString() + ".*")), false)
+    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
         .get().forEach(t -> admin.enableTable(t).join());
 
     // Test that tables are enabled
@@ -567,7 +567,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
             new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
             new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
-    createTableWithDefaultConf(tableName, Optional.of(splitKeys));
+    createTableWithDefaultConf(tableName, splitKeys);
 
     RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
     List<HRegionLocation> regions =

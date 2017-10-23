@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -254,7 +253,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
       List<RegionInfo> tableRegions = admin.getTableRegions(table).get();
       List<RegionLoad> regionLoads = Lists.newArrayList();
       for (ServerName serverName : servers) {
-        regionLoads.addAll(admin.getRegionLoads(serverName, Optional.of(table)).get());
+        regionLoads.addAll(admin.getRegionLoads(serverName, table).get());
       }
       checkRegionsAndRegionLoads(tableRegions, regionLoads);
     }

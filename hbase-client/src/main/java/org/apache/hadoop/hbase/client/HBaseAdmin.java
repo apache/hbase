@@ -1371,14 +1371,14 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void move(final byte [] encodedRegionName, final byte [] destServerName)
-  throws IOException {
+  public void move(final byte[] encodedRegionName, final byte[] destServerName) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
         setPriority(encodedRegionName);
         MoveRegionRequest request =
-            RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
+            RequestConverter.buildMoveRegionRequest(encodedRegionName,
+              destServerName != null ? ServerName.valueOf(Bytes.toString(destServerName)) : null);
         master.moveRegion(getRpcController(), request);
         return null;
       }
