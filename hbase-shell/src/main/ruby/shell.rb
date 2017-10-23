@@ -109,6 +109,10 @@ module Shell
       @hbase_quotas_admin ||= hbase.quotas_admin()
     end
 
+    def hbase_rsgroup_admin
+      @rsgroup_admin ||= hbase.rsgroup_admin()
+    end
+
     def export_commands(where)
       ::Shell.commands.keys.each do |cmd|
         # here where is the IRB namespace
@@ -442,5 +446,23 @@ Shell.load_command_group(
     get_auths
     clear_auths
     set_visibility
+  ]
+)
+
+Shell.load_command_group(
+  'rsgroup',
+  :full_name => 'RSGroups',
+  :comment => "NOTE: Above commands are only applicable if running with the Groups setup",
+  :commands => %w[
+    list_rsgroups
+    get_rsgroup
+    add_rsgroup
+    remove_rsgroup
+    balance_rsgroup
+    move_servers_rsgroup
+    move_tables_rsgroup
+    move_servers_tables_rsgroup
+    get_server_rsgroup
+    get_table_rsgroup
   ]
 )

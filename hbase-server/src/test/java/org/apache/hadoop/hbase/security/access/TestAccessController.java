@@ -2965,4 +2965,79 @@ public class TestAccessController extends SecureTestUtil {
       TEST_UTIL.deleteTable(tname);
     }
   }
+
+  @Test
+  public void testMoveServers() throws Exception {
+    AccessTestAction action1 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preMoveServers(ObserverContext.createAndPrepare(CP_ENV, null),
+            null, null);
+        return null;
+      }
+    };
+
+    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
+    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testMoveTables() throws Exception {
+    AccessTestAction action1 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preMoveTables(ObserverContext.createAndPrepare(CP_ENV, null),
+            null, null);
+        return null;
+      }
+    };
+
+    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
+    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testAddGroup() throws Exception {
+    AccessTestAction action1 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preAddRSGroup(ObserverContext.createAndPrepare(CP_ENV, null),
+            null);
+        return null;
+      }
+    };
+
+    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
+    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testRemoveGroup() throws Exception {
+    AccessTestAction action1 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRemoveRSGroup(ObserverContext.createAndPrepare(CP_ENV, null),
+            null);
+        return null;
+      }
+    };
+
+    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
+    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testBalanceGroup() throws Exception {
+    AccessTestAction action1 = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preBalanceRSGroup(ObserverContext.createAndPrepare(CP_ENV, null),
+            null);
+        return null;
+      }
+    };
+
+    verifyAllowed(action1, SUPERUSER, USER_ADMIN);
+    verifyDenied(action1, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
 }

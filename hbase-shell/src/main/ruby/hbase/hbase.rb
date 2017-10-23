@@ -54,6 +54,10 @@ module Hbase
       ::Hbase::TaskMonitor.new(configuration)
     end
 
+    def rsgroup_admin()
+      ::Hbase::RSGroupAdmin.new(@connection)
+    end
+
     # Create new one each time
     def table(table, shell)
       ::Hbase::Table.new(@connection.getTable(table), shell)

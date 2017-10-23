@@ -24,6 +24,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -106,7 +107,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     this.hostnameOnly = hostname;
     this.port = port;
     this.startcode = startcode;
-    this.servername = getServerName(this.hostnameOnly, port, startcode);
+    this.servername = getServerName(hostname, port, startcode);
   }
 
   /**
@@ -402,4 +403,26 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     int port = Addressing.parsePort(str);
     return valueOf(hostname, port, -1L);
   }
+
+  /**
+   * @return an Address constructed from the hostname and port carried by this ServerName
+   */
+  public Address getAddress() {
+    return Address.fromParts(getHostname(), getPort());
+  }
+
+  /**
+   * @param left
+   * @param right
+   * @return True if <code>other</code> has same hostname and port.
+   */
+  public static boolean isSameAddress(final ServerName left,
+                                      final ServerName right) {
+    // TODO: Make this left.getAddress().equals(right.getAddress())
+    if (left == null) return false;
+    if (right == null) return false;
+    return left.getHostname().compareToIgnoreCase(right.getHostname()) == 0 &&
+      left.getPort() == right.getPort();
+  }
+
 }

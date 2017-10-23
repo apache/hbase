@@ -78,6 +78,10 @@ module Hbase
       @shell.hbase_replication_admin
     end
 
+    def group_admin
+      @shell.hbase_group_admin
+    end
+
     def create_test_table(name)
       # Create the table if needed
       unless admin.exists?(name)

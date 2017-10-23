@@ -1986,7 +1986,7 @@ public final class ClientProtos {
      * <code>optional bool load_column_families_on_demand = 14;</code>
      *
      * <pre>
-     * DO NOT add defaults to load_column_families_on_demand.
+     * DO NOT add defaults to load_column_families_on_demand. 
      * </pre>
      */
     boolean hasLoadColumnFamiliesOnDemand();
@@ -1994,7 +1994,7 @@ public final class ClientProtos {
      * <code>optional bool load_column_families_on_demand = 14;</code>
      *
      * <pre>
-     * DO NOT add defaults to load_column_families_on_demand.
+     * DO NOT add defaults to load_column_families_on_demand. 
      * </pre>
      */
     boolean getLoadColumnFamiliesOnDemand();
@@ -2515,7 +2515,7 @@ public final class ClientProtos {
      * <code>optional bool load_column_families_on_demand = 14;</code>
      *
      * <pre>
-     * DO NOT add defaults to load_column_families_on_demand.
+     * DO NOT add defaults to load_column_families_on_demand. 
      * </pre>
      */
     public boolean hasLoadColumnFamiliesOnDemand() {
@@ -2525,7 +2525,7 @@ public final class ClientProtos {
      * <code>optional bool load_column_families_on_demand = 14;</code>
      *
      * <pre>
-     * DO NOT add defaults to load_column_families_on_demand.
+     * DO NOT add defaults to load_column_families_on_demand. 
      * </pre>
      */
     public boolean getLoadColumnFamiliesOnDemand() {
@@ -4577,7 +4577,7 @@ public final class ClientProtos {
        * <code>optional bool load_column_families_on_demand = 14;</code>
        *
        * <pre>
-       * DO NOT add defaults to load_column_families_on_demand.
+       * DO NOT add defaults to load_column_families_on_demand. 
        * </pre>
        */
       public boolean hasLoadColumnFamiliesOnDemand() {
@@ -4587,7 +4587,7 @@ public final class ClientProtos {
        * <code>optional bool load_column_families_on_demand = 14;</code>
        *
        * <pre>
-       * DO NOT add defaults to load_column_families_on_demand.
+       * DO NOT add defaults to load_column_families_on_demand. 
        * </pre>
        */
       public boolean getLoadColumnFamiliesOnDemand() {
@@ -4597,7 +4597,7 @@ public final class ClientProtos {
        * <code>optional bool load_column_families_on_demand = 14;</code>
        *
        * <pre>
-       * DO NOT add defaults to load_column_families_on_demand.
+       * DO NOT add defaults to load_column_families_on_demand. 
        * </pre>
        */
       public Builder setLoadColumnFamiliesOnDemand(boolean value) {
@@ -4610,7 +4610,7 @@ public final class ClientProtos {
        * <code>optional bool load_column_families_on_demand = 14;</code>
        *
        * <pre>
-       * DO NOT add defaults to load_column_families_on_demand.
+       * DO NOT add defaults to load_column_families_on_demand. 
        * </pre>
        */
       public Builder clearLoadColumnFamiliesOnDemand() {
