@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -60,12 +59,6 @@ public interface Store {
   long timeOfOldestEdit();
 
   FileSystem getFileSystem();
-
-  /**
-   * getter for CompactionProgress object
-   * @return CompactionProgress object; can be null
-   */
-  CompactionProgress getCompactionProgress();
 
   /**
    * Tests whether we should run a major compaction. For example, if the configured major compaction

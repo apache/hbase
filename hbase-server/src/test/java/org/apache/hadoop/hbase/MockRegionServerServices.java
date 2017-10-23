@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -147,6 +148,11 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public FlushRequester getFlushRequester() {
+    return null;
+  }
+
+  @Override
+  public CompactionRequester getCompactionRequestor() {
     return null;
   }
 

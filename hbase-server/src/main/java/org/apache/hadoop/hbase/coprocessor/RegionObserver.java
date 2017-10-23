@@ -158,7 +158,7 @@ public interface RegionObserver {
   /**
    * Called prior to selecting the {@link StoreFile StoreFiles} to compact from the list of
    * available candidates. To alter the files used for compaction, you may mutate the passed in list
-   * of candidates.
+   * of candidates. If you remove all the candidates then the compaction will be canceled.
    * @param c the environment provided by the region server
    * @param store the store where compaction is being requested
    * @param candidates the store files currently available for compaction
@@ -183,18 +183,12 @@ public interface RegionObserver {
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into a new
-   * {@code StoreFile}. To override or modify the compaction process, implementing classes have two
-   * options:
-   * <ul>
-   * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect
-   *  {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped scanner, applying its own
-   *   policy to what gets written.</li>
-   * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
-   * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
-   * bypassing core compaction using this approach must write out new store files themselves or the
-   * existing data will no longer be available after compaction.</strong></li>
-   * </ul>
+   * {@code StoreFile}.
+   * <p>
+   * To override or modify the compaction process, implementing classes can wrap the provided
+   * {@link InternalScanner} with a custom implementation that is returned from this method. The
+   * custom scanner can then inspect {@link org.apache.hadoop.hbase.Cell}s from the wrapped scanner,
+   * applying its own policy to what gets written.
    * @param c the environment provided by the region server
    * @param store the store being compacted
    * @param scanner the scanner over existing data used in the store file rewriting
@@ -206,8 +200,7 @@ public interface RegionObserver {
    */
   default InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-      CompactionRequest request)
-      throws IOException {
+      CompactionRequest request) throws IOException {
     return scanner;
   }
 

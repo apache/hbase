@@ -34,6 +34,8 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
@@ -60,7 +63,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  * Compact region on request and then run split if appropriate
  */
 @InterfaceAudience.Private
-public class CompactSplit implements PropagatingConfigurationObserver {
+public class CompactSplit implements CompactionRequester, PropagatingConfigurationObserver {
   private static final Log LOG = LogFactory.getLog(CompactSplit.class);
 
   // Configuration key for the large compaction threads.
@@ -99,7 +102,6 @@ public class CompactSplit implements PropagatingConfigurationObserver {
 
   /** @param server */
   CompactSplit(HRegionServer server) {
-    super();
     this.server = server;
     this.conf = server.getConfiguration();
     this.regionSplitLimit = conf.getInt(REGION_SERVER_REGION_SPLIT_LIMIT,
@@ -235,14 +237,68 @@ public class CompactSplit implements PropagatingConfigurationObserver {
     }
   }
 
-  public synchronized void requestCompaction(HRegion region, String why, int priority,
-      CompactionLifeCycleTracker tracker, User user) throws IOException {
-    requestCompactionInternal(region, why, priority, true, tracker, user);
+  // A compaction life cycle tracker to trace the execution of all the compactions triggered by one
+  // request and delegate to the source CompactionLifeCycleTracker. It will call completed method if
+  // all the compactions are finished.
+  private static final class AggregatingCompactionLifeCycleTracker
+      implements CompactionLifeCycleTracker {
+
+    private final CompactionLifeCycleTracker tracker;
+
+    private final AtomicInteger remaining;
+
+    public AggregatingCompactionLifeCycleTracker(CompactionLifeCycleTracker tracker,
+        int numberOfStores) {
+      this.tracker = tracker;
+      this.remaining = new AtomicInteger(numberOfStores);
+    }
+
+    private void tryCompleted() {
+      if (remaining.decrementAndGet() == 0) {
+        tracker.completed();
+      }
+    }
+
+    @Override
+    public void notExecuted(Store store, String reason) {
+      tracker.notExecuted(store, reason);
+      tryCompleted();
+    }
+
+    @Override
+    public void beforeExecution(Store store) {
+      tracker.beforeExecution(store);
+    }
+
+    @Override
+    public void afterExecution(Store store) {
+      tracker.afterExecution(store);
+      tryCompleted();
+    }
   }
 
+  private CompactionLifeCycleTracker wrap(CompactionLifeCycleTracker tracker,
+      IntSupplier numberOfStores) {
+    if (tracker == CompactionLifeCycleTracker.DUMMY) {
+      // a simple optimization to avoid creating unnecessary objects as usually we do not care about
+      // the life cycle of a compaction.
+      return tracker;
+    } else {
+      return new AggregatingCompactionLifeCycleTracker(tracker, numberOfStores.getAsInt());
+    }
+  }
+
+  @Override
+  public synchronized void requestCompaction(HRegion region, String why, int priority,
+      CompactionLifeCycleTracker tracker, User user) throws IOException {
+    requestCompactionInternal(region, why, priority, true,
+      wrap(tracker, () -> region.getTableDescriptor().getColumnFamilyCount()), user);
+  }
+
+  @Override
   public synchronized void requestCompaction(HRegion region, HStore store, String why, int priority,
       CompactionLifeCycleTracker tracker, User user) throws IOException {
-    requestCompactionInternal(region, store, why, priority, true, tracker, user);
+    requestCompactionInternal(region, store, why, priority, true, wrap(tracker, () -> 1), user);
   }
 
   private void requestCompactionInternal(HRegion region, String why, int priority,
@@ -259,6 +315,17 @@ public class CompactSplit implements PropagatingConfigurationObserver {
         !region.getTableDescriptor().isCompactionEnabled())) {
       return;
     }
+    RegionServerSpaceQuotaManager spaceQuotaManager =
+        this.server.getRegionServerSpaceQuotaManager();
+    if (spaceQuotaManager != null &&
+        spaceQuotaManager.areCompactionsDisabled(region.getTableDescriptor().getTableName())) {
+      String reason = "Ignoring compaction request for " + region +
+          " as an active space quota violation " + " policy disallows compactions.";
+      tracker.notExecuted(store, reason);
+      LOG.debug(reason);
+      return;
+    }
+
     Optional<CompactionContext> compaction;
     if (selectNow) {
       compaction = selectCompaction(region, store, priority, tracker, user);
@@ -268,17 +335,6 @@ public class CompactSplit implements PropagatingConfigurationObserver {
       }
     } else {
       compaction = Optional.empty();
-    }
-
-    RegionServerSpaceQuotaManager spaceQuotaManager =
-        this.server.getRegionServerSpaceQuotaManager();
-    if (spaceQuotaManager != null &&
-        spaceQuotaManager.areCompactionsDisabled(region.getTableDescriptor().getTableName())) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring compaction request for " + region +
-            " as an active space quota violation " + " policy disallows compactions.");
-      }
-      return;
     }
 
     ThreadPoolExecutor pool;
@@ -315,9 +371,11 @@ public class CompactSplit implements PropagatingConfigurationObserver {
   private Optional<CompactionContext> selectCompaction(HRegion region, HStore store, int priority,
       CompactionLifeCycleTracker tracker, User user) throws IOException {
     Optional<CompactionContext> compaction = store.requestCompaction(priority, tracker, user);
-    if (!compaction.isPresent() && LOG.isDebugEnabled() && region.getRegionInfo() != null) {
-      LOG.debug("Not compacting " + region.getRegionInfo().getRegionNameAsString() +
-          " because compaction request was cancelled");
+    if (!compaction.isPresent() && region.getRegionInfo() != null) {
+      String reason = "Not compacting " + region.getRegionInfo().getRegionNameAsString() +
+          " because compaction request was cancelled";
+      tracker.notExecuted(store, reason);
+      LOG.debug(reason);
     }
     return compaction;
   }
@@ -454,7 +512,6 @@ public class CompactSplit implements PropagatingConfigurationObserver {
 
     public CompactionRunner(HStore store, HRegion region, Optional<CompactionContext> compaction,
         ThreadPoolExecutor parent, User user) {
-      super();
       this.store = store;
       this.region = region;
       this.compaction = compaction;
@@ -462,7 +519,7 @@ public class CompactSplit implements PropagatingConfigurationObserver {
           : store.getCompactPriority();
       this.parent = parent;
       this.user = user;
-      this.time = System.currentTimeMillis();
+      this.time = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
@@ -520,7 +577,7 @@ public class CompactSplit implements PropagatingConfigurationObserver {
       // Finally we can compact something.
       assert c != null;
 
-      c.getRequest().getTracker().beforeExecute(store);
+      c.getRequest().getTracker().beforeExecution(store);
       try {
         // Note: please don't put single-compaction logic here;
         //       put it into region/store/etc. This is CST logic.
@@ -553,7 +610,7 @@ public class CompactSplit implements PropagatingConfigurationObserver {
         region.reportCompactionRequestFailure();
         server.checkFileSystem();
       } finally {
-        c.getRequest().getTracker().afterExecute(store);
+        c.getRequest().getTracker().afterExecution(store);
         region.decrementCompactionsQueuedCount();
         LOG.debug("CompactSplitThread Status: " + CompactSplit.this);
       }

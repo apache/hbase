@@ -1625,7 +1625,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     return StoreUtils.hasReferences(this.storeEngine.getStoreFileManager().getStorefiles());
   }
 
-  @Override
+  /**
+   * getter for CompactionProgress object
+   * @return CompactionProgress object; can be null
+   */
   public CompactionProgress getCompactionProgress() {
     return this.storeEngine.getCompactor().getProgress();
   }

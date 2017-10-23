@@ -1533,7 +1533,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.ADMIN_QOS)
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public CompactRegionResponse compactRegion(final RpcController controller,
       final CompactRegionRequest request) throws ServiceException {
     try {
@@ -1551,41 +1551,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       region.startRegionOperation(Operation.COMPACT_REGION);
       LOG.info("Compacting " + region.getRegionInfo().getRegionNameAsString());
-      boolean major = false;
-      byte [] family = null;
-      HStore store = null;
+      boolean major = request.hasMajor() && request.getMajor();
       if (request.hasFamily()) {
-        family = request.getFamily().toByteArray();
-        store = region.getStore(family);
-        if (store == null) {
-          throw new ServiceException(new DoNotRetryIOException("column family " +
-              Bytes.toString(family) + " does not exist in region " +
-              region.getRegionInfo().getRegionNameAsString()));
-        }
-      }
-      if (request.hasMajor()) {
-        major = request.getMajor();
-      }
-      if (major) {
-        if (family != null) {
-          store.triggerMajorCompaction();
-        } else {
-          region.triggerMajorCompaction();
-        }
-      }
-
-      String familyLogMsg = (family != null)?" for column family: " + Bytes.toString(family):"";
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("User-triggered compaction requested for region "
-          + region.getRegionInfo().getRegionNameAsString() + familyLogMsg);
-      }
-      String log = "User-triggered " + (major ? "major " : "") + "compaction" + familyLogMsg;
-      if (family != null) {
-        regionServer.compactSplitThread.requestCompaction(region, store, log, Store.PRIORITY_USER,
-          CompactionLifeCycleTracker.DUMMY, RpcServer.getRequestUser().orElse(null));
+        byte[] family = request.getFamily().toByteArray();
+        String log = "User-triggered " + (major ? "major " : "") + "compaction for region " +
+            region.getRegionInfo().getRegionNameAsString() + " and family " +
+            Bytes.toString(family);
+        LOG.trace(log);
+        region.requestCompaction(family, log, Store.PRIORITY_USER, major,
+          CompactionLifeCycleTracker.DUMMY);
       } else {
-        regionServer.compactSplitThread.requestCompaction(region, log, Store.PRIORITY_USER,
-          CompactionLifeCycleTracker.DUMMY, RpcServer.getRequestUser().orElse(null));
+        String log = "User-triggered " + (major ? "major " : "") + "compaction for region " +
+            region.getRegionInfo().getRegionNameAsString();
+        LOG.trace(log);
+        region.requestCompaction(log, Store.PRIORITY_USER, major, CompactionLifeCycleTracker.DUMMY);
       }
       return CompactRegionResponse.newBuilder().build();
     } catch (IOException ie) {

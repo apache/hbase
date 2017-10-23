@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -455,15 +453,6 @@ public interface Region extends ConfigurationObserver {
   // Wizards only, please
 
   /**
-   * Trigger major compaction on all stores in the region.
-   * <p>
-   * Compaction will be performed asynchronously to this call by the RegionServer's
-   * CompactSplitThread.
-   * @throws IOException
-   */
-  void triggerMajorCompaction() throws IOException;
-
-  /**
    * @return if a given region is in compaction now.
    */
   CompactionState getCompactionState();
@@ -471,12 +460,12 @@ public interface Region extends ConfigurationObserver {
   /**
    * Request compaction on this region.
    */
-  void requestCompaction(String why, int priority, CompactionLifeCycleTracker tracker, User user)
-      throws IOException;
+  void requestCompaction(String why, int priority, boolean major,
+      CompactionLifeCycleTracker tracker) throws IOException;
 
   /**
    * Request compaction for the given family
    */
-  void requestCompaction(byte[] family, String why, int priority,
-      CompactionLifeCycleTracker tracker, User user) throws IOException;
+  void requestCompaction(byte[] family, String why, int priority, boolean major,
+      CompactionLifeCycleTracker tracker) throws IOException;
 }
