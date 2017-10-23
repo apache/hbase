@@ -571,13 +571,13 @@ public class FixedFileTrailer {
         comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
       } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
         comparatorClassName = KeyValue.RAW_COMPARATOR.getClass().getName();
-      } else if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator")) {
+      } else if (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparatorImpl")) {
         // 2.0 based comparators found in class name. Convert it to corresponding Comparators in 1.x
-        // branch. Refer to HBASE-16189
+        // branch. Refer to HBASE-19052
         comparatorClassName = KeyValue.COMPARATOR.getClass().getName();
       } else if ((comparatorClassName
-          .equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))) {
-        // Refer to HBASE-16189. Fallback to 1.x comparators
+          .equals("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator"))) {
+        // Refer to HBASE-19052. Fallback to 1.x comparators
         comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
       }
 
