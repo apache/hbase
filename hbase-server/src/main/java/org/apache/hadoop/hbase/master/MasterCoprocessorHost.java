@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -536,7 +534,7 @@ public class MasterCoprocessorHost
     return execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preAbortProcedure(this, procEnv, procId);
+        observer.preAbortProcedure(this,  procId);
       }
     });
   }
@@ -563,7 +561,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetProcedures(this, procInfoList);
+        observer.postGetProcedures(this);
       }
     });
   }
@@ -581,7 +579,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetLocks(this, lockedResources);
+        observer.postGetLocks(this);
       }
     });
   }
@@ -1517,7 +1515,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preRequestLock(this, namespace, tableName, regionInfos, type, description);
+        observer.preRequestLock(this, namespace, tableName, regionInfos, description);
       }
     });
   }
@@ -1527,7 +1525,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postRequestLock(this, namespace, tableName, regionInfos, type, description);
+        observer.postRequestLock(this, namespace, tableName, regionInfos, description);
       }
     });
   }
@@ -1536,7 +1534,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preLockHeartbeat(this, proc, keepAlive);
+        observer.preLockHeartbeat(this, proc.getTableName(), proc.getDescription());
       }
     });
   }
@@ -1545,7 +1543,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postLockHeartbeat(this, proc, keepAlive);
+        observer.postLockHeartbeat(this);
       }
     });
   }

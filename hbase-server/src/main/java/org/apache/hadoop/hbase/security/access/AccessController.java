@@ -99,12 +99,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.procedure2.LockType;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -1218,15 +1213,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preAbortProcedure(
-      ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final ProcedureExecutor<MasterProcedureEnv> procEnv,
+  public void preAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx,
       final long procId) throws IOException {
-    if (!procEnv.isProcedureOwner(procId, getActiveUser(ctx))) {
-      // If the user is not the procedure owner, then we should further probe whether
-      // he can abort the procedure.
-      requirePermission(getActiveUser(ctx), "abortProcedure", Action.ADMIN);
-    }
+    requirePermission(getActiveUser(ctx), "abortProcedure", Action.ADMIN);
   }
 
   @Override
@@ -1238,35 +1227,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void preGetProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
-    // We are delegating the authorization check to postGetProcedures as we don't have
-    // any concrete set of procedures to work with
-  }
-
-  @Override
-  public void postGetProcedures(
-      ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<Procedure<?>> procList) throws IOException {
-    if (procList.isEmpty()) {
-      return;
-    }
-
-    // Retains only those which passes authorization checks, as the checks weren't done as part
-    // of preGetProcedures.
-    Iterator<Procedure<?>> itr = procList.iterator();
-    User user = getActiveUser(ctx);
-    while (itr.hasNext()) {
-      Procedure<?> proc = itr.next();
-      try {
-        String owner = proc.getOwner();
-        if (owner == null || !owner.equals(user.getShortName())) {
-          // If the user is not the procedure owner, then we should further probe whether
-          // he can see the procedure.
-          requirePermission(user, "getProcedures", Action.ADMIN);
-        }
-      } catch (AccessDeniedException e) {
-        itr.remove();
-      }
-    }
+    requirePermission(getActiveUser(ctx), "getProcedure", Action.ADMIN);
   }
 
   @Override
@@ -2787,19 +2748,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, RegionInfo[] regionInfos, LockType type, String description)
+      TableName tableName, RegionInfo[] regionInfos, String description)
   throws IOException {
     // There are operations in the CREATE and ADMIN domain which may require lock, READ
     // or WRITE. So for any lock request, we check for these two perms irrespective of lock type.
-    String reason = String.format("Lock %s, description=%s", type, description);
+    String reason = String.format("Description=%s", description);
     checkLockPermissions(getActiveUser(ctx), namespace, tableName, regionInfos, reason);
   }
 
   @Override
   public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      LockProcedure proc, boolean keepAlive) throws IOException {
-    String reason = "Heartbeat for lock " + proc.getProcId();
-    checkLockPermissions(getActiveUser(ctx), null, proc.getTableName(), null, reason);
+      TableName tableName, String description) throws IOException {
+    checkLockPermissions(getActiveUser(ctx), null, tableName, null, description);
   }
 
   private void checkLockPermissions(User user, String namespace,

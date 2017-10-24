@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,13 +55,8 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.LockType;
-import org.apache.hadoop.hbase.procedure2.LockedResource;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -564,9 +558,7 @@ public class TestMasterObserver {
 
     @Override
     public void preAbortProcedure(
-        ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final ProcedureExecutor<MasterProcedureEnv> procEnv,
-        final long procId) throws IOException {
+        ObserverContext<MasterCoprocessorEnvironment> ctx, final long procId) throws IOException {
       preAbortProcedureCalled = true;
     }
 
@@ -592,8 +584,7 @@ public class TestMasterObserver {
 
     @Override
     public void postGetProcedures(
-        ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<Procedure<?>> procInfoList) throws IOException {
+        ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
       postGetProceduresCalled = true;
     }
 
@@ -611,7 +602,7 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void postGetLocks(ObserverContext<MasterCoprocessorEnvironment> ctx, List<LockedResource> lockedResources)
+    public void postGetLocks(ObserverContext<MasterCoprocessorEnvironment> ctx)
         throws IOException {
       postGetLocksCalled = true;
     }
@@ -1220,27 +1211,25 @@ public class TestMasterObserver {
 
     @Override
     public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-        TableName tableName, RegionInfo[] regionInfos, LockType type,
-        String description) throws IOException {
+        TableName tableName, RegionInfo[] regionInfos, String description) throws IOException {
       preRequestLockCalled = true;
     }
 
     @Override
     public void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-        TableName tableName, RegionInfo[] regionInfos, LockType type,
-        String description) throws IOException {
+        TableName tableName, RegionInfo[] regionInfos, String description) throws IOException {
       postRequestLockCalled = true;
     }
 
     @Override
     public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        LockProcedure proc, boolean keepAlive) throws IOException {
+        TableName tn, String description) throws IOException {
       preLockHeartbeatCalled = true;
     }
 
     @Override
-    public void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        LockProcedure proc, boolean keepAlive) throws IOException {
+    public void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
       postLockHeartbeatCalled = true;
     }
 
