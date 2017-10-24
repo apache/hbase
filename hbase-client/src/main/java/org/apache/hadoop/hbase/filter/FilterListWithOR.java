@@ -81,9 +81,8 @@ public class FilterListWithOR extends FilterListBase {
    * to the filter, if row mismatch or row match but column family mismatch. (HBASE-18368)
    * @see org.apache.hadoop.hbase.filter.Filter.ReturnCode
    */
-  private boolean shouldPassCurrentCellToFilter(Cell prevCell, Cell currentCell, int filterIdx)
-      throws IOException {
-    ReturnCode prevCode = this.prevFilterRCList.get(filterIdx);
+  private boolean shouldPassCurrentCellToFilter(Cell prevCell, Cell currentCell,
+      ReturnCode prevCode) throws IOException {
     if (prevCell == null || prevCode == null) {
       return true;
     }
@@ -96,11 +95,13 @@ public class FilterListWithOR extends FilterListBase {
       return nextHintCell == null || this.compareCell(currentCell, nextHintCell) >= 0;
     case NEXT_COL:
     case INCLUDE_AND_NEXT_COL:
-      return !CellUtil.matchingRowColumn(prevCell, currentCell);
+      // Once row changed, reset() will clear prevCells, so we need not to compare their rows
+      // because rows are the same here.
+      return !CellUtil.matchingColumn(prevCell, currentCell);
     case NEXT_ROW:
     case INCLUDE_AND_SEEK_NEXT_ROW:
-      return !CellUtil.matchingRows(prevCell, currentCell)
-          || !CellUtil.matchingFamily(prevCell, currentCell);
+      // As described above, rows are definitely the same, so we only compare the family.
+      return !CellUtil.matchingFamily(prevCell, currentCell);
     default:
       throw new IllegalStateException("Received code is not valid.");
     }
@@ -181,6 +182,9 @@ public class FilterListWithOR extends FilterListBase {
       if (isInReturnCodes(rc, ReturnCode.INCLUDE)) {
         return ReturnCode.INCLUDE;
       }
+      if (isInReturnCodes(rc, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
+        return ReturnCode.NEXT_COL;
+      }
       if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL,
         ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
         return ReturnCode.INCLUDE_AND_NEXT_COL;
@@ -242,19 +246,20 @@ public class FilterListWithOR extends FilterListBase {
   }
 
   @Override
-  ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformCell) throws IOException {
+  ReturnCode internalFilterKeyValue(Cell c, Cell transformCell) throws IOException {
     if (isEmpty()) {
       return ReturnCode.INCLUDE;
     }
     ReturnCode rc = null;
     boolean everyFilterReturnHint = true;
-    Cell transformed = currentTransformCell;
+    Cell transformed = transformCell;
     this.referenceCell = c;
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
 
       Cell prevCell = this.prevCellList.get(i);
-      if (filter.filterAllRemaining() || !shouldPassCurrentCellToFilter(prevCell, c, i)) {
+      ReturnCode prevCode = this.prevFilterRCList.get(i);
+      if (filter.filterAllRemaining() || !shouldPassCurrentCellToFilter(prevCell, c, prevCode)) {
         everyFilterReturnHint = false;
         continue;
       }
@@ -295,11 +300,6 @@ public class FilterListWithOR extends FilterListBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell c) throws IOException {
-    return internalFilterKeyValue(c, c);
-  }
-
-  @Override
   public void reset() throws IOException {
     for (int i = 0, n = filters.size(); i < n; i++) {
       filters.get(i).reset();
@@ -332,6 +332,9 @@ public class FilterListWithOR extends FilterListBase {
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
       if (!filter.filterAllRemaining() && !filter.filterRowKey(firstRowCell)) {
+        // Can't just return false here, because there are some filters (such as PrefixFilter) which
+        // will catch the row changed event by filterRowKey(). If we return early here, those
+        // filters will have no chance to update their row state.
         retVal = false;
       }
     }

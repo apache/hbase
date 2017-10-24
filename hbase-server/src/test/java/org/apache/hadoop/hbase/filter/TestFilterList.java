@@ -330,7 +330,7 @@ public class TestFilterList {
    * @throws Exception
    */
   @Test
-  public void testFilterListWithInclusiveStopFilteMustPassOne() throws Exception {
+  public void testFilterListWithInclusiveStopFilterMustPassOne() throws Exception {
     byte[] r1 = Bytes.toBytes("Row1");
     byte[] r11 = Bytes.toBytes("Row11");
     byte[] r2 = Bytes.toBytes("Row2");
@@ -351,11 +351,13 @@ public class TestFilterList {
     public AlwaysNextColFilter() {
       super();
     }
+
     @Override
     public ReturnCode filterKeyValue(Cell v) {
       return ReturnCode.NEXT_COL;
     }
-    public static AlwaysNextColFilter parseFrom(final byte [] pbBytes)
+
+    public static AlwaysNextColFilter parseFrom(final byte[] pbBytes)
         throws DeserializationException {
       return new AlwaysNextColFilter();
     }
@@ -701,6 +703,7 @@ public class TestFilterList {
     filter.filterKeyValue(kv3);
     assertFalse(mockFilter.didCellPassToTheFilter);
 
+    filter.reset();
     mockFilter.didCellPassToTheFilter = false;
     filter.filterKeyValue(kv4);
     assertTrue(mockFilter.didCellPassToTheFilter);
@@ -718,6 +721,7 @@ public class TestFilterList {
     filter.filterKeyValue(kv3);
     assertFalse(mockFilter.didCellPassToTheFilter);
 
+    filter.reset();
     mockFilter.didCellPassToTheFilter = false;
     filter.filterKeyValue(kv4);
     assertTrue(mockFilter.didCellPassToTheFilter);
