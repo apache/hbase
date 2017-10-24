@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
@@ -553,26 +554,16 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testAbortProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final ProcedureExecutor<MasterProcedureEnv> procExec =
-        TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
-    Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
-    proc.setOwner(USER_OWNER);
-    final long procId = procExec.submitProcedure(proc);
-
+    long procId = 1;
     AccessTestAction abortProcedureAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER
-        .preAbortProcedure(ObserverContextImpl.createAndPrepare(CP_ENV), procExec, procId);
+        ACCESS_CONTROLLER.preAbortProcedure(ObserverContextImpl.createAndPrepare(CP_ENV), procId);
        return null;
       }
     };
 
     verifyAllowed(abortProcedureAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyAllowed(abortProcedureAction, USER_OWNER);
-    verifyDenied(
-      abortProcedureAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -589,7 +580,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER
-        .postGetProcedures(ObserverContextImpl.createAndPrepare(CP_ENV), procList);
+        .postGetProcedures(ObserverContextImpl.createAndPrepare(CP_ENV));
        return null;
       }
     };
@@ -3058,19 +3049,21 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction namespaceLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
         ACCESS_CONTROLLER.preRequestLock(ObserverContextImpl.createAndPrepare(CP_ENV), namespace,
-            null, null, LockType.EXCLUSIVE, null);
+            null, null, null);
         return null;
       }
     };
     verifyAllowed(namespaceLockAction, SUPERUSER, USER_ADMIN);
     verifyDenied(namespaceLockAction, globalRWXUser, tableACUser, namespaceUser, tableRWXUser);
     grantOnNamespace(TEST_UTIL, namespaceUser.getShortName(), namespace, Action.ADMIN);
+    // Why I need this pause? I don't need it elsewhere.
+    Threads.sleep(1000);
     verifyAllowed(namespaceLockAction, namespaceUser);
 
     AccessTestAction tableLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
         ACCESS_CONTROLLER.preRequestLock(ObserverContextImpl.createAndPrepare(CP_ENV),
-            null, tableName, null, LockType.EXCLUSIVE, null);
+            null, tableName, null, null);
         return null;
       }
     };
@@ -3083,7 +3076,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction regionsLockAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
         ACCESS_CONTROLLER.preRequestLock(ObserverContextImpl.createAndPrepare(CP_ENV),
-            null, null, regionInfos, LockType.EXCLUSIVE, null);
+            null, null, regionInfos, null);
         return null;
       }
     };
@@ -3097,7 +3090,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction regionLockHeartbeatAction = new AccessTestAction() {
       @Override public Object run() throws Exception {
         ACCESS_CONTROLLER.preLockHeartbeat(ObserverContextImpl.createAndPrepare(CP_ENV),
-            proc, false);
+            proc.getTableName(), proc.getDescription());
         return null;
       }
     };

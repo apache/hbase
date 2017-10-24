@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,26 +22,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.procedure2.LockType;
-import org.apache.hadoop.hbase.procedure2.LockedResource;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -356,13 +347,10 @@ public interface MasterObserver {
   /**
    * Called before a abortProcedure request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param procEnv procedure executor
    * @param procId the Id of the procedure
    */
   default void preAbortProcedure(
-      ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final ProcedureExecutor<MasterProcedureEnv> procEnv,
-      final long procId) throws IOException {}
+      ObserverContext<MasterCoprocessorEnvironment> ctx, final long procId) throws IOException {}
 
   /**
    * Called after a abortProcedure request has been processed.
@@ -381,11 +369,9 @@ public interface MasterObserver {
   /**
    * Called after a getProcedures request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param procList the list of procedures about to be returned
    */
-  default void postGetProcedures(
-      ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<Procedure<?>> procList) throws IOException {}
+  default void postGetProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
 
   /**
    * Called before a getLocks request has been processed.
@@ -398,12 +384,10 @@ public interface MasterObserver {
   /**
    * Called after a getLocks request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param lockedResources the list of locks about to be returned
    * @throws IOException if something went wrong
    */
   default void postGetLocks(
-      ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<LockedResource> lockedResources) throws IOException {}
+      ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {}
 
   /**
    * Called prior to moving a given region from one region server to another.
@@ -1269,32 +1253,28 @@ public interface MasterObserver {
    * @param ctx the environment to interact with the framework and master
    */
   default void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, RegionInfo[] regionInfos, LockType type,
-      String description) throws IOException {}
+      TableName tableName, RegionInfo[] regionInfos, String description) throws IOException {}
 
   /**
    * Called after new LockProcedure is queued.
    * @param ctx the environment to interact with the framework and master
    */
   default void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, RegionInfo[] regionInfos, LockType type,
-      String description) throws IOException {}
+      TableName tableName, RegionInfo[] regionInfos, String description) throws IOException {}
 
   /**
    * Called before heartbeat to a lock.
    * @param ctx the environment to interact with the framework and master
-   * @param keepAlive if lock should be kept alive; lock will be released if set to false.
    */
   default void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      LockProcedure proc, boolean keepAlive) throws IOException {}
+      TableName tn, String description) throws IOException {}
 
   /**
    * Called after heartbeat to a lock.
    * @param ctx the environment to interact with the framework and master
-   * @param keepAlive if lock was kept alive; lock was released if set to false.
    */
-  default void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      LockProcedure proc, boolean keepAlive) throws IOException {}
+  default void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
 
   /**
    * Called before list dead region servers.
