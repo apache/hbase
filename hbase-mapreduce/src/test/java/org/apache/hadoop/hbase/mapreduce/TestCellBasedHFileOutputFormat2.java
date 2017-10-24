@@ -399,8 +399,7 @@ public class TestCellBasedHFileOutputFormat2  {
       assertNotNull(range);
 
       // unmarshall and check values.
-      TimeRangeTracker timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.SYNC);
-      Writables.copyWritable(range, timeRangeTracker);
+      TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(range);
       LOG.info(timeRangeTracker.getMin() +
           "...." + timeRangeTracker.getMax());
       assertEquals(1000, timeRangeTracker.getMin());

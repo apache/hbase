@@ -539,7 +539,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)) {
         out.println(Bytes.toLong(e.getValue()));
       } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
-        TimeRangeTracker timeRangeTracker = TimeRangeTracker.getTimeRangeTracker(e.getValue());
+        TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
         out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
       } else if (Bytes.equals(e.getKey(), FileInfo.AVG_KEY_LEN)
           || Bytes.equals(e.getKey(), FileInfo.AVG_VALUE_LEN)
