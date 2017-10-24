@@ -756,6 +756,14 @@ public class RegionStates {
 
       serverResult.add(node.getRegionInfo());
     }
+    // Add online servers with no assignment for the table.
+    for (Map<ServerName, List<RegionInfo>> table: result.values()) {
+        for (ServerName svr : serverMap.keySet()) {
+          if (!table.containsKey(svr)) {
+            table.put(svr, new ArrayList<RegionInfo>());
+          }
+        }
+    }
     return result;
   }
 
