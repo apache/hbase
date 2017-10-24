@@ -1421,16 +1421,19 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
 
+      boolean isByTable = getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false);
       Map<TableName, Map<ServerName, List<RegionInfo>>> assignmentsByTable =
-        this.assignmentManager.getRegionStates().getAssignmentsByTable();
+        this.assignmentManager.getRegionStates().getAssignmentsByTable(!isByTable);
 
       List<RegionPlan> plans = new ArrayList<>();
 
       //Give the balancer the current cluster state.
       this.balancer.setClusterStatus(getClusterStatus());
-      this.balancer.setClusterLoad(
-              this.assignmentManager.getRegionStates().getAssignmentsByTable());
+      this.balancer.setClusterLoad(assignmentsByTable);
 
+      for (Map<ServerName, List<RegionInfo>> serverMap : assignmentsByTable.values()) {
+        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+      }
       for (Entry<TableName, Map<ServerName, List<RegionInfo>>> e : assignmentsByTable.entrySet()) {
         List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
         if (partialPlans != null) plans.addAll(partialPlans);

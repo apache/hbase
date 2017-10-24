@@ -172,6 +172,7 @@ implements ServerProcedureInterface {
         break;
 
       case SERVER_CRASH_FINISH:
+        services.getAssignmentManager().getRegionStates().removeServer(serverName);
         services.getServerManager().getDeadServers().finish(serverName);
         return Flow.NO_MORE_STATE;
 
