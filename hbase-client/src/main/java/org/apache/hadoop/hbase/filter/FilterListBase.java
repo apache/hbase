@@ -107,8 +107,20 @@ public abstract class FilterListBase extends FilterBase {
     return cell;
   }
 
-  abstract ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformedCell)
-      throws IOException;
+  /**
+   * Internal implementation of {@link #filterKeyValue(Cell)}
+   * @param c The cell in question.
+   * @param transformedCell The transformed cell of previous filter(s)
+   * @return ReturnCode of this filter operation.
+   * @throws IOException
+   * @see org.apache.hadoop.hbase.filter.FilterList#internalFilterKeyValue(Cell, Cell)
+   */
+  abstract ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException;
+
+  @Override
+  public ReturnCode filterKeyValue(Cell c) throws IOException {
+    return internalFilterKeyValue(c, c);
+  }
 
   /**
    * Filters that never filter by modifying the returned List of Cells can inherit this

@@ -21,17 +21,12 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -170,8 +165,23 @@ final public class FilterList extends FilterBase {
     return filterListBase.transformCell(c);
   }
 
-  ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformedCell) throws IOException {
-    return this.filterListBase.internalFilterKeyValue(c, currentTransformedCell);
+  /**
+   * Internal implementation of {@link #filterKeyValue(Cell)}. Compared to the
+   * {@link #filterKeyValue(Cell)} method, this method accepts an additional parameter named
+   * transformedCell. This parameter indicates the initial value of transformed cell before this
+   * filter operation. <br/>
+   * For FilterList, we can consider a filter list as a node in a tree. sub-filters of the filter
+   * list are children of the relative node. The logic of transforming cell of a filter list, well,
+   * we can consider it as the process of post-order tree traverse. For a node , Before we traverse
+   * the current child, we should set the traverse result (transformed cell) of previous node(s) as
+   * the initial value. so the additional currentTransformedCell parameter is needed (HBASE-18879).
+   * @param c The cell in question.
+   * @param transformedCell The transformed cell of previous filter(s)
+   * @return ReturnCode of this filter operation.
+   * @throws IOException
+   */
+  ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException {
+    return this.filterListBase.internalFilterKeyValue(c, transformedCell);
   }
 
   @Override

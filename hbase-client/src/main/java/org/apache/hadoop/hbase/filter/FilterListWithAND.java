@@ -148,12 +148,12 @@ public class FilterListWithAND extends FilterListBase {
   }
 
   @Override
-  ReturnCode internalFilterKeyValue(Cell c, Cell currentTransformedCell) throws IOException {
+  ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException {
     if (isEmpty()) {
       return ReturnCode.INCLUDE;
     }
     ReturnCode rc = ReturnCode.INCLUDE;
-    Cell transformed = currentTransformedCell;
+    Cell transformed = transformedCell;
     this.referenceCell = c;
     this.seekHintFilter.clear();
     for (int i = 0, n = filters.size(); i < n; i++) {
@@ -183,11 +183,6 @@ public class FilterListWithAND extends FilterListBase {
       return ReturnCode.SEEK_NEXT_USING_HINT;
     }
     return rc;
-  }
-
-  @Override
-  public ReturnCode filterKeyValue(Cell c) throws IOException {
-    return internalFilterKeyValue(c, c);
   }
 
   @Override
@@ -222,6 +217,9 @@ public class FilterListWithAND extends FilterListBase {
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining() || filter.filterRowKey(firstRowCell)) {
+        // Can't just return true here, because there are some filters (such as PrefixFilter) which
+        // will catch the row changed event by filterRowKey(). If we return early here, those
+        // filters will have no chance to update their row state.
         retVal = true;
       }
     }
