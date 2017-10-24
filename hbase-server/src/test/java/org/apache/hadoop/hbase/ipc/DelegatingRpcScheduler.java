@@ -103,4 +103,9 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   public int getActiveScanRpcHandlerCount() {
     return 0;
   }
+
+  @Override
+  public CallQueueInfo getCallQueueInfo() {
+    return delegate.getCallQueueInfo();
+  }
 }

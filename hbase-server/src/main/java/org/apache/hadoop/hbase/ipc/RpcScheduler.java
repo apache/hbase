@@ -65,6 +65,9 @@ public abstract class RpcScheduler {
    */
   public abstract boolean dispatch(CallRunner task) throws IOException, InterruptedException;
 
+  /** Get call queue information **/
+  public abstract CallQueueInfo getCallQueueInfo();
+
   /** Retrieves length of the general queue for metrics. */
   public abstract int getGeneralQueueLength();
 
