@@ -1791,6 +1791,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             // essentially ignore and propagate the interrupt back up
             LOG.warn("Interrupted while waiting");
             interrupted = true;
+            break;
           }
         }
       } finally {
