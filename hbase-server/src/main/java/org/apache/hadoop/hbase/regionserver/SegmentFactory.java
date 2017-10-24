@@ -95,17 +95,18 @@ public final class SegmentFactory {
   // create flat immutable segment from non-flat immutable segment
   // for flattening
   public ImmutableSegment createImmutableSegmentByFlattening(
-      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType, MemStoreSize memstoreSize) {
+      CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType,
+      MemStoreSizing memstoreSizing) {
     ImmutableSegment res = null;
     switch (idxType) {
     case CHUNK_MAP:
-      res = new CellChunkImmutableSegment(segment, memstoreSize);
+      res = new CellChunkImmutableSegment(segment, memstoreSizing);
       break;
     case CSLM_MAP:
       assert false; // non-flat segment can not be the result of flattening
       break;
     case ARRAY_MAP:
-      res = new CellArrayImmutableSegment(segment, memstoreSize);
+      res = new CellArrayImmutableSegment(segment, memstoreSizing);
       break;
     }
     return res;

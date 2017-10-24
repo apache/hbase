@@ -537,11 +537,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     final long startTime;
     final long flushOpSeqId;
     final long flushedSeqId;
-    final MemStoreSize totalFlushableSize;
+    final MemStoreSizing totalFlushableSize;
 
     /** Constructs an early exit case */
     PrepareFlushResult(FlushResultImpl result, long flushSeqId) {
-      this(result, null, null, null, Math.max(0, flushSeqId), 0, 0, new MemStoreSize());
+      this(result, null, null, null, Math.max(0, flushSeqId), 0, 0, MemStoreSizing.DUD);
     }
 
     /** Constructs a successful prepare flush result */
@@ -549,7 +549,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       TreeMap<byte[], StoreFlushContext> storeFlushCtxs,
       TreeMap<byte[], List<Path>> committedFiles,
       TreeMap<byte[], MemStoreSize> storeFlushableSize, long startTime, long flushSeqId,
-      long flushedSeqId, MemStoreSize totalFlushableSize) {
+      long flushedSeqId, MemStoreSizing totalFlushableSize) {
       this(null, storeFlushCtxs, committedFiles, storeFlushableSize, startTime,
         flushSeqId, flushedSeqId, totalFlushableSize);
     }
@@ -559,7 +559,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       TreeMap<byte[], StoreFlushContext> storeFlushCtxs,
       TreeMap<byte[], List<Path>> committedFiles,
       TreeMap<byte[], MemStoreSize> storeFlushableSize, long startTime, long flushSeqId,
-      long flushedSeqId, MemStoreSize totalFlushableSize) {
+      long flushedSeqId, MemStoreSizing totalFlushableSize) {
       this.result = result;
       this.storeFlushCtxs = storeFlushCtxs;
       this.committedFiles = committedFiles;
@@ -1711,7 +1711,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       this.closed.set(true);
       if (!canFlush) {
-        this.decrMemStoreSize(new MemStoreSize(memstoreDataSize.get(), getMemStoreHeapSize()));
+        this.decrMemStoreSize(new MemStoreSizing(memstoreDataSize.get(), getMemStoreHeapSize()));
       } else if (memstoreDataSize.get() != 0) {
         LOG.error("Memstore size is " + memstoreDataSize.get());
       }
@@ -2502,7 +2502,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // block waiting for the lock for internal flush
     this.updatesLock.writeLock().lock();
     status.setStatus("Preparing flush snapshotting stores in " + getRegionInfo().getEncodedName());
-    MemStoreSize totalSizeOfFlushableStores = new MemStoreSize();
+    MemStoreSizing totalSizeOfFlushableStores = new MemStoreSizing();
 
     Map<byte[], Long> flushedFamilyNamesToSeq = new HashMap<>();
     for (HStore store : storesToFlush) {
@@ -2546,7 +2546,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (HStore s : storesToFlush) {
         MemStoreSize flushableSize = s.getFlushableSize();
         totalSizeOfFlushableStores.incMemStoreSize(flushableSize);
-        storeFlushCtxs.put(s.getColumnFamilyDescriptor().getName(), s.createFlushContext(flushOpSeqId));
+        storeFlushCtxs.put(s.getColumnFamilyDescriptor().getName(),
+            s.createFlushContext(flushOpSeqId));
         committedFiles.put(s.getColumnFamilyDescriptor().getName(), null); // for writing stores to WAL
         storeFlushableSize.put(s.getColumnFamilyDescriptor().getName(), flushableSize);
       }
@@ -3323,7 +3324,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     int cellCount = 0;
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
-    MemStoreSize memStoreSize = new MemStoreSize();
+    MemStoreSizing memStoreAccounting = new MemStoreSizing();
     try {
       // STEP 1. Try to acquire as many locks as we can, and ensure we acquire at least one.
       int numReadyToWrite = 0;
@@ -3506,11 +3507,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.updateSequenceId(batchOp.familyCellMaps[i].values(),
             replay? batchOp.getReplaySequenceId(): writeEntry.getWriteNumber());
         }
-        applyFamilyMapToMemStore(batchOp.familyCellMaps[i], memStoreSize);
+        applyFamilyMapToMemStore(batchOp.familyCellMaps[i], memStoreAccounting);
       }
 
       // update memstore size
-      this.addAndGetMemStoreSize(memStoreSize);
+      this.addAndGetMemStoreSize(memStoreAccounting);
 
       // calling the post CP hook for batch mutation
       if (!replay && coprocessorHost != null) {
@@ -3983,12 +3984,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param memstoreSize
    */
   private void applyFamilyMapToMemStore(Map<byte[], List<Cell>> familyMap,
-      MemStoreSize memstoreSize) throws IOException {
+      MemStoreSizing memstoreAccounting) throws IOException {
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
       byte[] family = e.getKey();
       List<Cell> cells = e.getValue();
       assert cells instanceof RandomAccess;
-      applyToMemStore(getStore(family), cells, false, memstoreSize);
+      applyToMemStore(getStore(family), cells, false, memstoreAccounting);
     }
   }
 
@@ -3996,30 +3997,30 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param delta If we are doing delta changes -- e.g. increment/append -- then this flag will be
    *          set; when set we will run operations that make sense in the increment/append scenario
    *          but that do not make sense otherwise.
-   * @see #applyToMemStore(HStore, Cell, MemStoreSize)
+   * @see #applyToMemStore(HStore, Cell, MemStoreSizing)
    */
   private void applyToMemStore(HStore store, List<Cell> cells, boolean delta,
-      MemStoreSize memstoreSize) throws IOException {
+      MemStoreSizing memstoreAccounting) throws IOException {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
     boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
     if (upsert) {
-      store.upsert(cells, getSmallestReadPoint(), memstoreSize);
+      store.upsert(cells, getSmallestReadPoint(), memstoreAccounting);
     } else {
-      store.add(cells, memstoreSize);
+      store.add(cells, memstoreAccounting);
     }
   }
 
   /**
-   * @see #applyToMemStore(HStore, List, boolean, MemStoreSize)
+   * @see #applyToMemStore(HStore, List, boolean, MemStoreSizing)
    */
-  private void applyToMemStore(HStore store, Cell cell, MemStoreSize memstoreSize)
+  private void applyToMemStore(HStore store, Cell cell, MemStoreSizing memstoreAccounting)
       throws IOException {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
     if (store == null) {
       checkFamily(CellUtil.cloneFamily(cell));
       // Unreachable because checkFamily will throw exception
     }
-    store.add(cell, memstoreSize);
+    store.add(cell, memstoreAccounting);
   }
 
   /**
@@ -4347,7 +4348,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           boolean flush = false;
-          MemStoreSize memstoreSize = new MemStoreSize();
+          MemStoreSizing memstoreSize = new MemStoreSizing();
           for (Cell cell: val.getCells()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
@@ -4843,7 +4844,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException
    */
   private MemStoreSize dropMemStoreContentsForSeqId(long seqId, HStore store) throws IOException {
-    MemStoreSize totalFreedSize = new MemStoreSize();
+    MemStoreSizing totalFreedSize = new MemStoreSizing();
     this.updatesLock.writeLock().lock();
     try {
 
@@ -5271,15 +5272,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Used by tests
    * @param s Store to add edit too.
    * @param cell Cell to add.
-   * @param memstoreSize
    */
   @VisibleForTesting
-  protected void restoreEdit(HStore s, Cell cell, MemStoreSize memstoreSize) {
-    s.add(cell, memstoreSize);
+  protected void restoreEdit(HStore s, Cell cell, MemStoreSizing memstoreAccounting) {
+    s.add(cell, memstoreAccounting);
   }
 
   /**
-   * @param fs
    * @param p File to check.
    * @return True if file was zero-length (and if so, we'll delete it in here).
    * @throws IOException
@@ -7114,7 +7113,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // This is assigned by mvcc either explicity in the below or in the guts of the WAL append
     // when it assigns the edit a sequencedid (A.K.A the mvcc write number).
     WriteEntry writeEntry = null;
-    MemStoreSize memstoreSize = new MemStoreSize();
+    MemStoreSizing memstoreAccounting = new MemStoreSizing();
     try {
       boolean success = false;
       try {
@@ -7158,7 +7157,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 // If no WAL, need to stamp it here.
                 CellUtil.setSequenceId(cell, sequenceId);
               }
-              applyToMemStore(getStore(cell), cell, memstoreSize);
+              applyToMemStore(getStore(cell), cell, memstoreAccounting);
             }
           }
 
@@ -7194,7 +7193,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     } finally {
       closeRegionOperation();
       if (!mutations.isEmpty()) {
-        long newSize = this.addAndGetMemStoreSize(memstoreSize);
+        long newSize = this.addAndGetMemStoreSize(memstoreAccounting);
         requestFlushIfNeeded(newSize);
       }
     }
@@ -7298,7 +7297,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     startRegionOperation(op);
     List<Cell> results = returnResults? new ArrayList<>(mutation.size()): null;
     RowLock rowLock = null;
-    MemStoreSize memstoreSize = new MemStoreSize();
+    MemStoreSizing memstoreAccounting = new MemStoreSizing();
     try {
       rowLock = getRowLockInternal(mutation.getRow(), false);
       lock(this.updatesLock.readLock());
@@ -7324,7 +7323,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         // Now write to MemStore. Do it a column family at a time.
         for (Map.Entry<HStore, List<Cell>> e : forMemStore.entrySet()) {
-          applyToMemStore(e.getKey(), e.getValue(), true, memstoreSize);
+          applyToMemStore(e.getKey(), e.getValue(), true, memstoreAccounting);
         }
         mvcc.completeAndWait(writeEntry);
         if (rsServices != null && rsServices.getNonceManager() != null) {
@@ -7347,7 +7346,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         rowLock.release();
       }
       // Request a cache flush if over the limit.  Do it outside update lock.
-      if (isFlushSize(addAndGetMemStoreSize(memstoreSize))) {
+      if (isFlushSize(addAndGetMemStoreSize(memstoreAccounting))) {
         requestFlush();
       }
       closeRegionOperation(op);

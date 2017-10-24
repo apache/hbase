@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -51,14 +50,13 @@ public class MutableSegment extends Segment {
    * Adds the given cell into the segment
    * @param cell the cell to add
    * @param mslabUsed whether using MSLAB
-   * @param memstoreSize
    */
-  public void add(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
-    internalAdd(cell, mslabUsed, memstoreSize);
+  public void add(Cell cell, boolean mslabUsed, MemStoreSizing memStoreSizing) {
+    internalAdd(cell, mslabUsed, memStoreSizing);
   }
 
-  public void upsert(Cell cell, long readpoint, MemStoreSize memstoreSize) {
-    internalAdd(cell, false, memstoreSize);
+  public void upsert(Cell cell, long readpoint, MemStoreSizing memStoreSizing) {
+    internalAdd(cell, false, memStoreSizing);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
@@ -90,8 +88,8 @@ public class MutableSegment extends Segment {
             int cellLen = getCellLength(cur);
             long heapSize = heapSizeChange(cur, true);
             this.incSize(-cellLen, -heapSize);
-            if (memstoreSize != null) {
-              memstoreSize.decMemStoreSize(cellLen, heapSize);
+            if (memStoreSizing != null) {
+              memStoreSizing.decMemStoreSize(cellLen, heapSize);
             }
             it.remove();
           } else {

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 public class RegionServerAccounting {
-
   // memstore data size
   private final LongAdder globalMemstoreDataSize = new LongAdder();
   // memstore heap size. When off heap MSLAB in place, this will be only heap overhead of the Cell
@@ -46,7 +45,7 @@ public class RegionServerAccounting {
 
   // Store the edits size during replaying WAL. Use this to roll back the
   // global memstore size once a region opening failed.
-  private final ConcurrentMap<byte[], MemStoreSize> replayEditsPerRegion =
+  private final ConcurrentMap<byte[], MemStoreSizing> replayEditsPerRegion =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   private long globalMemStoreLimit;
@@ -216,14 +215,14 @@ public class RegionServerAccounting {
    * @param memStoreSize the Memstore size will be added to replayEditsPerRegion.
    */
   public void addRegionReplayEditsSize(byte[] regionName, MemStoreSize memStoreSize) {
-    MemStoreSize replayEdistsSize = replayEditsPerRegion.get(regionName);
+    MemStoreSizing replayEdistsSize = replayEditsPerRegion.get(regionName);
     // All ops on the same MemStoreSize object is going to be done by single thread, sequentially
     // only. First calls to this method to increment the per region reply edits size and then call
     // to either rollbackRegionReplayEditsSize or clearRegionReplayEditsSize as per the result of
     // the region open operation. No need to handle multi thread issues on one region's entry in
     // this Map.
     if (replayEdistsSize == null) {
-      replayEdistsSize = new MemStoreSize();
+      replayEdistsSize = new MemStoreSizing();
       replayEditsPerRegion.put(regionName, replayEdistsSize);
     }
     replayEdistsSize.incMemStoreSize(memStoreSize);

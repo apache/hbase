@@ -72,8 +72,11 @@ public interface WALObserver {
    * is writen to WAL.
    *
    * @return true if default behavior should be bypassed, false otherwise
+   * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
+   * InterfaceAudience classes such as WALKey and WALEdit. Will be removed in hbase-3.0.0.
    */
   // TODO: return value is not used
+  @Deprecated
   default boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
       RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     return false;
@@ -82,7 +85,10 @@ public interface WALObserver {
   /**
    * Called after a {@link WALEdit}
    * is writen to WAL.
+   * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
+   * InterfaceAudience classes such as WALKey and WALEdit. Will be removed in hbase-3.0.0.
    */
+  @Deprecated
   default void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
       RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 

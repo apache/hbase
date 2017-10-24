@@ -126,9 +126,9 @@ public class TestDefaultMemStore {
   public void testPutSameCell() {
     byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    MemStoreSize sizeChangeForFirstCell = new MemStoreSize();
+    MemStoreSizing sizeChangeForFirstCell = new MemStoreSizing();
     this.memstore.add(kv, sizeChangeForFirstCell);
-    MemStoreSize sizeChangeForSecondCell = new MemStoreSize();
+    MemStoreSizing sizeChangeForSecondCell = new MemStoreSizing();
     this.memstore.add(kv, sizeChangeForSecondCell);
     // make sure memstore size increase won't double-count MSLAB chunk size
     assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getDataSize());

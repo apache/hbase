@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -55,7 +54,7 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
    * of CSLMImmutableSegment
    * The given iterator returns the Cells that "survived" the compaction.
    */
-  protected CellArrayImmutableSegment(CSLMImmutableSegment segment, MemStoreSize memstoreSize) {
+  protected CellArrayImmutableSegment(CSLMImmutableSegment segment, MemStoreSizing memstoreSizing) {
     super(segment); // initiailize the upper class
     incSize(0, DEEP_OVERHEAD_CAM - CSLMImmutableSegment.DEEP_OVERHEAD_CSLM);
     int numOfCells = segment.getCellsCount();
@@ -65,7 +64,7 @@ public class CellArrayImmutableSegment extends ImmutableSegment {
     // add sizes of CellArrayMap entry (reinitializeCellSet doesn't take the care for the sizes)
     long newSegmentSizeDelta = numOfCells*(indexEntrySize()-ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
     incSize(0, newSegmentSizeDelta);
-    memstoreSize.incMemStoreSize(0, newSegmentSizeDelta);
+    memstoreSizing.incMemStoreSize(0, newSegmentSizeDelta);
   }
 
   @Override

@@ -682,13 +682,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   /**
    * Adds a value to the memstore
-   * @param cell
-   * @param memstoreSize
    */
-  public void add(final Cell cell, MemStoreSize memstoreSize) {
+  public void add(final Cell cell, MemStoreSizing memstoreSizing) {
     lock.readLock().lock();
     try {
-       this.memstore.add(cell, memstoreSize);
+       this.memstore.add(cell, memstoreSizing);
     } finally {
       lock.readLock().unlock();
     }
@@ -696,13 +694,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   /**
    * Adds the specified value to the memstore
-   * @param cells
-   * @param memstoreSize
    */
-  public void add(final Iterable<Cell> cells, MemStoreSize memstoreSize) {
+  public void add(final Iterable<Cell> cells, MemStoreSizing memstoreSizing) {
     lock.readLock().lock();
     try {
-      memstore.add(cells, memstoreSize);
+      memstore.add(cells, memstoreSizing);
     } finally {
       lock.readLock().unlock();
     }
@@ -2143,16 +2139,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * <p>
    * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
    * across all of them.
-   * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate KVs
-   * @param memstoreSize
    * @throws IOException
    */
-  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSize memstoreSize)
+  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing)
       throws IOException {
     this.lock.readLock().lock();
     try {
-      this.memstore.upsert(cells, readpoint, memstoreSize);
+      this.memstore.upsert(cells, readpoint, memstoreSizing);
     } finally {
       this.lock.readLock().unlock();
     }

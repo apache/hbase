@@ -195,26 +195,26 @@ public class DefaultMemStore extends AbstractMemStore {
     byte [] fam = Bytes.toBytes("col");
     byte [] qf = Bytes.toBytes("umn");
     byte [] empty = new byte[0];
-    MemStoreSize memstoreSize = new MemStoreSize();
+    MemStoreSizing memstoreSizing = new MemStoreSizing();
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
+      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSizing);
     }
     LOG.info("memstore1 estimated size="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
+        + (memstoreSizing.getDataSize() + memstoreSizing.getHeapSize()));
     for (int i = 0; i < count; i++) {
-      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
+      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSizing);
     }
     LOG.info("memstore1 estimated size (2nd loading of same data)="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
+        + (memstoreSizing.getDataSize() + memstoreSizing.getHeapSize()));
     // Make a variably sized memstore.
     DefaultMemStore memstore2 = new DefaultMemStore();
-    memstoreSize = new MemStoreSize();
+    memstoreSizing = new MemStoreSizing();
     for (int i = 0; i < count; i++) {
-      memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memstoreSize);
+      memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memstoreSizing);
     }
     LOG.info("memstore2 estimated size="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
+        + (memstoreSizing.getDataSize() + memstoreSizing.getHeapSize()));
     final int seconds = 30;
     LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
     LOG.info("Exiting.");

@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -149,7 +149,7 @@ public class CompactionPipeline {
       long newHeapSize = 0;
       if(segment != null) newHeapSize = segment.heapSize();
       long heapSizeDelta = suffixHeapSize - newHeapSize;
-      region.addMemStoreSize(new MemStoreSize(-dataSizeDelta, -heapSizeDelta));
+      region.addMemStoreSize(new MemStoreSizing(-dataSizeDelta, -heapSizeDelta));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Suffix data size: " + suffixDataSize + " new segment data size: "
             + newDataSize + ". Suffix heap size: " + suffixHeapSize
@@ -199,14 +199,14 @@ public class CompactionPipeline {
       int i = 0;
       for (ImmutableSegment s : pipeline) {
         if ( s.canBeFlattened() ) {
-          MemStoreSize newMemstoreSize = new MemStoreSize(); // the size to be updated
+          MemStoreSizing newMemstoreAccounting = new MemStoreSizing(); // the size to be updated
           ImmutableSegment newS = SegmentFactory.instance().createImmutableSegmentByFlattening(
-              (CSLMImmutableSegment)s,idxType,newMemstoreSize);
+              (CSLMImmutableSegment)s,idxType,newMemstoreAccounting);
           replaceAtIndex(i,newS);
           if(region != null) {
             // update the global memstore size counter
             // upon flattening there is no change in the data size
-            region.addMemStoreSize(new MemStoreSize(0, newMemstoreSize.getHeapSize()));
+            region.addMemStoreSize(new MemStoreSize(0, newMemstoreAccounting.getHeapSize()));
           }
           LOG.debug("Compaction pipeline segment " + s + " was flattened");
           return true;
@@ -241,22 +241,22 @@ public class CompactionPipeline {
     return minSequenceId;
   }
 
-  public MemStoreSize getTailSize() {
+  public MemStoreSizing getTailSizing() {
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return new MemStoreSize(true);
-    return new MemStoreSize(localCopy.peekLast().keySize(), localCopy.peekLast().heapSize());
+    if (localCopy.isEmpty()) return new MemStoreSizing();
+    return new MemStoreSizing(localCopy.peekLast().keySize(), localCopy.peekLast().heapSize());
   }
 
-  public MemStoreSize getPipelineSize() {
+  public MemStoreSizing getPipelineSizing() {
     long keySize = 0;
     long heapSize = 0;
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return new MemStoreSize(true);
+    if (localCopy.isEmpty()) return new MemStoreSizing();
     for (Segment segment : localCopy) {
       keySize += segment.keySize();
       heapSize += segment.heapSize();
     }
-    return new MemStoreSize(keySize, heapSize);
+    return new MemStoreSizing(keySize, heapSize);
   }
 
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,

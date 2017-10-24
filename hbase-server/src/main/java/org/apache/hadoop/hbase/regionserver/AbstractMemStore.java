@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -96,14 +96,14 @@ public abstract class AbstractMemStore implements MemStore {
   public abstract void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent);
 
   @Override
-  public void add(Iterable<Cell> cells, MemStoreSize memstoreSize) {
+  public void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing) {
     for (Cell cell : cells) {
-      add(cell, memstoreSize);
+      add(cell, memstoreSizing);
     }
   }
 
   @Override
-  public void add(Cell cell, MemStoreSize memstoreSize) {
+  public void add(Cell cell, MemStoreSizing memstoreSizing) {
     Cell toAdd = maybeCloneWithAllocator(cell);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). By
@@ -118,7 +118,7 @@ public abstract class AbstractMemStore implements MemStore {
     if (!mslabUsed) {
       toAdd = deepCopyIfNeeded(toAdd);
     }
-    internalAdd(toAdd, mslabUsed, memstoreSize);
+    internalAdd(toAdd, mslabUsed, memstoreSizing);
   }
 
   private static Cell deepCopyIfNeeded(Cell cell) {
@@ -129,9 +129,9 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   @Override
-  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSize memstoreSize) {
+  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing) {
     for (Cell cell : cells) {
-      upsert(cell, readpoint, memstoreSize);
+      upsert(cell, readpoint, memstoreSizing);
     }
   }
 
@@ -167,7 +167,11 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public MemStoreSize getSnapshotSize() {
-    return new MemStoreSize(this.snapshot.keySize(), this.snapshot.heapSize());
+    return getSnapshotSizing();
+  }
+
+  MemStoreSizing getSnapshotSizing() {
+    return new MemStoreSizing(this.snapshot.keySize(), this.snapshot.heapSize());
   }
 
   @Override
@@ -210,7 +214,7 @@ public abstract class AbstractMemStore implements MemStore {
    * @param readpoint readpoint below which we can safely remove duplicate KVs
    * @param memstoreSize
    */
-  private void upsert(Cell cell, long readpoint, MemStoreSize memstoreSize) {
+  private void upsert(Cell cell, long readpoint, MemStoreSizing memstoreSizing) {
     // Add the Cell to the MemStore
     // Use the internalAdd method here since we (a) already have a lock
     // and (b) cannot safely use the MSLAB here without potentially
@@ -221,7 +225,7 @@ public abstract class AbstractMemStore implements MemStore {
     // must do below deep copy. Or else we will keep referring to the bigger chunk of memory and
     // prevent it from getting GCed.
     cell = deepCopyIfNeeded(cell);
-    this.active.upsert(cell, readpoint, memstoreSize);
+    this.active.upsert(cell, readpoint, memstoreSizing);
     setOldestEditTimeToNow();
     checkActiveSize();
   }
@@ -277,8 +281,8 @@ public abstract class AbstractMemStore implements MemStore {
    * @param mslabUsed whether using MSLAB
    * @param memstoreSize
    */
-  private void internalAdd(final Cell toAdd, final boolean mslabUsed, MemStoreSize memstoreSize) {
-    active.add(toAdd, mslabUsed, memstoreSize);
+  private void internalAdd(final Cell toAdd, final boolean mslabUsed, MemStoreSizing memstoreSizing) {
+    active.add(toAdd, mslabUsed, memstoreSizing);
     setOldestEditTimeToNow();
     checkActiveSize();
   }

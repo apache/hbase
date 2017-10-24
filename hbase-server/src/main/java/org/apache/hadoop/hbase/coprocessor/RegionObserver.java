@@ -880,7 +880,10 @@ public interface RegionObserver {
    * Called before a {@link WALEdit}
    * replayed for this region.
    * @param ctx the environment provided by the region server
+   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
+   * with something that doesn't expose IntefaceAudience.Private classes.
    */
+  @Deprecated
   default void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
@@ -888,7 +891,10 @@ public interface RegionObserver {
    * Called after a {@link WALEdit}
    * replayed for this region.
    * @param ctx the environment provided by the region server
+   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
+   * with something that doesn't expose IntefaceAudience.Private classes.
    */
+  @Deprecated
   default void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 

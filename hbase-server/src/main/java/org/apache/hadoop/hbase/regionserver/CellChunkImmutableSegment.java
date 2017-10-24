@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -61,7 +60,8 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
    * of CSLMImmutableSegment
    * The given iterator returns the Cells that "survived" the compaction.
    */
-  protected CellChunkImmutableSegment(CSLMImmutableSegment segment, MemStoreSize memstoreSize) {
+  protected CellChunkImmutableSegment(CSLMImmutableSegment segment,
+      MemStoreSizing memstoreSizing) {
     super(segment); // initiailize the upper class
     incSize(0,-CSLMImmutableSegment.DEEP_OVERHEAD_CSLM + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM);
     int numOfCells = segment.getCellsCount();
@@ -73,7 +73,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     long newSegmentSizeDelta = numOfCells*(indexEntrySize()-ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY);
 
     incSize(0, newSegmentSizeDelta);
-    memstoreSize.incMemStoreSize(0, newSegmentSizeDelta);
+    memstoreSizing.incMemStoreSize(0, newSegmentSizeDelta);
   }
 
   @Override
