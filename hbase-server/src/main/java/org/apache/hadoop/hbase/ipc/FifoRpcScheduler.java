@@ -21,12 +21,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
 
 /**
  * A very simple {@code }RpcScheduler} that serves incoming requests in order.
@@ -70,6 +72,24 @@ public class FifoRpcScheduler extends RpcScheduler {
     this.executor.shutdown();
   }
 
+  private static class FifoCallRunner implements Runnable {
+    private final CallRunner callRunner;
+
+    FifoCallRunner(CallRunner cr) {
+      this.callRunner = cr;
+    }
+
+    CallRunner getCallRunner() {
+      return callRunner;
+    }
+
+    @Override
+    public void run() {
+      callRunner.run();
+    }
+
+  }
+
   @Override
   public boolean dispatch(final CallRunner task) throws IOException, InterruptedException {
     // Executors provide no offer, so make our own.
@@ -78,7 +98,8 @@ public class FifoRpcScheduler extends RpcScheduler {
       queueSize.decrementAndGet();
       return false;
     }
-    executor.submit(new Runnable() {
+
+    executor.execute(new FifoCallRunner(task){
       @Override
       public void run() {
         task.setStatus(RpcServer.getStatus());
@@ -86,6 +107,7 @@ public class FifoRpcScheduler extends RpcScheduler {
         queueSize.decrementAndGet();
       }
     });
+
     return true;
   }
 
@@ -148,4 +170,37 @@ public class FifoRpcScheduler extends RpcScheduler {
   public int getActiveScanRpcHandlerCount() {
     return 0;
   }
+
+  @Override
+  public CallQueueInfo getCallQueueInfo() {
+    String queueName = "Fifo Queue";
+
+    HashMap<String, Long> methodCount = new HashMap<>();
+    HashMap<String, Long> methodSize = new HashMap<>();
+
+    CallQueueInfo callQueueInfo = new CallQueueInfo();
+    callQueueInfo.setCallMethodCount(queueName, methodCount);
+    callQueueInfo.setCallMethodSize(queueName, methodSize);
+
+
+    for (Runnable r:executor.getQueue()) {
+      FifoCallRunner mcr = (FifoCallRunner) r;
+      RpcCall rpcCall = mcr.getCallRunner().getRpcCall();
+
+      String method;
+
+      if (null==rpcCall.getMethod() ||
+            StringUtil.isNullOrEmpty(method = rpcCall.getMethod().getName())) {
+        method = "Unknown";
+      }
+
+      long size = rpcCall.getSize();
+
+      methodCount.put(method, 1 + methodCount.getOrDefault(method, 0L));
+      methodSize.put(method, size + methodSize.getOrDefault(method, 0L));
+    }
+
+    return callQueueInfo;
+  }
+
 }

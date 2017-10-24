@@ -27,12 +27,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
@@ -150,6 +153,50 @@ public abstract class RpcExecutor {
   protected int computeNumCallQueues(final int handlerCount, final float callQueuesHandlersFactor) {
     return Math.max(1, (int) Math.round(handlerCount * callQueuesHandlersFactor));
   }
+
+  public Map<String, Long> getCallQueueCountsSummary() {
+    HashMap<String, Long> callQueueMethodTotalCount = new HashMap<>();
+
+    for(BlockingQueue<CallRunner> queue: queues) {
+      for (CallRunner cr:queue) {
+        RpcCall rpcCall = cr.getRpcCall();
+
+        String method;
+
+        if (null==rpcCall.getMethod() ||
+             StringUtil.isNullOrEmpty(method = rpcCall.getMethod().getName())) {
+          method = "Unknown";
+        }
+
+        callQueueMethodTotalCount.put(method, 1+callQueueMethodTotalCount.getOrDefault(method, 0L));
+      }
+    }
+
+    return callQueueMethodTotalCount;
+  }
+
+  public Map<String, Long> getCallQueueSizeSummary() {
+    HashMap<String, Long> callQueueMethodTotalSize = new HashMap<>();
+
+    for(BlockingQueue<CallRunner> queue: queues) {
+      for (CallRunner cr:queue) {
+        RpcCall rpcCall = cr.getRpcCall();
+        String method;
+
+        if (null==rpcCall.getMethod() ||
+          StringUtil.isNullOrEmpty(method = rpcCall.getMethod().getName())) {
+          method = "Unknown";
+        }
+
+        long size = rpcCall.getSize();
+
+        callQueueMethodTotalSize.put(method, size+callQueueMethodTotalSize.getOrDefault(method, 0L));
+      }
+    }
+
+    return callQueueMethodTotalSize;
+  }
+
 
   protected void initializeQueues(final int numQueues) {
     if (queueInitArgs.length > 0) {

@@ -229,5 +229,33 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public int getActiveScanRpcHandlerCount() {
     return callExecutor.getActiveScanHandlerCount();
   }
+
+  @Override
+  public CallQueueInfo getCallQueueInfo() {
+    String queueName;
+
+    CallQueueInfo callQueueInfo = new CallQueueInfo();
+
+    if(null!=callExecutor) {
+      queueName = "Call Queue";
+      callQueueInfo.setCallMethodCount(queueName, callExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, callExecutor.getCallQueueSizeSummary());
+    }
+
+    if(null!=priorityExecutor) {
+      queueName = "Priority Queue";
+      callQueueInfo.setCallMethodCount(queueName, priorityExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, priorityExecutor.getCallQueueSizeSummary());
+    }
+
+    if(null!=replicationExecutor) {
+      queueName = "Replication Queue";
+      callQueueInfo.setCallMethodCount(queueName, replicationExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, replicationExecutor.getCallQueueSizeSummary());
+    }
+
+    return callQueueInfo;
+  }
+
 }
 

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -111,6 +112,73 @@ public class TestSimpleRpcScheduler {
     verify(task, timeout(1000)).run();
     scheduler.stop();
   }
+
+  private RpcScheduler disableHandlers(RpcScheduler scheduler) {
+    try {
+      Field ExecutorField = scheduler.getClass().getDeclaredField("callExecutor");
+      ExecutorField.setAccessible(true);
+
+      RpcExecutor rpcExecutor = (RpcExecutor)ExecutorField.get(scheduler);
+
+      Field handlerCountField = rpcExecutor.getClass().getSuperclass().getSuperclass().getDeclaredField("handlerCount");
+
+      handlerCountField.setAccessible(true);
+      handlerCountField.set(rpcExecutor, 0);
+
+      Field numCallQueuesField = rpcExecutor.getClass().getSuperclass().getSuperclass().getDeclaredField("numCallQueues");
+
+      numCallQueuesField.setAccessible(true);
+      numCallQueuesField.set(rpcExecutor, 1);
+
+      Field currentQueueLimitField = rpcExecutor.getClass().getSuperclass().getSuperclass().getDeclaredField("currentQueueLimit");
+
+      currentQueueLimitField.setAccessible(true);
+      currentQueueLimitField.set(rpcExecutor, 100);
+
+    } catch (NoSuchFieldException e) {
+      LOG.error("No such field exception"+e);
+    } catch (IllegalAccessException e) {
+      LOG.error("Illegal access exception"+e);
+    }
+
+    return scheduler;
+  }
+
+  @Test
+  public void testCallQueueInfo() throws IOException, InterruptedException {
+
+    PriorityFunction qosFunction = mock(PriorityFunction.class);
+    RpcScheduler scheduler = new SimpleRpcScheduler(
+            conf, 0, 0, 0, qosFunction, 0);
+
+    scheduler.init(CONTEXT);
+
+    // Set the handlers to zero. So that number of requests in call Queue can be tested
+    scheduler = disableHandlers(scheduler);
+    scheduler.start();
+
+    int totalCallMethods = 10;
+    for (int i = totalCallMethods; i>0; i--) {
+      CallRunner task = createMockTask();
+      task.setStatus(new MonitoredRPCHandlerImpl());
+      scheduler.dispatch(task);
+    }
+
+
+    CallQueueInfo callQueueInfo = scheduler.getCallQueueInfo();
+
+    for (String callQueueName:callQueueInfo.getCallQueueNames()) {
+
+      for (String calledMethod: callQueueInfo.getCalledMethodNames(callQueueName)) {
+        assertEquals(callQueueInfo.getCallMethodCount(callQueueName, calledMethod), totalCallMethods);
+      }
+
+    }
+
+    scheduler.stop();
+
+  }
+
 
   @Test
   public void testHandlerIsolation() throws IOException, InterruptedException {
