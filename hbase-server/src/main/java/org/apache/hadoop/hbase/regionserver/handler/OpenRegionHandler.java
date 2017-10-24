@@ -121,7 +121,7 @@ public class OpenRegionHandler extends EventHandler {
         return;
       }
 
-      // Successful region open, and add it to OnlineRegions
+      // Successful region open, and add it to MutableOnlineRegions
       this.rsServices.addRegion(region);
       openSuccessful = true;
 

@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
@@ -271,6 +272,11 @@ public class TestTokenAuthentication {
       super.start( new RegionCoprocessorEnvironment()  {
         @Override
         public HRegion getRegion() { return null; }
+
+        @Override
+        public OnlineRegions getOnlineRegions() {
+          return null;
+        }
 
         @Override
         public void startup() throws IOException {}

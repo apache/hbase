@@ -206,6 +206,7 @@ public class RegionServerCoprocessorHost extends
     private final MetricRegistry metricRegistry;
     private final Connection connection;
     private final ServerName serverName;
+    private final OnlineRegions onlineRegions;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
         justification="Intentional; FB has trouble detecting isAssignableFrom")
@@ -216,10 +217,16 @@ public class RegionServerCoprocessorHost extends
       for (Service service : impl.getServices()) {
         services.registerService(service);
       }
+      this.onlineRegions = services;
       this.connection = services.getConnection();
       this.serverName = services.getServerName();
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
+    }
+
+    @Override
+    public OnlineRegions getOnlineRegions() {
+      return this.onlineRegions;
     }
 
     @Override
