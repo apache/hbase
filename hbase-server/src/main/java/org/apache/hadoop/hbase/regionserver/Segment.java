@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -277,13 +277,13 @@ public abstract class Segment {
     return comparator;
   }
 
-  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSize memstoreSize) {
+  protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSizing memstoreSizing) {
     boolean succ = getCellSet().add(cell);
-    updateMetaInfo(cell, succ, mslabUsed, memstoreSize);
+    updateMetaInfo(cell, succ, mslabUsed, memstoreSizing);
   }
 
   protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
-      MemStoreSize memstoreSize) {
+      MemStoreSizing memstoreSizing) {
     long cellSize = 0;
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
@@ -293,8 +293,8 @@ public abstract class Segment {
     }
     long heapSize = heapSizeChange(cellToAdd, succ);
     incSize(cellSize, heapSize);
-    if (memstoreSize != null) {
-      memstoreSize.incMemStoreSize(cellSize, heapSize);
+    if (memstoreSizing != null) {
+      memstoreSizing.incMemStoreSize(cellSize, heapSize);
     }
     getTimeRangeTracker().includeTimestamp(cellToAdd);
     minSequenceId = Math.min(minSequenceId, cellToAdd.getSequenceId());
@@ -307,8 +307,8 @@ public abstract class Segment {
     }
   }
 
-  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemStoreSize memstoreSize) {
-    updateMetaInfo(cellToAdd, succ, (getMemStoreLAB()!=null), memstoreSize);
+  protected void updateMetaInfo(Cell cellToAdd, boolean succ, MemStoreSizing memstoreSizing) {
+    updateMetaInfo(cellToAdd, succ, (getMemStoreLAB()!=null), memstoreSizing);
   }
 
   /**

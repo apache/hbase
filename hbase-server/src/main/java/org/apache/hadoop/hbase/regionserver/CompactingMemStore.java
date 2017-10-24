@@ -146,12 +146,12 @@ public class CompactingMemStore extends AbstractMemStore {
    */
   @Override
   public MemStoreSize size() {
-    MemStoreSize memstoreSize = new MemStoreSize();
-    memstoreSize.incMemStoreSize(this.active.keySize(), this.active.heapSize());
+    MemStoreSizing memstoreSizing = new MemStoreSizing();
+    memstoreSizing.incMemStoreSize(this.active.keySize(), this.active.heapSize());
     for (Segment item : pipeline.getSegments()) {
-      memstoreSize.incMemStoreSize(item.keySize(), item.heapSize());
+      memstoreSizing.incMemStoreSize(item.keySize(), item.heapSize());
     }
-    return memstoreSize;
+    return memstoreSizing;
   }
 
   /**
@@ -215,17 +215,17 @@ public class CompactingMemStore extends AbstractMemStore {
    */
   @Override
   public MemStoreSize getFlushableSize() {
-    MemStoreSize snapshotSize = getSnapshotSize();
-    if (snapshotSize.getDataSize() == 0) {
+    MemStoreSizing snapshotSizing = getSnapshotSizing();
+    if (snapshotSizing.getDataSize() == 0) {
       // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
       if (compositeSnapshot) {
-        snapshotSize = pipeline.getPipelineSize();
-        snapshotSize.incMemStoreSize(this.active.keySize(), this.active.heapSize());
+        snapshotSizing = pipeline.getPipelineSizing();
+        snapshotSizing.incMemStoreSize(this.active.keySize(), this.active.heapSize());
       } else {
-        snapshotSize = pipeline.getTailSize();
+        snapshotSizing = pipeline.getTailSizing();
       }
     }
-    return snapshotSize.getDataSize() > 0 ? snapshotSize
+    return snapshotSizing.getDataSize() > 0 ? snapshotSizing
         : new MemStoreSize(this.active.keySize(), this.active.heapSize());
   }
 

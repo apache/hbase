@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -30,7 +31,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
  * org.apache.hadoop.hbase.coprocessor.ObserverContext, MiniBatchOperationInProgress)
  * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
-@InterfaceAudience.LimitedPrivate("Coprocessors")
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public class MiniBatchOperationInProgress<T> {
   private final T[] operations;
   private Mutation[][] operationsFromCoprocessors;

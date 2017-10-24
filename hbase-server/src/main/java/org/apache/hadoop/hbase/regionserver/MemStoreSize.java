@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,71 +17,47 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Wraps the data size part and total heap space occupied by the memstore.
+ * Reports the data size part and total heap space occupied by the MemStore.
+ * Read-only.
+ * @see MemStoreSizing
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public class MemStoreSize {
+  /**
+   *'dataSize' tracks the Cell's data bytes size alone (Key bytes, value bytes). A cell's data can
+   * be in on heap or off heap area depending on the MSLAB and its configuration to be using on heap
+   * or off heap LABs
+   */
+  protected long dataSize;
 
-  // 'dataSize' tracks the Cell's data bytes size alone (Key bytes, value bytes). A cell's data can
-  // be in on heap or off heap area depending on the MSLAB and its configuration to be using on heap
-  // or off heap LABs
-  private long dataSize;
-  // 'heapSize' tracks all Cell's heap size occupancy. This will include Cell POJO heap overhead.
-  // When Cells in on heap area, this will include the cells data size as well.
-  private long heapSize;
-  final private boolean isEmpty;
+  /** 'heapSize' tracks all Cell's heap size occupancy. This will include Cell POJO heap overhead.
+   * When Cells in on heap area, this will include the cells data size as well.
+   */
+  protected long heapSize;
 
   public MemStoreSize() {
-    dataSize = 0;
-    heapSize = 0;
-    isEmpty = false;
-  }
-
-  public MemStoreSize(boolean isEmpty) {
-    dataSize = 0;
-    heapSize = 0;
-    this.isEmpty = isEmpty;
-  }
-
-  public boolean isEmpty() {
-    return isEmpty;
+    this(0L, 0L);
   }
 
   public MemStoreSize(long dataSize, long heapSize) {
     this.dataSize = dataSize;
     this.heapSize = heapSize;
-    this.isEmpty = false;
   }
 
-  public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
-    this.dataSize += dataSizeDelta;
-    this.heapSize += heapSizeDelta;
-  }
-
-  public void incMemStoreSize(MemStoreSize delta) {
-    this.dataSize += delta.dataSize;
-    this.heapSize += delta.heapSize;
-  }
-
-  public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
-    this.dataSize -= dataSizeDelta;
-    this.heapSize -= heapSizeDelta;
-  }
-
-  public void decMemStoreSize(MemStoreSize delta) {
-    this.dataSize -= delta.dataSize;
-    this.heapSize -= delta.heapSize;
+  public boolean isEmpty() {
+    return this.dataSize == 0 && this.heapSize == 0;
   }
 
   public long getDataSize() {
-    return isEmpty ? 0 : dataSize;
+    return this.dataSize;
   }
 
   public long getHeapSize() {
-    return isEmpty ? 0 : heapSize;
+    return this.heapSize;
   }
 
   @Override

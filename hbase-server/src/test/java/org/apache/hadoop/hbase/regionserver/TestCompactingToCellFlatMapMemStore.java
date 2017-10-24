@@ -607,18 +607,18 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   private long addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
-    MemStoreSize memstoreSize = new MemStoreSize();
+    MemStoreSizing memstoreSizing = new MemStoreSizing();
     for (int i = 0; i < keys.length; i++) {
       long timestamp = System.currentTimeMillis();
       Threads.sleep(1); // to make sure each kv gets a different ts
       byte[] row = Bytes.toBytes(keys[i]);
       byte[] val = Bytes.toBytes(keys[i] + i);
       KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);
-      hmc.add(kv, memstoreSize);
+      hmc.add(kv, memstoreSizing);
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp" + kv.getTimestamp());
     }
-    regionServicesForStores.addMemStoreSize(memstoreSize);
-    return memstoreSize.getDataSize();
+    regionServicesForStores.addMemStoreSize(memstoreSizing);
+    return memstoreSizing.getDataSize();
   }
 
   private long cellBeforeFlushSize() {
