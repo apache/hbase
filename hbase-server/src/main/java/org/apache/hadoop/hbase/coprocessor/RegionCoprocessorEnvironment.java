@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -39,6 +40,11 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
 
   /** @return region information for the region this coprocessor is running on */
   RegionInfo getRegionInfo();
+
+  /**
+   * @return Interface to Map of regions online on this RegionServer {@link #getServerName()}}.
+   */
+  OnlineRegions getOnlineRegions();
 
   /** @return shared data between all instances of this coprocessor */
   ConcurrentMap<String, Object> getSharedData();

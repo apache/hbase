@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -34,6 +35,11 @@ public interface RegionServerCoprocessorEnvironment
    * @return Hosting Server's ServerName
    */
   ServerName getServerName();
+
+  /**
+   * @return Interface to Map of regions online on this RegionServer {@link #getServerName()}}.
+   */
+  OnlineRegions getOnlineRegions();
 
   /**
    * Be careful RPC'ing from a Coprocessor context.

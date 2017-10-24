@@ -48,7 +48,7 @@ import com.google.protobuf.Service;
  * the code base.
  */
 @InterfaceAudience.Private
-public interface RegionServerServices extends Server, OnlineRegions, FavoredNodesForRegion {
+public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion {
 
   /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */

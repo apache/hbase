@@ -117,6 +117,7 @@ public class RegionCoprocessorHost
     private final MetricRegistry metricRegistry;
     private final Connection connection;
     private final ServerName serverName;
+    private final OnlineRegions onlineRegions;
 
     /**
      * Constructor
@@ -132,6 +133,7 @@ public class RegionCoprocessorHost
       this.connection = services != null? services.getConnection(): null;
       this.serverName = services != null? services.getServerName(): null;
       this.sharedData = sharedData;
+      this.onlineRegions = services;
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
     }
@@ -140,6 +142,10 @@ public class RegionCoprocessorHost
     @Override
     public Region getRegion() {
       return region;
+    }
+
+    public OnlineRegions getOnlineRegions() {
+      return this.onlineRegions;
     }
 
     @Override
