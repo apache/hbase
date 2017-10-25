@@ -1137,7 +1137,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (LOG.isWarnEnabled()) {
         LOG.warn("Large batch operation detected (greater than " + rowSizeWarnThreshold
             + ") (HBASE-18023)." + " Requested Number of Rows: " + sum + " Client: "
-            + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress()
+            + RpcServer.getRequestUserName().orElse(null) + "/"
+            + RpcServer.getRemoteAddress().orElse(null)
             + " first region in multi=" + firstRegionName);
       }
     }
@@ -1727,8 +1728,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority=HConstants.ADMIN_QOS)
   public ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller,
     ClearCompactionQueuesRequest request) throws ServiceException {
-    LOG.debug("Client=" + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress()
-            + " clear compactions queue");
+    LOG.debug("Client=" + RpcServer.getRequestUserName().orElse(null) + "/"
+        + RpcServer.getRemoteAddress().orElse(null) + " clear compactions queue");
     ClearCompactionQueuesResponse.Builder respBuilder = ClearCompactionQueuesResponse.newBuilder();
     requestCount.increment();
     if (clearCompactionQueues.compareAndSet(false,true)) {

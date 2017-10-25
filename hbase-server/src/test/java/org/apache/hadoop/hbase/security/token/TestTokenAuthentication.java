@@ -374,7 +374,7 @@ public class TestTokenAuthentication {
     public AuthenticationProtos.GetAuthenticationTokenResponse getAuthenticationToken(
         RpcController controller, AuthenticationProtos.GetAuthenticationTokenRequest request)
       throws ServiceException {
-      LOG.debug("Authentication token request from " + RpcServer.getRequestUserName());
+      LOG.debug("Authentication token request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       final NonShadedBlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>
@@ -392,7 +392,7 @@ public class TestTokenAuthentication {
     public AuthenticationProtos.WhoAmIResponse whoAmI(
         RpcController controller, AuthenticationProtos.WhoAmIRequest request)
       throws ServiceException {
-      LOG.debug("whoAmI() request from " + RpcServer.getRequestUserName());
+      LOG.debug("whoAmI() request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       NonShadedBlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
