@@ -19,12 +19,12 @@
  */
 -->
 
-<!--Shared.  Does common copying-->
+<!-- Filesets shared by different binary tars. -->
 <component>
   <fileSets>
     <!--Copy over the site if built as docs dir -->
     <fileSet>
-        <directory>${project.basedir}/../target/site</directory>
+      <directory>${project.basedir}/../target/site</directory>
       <outputDirectory>docs</outputDirectory>
     </fileSet>
     <!-- Include top level text files-->
@@ -50,7 +50,7 @@
       <directory>${project.basedir}/../bin</directory>
       <outputDirectory>bin</outputDirectory>
       <excludes>
-          <exclude>**/*.cmd</exclude>
+        <exclude>**/*.cmd</exclude>
       </excludes>
       <fileMode>0755</fileMode>
       <directoryMode>0755</directoryMode>
@@ -60,19 +60,19 @@
       <directory>${project.basedir}/../bin</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
-          <include>**/*.cmd</include>
+        <include>**/*.cmd</include>
       </includes>
     </fileSet>
     <!-- Move the ruby code over -->
     <fileSet>
-        <directory>${project.basedir}/../hbase-shell/src/main/ruby</directory>
+      <directory>${project.basedir}/../hbase-shell/src/main/ruby</directory>
       <outputDirectory>lib/ruby</outputDirectory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
     </fileSet>
     <!-- Move the webapps to the webapp dir -->
     <fileSet>
-        <directory>${project.basedir}/../hbase-server/target/hbase-webapps</directory>
+      <directory>${project.basedir}/../hbase-server/target/hbase-webapps</directory>
       <outputDirectory>hbase-webapps</outputDirectory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
@@ -91,8 +91,8 @@
     </fileSet>
     <!-- Include native libraries -->
     <fileSet>
-        <directory>${project.basedir}/../hbase-server/target/native</directory>
-        <outputDirectory>lib/native</outputDirectory>
+      <directory>${project.basedir}/../hbase-server/target/native</directory>
+      <outputDirectory>lib/native</outputDirectory>
       <fileMode>0755</fileMode>
       <directoryMode>0755</directoryMode>
       <includes>
@@ -107,7 +107,7 @@
       have 1 submodule to accumulate, but we can copy/paste as necessary until maven is
       fixed. -->
     <fileSet>
-        <directory>${project.basedir}/../hbase-server/target/</directory>
+      <directory>${project.basedir}/../hbase-server/target/</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>${server.test.jar}</include>
@@ -115,7 +115,7 @@
       <fileMode>0644</fileMode>
     </fileSet>
     <fileSet>
-        <directory>${project.basedir}/../hbase-it/target/</directory>
+      <directory>${project.basedir}/../hbase-it/target/</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>${it.test.jar}</include>
@@ -123,7 +123,7 @@
       <fileMode>0644</fileMode>
     </fileSet>
     <fileSet>
-        <directory>${project.basedir}/../hbase-annotations/target/</directory>
+      <directory>${project.basedir}/../hbase-annotations/target/</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>${annotations.test.jar}</include>
@@ -131,7 +131,7 @@
       <fileMode>0644</fileMode>
     </fileSet>
     <fileSet>
-        <directory>${project.basedir}/../hbase-common/target/</directory>
+      <directory>${project.basedir}/../hbase-common/target/</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>${common.test.jar}</include>

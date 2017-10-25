@@ -1566,6 +1566,11 @@
         <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
       </dependency>
       <dependency>
+        <artifactId>hbase-backup</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-error-prone</artifactId>
         <version>${project.version}</version>
@@ -1756,6 +1761,28 @@
       </dependency>
       <dependency>
         <artifactId>hbase-metrics</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-rest</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-resource-bundle</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-spark</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-spark-it</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
         <type>test-jar</type>

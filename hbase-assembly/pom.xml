@@ -223,53 +223,51 @@
     <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>${compat.module}</artifactId>
-        <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-shell</artifactId>
-       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-thrift</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-rest</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-external-blockcache</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-testing-util</artifactId>
-       <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-metrics-api</artifactId>
-       <version>${project.version}</version>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-metrics</artifactId>
-       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
     <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-resource-bundle</artifactId>
-       <version>${project.version}</version>
        <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-spark</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
@@ -282,13 +280,23 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-spark-it</artifactId>
-      <version>${project.version}</version>
       <type>test-jar</type>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-backup</artifactId>
-      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-replication</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-examples</artifactId>
     </dependency>
   </dependencies>
   <profiles>
