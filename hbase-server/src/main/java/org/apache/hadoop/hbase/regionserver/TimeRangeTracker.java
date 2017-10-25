@@ -199,8 +199,9 @@ public abstract class TimeRangeTracker {
       ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
       return TimeRangeTracker.create(type, builder.getFrom(), builder.getTo());
     } else {
-      DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
-      return TimeRangeTracker.create(type, in.readLong(), in.readLong());
+      try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
+        return TimeRangeTracker.create(type, in.readLong(), in.readLong());
+      }
     }
   }
 
