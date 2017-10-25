@@ -1552,7 +1552,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    * @return Client info for use as prefix on an audit log string; who did an action
    */
   public String getClientIdAuditPrefix() {
-    return "Client=" + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress();
+    return "Client=" + RpcServer.getRequestUserName().orElse(null)
+        + "/" + RpcServer.getRemoteAddress().orElse(null);
   }
 
   /**
