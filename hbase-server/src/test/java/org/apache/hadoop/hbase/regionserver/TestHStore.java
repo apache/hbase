@@ -769,7 +769,7 @@ public class TestHStore {
   }
 
   private static void flushStore(HStore store, long id) throws IOException {
-    StoreFlushContext storeFlushCtx = store.createFlushContext(id);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
     storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
     storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
@@ -1081,7 +1081,7 @@ public class TestHStore {
       seqId = Math.max(seqId, c.getSequenceId());
     }
     inputCellsBeforeSnapshot.forEach(c -> store.add(c, null));
-    StoreFlushContext storeFlushCtx = store.createFlushContext(id++);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(id++, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
     inputCellsAfterSnapshot.forEach(c -> store.add(c, null));
     int numberOfMemScannersBeforeFlush = inputCellsAfterSnapshot.isEmpty() ? 1 : 2;
@@ -1287,7 +1287,7 @@ public class TestHStore {
     quals.add(qf1);
     quals.add(qf2);
     quals.add(qf3);
-    StoreFlushContext storeFlushCtx = store.createFlushContext(id++);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(id++, FlushLifeCycleTracker.DUMMY);
     MyCompactingMemStore.START_TEST.set(true);
     Runnable flush = () -> {
       // this is blocked until we create first scanner from pipeline and snapshot -- phase (1/5)
@@ -1363,7 +1363,7 @@ public class TestHStore {
     myStore.add(createCell(qf3, ts, seqId, oldValue), memStoreSizing);
     long snapshotId = id++;
     // push older data into snapshot -- phase (1/4)
-    StoreFlushContext storeFlushCtx = store.createFlushContext(snapshotId);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(snapshotId, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
 
     // insert current data into active -- phase (2/4)
@@ -1475,7 +1475,7 @@ public class TestHStore {
     store.add(createCell(qf2, ts, seqId, value), memStoreSizing);
     store.add(createCell(qf3, ts, seqId, value), memStoreSizing);
     assertEquals(1, MyCompactingMemStoreWithCustomCompactor.RUNNER_COUNT.get());
-    StoreFlushContext storeFlushCtx = store.createFlushContext(id++);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(id++, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
     // This shouldn't invoke another in-memory flush because the first compactor thread
     // hasn't accomplished the in-memory compaction.

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -171,14 +172,14 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
 
   @Override
   public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, InternalScanner scanner) throws IOException {
+      Store store, InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     ctPreFlush.incrementAndGet();
     return scanner;
   }
 
   @Override
   public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, StoreFile resultFile) throws IOException {
+      Store store, StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
     ctPostFlush.incrementAndGet();
     if (throwOnPostFlush.get()){
       throw new IOException("throwOnPostFlush is true in postFlush");

@@ -45,7 +45,7 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
 
   @Override
   public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner) throws IOException {
+      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     return new DelegatingInternalScanner(scanner);
   }
 

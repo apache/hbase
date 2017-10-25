@@ -293,7 +293,7 @@ public class TestHRegion {
     put.addColumn(COLUMN_FAMILY_BYTES, null, value);
     // First put something in current memstore, which will be in snapshot after flusher.prepare()
     region.put(put);
-    StoreFlushContext storeFlushCtx = store.createFlushContext(12345);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(12345, FlushLifeCycleTracker.DUMMY);
     storeFlushCtx.prepare();
     // Second put something in current memstore
     put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
@@ -337,7 +337,7 @@ public class TestHRegion {
     HStore store = region.getStore(COLUMN_FAMILY_BYTES);
     // Get some random bytes.
     byte [] value = Bytes.toBytes(method);
-    faultyLog.setStoreFlushCtx(store.createFlushContext(12345));
+    faultyLog.setStoreFlushCtx(store.createFlushContext(12345, FlushLifeCycleTracker.DUMMY));
 
     Put put = new Put(value);
     put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
@@ -400,8 +400,8 @@ public class TestHRegion {
     // save normalCPHost and replaced by mockedCPHost, which will cancel flush requests
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
     RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
-    when(mockedCPHost.preFlush(Mockito.isA(HStore.class), Mockito.isA(InternalScanner.class))).
-      thenReturn(null);
+    when(mockedCPHost.preFlush(Mockito.isA(HStore.class), Mockito.isA(InternalScanner.class),
+      Mockito.isA(FlushLifeCycleTracker.class))).thenReturn(null);
     region.setCoprocessorHost(mockedCPHost);
     region.put(put);
     region.flush(true);
@@ -567,7 +567,8 @@ public class TestHRegion {
           region.put(p1);
           // Manufacture an outstanding snapshot -- fake a failed flush by doing prepare step only.
           HStore store = region.getStore(COLUMN_FAMILY_BYTES);
-          StoreFlushContext storeFlushCtx = store.createFlushContext(12345);
+          StoreFlushContext storeFlushCtx =
+              store.createFlushContext(12345, FlushLifeCycleTracker.DUMMY);
           storeFlushCtx.prepare();
           // Now add two entries to the foreground memstore.
           Put p2 = new Put(row);
@@ -5626,7 +5627,7 @@ public class TestHRegion {
       Put put = new Put(Bytes.toBytes("19998"));
       put.addColumn(cf1, col, Bytes.toBytes("val"));
       region.put(put);
-      region.flushcache(true, true);
+      region.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
       Put put2 = new Put(Bytes.toBytes("19997"));
       put2.addColumn(cf1, col, Bytes.toBytes("val"));
       region.put(put2);
@@ -5642,7 +5643,7 @@ public class TestHRegion {
         p.addColumn(cf1, col, Bytes.toBytes("" + i));
         region.put(p);
       }
-      region.flushcache(true, true);
+      region.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
 
       // create one memstore contains many rows will be skipped
       // to check MemStoreScanner.seekToPreviousRow
@@ -5689,7 +5690,7 @@ public class TestHRegion {
       RegionScanner scanner = region.getScanner(scan);
 
       // flush the cache. This will reset the store scanner
-      region.flushcache(true, true);
+      region.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
 
       // create one memstore contains many rows will be skipped
       // to check MemStoreScanner.seekToPreviousRow

@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
@@ -214,12 +215,16 @@ public class TestCoprocessorInterface {
         CompactionRequest request) {
       postCompactCalled = true;
     }
+
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) {
       preFlushCalled = true;
     }
+
     @Override
-    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
+    public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) {
       postFlushCalled = true;
     }
 

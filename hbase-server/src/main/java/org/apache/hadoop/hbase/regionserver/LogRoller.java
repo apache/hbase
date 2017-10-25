@@ -210,7 +210,7 @@ public class LogRoller extends HasThread implements Closeable {
       requester = this.services.getFlushRequester();
       if (requester != null) {
         // force flushing all stores to clean old logs
-        requester.requestFlush(r, true);
+        requester.requestFlush(r, true, FlushLifeCycleTracker.DUMMY);
         scheduled = true;
       }
     }
