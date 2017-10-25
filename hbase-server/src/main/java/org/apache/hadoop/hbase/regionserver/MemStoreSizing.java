@@ -82,7 +82,7 @@ public class MemStoreSizing extends MemStoreSize {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof MemStoreSizing)) {
+    if (obj == null || (getClass() != obj.getClass())) {
       return false;
     }
     MemStoreSizing other = (MemStoreSizing) obj;
