@@ -35,6 +35,11 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 /**
  * An example coprocessor that collects some metrics to demonstrate the usage of exporting custom
@@ -50,6 +55,8 @@ import org.apache.hadoop.hbase.metrics.Timer;
 public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
 
   private Counter preGetCounter;
+  private Counter flushCounter;
+  private Counter filesCompactedCounter;
   private Timer costlyOperationTimer;
   private ExampleRegionObserver observer;
 
@@ -76,6 +83,30 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
         performCostlyOperation();
       } finally {
         costlyOperationTimer.updateNanos(System.nanoTime() - start);
+      }
+    }
+
+    @Override
+    public void postFlush(
+        ObserverContext<RegionCoprocessorEnvironment> c,
+        FlushLifeCycleTracker tracker) throws IOException {
+      flushCounter.increment();
+    }
+
+    @Override
+    public void postFlush(
+        ObserverContext<RegionCoprocessorEnvironment> c, Store store, StoreFile resultFile,
+        FlushLifeCycleTracker tracker) throws IOException {
+      flushCounter.increment();
+    }
+
+    @Override
+    public void postCompactSelection(
+        ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+        List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
+        CompactionRequest request) {
+      if (selected != null) {
+        filesCompactedCounter.increment(selected.size());
       }
     }
 
@@ -118,6 +149,17 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
       if (costlyOperationTimer == null) {
         // Create a Timer to track execution times for the costly operation.
         costlyOperationTimer = registry.timer("costlyOperation");
+      }
+
+      if (flushCounter == null) {
+        // Track the number of flushes that have completed
+        flushCounter = registry.counter("flushesCompleted");
+      }
+
+      if (filesCompactedCounter == null) {
+        // Track the number of files that were compacted (many files may be rewritten in a single
+        // compaction).
+        filesCompactedCounter = registry.counter("filesCompacted");
       }
     }
   }
