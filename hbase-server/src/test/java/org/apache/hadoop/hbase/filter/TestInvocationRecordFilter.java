@@ -166,7 +166,7 @@ public class TestInvocationRecordFilter {
       visitedKeyValues.clear();
     }
 
-    public ReturnCode filterKeyValue(Cell ignored) {
+    public ReturnCode filterCell(final Cell ignored) {
       visitedKeyValues.add(ignored);
       return ReturnCode.INCLUDE;
     }

@@ -972,7 +972,7 @@ public class TestHCM {
       return false;
     }
     @Override
-    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+    public ReturnCode filterCell(final Cell ignored) throws IOException {
       return ReturnCode.INCLUDE;
     }
 

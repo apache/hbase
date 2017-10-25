@@ -1050,7 +1050,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     }
 
     @Override
-    public ReturnCode filterKeyValue(Cell cell) throws IOException {
+    public ReturnCode filterCell(final Cell cell) throws IOException {
       List<Tag> putVisTags = new ArrayList<>();
       Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);
       if (putVisTags.isEmpty() && deleteCellVisTags.isEmpty()) {

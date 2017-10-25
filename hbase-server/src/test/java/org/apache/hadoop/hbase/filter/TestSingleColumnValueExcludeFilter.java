@@ -37,7 +37,7 @@ import java.util.ArrayList;
 /**
  * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter
  * extends {@link SingleColumnValueFilter}, only the added functionality is
- * tested. That is, method filterKeyValue(KeyValue).
+ * tested. That is, method filterCell(Cell).
  *
  */
 @Category({FilterTests.class, SmallTests.class})
@@ -50,17 +50,17 @@ public class TestSingleColumnValueExcludeFilter {
   private static final byte[] VAL_2 = Bytes.toBytes("ab");
 
   /**
-   * Test the overridden functionality of filterKeyValue(KeyValue)
+   * Test the overridden functionality of filterCell(Cell)
    * @throws Exception
    */
   @Test
-  public void testFilterKeyValue() throws Exception {
+  public void testFilterCell() throws Exception {
     Filter filter = new SingleColumnValueExcludeFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
     CompareOperator.EQUAL, VAL_1);
 
     // A 'match' situation
     List<Cell> kvs = new ArrayList<>();
-    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
+    KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
 
     kvs.add (new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1));
     kvs.add (new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1));
@@ -69,21 +69,21 @@ public class TestSingleColumnValueExcludeFilter {
     filter.filterRowCells(kvs);
 
     assertEquals("resultSize", kvs.size(), 2);
-    assertTrue("leftKV1", CellComparatorImpl.COMPARATOR.compare(kvs.get(0), kv) == 0);
-    assertTrue("leftKV2", CellComparatorImpl.COMPARATOR.compare(kvs.get(1), kv) == 0);
+    assertTrue("leftKV1", CellComparatorImpl.COMPARATOR.compare(kvs.get(0), c) == 0);
+    assertTrue("leftKV2", CellComparatorImpl.COMPARATOR.compare(kvs.get(1), c) == 0);
     assertFalse("allRemainingWhenMatch", filter.filterAllRemaining());
 
     // A 'mismatch' situation
     filter.reset();
     // INCLUDE expected because test column has not yet passed
-    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("otherColumn", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
+    assertTrue("otherColumn", filter.filterCell(c) == Filter.ReturnCode.INCLUDE);
     // Test column will pass (wont match), expect NEXT_ROW
-    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
-    assertTrue("testedMismatch", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
+    c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_2);
+    assertTrue("testedMismatch", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
     // After a mismatch (at least with LatestVersionOnly), subsequent columns are EXCLUDE
-    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("otherColumn", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
+    c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
+    assertTrue("otherColumn", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
   }
 
 

@@ -152,12 +152,12 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     }
 
     return filter == null ? matchCode : mergeFilterResponse(cell, matchCode,
-      filter.filterKeyValue(cell));
+      filter.filterCell(cell));
   }
 
   /*
    * Call this when scan has filter. Decide the desired behavior by checkVersions's MatchCode
-   * and filterKeyValue's ReturnCode. Cell may be skipped by filter, so the column versions
+   * and filterCell's ReturnCode. Cell may be skipped by filter, so the column versions
    * in result may be less than user need. It will check versions again after filter.
    *
    * ColumnChecker                FilterResponse               Desired behavior

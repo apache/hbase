@@ -92,7 +92,7 @@ class AccessControlFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell cell) {
+  public ReturnCode filterCell(final Cell cell) {
     if (isSystemTable) {
       return ReturnCode.INCLUDE;
     }

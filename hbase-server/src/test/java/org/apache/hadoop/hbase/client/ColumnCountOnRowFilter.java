@@ -37,7 +37,7 @@ public final class ColumnCountOnRowFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
+  public ReturnCode filterCell(final Cell c) {
     count++;
     return count > limit ? ReturnCode.NEXT_ROW : ReturnCode.INCLUDE;
   }

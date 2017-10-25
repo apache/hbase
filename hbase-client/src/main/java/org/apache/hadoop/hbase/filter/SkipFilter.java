@@ -78,11 +78,17 @@ public class SkipFilter extends FilterBase {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
-    ReturnCode c = filter.filterKeyValue(v);
-    changeFR(c != ReturnCode.INCLUDE);
-    return c;
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    ReturnCode rc = filter.filterCell(c);
+    changeFR(rc != ReturnCode.INCLUDE);
+    return rc;
   }
 
   @Override
@@ -130,7 +136,7 @@ public class SkipFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

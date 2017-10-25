@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * {@link Operator#MUST_PASS_ONE} (<code>OR</code>). Since you can use Filter Lists as children of
  * Filter Lists, you can create a hierarchy of filters to be evaluated. <br>
  * {@link Operator#MUST_PASS_ALL} evaluates lazily: evaluation stops as soon as one filter does not
- * include the KeyValue. <br>
+ * include the Cell. <br>
  * {@link Operator#MUST_PASS_ONE} evaluates non-lazily: all filters are always evaluated. <br>
  * Defaults to {@link Operator#MUST_PASS_ALL}.
  */
@@ -166,8 +166,8 @@ final public class FilterList extends FilterBase {
   }
 
   /**
-   * Internal implementation of {@link #filterKeyValue(Cell)}. Compared to the
-   * {@link #filterKeyValue(Cell)} method, this method accepts an additional parameter named
+   * Internal implementation of {@link #filterCell(Cell)}. Compared to the
+   * {@link #filterCell(Cell)} method, this method accepts an additional parameter named
    * transformedCell. This parameter indicates the initial value of transformed cell before this
    * filter operation. <br/>
    * For FilterList, we can consider a filter list as a node in a tree. sub-filters of the filter
@@ -180,13 +180,19 @@ final public class FilterList extends FilterBase {
    * @return ReturnCode of this filter operation.
    * @throws IOException
    */
-  ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException {
-    return this.filterListBase.internalFilterKeyValue(c, transformedCell);
+  ReturnCode internalFilterCell(Cell c, Cell transformedCell) throws IOException {
+    return this.filterListBase.internalFilterCell(c, transformedCell);
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell c) throws IOException {
-    return filterListBase.filterKeyValue(c);
+  @Deprecated
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    return filterListBase.filterCell(c);
   }
 
   /**

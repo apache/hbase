@@ -58,7 +58,7 @@ public class FilterListWithAND extends FilterListBase {
    * Let's call it: The Maximal Step Rule. So if filter-A in filter list return INCLUDE and filter-B
    * in filter list return INCLUDE_AND_NEXT_COL, then the filter list should return
    * INCLUDE_AND_NEXT_COL. For SEEK_NEXT_USING_HINT, it's more special, and in method
-   * filterKeyValueWithMustPassAll(), if any sub-filter return SEEK_NEXT_USING_HINT, then our filter
+   * filterCellWithMustPassAll(), if any sub-filter return SEEK_NEXT_USING_HINT, then our filter
    * list will return SEEK_NEXT_USING_HINT. so we don't care about the SEEK_NEXT_USING_HINT here.
    * <br/>
    * <br/>
@@ -147,7 +147,7 @@ public class FilterListWithAND extends FilterListBase {
   }
 
   @Override
-  ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException {
+  ReturnCode internalFilterCell(Cell c, Cell transformedCell) throws IOException {
     if (isEmpty()) {
       return ReturnCode.INCLUDE;
     }
@@ -162,9 +162,9 @@ public class FilterListWithAND extends FilterListBase {
       }
       ReturnCode localRC;
       if (filter instanceof FilterList) {
-        localRC = ((FilterList) filter).internalFilterKeyValue(c, transformed);
+        localRC = ((FilterList) filter).internalFilterCell(c, transformed);
       } else {
-        localRC = filter.filterKeyValue(c);
+        localRC = filter.filterCell(c);
       }
       rc = mergeReturnCode(rc, localRC);
 

@@ -51,8 +51,14 @@ public class InclusiveStopFilter extends FilterBase {
     return this.stopRowKey;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if (done) return ReturnCode.NEXT_ROW;
     return ReturnCode.INCLUDE;
   }
@@ -105,7 +111,7 @@ public class InclusiveStopFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

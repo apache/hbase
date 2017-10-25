@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.regionserver.ShipperListener;
  * This class is utilized through three methods:
  * <ul>
  * <li>{@link #add} when encountering a Delete</li>
- * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted</li>
+ * <li>{@link #isDeleted} when checking if a Put Cell has been deleted</li>
  * <li>{@link #update} when reaching the end of a StoreFile</li>
  * </ul>
  */
@@ -47,7 +47,7 @@ public interface DeleteTracker extends ShipperListener {
   /**
    * Check if the specified cell buffer has been deleted by a previously seen delete.
    * @param cell - current cell to check if deleted by a previously seen delete
-   * @return deleteResult The result tells whether the KeyValue is deleted and why
+   * @return deleteResult The result tells whether the Cell is deleted and why
    */
   DeleteResult isDeleted(Cell cell);
 
@@ -76,12 +76,12 @@ public interface DeleteTracker extends ShipperListener {
    * and why. Based on the delete result, the ScanQueryMatcher will decide the next operation
    */
   enum DeleteResult {
-    FAMILY_DELETED, // The KeyValue is deleted by a delete family.
-    FAMILY_VERSION_DELETED, // The KeyValue is deleted by a delete family version.
-    COLUMN_DELETED, // The KeyValue is deleted by a delete column.
-    VERSION_DELETED, // The KeyValue is deleted by a version delete.
+    FAMILY_DELETED, // The Cell is deleted by a delete family.
+    FAMILY_VERSION_DELETED, // The Cell is deleted by a delete family version.
+    COLUMN_DELETED, // The Cell is deleted by a delete column.
+    VERSION_DELETED, // The Cell is deleted by a version delete.
     NOT_DELETED,
-    VERSION_MASKED  // The KeyValue is masked by max number of versions which is considered as
+    VERSION_MASKED  // The Cell is masked by max number of versions which is considered as
                     // deleted in strong semantics of versions(See MvccTracker)
   }
 

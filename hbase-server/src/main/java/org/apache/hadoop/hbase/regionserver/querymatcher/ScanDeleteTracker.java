@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * This class is utilized through three methods:
  * <ul>
  * <li>{@link #add} when encountering a Delete or DeleteColumn</li>
- * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted</li>
+ * <li>{@link #isDeleted} when checking if a Put Cell has been deleted</li>
  * <li>{@link #update} when reaching the end of a StoreFile or row for scans</li>
  * </ul>
  * <p>
@@ -63,7 +63,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   }
 
   /**
-   * Add the specified KeyValue to the list of deletes to check against for this row operation.
+   * Add the specified Cell to the list of deletes to check against for this row operation.
    * <p>
    * This is called when a Delete is encountered.
    * @param cell - the delete cell
@@ -97,7 +97,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   }
 
   /**
-   * Check if the specified KeyValue buffer has been deleted by a previously seen delete.
+   * Check if the specified Cell buffer has been deleted by a previously seen delete.
    * @param cell - current cell to check if deleted by a previously seen delete
    * @return deleteResult
    */

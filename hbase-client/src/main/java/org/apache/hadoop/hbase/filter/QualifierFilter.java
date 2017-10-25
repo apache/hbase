@@ -70,11 +70,17 @@ public class QualifierFilter extends CompareFilter {
     super(op, qualifierComparator);
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
-    int qualifierLength = v.getQualifierLength();
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
+    int qualifierLength = c.getQualifierLength();
     if (qualifierLength > 0) {
-      if (compareQualifier(getCompareOperator(), this.comparator, v)) {
+      if (compareQualifier(getCompareOperator(), this.comparator, c)) {
         return ReturnCode.SKIP;
       }
     }

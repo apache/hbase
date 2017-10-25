@@ -55,7 +55,7 @@ public abstract class Query extends OperationWithAttributes {
 
   /**
    * Apply the specified server-side filter when performing the Query. Only
-   * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.Cell)} is called AFTER all tests for ttl,
+   * {@link Filter#filterCell(org.apache.hadoop.hbase.Cell)} is called AFTER all tests for ttl,
    * column match, deletes and column family's max versions have been run.
    * @param filter filter to run on the server
    * @return this for invocation chaining
