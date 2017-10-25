@@ -952,7 +952,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @throws IOException if exception occurs during process
    */
   protected List<Path> flushCache(final long logCacheFlushId, MemStoreSnapshot snapshot,
-      MonitoredTask status, ThroughputController throughputController) throws IOException {
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
@@ -963,7 +964,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     for (int i = 0; i < flushRetriesNumber; i++) {
       try {
         List<Path> pathNames =
-            flusher.flushSnapshot(snapshot, logCacheFlushId, status, throughputController);
+            flusher.flushSnapshot(snapshot, logCacheFlushId, status, throughputController, tracker);
         Path lastPathName = null;
         try {
           for (Path pathName : pathNames) {
@@ -2152,13 +2153,14 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
   }
 
-  public StoreFlushContext createFlushContext(long cacheFlushId) {
-    return new StoreFlusherImpl(cacheFlushId);
+  public StoreFlushContext createFlushContext(long cacheFlushId, FlushLifeCycleTracker tracker) {
+    return new StoreFlusherImpl(cacheFlushId, tracker);
   }
 
   private final class StoreFlusherImpl implements StoreFlushContext {
 
-    private long cacheFlushSeqNum;
+    private final FlushLifeCycleTracker tracker;
+    private final long cacheFlushSeqNum;
     private MemStoreSnapshot snapshot;
     private List<Path> tempFiles;
     private List<Path> committedFiles;
@@ -2166,8 +2168,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     private long cacheFlushSize;
     private long outputFileSize;
 
-    private StoreFlusherImpl(long cacheFlushSeqNum) {
+    private StoreFlusherImpl(long cacheFlushSeqNum, FlushLifeCycleTracker tracker) {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
+      this.tracker = tracker;
     }
 
     /**
@@ -2188,7 +2191,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       RegionServerServices rsService = region.getRegionServerServices();
       ThroughputController throughputController =
           rsService == null ? null : rsService.getFlushThroughputController();
-      tempFiles = HStore.this.flushCache(cacheFlushSeqNum, snapshot, status, throughputController);
+      tempFiles =
+          HStore.this.flushCache(cacheFlushSeqNum, snapshot, status, throughputController, tracker);
     }
 
     @Override
@@ -2220,7 +2224,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
       for (HStoreFile sf : storeFiles) {
         if (HStore.this.getCoprocessorHost() != null) {
-          HStore.this.getCoprocessorHost().postFlush(HStore.this, sf);
+          HStore.this.getCoprocessorHost().postFlush(HStore.this, sf, tracker);
         }
         committedFiles.add(sf.getPath());
       }

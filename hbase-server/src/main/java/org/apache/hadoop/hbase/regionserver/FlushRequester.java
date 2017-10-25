@@ -33,7 +33,7 @@ public interface FlushRequester {
    * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
    *          rolling.
    */
-  void requestFlush(HRegion region, boolean forceFlushAllStores);
+  void requestFlush(HRegion region, boolean forceFlushAllStores, FlushLifeCycleTracker tracker);
 
   /**
    * Tell the listener the cache needs to be flushed after a delay

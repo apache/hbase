@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
@@ -123,37 +124,43 @@ public interface RegionObserver {
   /**
    * Called before the memstore is flushed to disk.
    * @param c the environment provided by the region server
+   * @param tracker tracker used to track the life cycle of a flush
    */
-  default void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {}
+  default void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c,
+      FlushLifeCycleTracker tracker) throws IOException {}
 
   /**
    * Called before a Store's memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @param store the store where compaction is being requested
    * @param scanner the scanner over existing data used in the store file
+   * @param tracker tracker used to track the life cycle of a flush
    * @return the scanner to use during compaction.  Should not be {@code null}
    * unless the implementation is writing new store files on its own.
    */
   default InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner) throws IOException {
+      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     return scanner;
   }
 
   /**
    * Called after the memstore is flushed to disk.
    * @param c the environment provided by the region server
+   * @param tracker tracker used to track the life cycle of a flush
    * @throws IOException if an error occurred on the coprocessor
    */
-  default void postFlush(ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {}
+  default void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+      FlushLifeCycleTracker tracker) throws IOException {}
 
   /**
    * Called after a Store's memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @param store the store being flushed
    * @param resultFile the new store file written out during compaction
+   * @param tracker tracker used to track the life cycle of a flush
    */
   default void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      StoreFile resultFile) throws IOException {}
+      StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {}
 
   /**
    * Called prior to selecting the {@link StoreFile StoreFiles} to compact from the list of

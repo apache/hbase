@@ -468,4 +468,9 @@ public interface Region extends ConfigurationObserver {
    */
   void requestCompaction(byte[] family, String why, int priority, boolean major,
       CompactionLifeCycleTracker tracker) throws IOException;
+
+  /**
+   * Request flush on this region.
+   */
+  void requestFlush(FlushLifeCycleTracker tracker) throws IOException;
 }

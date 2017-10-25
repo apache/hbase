@@ -57,7 +57,8 @@ abstract class StoreFlusher {
    * @return List of files written. Can be empty; must not be null.
    */
   public abstract List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
-      MonitoredTask status, ThroughputController throughputController) throws IOException;
+      MonitoredTask status, ThroughputController throughputController,
+      FlushLifeCycleTracker tracker) throws IOException;
 
   protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
       MonitoredTask status) throws IOException {
@@ -77,15 +78,15 @@ abstract class StoreFlusher {
    * @param smallestReadPoint
    * @return The scanner; null if coprocessor is canceling the flush.
    */
-  protected InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
-      long smallestReadPoint) throws IOException {
+  protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
+      long smallestReadPoint, FlushLifeCycleTracker tracker) throws IOException {
     InternalScanner scanner =
         new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), snapshotScanners,
             ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
     assert scanner != null;
     if (store.getCoprocessorHost() != null) {
       try {
-        return store.getCoprocessorHost().preFlush(store, scanner);
+        return store.getCoprocessorHost().preFlush(store, scanner, tracker);
       } catch (IOException ioe) {
         scanner.close();
         throw ioe;

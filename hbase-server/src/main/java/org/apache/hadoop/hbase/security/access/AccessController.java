@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -1592,9 +1593,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> c) throws IOException {
+  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
+      FlushLifeCycleTracker tracker) throws IOException {
     requirePermission(getActiveUser(c), "flush", getTableName(c.getEnvironment()), null, null,
-        Action.ADMIN, Action.CREATE);
+      Action.ADMIN, Action.CREATE);
   }
 
   @Override

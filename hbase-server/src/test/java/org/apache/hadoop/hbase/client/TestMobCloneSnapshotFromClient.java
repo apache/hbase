@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -147,7 +148,8 @@ public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient 
     }
 
     @Override
-    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+    public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
+        FlushLifeCycleTracker tracker) throws IOException {
       if (delayFlush) {
         try {
           if (Bytes.compareTo(e.getEnvironment().getRegionInfo().getStartKey(),
