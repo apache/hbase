@@ -610,7 +610,7 @@ public class TestFilter {
     }
 
     @Override
-    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+    public ReturnCode filterCell(final Cell ignored) throws IOException {
       return ReturnCode.INCLUDE;
     }
   }
@@ -666,14 +666,14 @@ public class TestFilter {
 
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
-   * {@link Filter} that uses the {@link Filter#filterKeyValue(Cell)} method.
+   * {@link Filter} that uses the {@link Filter#filterCell(Cell)} method.
    *
    * See HBASE-2258.
    *
    * @throws Exception
    */
   @Test
-  public void testWhileMatchFilterWithFilterKeyValue() throws Exception {
+  public void testWhileMatchFilterWithFilterCell() throws Exception {
     Scan s = new Scan();
     WhileMatchFilter filter = new WhileMatchFilter(
         new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0], CompareOperator.EQUAL, Bytes.toBytes("foo"))
@@ -2037,7 +2037,7 @@ public class TestFilter {
     public byte [] toByteArray() {return null;}
 
     @Override
-    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+    public ReturnCode filterCell(final Cell ignored) throws IOException {
       return ReturnCode.INCLUDE;
     }
 

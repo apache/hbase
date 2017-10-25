@@ -56,7 +56,7 @@ class VisibilityLabelFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell cell) throws IOException {
+  public ReturnCode filterCell(final Cell cell) throws IOException {
     if (curFamily.getBytes() == null
         || !(CellUtil.matchingFamily(cell, curFamily.getBytes(), curFamily.getOffset(),
             curFamily.getLength()))) {

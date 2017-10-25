@@ -51,8 +51,14 @@ public class FirstKeyOnlyFilter extends FilterBase {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if(foundKV) return ReturnCode.NEXT_ROW;
     foundKV = true;
     return ReturnCode.INCLUDE;
@@ -107,7 +113,7 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

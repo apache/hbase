@@ -110,7 +110,13 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell v)
+  @Deprecated
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c)
   {
     if (columnOffset != null) {
       if (count >= limit) {
@@ -119,7 +125,7 @@ public class ColumnPaginationFilter extends FilterBase {
       int cmp = 0;
       // Only compare if no KV's have been seen so far.
       if (count == 0) {
-        cmp = CellUtil.compareQualifiers(v, this.columnOffset, 0, this.columnOffset.length);
+        cmp = CellUtil.compareQualifiers(c, this.columnOffset, 0, this.columnOffset.length);
       }
       if (cmp < 0) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
@@ -196,7 +202,7 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

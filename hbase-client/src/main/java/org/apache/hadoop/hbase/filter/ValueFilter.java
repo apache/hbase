@@ -68,9 +68,15 @@ public class ValueFilter extends CompareFilter {
     super(valueCompareOp, valueComparator);
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
-    if (compareValue(getCompareOperator(), this.comparator, v)) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
+    if (compareValue(getCompareOperator(), this.comparator, c)) {
       return ReturnCode.SKIP;
     }
     return ReturnCode.INCLUDE;

@@ -108,11 +108,17 @@ public class TimestampsFilter extends FilterBase {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
-    if (this.timestamps.contains(v.getTimestamp())) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
+    if (this.timestamps.contains(c.getTimestamp())) {
       return ReturnCode.INCLUDE;
-    } else if (v.getTimestamp() < minTimeStamp) {
+    } else if (c.getTimestamp() < minTimeStamp) {
       // The remaining versions of this column are guaranteed
       // to be lesser than all of the other values.
       return ReturnCode.NEXT_COL;
@@ -140,7 +146,7 @@ public class TimestampsFilter extends FilterBase {
       // This should only happen if the current column's
       // timestamp is below the last one in the list.
       //
-      // It should never happen as the filterKeyValue should return NEXT_COL
+      // It should never happen as the filterCell should return NEXT_COL
       // but it's always better to be extra safe and protect against future
       // behavioral changes.
 
@@ -193,7 +199,7 @@ public class TimestampsFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

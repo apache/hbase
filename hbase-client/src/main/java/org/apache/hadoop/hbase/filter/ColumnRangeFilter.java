@@ -121,11 +121,17 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(Cell kv) {
+  @Deprecated
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     int cmpMin = 1;
 
     if (this.minColumn != null) {
-      cmpMin = CellUtil.compareQualifiers(kv, this.minColumn, 0, this.minColumn.length);
+      cmpMin = CellUtil.compareQualifiers(c, this.minColumn, 0, this.minColumn.length);
     }
 
     if (cmpMin < 0) {
@@ -140,7 +146,7 @@ public class ColumnRangeFilter extends FilterBase {
       return ReturnCode.INCLUDE;
     }
 
-    int cmpMax = CellUtil.compareQualifiers(kv, this.maxColumn, 0, this.maxColumn.length);
+    int cmpMax = CellUtil.compareQualifiers(c, this.maxColumn, 0, this.maxColumn.length);
 
     if (this.maxColumnInclusive && cmpMax <= 0 ||
         !this.maxColumnInclusive && cmpMax < 0) {

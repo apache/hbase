@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  * related hooks can be defined in this wrapper. The only way to create a
  * FilterWrapper instance is passing a client side Filter instance through
  * {@link org.apache.hadoop.hbase.client.Scan#getFilter()}.
- * 
+ *
  */
 @InterfaceAudience.Private
 final public class FilterWrapper extends Filter {
@@ -112,9 +112,14 @@ final public class FilterWrapper extends Filter {
     return this.filter.filterRowKey(cell);
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
-    return this.filter.filterKeyValue(v);
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return filterCell(c);
+  }
+
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    return this.filter.filterCell(c);
   }
 
   @Override
@@ -161,7 +166,7 @@ final public class FilterWrapper extends Filter {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

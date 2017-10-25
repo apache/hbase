@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
 /**
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
  * as the wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
- * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.Cell)},
+ * {@link Filter#filterCell(org.apache.hadoop.hbase.Cell)},
  * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or
  * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
  * returns true.
@@ -77,11 +77,17 @@ public class WhileMatchFilter extends FilterBase {
     return value;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
-    ReturnCode c = filter.filterKeyValue(v);
-    changeFAR(c != ReturnCode.INCLUDE);
-    return c;
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    ReturnCode code = filter.filterCell(c);
+    changeFAR(code != ReturnCode.INCLUDE);
+    return code;
   }
 
   @Override
@@ -133,7 +139,7 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

@@ -97,7 +97,7 @@ public class TestMultiRowRangeFilter {
      * Expected :SEEK_NEXT_USING_HINT
      * Actual   :INCLUDE
      * */
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(null));
   }
 
   @Test
@@ -107,15 +107,15 @@ public class TestMultiRowRangeFilter {
             new MultiRowRangeFilter.RowRange(Bytes.toBytes("d"), true, Bytes.toBytes("e"), true)
     ));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("a")));
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("b")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("c")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("d")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
     filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("e")));
-    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterCell(null));
   }
 
   @Test

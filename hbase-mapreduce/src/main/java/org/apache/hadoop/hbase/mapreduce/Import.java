@@ -683,16 +683,16 @@ public class Import extends Configured implements Tool {
 
   /**
    * Attempt to filter out the keyvalue
-   * @param kv {@link KeyValue} on which to apply the filter
+   * @param c {@link Cell} on which to apply the filter
    * @return <tt>null</tt> if the key should not be written, otherwise returns the original
-   *         {@link KeyValue}
+   *         {@link Cell}
    */
-  public static Cell filterKv(Filter filter, Cell kv) throws IOException {
+  public static Cell filterKv(Filter filter, Cell c) throws IOException {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
-      Filter.ReturnCode code = filter.filterKeyValue(kv);
+      Filter.ReturnCode code = filter.filterCell(c);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Filter returned:" + code + " for the key value:" + kv);
+        LOG.trace("Filter returned:" + code + " for the cell:" + c);
       }
       // if its not an accept type, then skip this kv
       if (!(code.equals(Filter.ReturnCode.INCLUDE) || code
@@ -700,7 +700,7 @@ public class Import extends Configured implements Tool {
         return null;
       }
     }
-    return kv;
+    return c;
   }
 
   // helper: create a new KeyValue based on CF rename map
@@ -884,7 +884,7 @@ public class Import extends Configured implements Tool {
     System.err.println("By default Import will load data directly into HBase. To instead generate");
     System.err.println("HFiles of data to prepare for a bulk data load, pass the option:");
     System.err.println("  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output");
-    System.err.println("If there is a large result that includes too much KeyValue "
+    System.err.println("If there is a large result that includes too much Cell "
         + "whitch can occur OOME caused by the memery sort in reducer, pass the option:");
     System.err.println("  -D" + HAS_LARGE_RESULT + "=true");
     System.err
@@ -895,9 +895,9 @@ public class Import extends Configured implements Tool {
         + CF_RENAME_PROP + " property. Futher, filters will only use the"
         + " Filter#filterRowKey(byte[] buffer, int offset, int length) method to identify "
         + " whether the current row needs to be ignored completely for processing and "
-        + " Filter#filterKeyValue(KeyValue) method to determine if the KeyValue should be added;"
+        + " Filter#filterCell(Cell) method to determine if the Cell should be added;"
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including"
-        + " the KeyValue.");
+        + " the Cell.");
     System.err.println("To import data exported from HBase 0.94, use");
     System.err.println("  -Dhbase.import.version=0.94");
     System.err.println("  -D " + JOB_NAME_CONF_KEY

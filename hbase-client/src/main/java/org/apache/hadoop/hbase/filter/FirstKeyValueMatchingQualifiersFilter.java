@@ -60,19 +60,25 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     this.qualifiers = qualifiers;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if (hasFoundKV()) {
       return ReturnCode.NEXT_ROW;
-    } else if (hasOneMatchingQualifier(v)) {
+    } else if (hasOneMatchingQualifier(c)) {
       setFoundKV(true);
     }
     return ReturnCode.INCLUDE;
   }
 
-  private boolean hasOneMatchingQualifier(Cell v) {
+  private boolean hasOneMatchingQualifier(Cell c) {
     for (byte[] q : qualifiers) {
-      if (CellUtil.matchingQualifier(v, q)) {
+      if (CellUtil.matchingQualifier(c, q)) {
         return true;
       }
     }
@@ -114,7 +120,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

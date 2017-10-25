@@ -43,7 +43,7 @@ public abstract class FilterListBase extends FilterBase {
   protected Cell referenceCell = null;
 
   /**
-   * When filtering a given Cell in {@link #filterKeyValue(Cell)}, this stores the transformed Cell
+   * When filtering a given Cell in {@link #filterCell(Cell)}, this stores the transformed Cell
    * to be returned by {@link #transformCell(Cell)}. Individual filters transformation are applied
    * only when the filter includes the Cell. Transformations are composed in the order specified by
    * {@link #filters}.
@@ -108,18 +108,23 @@ public abstract class FilterListBase extends FilterBase {
   }
 
   /**
-   * Internal implementation of {@link #filterKeyValue(Cell)}
+   * Internal implementation of {@link #filterCell(Cell)}
    * @param c The cell in question.
    * @param transformedCell The transformed cell of previous filter(s)
    * @return ReturnCode of this filter operation.
    * @throws IOException
-   * @see org.apache.hadoop.hbase.filter.FilterList#internalFilterKeyValue(Cell, Cell)
+   * @see org.apache.hadoop.hbase.filter.FilterList#internalFilterCell(Cell, Cell)
    */
-  abstract ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException;
+  abstract ReturnCode internalFilterCell(Cell c, Cell transformedCell) throws IOException;
 
   @Override
-  public ReturnCode filterKeyValue(Cell c) throws IOException {
-    return internalFilterKeyValue(c, c);
+  public ReturnCode filterKeyValue(final Cell c) throws IOException {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) throws IOException {
+    return internalFilterCell(c, c);
   }
 
   /**

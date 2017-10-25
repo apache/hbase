@@ -66,12 +66,18 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell kv) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     if (sortedPrefixes.isEmpty()) {
       return ReturnCode.INCLUDE;
     } else {
-      return filterColumn(kv);
+      return filterColumn(c);
     }
   }
 
@@ -144,7 +150,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

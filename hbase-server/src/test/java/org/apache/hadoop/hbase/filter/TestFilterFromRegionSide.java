@@ -146,7 +146,7 @@ public class TestFilterFromRegionSide {
     }
 
     @Override
-    public ReturnCode filterKeyValue(Cell v) {
+    public ReturnCode filterCell(final Cell v) {
       if (count++ < NUM_COLS) {
         return ReturnCode.INCLUDE;
       }

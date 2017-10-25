@@ -155,8 +155,14 @@ public class DependentColumnFilter extends CompareFilter {
     return false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell c) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
     // Check if the column and qualifier match
     if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
         // include non-matches for the time being, they'll be discarded afterwards

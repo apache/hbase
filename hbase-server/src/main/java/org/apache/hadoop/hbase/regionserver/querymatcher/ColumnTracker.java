@@ -61,7 +61,7 @@ public interface ColumnTracker extends ShipperListener {
    * this method are {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and
    * {@link MatchCode#SEEK_NEXT_ROW}.
    * @param cell
-   * @param type The type of the KeyValue
+   * @param type The type of the Cell
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem caused by a data
    *           corruption.
@@ -70,7 +70,7 @@ public interface ColumnTracker extends ShipperListener {
 
   /**
    * Keeps track of the number of versions for the columns asked for. It assumes that the user has
-   * already checked if the keyvalue needs to be included by calling the
+   * already checked if the cell needs to be included by calling the
    * {@link #checkColumn(Cell, byte)} method. The enum values returned by this method
    * are {@link MatchCode#SKIP}, {@link MatchCode#INCLUDE},
    * {@link MatchCode#INCLUDE_AND_SEEK_NEXT_COL} and {@link MatchCode#INCLUDE_AND_SEEK_NEXT_ROW}.

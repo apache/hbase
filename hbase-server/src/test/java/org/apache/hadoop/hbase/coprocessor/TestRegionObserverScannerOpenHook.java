@@ -90,7 +90,7 @@ public class TestRegionObserverScannerOpenHook {
   public static class NoDataFilter extends FilterBase {
 
     @Override
-    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+    public ReturnCode filterCell(final Cell ignored) {
       return ReturnCode.SKIP;
     }
 

@@ -234,11 +234,11 @@ public class TestDependentColumnFilter {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
     List<Cell> accepted = new ArrayList<>();
     for(Cell val : testVals) {
-      if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
+      if(filter.filterCell(val) == ReturnCode.INCLUDE) {
         accepted.add(val);
       }
     }
-    assertEquals("check all values accepted from filterKeyValue", 5, accepted.size());
+    assertEquals("check all values accepted from filterCell", 5, accepted.size());
 
     filter.filterRowCells(accepted);
     assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry", 4, accepted.size());
@@ -247,7 +247,7 @@ public class TestDependentColumnFilter {
     filter = new DependentColumnFilter(FAMILIES[1], QUALIFIER, true);
     accepted.clear();
     for(KeyValue val : testVals) {
-        if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
+        if(filter.filterCell(val) == ReturnCode.INCLUDE) {
           accepted.add(val);
         }
       }

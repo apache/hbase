@@ -112,7 +112,7 @@ public abstract class FilterBase extends Filter {
 
   /**
    * Filters that never filter by rows based on previously gathered state from
-   * {@link #filterKeyValue(Cell)} can inherit this implementation that
+   * {@link #filterCell(Cell)} can inherit this implementation that
    * never filters a row.
    *
    * {@inheritDoc}

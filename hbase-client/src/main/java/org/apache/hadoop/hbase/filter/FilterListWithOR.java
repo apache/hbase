@@ -246,7 +246,7 @@ public class FilterListWithOR extends FilterListBase {
   }
 
   @Override
-  ReturnCode internalFilterKeyValue(Cell c, Cell transformCell) throws IOException {
+  ReturnCode internalFilterCell(Cell c, Cell transformCell) throws IOException {
     if (isEmpty()) {
       return ReturnCode.INCLUDE;
     }
@@ -266,9 +266,9 @@ public class FilterListWithOR extends FilterListBase {
 
       ReturnCode localRC;
       if (filter instanceof FilterList) {
-        localRC = ((FilterList) filter).internalFilterKeyValue(c, transformed);
+        localRC = ((FilterList) filter).internalFilterCell(c, transformed);
       } else {
-        localRC = filter.filterKeyValue(c);
+        localRC = filter.filterCell(c);
       }
 
       // Update previous return code and previous cell for filter[i].

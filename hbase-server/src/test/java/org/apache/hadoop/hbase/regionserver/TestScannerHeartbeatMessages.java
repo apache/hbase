@@ -273,7 +273,7 @@ public class TestScannerHeartbeatMessages {
   public static class SparseFilter extends FilterBase {
 
     @Override
-    public ReturnCode filterKeyValue(Cell v) throws IOException {
+    public ReturnCode filterCell(final Cell v) throws IOException {
       try {
         Thread.sleep(CLIENT_TIMEOUT / 2 + 100);
       } catch (InterruptedException e) {

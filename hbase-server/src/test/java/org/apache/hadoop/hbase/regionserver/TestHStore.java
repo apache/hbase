@@ -1140,7 +1140,7 @@ public class TestHStore {
       }
     }, new FilterBase() {
       @Override
-      public Filter.ReturnCode filterKeyValue(Cell v) throws IOException {
+      public Filter.ReturnCode filterCell(final Cell c) throws IOException {
         return ReturnCode.INCLUDE;
       }
     }, expectedSize);
@@ -1164,7 +1164,7 @@ public class TestHStore {
       }
     }, new FilterBase() {
       @Override
-      public Filter.ReturnCode filterKeyValue(Cell v) throws IOException {
+      public Filter.ReturnCode filterCell(final Cell c) throws IOException {
         if (timeToGoNextRow.get()) {
           timeToGoNextRow.set(false);
           return ReturnCode.NEXT_ROW;
@@ -1193,7 +1193,7 @@ public class TestHStore {
       }
     }, new FilterBase() {
       @Override
-      public Filter.ReturnCode filterKeyValue(Cell v) throws IOException {
+      public Filter.ReturnCode filterCell(final Cell c) throws IOException {
         if (timeToGetHint.get()) {
           timeToGetHint.set(false);
           return Filter.ReturnCode.SEEK_NEXT_USING_HINT;

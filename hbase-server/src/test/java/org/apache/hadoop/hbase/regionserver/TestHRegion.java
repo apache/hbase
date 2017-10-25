@@ -3451,7 +3451,7 @@ public class TestHRegion {
       scan.setLoadColumnFamiliesOnDemand(true);
       Filter bogusFilter = new FilterBase() {
         @Override
-        public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+        public ReturnCode filterCell(final Cell ignored) throws IOException {
           return ReturnCode.INCLUDE;
         }
         @Override

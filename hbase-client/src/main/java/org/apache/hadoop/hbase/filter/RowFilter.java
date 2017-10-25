@@ -76,8 +76,14 @@ public class RowFilter extends CompareFilter {
     this.filterOutRow = false;
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell v) {
     if(this.filterOutRow) {
       return ReturnCode.NEXT_ROW;
     }

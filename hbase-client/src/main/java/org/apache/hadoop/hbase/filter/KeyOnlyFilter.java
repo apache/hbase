@@ -67,8 +67,14 @@ public class KeyOnlyFilter extends FilterBase {
     }
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell ignored) throws IOException {
+  public ReturnCode filterKeyValue(final Cell ignored) throws IOException {
+    return filterCell(ignored);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell ignored) throws IOException {
     return ReturnCode.INCLUDE;
   }
   
@@ -110,7 +116,7 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   /**
-   * @param other
+   * @param o the other filter to compare with
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */

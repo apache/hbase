@@ -72,11 +72,17 @@ public class FamilyFilter extends CompareFilter {
     super(op, familyComparator);
   }
 
+  @Deprecated
   @Override
-  public ReturnCode filterKeyValue(Cell v) {
-    int familyLength = v.getFamilyLength();
+  public ReturnCode filterKeyValue(final Cell c) {
+    return filterCell(c);
+  }
+
+  @Override
+  public ReturnCode filterCell(final Cell c) {
+    int familyLength = c.getFamilyLength();
     if (familyLength > 0) {
-      if (compareFamily(getCompareOperator(), this.comparator, v)) {
+      if (compareFamily(getCompareOperator(), this.comparator, c)) {
         return ReturnCode.NEXT_ROW;
       }
     }
