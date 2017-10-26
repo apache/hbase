@@ -181,7 +181,7 @@ public class NettyRpcServer extends RpcServer {
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
       long startTime, int timeout) throws IOException {
     NettyServerCall fakeCall = new NettyServerCall(-1, service, md, null, param, cellScanner, null,
-        -1, null, null, receiveTime, timeout, reservoir, cellBlockBuilder, null);
+        -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null);
     return call(fakeCall, status);
   }
 }

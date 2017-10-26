@@ -489,7 +489,7 @@ public class SimpleRpcServer extends RpcServer {
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
       long startTime, int timeout) throws IOException {
     SimpleServerCall fakeCall = new SimpleServerCall(-1, service, md, null, param, cellScanner,
-        null, -1, null, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, null);
+        null, -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, null);
     return call(fakeCall, status);
   }
 

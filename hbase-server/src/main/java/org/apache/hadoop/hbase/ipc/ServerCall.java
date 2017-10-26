@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.TraceInfo;
 
 /**
  * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -79,7 +78,6 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
 
   protected final long size;                          // size of current call
   protected boolean isError;
-  protected final TraceInfo tinfo;
   protected ByteBufferListOutputStream cellBlockStream = null;
   protected CallCleanup reqCleanup = null;
 
@@ -96,7 +94,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
       justification="Can't figure why this complaint is happening... see below")
   ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header,
-      Message param, CellScanner cellScanner, T connection, long size, TraceInfo tinfo,
+      Message param, CellScanner cellScanner, T connection, long size,
       InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     this.id = id;
@@ -110,7 +108,6 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     this.response = null;
     this.isError = false;
     this.size = size;
-    this.tinfo = tinfo;
     if (connection != null) {
       this.user =  connection.user;
       this.retryImmediatelySupported = connection.retryImmediatelySupported;
@@ -504,11 +501,6 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   @Override
   public int getRemotePort() {
     return connection.getRemotePort();
-  }
-
-  @Override
-  public TraceInfo getTraceInfo() {
-    return tinfo;
   }
 
   @Override

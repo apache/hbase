@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -526,6 +527,7 @@ public class HRegionServer extends HasThread implements
   // Defer till after we register with the Master as much as possible. See #startServices.
   public HRegionServer(Configuration conf) throws IOException {
     super("RegionServer");  // thread name
+    TraceUtil.initTracer(conf);
     try {
       this.startcode = System.currentTimeMillis();
       this.conf = conf;

@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.htrace.TraceInfo;
 
 /**
  * RpcConnection implementation for netty rpc server.
@@ -119,9 +118,9 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   @Override
   public NettyServerCall createCall(int id, final BlockingService service,
       final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
-      long size, TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
+      long size, final InetAddress remoteAddress, int timeout,
       CallCleanup reqCleanup) {
-    return new NettyServerCall(id, service, md, header, param, cellScanner, this, size, tinfo,
+    return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
         this.rpcServer.cellBlockBuilder, reqCleanup);
   }

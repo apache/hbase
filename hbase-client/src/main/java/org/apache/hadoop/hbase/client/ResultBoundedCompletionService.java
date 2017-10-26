@@ -28,9 +28,9 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.htrace.Trace;
 
 /**
  * A completion service for the RpcRetryingCallerFactory.
@@ -168,7 +168,7 @@ public class ResultBoundedCompletionService<V> {
 
   public void submit(RetryingCallable<V> task, int callTimeout, int id) {
     QueueingFuture<V> newFuture = new QueueingFuture<>(task, callTimeout, id);
-    executor.execute(Trace.wrap(newFuture));
+    executor.execute(TraceUtil.wrap(newFuture, "ResultBoundedCompletionService.submit"));
     tasks[id] = newFuture;
   }
 

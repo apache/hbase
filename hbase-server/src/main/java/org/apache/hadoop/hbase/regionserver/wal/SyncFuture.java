@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.htrace.Span;
+import org.apache.htrace.core.Span;
 
 /**
  * A Future on a filesystem sync call. It given to a client or 'Handler' for it to wait on till the

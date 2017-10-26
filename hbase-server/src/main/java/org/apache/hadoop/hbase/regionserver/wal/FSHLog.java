@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -54,10 +55,8 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.NullScope;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -345,7 +344,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           // use assert to make sure no change breaks the logic that
           // sequence and zigzagLatch will be set together
           assert sequence > 0L : "Failed to get sequence from ring buffer";
-          Trace.addTimelineAnnotation("awaiting safepoint");
+          TraceUtil.addTimelineAnnotation("awaiting safepoint");
           syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer(sequence));
         }
       } catch (FailedSyncBeforeLogCloseException e) {
@@ -361,9 +360,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       if (this.writer != null) {
         oldFileLen = this.writer.getLength();
         try {
-          Trace.addTimelineAnnotation("closing writer");
+          TraceUtil.addTimelineAnnotation("closing writer");
           this.writer.close();
-          Trace.addTimelineAnnotation("writer closed");
+          TraceUtil.addTimelineAnnotation("writer closed");
           this.closeErrorCount.set(0);
         } catch (IOException ioe) {
           int errors = closeErrorCount.incrementAndGet();
@@ -595,13 +594,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           }
           // I got something. Lets run. Save off current sequence number in case it changes
           // while we run.
-          TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
+          //TODO handle htrace API change, see HBASE-18895
+          //TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
           Throwable lastException = null;
           try {
-            Trace.addTimelineAnnotation("syncing writer");
+            TraceUtil.addTimelineAnnotation("syncing writer");
             writer.sync();
-            Trace.addTimelineAnnotation("writer synced");
+            TraceUtil.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
             LOG.error("Error syncing, request close of WAL", e);
@@ -611,7 +611,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             lastException = e;
           } finally {
             // reattach the span to the future before releasing.
-            takeSyncFuture.setSpan(scope.detach());
+            //TODO handle htrace API change, see HBASE-18895
+            // takeSyncFuture.setSpan(scope.getSpan());
             // First release what we 'took' from the queue.
             syncCount += releaseSyncFuture(takeSyncFuture, currentSequence, lastException);
             // Can we release other syncs?
@@ -727,8 +728,15 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   // Sync all known transactions
-  private Span publishSyncThenBlockOnCompletion(Span span) throws IOException {
-    return blockOnSync(publishSyncOnRingBuffer(span));
+  private void publishSyncThenBlockOnCompletion(TraceScope scope) throws IOException {
+    if (scope != null) {
+      SyncFuture syncFuture = publishSyncOnRingBuffer(scope.getSpan());
+      blockOnSync(syncFuture);
+    }
+    else {
+      SyncFuture syncFuture = publishSyncOnRingBuffer(null);
+      blockOnSync(syncFuture);
+    }
   }
 
   /**
@@ -754,12 +762,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   @Override
   public void sync() throws IOException {
-    TraceScope scope = Trace.startSpan("FSHLog.sync");
-    try {
-      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
-    } finally {
-      assert scope == NullScope.INSTANCE || !scope.isDetached();
-      scope.close();
+    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
+      publishSyncThenBlockOnCompletion(scope);
     }
   }
 
@@ -769,12 +773,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       // Already sync'd.
       return;
     }
-    TraceScope scope = Trace.startSpan("FSHLog.sync");
-    try {
-      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
-    } finally {
-      assert scope == NullScope.INSTANCE || !scope.isDetached();
-      scope.close();
+    try (TraceScope scope = TraceUtil.createTrace("FSHLog.sync")) {
+      publishSyncThenBlockOnCompletion(scope);
     }
   }
 
@@ -996,7 +996,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           }
         } else if (truck.type() == RingBufferTruck.Type.APPEND) {
           FSWALEntry entry = truck.unloadAppend();
-          TraceScope scope = Trace.continueSpan(entry.detachSpan());
+          //TODO handle htrace API change, see HBASE-18895
+          //TraceScope scope = Trace.continueSpan(entry.detachSpan());
           try {
 
             if (this.exception != null) {
@@ -1015,9 +1016,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
                     : new DamagedWALException("On sync", this.exception));
             // Return to keep processing events coming off the ringbuffer
             return;
-          } finally {
-            assert scope == NullScope.INSTANCE || !scope.isDetached();
-            scope.close(); // append scope is complete
           }
         } else {
           // What is this if not an append or sync. Fail all up to this!!!

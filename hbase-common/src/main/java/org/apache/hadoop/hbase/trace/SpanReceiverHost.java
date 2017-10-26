@@ -24,10 +24,8 @@ import java.util.HashSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.htrace.core.SpanReceiver;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.htrace.SpanReceiver;
-import org.apache.htrace.SpanReceiverBuilder;
-import org.apache.htrace.Trace;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
@@ -62,6 +60,16 @@ public class SpanReceiverHost {
 
   }
 
+  public static Configuration getConfiguration(){
+    synchronized (SingletonHolder.INSTANCE.lock) {
+      if (SingletonHolder.INSTANCE.host == null || SingletonHolder.INSTANCE.host.conf == null) {
+        return null;
+      }
+
+      return SingletonHolder.INSTANCE.host.conf;
+    }
+  }
+
   SpanReceiverHost(Configuration conf) {
     receivers = new HashSet<>();
     this.conf = conf;
@@ -78,18 +86,18 @@ public class SpanReceiverHost {
       return;
     }
 
-    SpanReceiverBuilder builder = new SpanReceiverBuilder(new HBaseHTraceConfiguration(conf));
+    SpanReceiver.Builder builder = new SpanReceiver.Builder(new HBaseHTraceConfiguration(conf));
     for (String className : receiverNames) {
       className = className.trim();
 
-      SpanReceiver receiver = builder.spanReceiverClass(className).build();
+      SpanReceiver receiver = builder.className(className).build();
       if (receiver != null) {
         receivers.add(receiver);
         LOG.info("SpanReceiver " + className + " was loaded successfully.");
       }
     }
     for (SpanReceiver rcvr : receivers) {
-      Trace.addReceiver(rcvr);
+      TraceUtil.addReceiver(rcvr);
     }
   }
 

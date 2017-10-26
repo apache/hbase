@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.hbase.trace;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.htrace.HTraceConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.htrace.core.HTraceConfiguration;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class HBaseHTraceConfiguration extends HTraceConfiguration {
-  private static final Log LOG =
-    LogFactory.getLog(HBaseHTraceConfiguration.class);
+  private static final Log LOG = LogFactory.getLog(HBaseHTraceConfiguration.class);
 
   public static final String KEY_PREFIX = "hbase.htrace.";
 
@@ -65,7 +64,7 @@ public class HBaseHTraceConfiguration extends HTraceConfiguration {
 
   @Override
   public String get(String key) {
-    return conf.get(KEY_PREFIX +key);
+    return conf.get(KEY_PREFIX + key);
   }
 
   @Override
