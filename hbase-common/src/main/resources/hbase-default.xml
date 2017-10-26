@@ -305,6 +305,13 @@ possible configurations would overwhelm and obscure the important.
       honor the old hbase.regionserver.global.memstore.lowerLimit property if present.</description>
   </property>
   <property>
+    <name>hbase.systemtables.compacting.memstore.type</name>
+    <value>NONE</value>
+    <description>Determines the type of memstore to be used for system tables like META, namespace tables etc.
+    By default NONE is the type and hence we use the default memstore for all the system tables. If we
+    need to use compacting memstore for system tables then set this property to BASIC/EAGER</description>
+  </property>
+  <property>
     <name>hbase.regionserver.optionalcacheflushinterval</name>
     <value>3600000</value>
     <description>
