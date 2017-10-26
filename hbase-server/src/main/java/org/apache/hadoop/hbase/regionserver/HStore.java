@@ -264,24 +264,30 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
     scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
-    MemoryCompactionPolicy inMemoryCompaction = family.getInMemoryCompaction();
-    if(inMemoryCompaction == null) {
-      inMemoryCompaction = MemoryCompactionPolicy.valueOf(
-          conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-              CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
+    MemoryCompactionPolicy inMemoryCompaction = null;
+    if (this.getTableName().isSystemTable()) {
+      inMemoryCompaction = MemoryCompactionPolicy
+          .valueOf(conf.get("hbase.systemtables.compacting.memstore.type", "NONE"));
+    } else {
+      inMemoryCompaction = family.getInMemoryCompaction();
+    }
+    if (inMemoryCompaction == null) {
+      inMemoryCompaction =
+          MemoryCompactionPolicy.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+            CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
     }
     String className;
     switch (inMemoryCompaction) {
-      case BASIC :
-      case EAGER :
-        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
-          CompactingMemStore.class, CompactingMemStore.class);
-        className = clz.getName();
-        this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
-            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction});
-        break;
-      case NONE :
-      default:
+    case BASIC:
+    case EAGER:
+      Class<? extends CompactingMemStore> clz =
+          conf.getClass(MEMSTORE_CLASS_NAME, CompactingMemStore.class, CompactingMemStore.class);
+      className = clz.getName();
+      this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
+          this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
+      break;
+    case NONE:
+    default:
       className = DefaultMemStore.class.getName();
       this.memstore = ReflectionUtils.newInstance(DefaultMemStore.class,
         new Object[] { conf, this.comparator });
