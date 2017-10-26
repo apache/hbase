@@ -691,7 +691,9 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
                     if(cell != null) {
                       sn = ServerName.parseVersionedServerName(CellUtil.cloneValue(cell));
                     }
-                    if (tsm.isTableState(TableName.NAMESPACE_TABLE_NAME,
+                    if (sn == null) {
+                      nsFound.set(false);
+                    } else if (tsm.isTableState(TableName.NAMESPACE_TABLE_NAME,
                         TableState.State.ENABLED)) {
                       try {
                         ClientProtos.ClientService.BlockingInterface rs = conn.getClient(sn);
