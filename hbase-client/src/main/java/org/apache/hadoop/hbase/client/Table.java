@@ -110,7 +110,25 @@ public interface Table extends Closeable {
    * @return Array of boolean.  True if the specified Get matches one or more keys, false if not.
    * @throws IOException e
    */
-  boolean[] existsAll(List<Get> gets) throws IOException;
+  boolean[] exists(List<Get> gets) throws IOException;
+
+  /**
+   * Test for the existence of columns in the table, as specified by the Gets.
+   * This will return an array of booleans. Each value will be true if the related Get matches
+   * one or more keys, false if not.
+   * This is a server-side call so it prevents any data from being transferred to
+   * the client.
+   *
+   * @param gets the Gets
+   * @return Array of boolean.  True if the specified Get matches one or more keys, false if not.
+   * @throws IOException e
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #exists(List)}
+   */
+  @Deprecated
+  default boolean[] existsAll(List<Get> gets) throws IOException {
+    return exists(gets);
+  }
 
   /**
    * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends, RowMutations.

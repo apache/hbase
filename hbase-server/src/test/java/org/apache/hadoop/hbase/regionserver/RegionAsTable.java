@@ -100,7 +100,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
-  public boolean[] existsAll(List<Get> gets) throws IOException {
+  public boolean[] exists(List<Get> gets) throws IOException {
     boolean [] results = new boolean[gets.size()];
     int index = 0;
     for (Get get: gets) {
