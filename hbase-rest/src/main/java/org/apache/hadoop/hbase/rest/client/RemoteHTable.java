@@ -367,28 +367,14 @@ public class RemoteHTable implements Table {
     return (result != null && !(result.isEmpty()));
   }
 
-  /**
-   * exists(List) is really a list of get() calls. Just use get().
-   * @param gets list of Get to test for the existence
-   */
   @Override
-  public boolean[] existsAll(List<Get> gets) throws IOException {
+  public boolean[] exists(List<Get> gets) throws IOException {
     LOG.warn("exists(List<Get>) is really list of get() calls, just use get()");
     boolean[] results = new boolean[gets.size()];
     for (int i = 0; i < results.length; i++) {
       results[i] = exists(gets.get(i));
     }
     return results;
-  }
-
-  @Deprecated
-  public Boolean[] exists(List<Get> gets) throws IOException {
-    boolean[] results = existsAll(gets);
-    Boolean[] objectResults = new Boolean[results.length];
-    for (int i = 0; i < results.length; ++i) {
-      objectResults[i] = results[i];
-    }
-    return objectResults;
   }
 
   @Override

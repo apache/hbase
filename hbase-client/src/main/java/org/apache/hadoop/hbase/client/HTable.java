@@ -945,11 +945,8 @@ public class HTable implements Table {
     return r.getExists();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public boolean[] existsAll(final List<Get> gets) throws IOException {
+  public boolean[] exists(List<Get> gets) throws IOException {
     if (gets.isEmpty()) return new boolean[]{};
     if (gets.size() == 1) return new boolean[]{exists(gets.get(0))};
 
