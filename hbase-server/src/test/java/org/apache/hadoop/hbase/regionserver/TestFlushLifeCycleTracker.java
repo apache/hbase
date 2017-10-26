@@ -45,6 +45,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -52,6 +53,7 @@ import org.junit.experimental.categories.Category;
  * Confirm that the function of FlushLifeCycleTracker is OK as we do not use it in our own code.
  */
 @Category({ CoprocessorTests.class, MediumTests.class })
+@Ignore
 public class TestFlushLifeCycleTracker {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
