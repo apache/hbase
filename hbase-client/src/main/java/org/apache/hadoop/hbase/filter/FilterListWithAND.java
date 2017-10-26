@@ -23,9 +23,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * FilterListWithAND represents an ordered list of filters which will be evaluated with an AND
@@ -34,7 +33,7 @@ import java.util.Set;
 @InterfaceAudience.Private
 public class FilterListWithAND extends FilterListBase {
 
-  private Set<Filter> seekHintFilter = new HashSet<>();
+  private List<Filter> seekHintFilters = new ArrayList<>();
 
   public FilterListWithAND(List<Filter> filters) {
     super(filters);
@@ -155,7 +154,7 @@ public class FilterListWithAND extends FilterListBase {
     ReturnCode rc = ReturnCode.INCLUDE;
     Cell transformed = transformedCell;
     this.referenceCell = c;
-    this.seekHintFilter.clear();
+    this.seekHintFilters.clear();
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
@@ -175,11 +174,11 @@ public class FilterListWithAND extends FilterListBase {
         transformed = filter.transformCell(transformed);
       }
       if (localRC == ReturnCode.SEEK_NEXT_USING_HINT) {
-        seekHintFilter.add(filter);
+        seekHintFilters.add(filter);
       }
     }
     this.transformedCell = transformed;
-    if (!seekHintFilter.isEmpty()) {
+    if (!seekHintFilters.isEmpty()) {
       return ReturnCode.SEEK_NEXT_USING_HINT;
     }
     return rc;
@@ -190,7 +189,7 @@ public class FilterListWithAND extends FilterListBase {
     for (int i = 0, n = filters.size(); i < n; i++) {
       filters.get(i).reset();
     }
-    seekHintFilter.clear();
+    seekHintFilters.clear();
   }
 
   @Override
@@ -259,7 +258,7 @@ public class FilterListWithAND extends FilterListBase {
       return super.getNextCellHint(currentCell);
     }
     Cell maxHint = null;
-    for (Filter filter : seekHintFilter) {
+    for (Filter filter : seekHintFilters) {
       if (filter.filterAllRemaining()) {
         continue;
       }
