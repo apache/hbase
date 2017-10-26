@@ -58,7 +58,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -83,7 +82,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.coprocessor.BypassCoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
@@ -1704,9 +1702,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     try {
       checkInitialized();
       if (this.cpHost != null) {
-        if (this.cpHost.preMove(hri, rp.getSource(), rp.getDestination())) {
-          return;
-        }
+        this.cpHost.preMove(hri, rp.getSource(), rp.getDestination());
       }
       // Warmup the region on the destination before initiating the move. this call
       // is synchronous and takes some time. doing it before the source region gets
@@ -2895,13 +2891,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     TableName.isLegalNamespaceName(Bytes.toBytes(namespaceDescriptor.getName()));
 
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+    return MasterProcedureUtil.submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this,
+          nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        if (getMaster().getMasterCoprocessorHost().preCreateNamespace(namespaceDescriptor)) {
-          throw new BypassCoprocessorException();
-        }
+        getMaster().getMasterCoprocessorHost().preCreateNamespace(namespaceDescriptor);
         LOG.info(getClientIdAuditPrefix() + " creating " + namespaceDescriptor);
         // Execute the operation synchronously - wait for the operation to complete before
         // continuing.
@@ -2929,13 +2923,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     TableName.isLegalNamespaceName(Bytes.toBytes(namespaceDescriptor.getName()));
 
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+    return MasterProcedureUtil.submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this,
+          nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        if (getMaster().getMasterCoprocessorHost().preModifyNamespace(namespaceDescriptor)) {
-          throw new BypassCoprocessorException();
-        }
+        getMaster().getMasterCoprocessorHost().preModifyNamespace(namespaceDescriptor);
         LOG.info(getClientIdAuditPrefix() + " modify " + namespaceDescriptor);
         // Execute the operation synchronously - wait for the operation to complete before
         // continuing.
@@ -2961,13 +2953,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       throws IOException {
     checkInitialized();
 
-    return MasterProcedureUtil.submitProcedure(
-        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+    return MasterProcedureUtil.submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this,
+          nonceGroup, nonce) {
       @Override
       protected void run() throws IOException {
-        if (getMaster().getMasterCoprocessorHost().preDeleteNamespace(name)) {
-          throw new BypassCoprocessorException();
-        }
+        getMaster().getMasterCoprocessorHost().preDeleteNamespace(name);
         LOG.info(getClientIdAuditPrefix() + " delete " + name);
         // Execute the operation synchronously - wait for the operation to complete before
         // continuing.
@@ -3002,13 +2992,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   List<NamespaceDescriptor> getNamespaces() throws IOException {
     checkInitialized();
     final List<NamespaceDescriptor> nsds = new ArrayList<>();
-    boolean bypass = false;
     if (cpHost != null) {
-      bypass = cpHost.preListNamespaceDescriptors(nsds);
+      cpHost.preListNamespaceDescriptors(nsds);
     }
-    if (!bypass) {
-      nsds.addAll(this.clusterSchemaService.getNamespaces());
-      if (this.cpHost != null) this.cpHost.postListNamespaceDescriptors(nsds);
+    nsds.addAll(this.clusterSchemaService.getNamespaces());
+    if (this.cpHost != null) {
+      this.cpHost.postListNamespaceDescriptors(nsds);
     }
     return nsds;
   }
@@ -3085,13 +3074,12 @@ public class HMaster extends HRegionServer implements MasterServices {
       final List<TableName> tableNameList, final boolean includeSysTables)
   throws IOException {
     List<TableDescriptor> htds = new ArrayList<>();
-    boolean bypass = cpHost != null?
-        cpHost.preGetTableDescriptors(tableNameList, htds, regex): false;
-    if (!bypass) {
-      htds = getTableDescriptors(htds, namespace, regex, tableNameList, includeSysTables);
-      if (cpHost != null) {
-        cpHost.postGetTableDescriptors(tableNameList, htds, regex);
-      }
+    if (cpHost != null) {
+      cpHost.preGetTableDescriptors(tableNameList, htds, regex);
+    }
+    htds = getTableDescriptors(htds, namespace, regex, tableNameList, includeSysTables);
+    if (cpHost != null) {
+      cpHost.postGetTableDescriptors(tableNameList, htds, regex);
     }
     return htds;
   }
@@ -3106,10 +3094,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   public List<TableName> listTableNames(final String namespace, final String regex,
       final boolean includeSysTables) throws IOException {
     List<TableDescriptor> htds = new ArrayList<>();
-    boolean bypass = cpHost != null? cpHost.preGetTableNames(htds, regex): false;
-    if (!bypass) {
-      htds = getTableDescriptors(htds, namespace, regex, null, includeSysTables);
-      if (cpHost != null) cpHost.postGetTableNames(htds, regex);
+    if (cpHost != null) {
+      cpHost.preGetTableNames(htds, regex);
+    }
+    htds = getTableDescriptors(htds, namespace, regex, null, includeSysTables);
+    if (cpHost != null) {
+      cpHost.postGetTableNames(htds, regex);
     }
     List<TableName> result = new ArrayList<>(htds.size());
     for (TableDescriptor htd: htds) result.add(htd.getTableName());

@@ -407,9 +407,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
         s.close();
         return;
       }
-      if (region.getCoprocessorHost().preScannerClose(s)) {
-        return;
-      }
+      region.getCoprocessorHost().preScannerClose(s);
       try {
         s.close();
       } finally {

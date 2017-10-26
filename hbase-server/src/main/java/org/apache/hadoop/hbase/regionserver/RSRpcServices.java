@@ -680,7 +680,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         } else {
           // convert duplicate append to get
           List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cellScanner), false,
-            nonceGroup, nonce);
+              nonceGroup, nonce);
           r = Result.create(results);
         }
         success = true;
@@ -731,7 +731,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         } else {
           // convert duplicate increment to get
           List<Cell> results = region.get(ProtobufUtil.toGet(mutation, cells), false, nonceGroup,
-            nonce);
+              nonce);
           r = Result.create(results);
         }
         success = true;
@@ -2251,7 +2251,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
-      boolean bypass = false;
       boolean loaded = false;
       Map<byte[], List<Path>> map = null;
 
@@ -2278,15 +2277,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
         }
         if (region.getCoprocessorHost() != null) {
-          bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
+          region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
         }
         try {
-          if (!bypass) {
-            map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
-                request.getCopyFile());
-            if (map != null) {
-              loaded = true;
-            }
+          map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
+              request.getCopyFile());
+          if (map != null) {
+            loaded = true;
           }
         } finally {
           if (region.getCoprocessorHost() != null) {
@@ -2457,16 +2454,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private Result get(Get get, HRegion region, RegionScannersCloseCallBack closeCallBack,
       RpcCallContext context) throws IOException {
     region.prepareGet(get);
-    List<Cell> results = new ArrayList<>();
     boolean stale = region.getRegionInfo().getReplicaId() != 0;
+
+    // This method is almost the same as HRegion#get.
+    List<Cell> results = new ArrayList<>();
+    long before = EnvironmentEdgeManager.currentTime();
     // pre-get CP hook
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preGet(get, results)) {
+        region.metricsUpdateForGet(results, before);
         return Result
             .create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
       }
     }
-    long before = EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
     if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
@@ -2498,6 +2498,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       region.getCoprocessorHost().postGet(get, results);
     }
     region.metricsUpdateForGet(results, before);
+
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
@@ -2729,11 +2730,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           byte[] qualifier = condition.getQualifier().toByteArray();
           CompareOperator compareOp =
             CompareOperator.valueOf(condition.getCompareType().name());
-          ByteArrayComparable comparator =
-            ProtobufUtil.toComparator(condition.getComparator());
+          ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
           if (region.getCoprocessorHost() != null) {
-            processed = region.getCoprocessorHost().preCheckAndPut(
-              row, family, qualifier, compareOp, comparator, put);
+            processed = region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
+                compareOp, comparator, put);
           }
           if (processed == null) {
             boolean result = region.checkAndMutate(row, family,
@@ -2760,11 +2760,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           byte[] family = condition.getFamily().toByteArray();
           byte[] qualifier = condition.getQualifier().toByteArray();
           CompareOperator op = CompareOperator.valueOf(condition.getCompareType().name());
-          ByteArrayComparable comparator =
-            ProtobufUtil.toComparator(condition.getComparator());
+          ByteArrayComparable comparator = ProtobufUtil.toComparator(condition.getComparator());
           if (region.getCoprocessorHost() != null) {
-            processed = region.getCoprocessorHost().preCheckAndDelete(
-              row, family, qualifier, op, comparator, delete);
+            processed = region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier, op,
+                comparator, delete);
           }
           if (processed == null) {
             boolean result = region.checkAndMutate(row, family,

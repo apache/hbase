@@ -28,10 +28,10 @@ import java.util.Optional;
 /**
  * Carries the execution state for a given invocation of an Observer coprocessor
  * ({@link RegionObserver}, {@link MasterObserver}, or {@link WALObserver})
- * method.  The same ObserverContext instance is passed sequentially to all loaded
+ * method. The same ObserverContext instance is passed sequentially to all loaded
  * coprocessors for a given Observer method trigger, with the
- * <code>CoprocessorEnvironment</code> reference swapped out for each
- * coprocessor.
+ * <code>CoprocessorEnvironment</code> reference set appropriately for each Coprocessor type:
+ * e.g. the RegionCoprocessorEnvironment is passed to RegionCoprocessors, and so on.
  * @param <E> The {@link CoprocessorEnvironment} subclass applicable to the
  *     revelant Observer interface.
  */
@@ -41,15 +41,39 @@ public interface ObserverContext<E extends CoprocessorEnvironment> {
   E getEnvironment();
 
   /**
-   * Call to indicate that the current coprocessor's return value should be
-   * used in place of the normal HBase obtained value.
+   * Call to indicate that the current coprocessor's return value (or parameter -- depends on the
+   * call-type) should be used in place of the value that would be obtained via normal processing;
+   * i.e. bypass the core call and return the Coprocessor's result instead. DOES NOT work for all
+   * Coprocessor invocations, only on a small subset of methods, mostly preXXX calls in
+   * RegionObserver. Check javadoc on the pertinent Coprocessor Observer to see if
+   * <code>bypass</code> is supported.
+   * <p>This behavior of honoring only a subset of methods is new since hbase-2.0.0.
+   * <p>Where bypass is supported what is being bypassed is all of the core code
+   * implementing the remainder of the operation. In order to understand what
+   * calling bypass() will skip, a coprocessor implementer should read and
+   * understand all of the remaining code and its nuances. Although this
+   * is good practice for coprocessor developers in general, it demands a lot.
+   * What is skipped is extremely version dependent. The core code will vary, perhaps significantly,
+   * even between point releases. We do not provide the promise of consistent behavior even between
+   * point releases for the bypass semantic. To achieve
+   * that we could not change any code between hook points. Therefore the
+   * coprocessor implementer becomes an HBase core developer in practice as soon
+   * as they rely on bypass(). Every release of HBase may break the assumption
+   * that the replacement for the bypassed code takes care of all necessary
+   * skipped concerns. Because those concerns can change at any point, such an
+   * assumption is never safe.</p>
+   * @see #complete()
    */
   void bypass();
 
   /**
-   * Call to indicate that additional coprocessors further down the execution
-   * chain do not need to be invoked.  Implies that this coprocessor's response
+   * Call to skip out on calling remaining coprocessors in current execution chain (there may be
+   * more than one coprocessor chained to a method call). Implies that this coprocessor's response
    * is definitive.
+   * <p>Since hbase-2.0.0, only <code>complete</code> of 'bypassable' methods has an effect. See
+   * javadoc on the Coprocessor Observer method as to whether bypass (and thereby 'complete') is
+   * supported. This behavior of honoring only a subset of methods is new since hbase-2.0.0.
+   * @see #bypass()
    */
   void complete();
 
@@ -60,5 +84,4 @@ public interface ObserverContext<E extends CoprocessorEnvironment> {
    * context.
    */
   Optional<User> getCaller();
-
 }

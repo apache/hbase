@@ -714,6 +714,9 @@ public class TestMobCompactor {
     while (fileList.length != num) {
       Thread.sleep(50);
       fileList = fs.listStatus(path);
+      for (FileStatus fileStatus: fileList) {
+        LOG.info(fileStatus);
+      }
     }
   }
 
@@ -738,6 +741,7 @@ public class TestMobCompactor {
           candidates.remove(0);
         }
         c.bypass();
+        c.complete();
       }
     }
   }

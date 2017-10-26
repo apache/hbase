@@ -99,12 +99,11 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
   }
 
   @Override
-  public boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
+  public void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
       RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-    boolean bypass = false;
     // check table name matches or not.
     if (!Bytes.equals(info.getTable().toBytes(), this.tableName)) {
-      return bypass;
+      return;
     }
     preWALWriteCalled = true;
     // here we're going to remove one keyvalue from the WALEdit, and add
@@ -134,7 +133,6 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
       LOG.debug("About to delete a KeyValue from WALEdit.");
       cells.remove(deletedCell);
     }
-    return bypass;
   }
 
   /**

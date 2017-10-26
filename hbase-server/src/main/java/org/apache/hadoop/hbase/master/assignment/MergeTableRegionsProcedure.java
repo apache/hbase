@@ -530,12 +530,7 @@ public class MergeTableRegionsProcedure
   private void preMergeRegions(final MasterProcedureEnv env) throws IOException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      boolean ret = cpHost.preMergeRegionsAction(regionsToMerge, getUser());
-      if (ret) {
-        throw new IOException(
-          "Coprocessor bypassing regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
-          " merge.");
-      }
+      cpHost.preMergeRegionsAction(regionsToMerge, getUser());
     }
     // TODO: Clean up split and merge. Currently all over the place.
     try {
@@ -702,13 +697,7 @@ public class MergeTableRegionsProcedure
     if (cpHost != null) {
       @MetaMutationAnnotation
       final List<Mutation> metaEntries = new ArrayList<Mutation>();
-      boolean ret = cpHost.preMergeRegionsCommit(regionsToMerge, metaEntries, getUser());
-
-      if (ret) {
-        throw new IOException(
-          "Coprocessor bypassing regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
-          " merge.");
-      }
+      cpHost.preMergeRegionsCommit(regionsToMerge, metaEntries, getUser());
       try {
         for (Mutation p : metaEntries) {
           RegionInfo.parseRegionName(p.getRow());

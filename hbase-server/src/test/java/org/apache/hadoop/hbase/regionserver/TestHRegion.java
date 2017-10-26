@@ -359,7 +359,7 @@ public class TestHRegion {
 
   /**
    * Create a WAL outside of the usual helper in
-   * {@link HBaseTestingUtility#createWal(Configuration, Path, HRegionInfo)} because that method
+   * {@link HBaseTestingUtility#createWal(Configuration, Path, RegionInfo)} because that method
    * doesn't play nicely with FaultyFileSystem. Call this method before overriding
    * {@code fs.file.impl}.
    * @param callingMethod a unique component for the path, probably the name of the test method.
@@ -2386,6 +2386,9 @@ public class TestHRegion {
     FileSystem fs = FileSystem.get(CONF);
     Path rootDir = new Path(dir + "testDataInMemoryWithoutWAL");
     FSHLog hLog = new FSHLog(fs, rootDir, "testDataInMemoryWithoutWAL", CONF);
+    // This chunk creation is done throughout the code base. Do we want to move it into core?
+    // It is missing from this test. W/o it we NPE.
+    ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
 
@@ -2433,17 +2436,17 @@ public class TestHRegion {
     // save normalCPHost and replaced by mockedCPHost
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
     RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
-    Answer<Boolean> answer = new Answer<Boolean>() {
+    // Because the preBatchMutate returns void, we can't do usual Mockito when...then form. Must
+    // do below format (from Mockito doc).
+    Mockito.doAnswer(new Answer() {
       @Override
-      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+      public Object answer(InvocationOnMock invocation) throws Throwable {
         MiniBatchOperationInProgress<Mutation> mb = invocation.getArgumentAt(0,
                 MiniBatchOperationInProgress.class);
         mb.addOperationsFromCP(0, new Mutation[]{addPut});
-        return false;
+        return null;
       }
-    };
-    when(mockedCPHost.preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class)))
-      .then(answer);
+    }).when(mockedCPHost).preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class));
     region.setCoprocessorHost(mockedCPHost);
     region.put(originalPut);
     region.setCoprocessorHost(normalCPHost);

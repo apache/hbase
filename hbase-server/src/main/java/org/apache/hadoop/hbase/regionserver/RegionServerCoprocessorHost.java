@@ -115,7 +115,10 @@ public class RegionServerCoprocessorHost extends
   public void preStop(String message, User user) throws IOException {
     // While stopping the region server all coprocessors method should be executed first then the
     // coprocessor should be cleaned up.
-    execShutdown(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation(user) {
+    if (coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execShutdown(new RegionServerObserverOperation(user) {
       @Override
       public void call(RegionServerObserver observer) throws IOException {
         observer.preStopRegionServer(this);
@@ -169,9 +172,12 @@ public class RegionServerCoprocessorHost extends
 
   public ReplicationEndpoint postCreateReplicationEndPoint(final ReplicationEndpoint endpoint)
       throws IOException {
-    return execOperationWithResult(endpoint, coprocEnvironments.isEmpty() ? null :
+    if (this.coprocEnvironments.isEmpty()) {
+      return endpoint;
+    }
+    return execOperationWithResult(
         new ObserverOperationWithResult<RegionServerObserver, ReplicationEndpoint>(
-            rsObserverGetter) {
+            rsObserverGetter, endpoint) {
       @Override
       public ReplicationEndpoint call(RegionServerObserver observer) throws IOException {
         return observer.postCreateReplicationEndPoint(this, getResult());

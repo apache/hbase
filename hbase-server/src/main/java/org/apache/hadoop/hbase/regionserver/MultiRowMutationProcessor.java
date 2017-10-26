@@ -108,6 +108,8 @@ MultiRowMutationProcessorResponse> {
         if (m instanceof Put) {
           if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
             // by pass everything
+            // Is this right? Bypass everything and not just this individual put?
+            // This class is going away in hbase2 so lets not sweat it.
             return;
           }
         } else if (m instanceof Delete) {
@@ -115,6 +117,8 @@ MultiRowMutationProcessorResponse> {
           region.prepareDelete(d);
           if (coprocessorHost.preDelete(d, walEdit, d.getDurability())) {
             // by pass everything
+            // Is this right? Bypass everything and not just this individual put?
+            // This class is going away in hbase2 so lets not sweat it.
             return;
           }
         }
