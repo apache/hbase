@@ -351,6 +351,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>janh</id>
+      <name>Jan Hentschel</name>
+      <email>janh@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>jmhsieh</id>
       <name>Jonathan Hsieh</name>
       <email>jmhsieh@apache.org</email>
