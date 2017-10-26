@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
@@ -62,19 +61,18 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.FatalConnectionException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
-import org.apache.htrace.impl.AlwaysSampler;
+import org.apache.htrace.core.AlwaysSampler;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
 
 /**
  * Integration test that should benchmark how fast HBase can recover from failures. This test starts
@@ -268,7 +266,7 @@ public class IntegrationTestMTTR {
 
     loadTool = null;
   }
-  
+
   private static boolean tablesOnMaster() {
     boolean ret = true;
     String value = util.getConfiguration().get("hbase.balancer.tablesOnMaster");
@@ -369,7 +367,7 @@ public class IntegrationTestMTTR {
    */
   private static class TimingResult {
     DescriptiveStatistics stats = new DescriptiveStatistics();
-    ArrayList<Long> traces = new ArrayList<>(10);
+    ArrayList<String> traces = new ArrayList<>(10);
 
     /**
      * Add a result to this aggregate result.
@@ -377,9 +375,12 @@ public class IntegrationTestMTTR {
      * @param span Span.  To be kept if the time taken was over 1 second
      */
     public void addResult(long time, Span span) {
+      if (span == null) {
+        return;
+      }
       stats.addValue(TimeUnit.MILLISECONDS.convert(time, TimeUnit.NANOSECONDS));
       if (TimeUnit.SECONDS.convert(time, TimeUnit.NANOSECONDS) >= 1) {
-        traces.add(span.getTraceId());
+        traces.add(span.getTracerId());
       }
     }
 
@@ -419,12 +420,15 @@ public class IntegrationTestMTTR {
       final int maxIterations = 10;
       int numAfterDone = 0;
       int resetCount = 0;
+      TraceUtil.addSampler(AlwaysSampler.INSTANCE);
       // Keep trying until the rs is back up and we've gotten a put through
       while (numAfterDone < maxIterations) {
         long start = System.nanoTime();
-        TraceScope scope = null;
-        try {
-          scope = Trace.startSpan(getSpanName(), AlwaysSampler.INSTANCE);
+        Span span = null;
+        try (TraceScope scope = TraceUtil.createTrace(getSpanName())) {
+          if (scope != null) {
+            span = scope.getSpan();
+          }
           boolean actionResult = doAction();
           if (actionResult && future.isDone()) {
             numAfterDone++;
@@ -470,12 +474,8 @@ public class IntegrationTestMTTR {
             LOG.info("Too many unexpected Exceptions. Aborting.", e);
             throw e;
           }
-        } finally {
-          if (scope != null) {
-            scope.close();
-          }
         }
-        result.addResult(System.nanoTime() - start, scope.getSpan());
+        result.addResult(System.nanoTime() - start, span);
       }
       return result;
     }

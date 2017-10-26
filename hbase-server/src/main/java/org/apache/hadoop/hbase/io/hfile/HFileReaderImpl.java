@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -59,8 +60,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -255,6 +255,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // Prefetch file blocks upon open if requested
     if (cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
+        @Override
         public void run() {
           long offset = 0;
           long end = 0;
@@ -436,6 +437,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @return the total heap size of data and meta block indexes in bytes. Does
    *         not take into account non-root blocks of a multilevel data index.
    */
+  @Override
   public long indexSize() {
     return (dataBlockIndexReader != null ? dataBlockIndexReader.heapSize() : 0)
         + ((metaBlockIndexReader != null) ? metaBlockIndexReader.heapSize()
@@ -1239,6 +1241,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
   }
 
+  @Override
   public Path getPath() {
     return path;
   }
@@ -1276,10 +1279,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   protected boolean decodeMemstoreTS = false;
 
 
+  @Override
   public boolean isDecodeMemStoreTS() {
     return this.decodeMemstoreTS;
   }
 
+  @Override
   public boolean shouldIncludeMemStoreTS() {
     return includesMemstoreTS;
   }
@@ -1437,8 +1442,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
-    TraceScope traceScope = Trace.startSpan("HFileReaderImpl.readBlock");
-    try {
+    try (TraceScope traceScope = TraceUtil.createTrace("HFileReaderImpl.readBlock")) {
       while (true) {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
@@ -1453,9 +1457,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             if (LOG.isTraceEnabled()) {
               LOG.trace("From Cache " + cachedBlock);
             }
-            if (Trace.isTracing()) {
-              traceScope.getSpan().addTimelineAnnotation("blockCacheHit");
-            }
+            TraceUtil.addTimelineAnnotation("blockCacheHit");
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {
               if (updateCacheMetrics) {
@@ -1481,9 +1483,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           // Carry on, please load.
         }
 
-        if (Trace.isTracing()) {
-          traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
-        }
+        TraceUtil.addTimelineAnnotation("blockCacheMiss");
         // Load block from filesystem.
         HFileBlock hfileBlock =
             fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread, !isCompaction);
@@ -1505,7 +1505,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return unpacked;
       }
     } finally {
-      traceScope.close();
       if (lockEntry != null) {
         offsetLock.releaseLockEntry(lockEntry);
       }
@@ -1568,6 +1567,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     close(cacheConf.shouldEvictOnClose());
   }
 
+  @Override
   public void close(boolean evictOnClose) throws IOException {
     PrefetchExecutor.cancel(path);
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
@@ -1580,11 +1580,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     fsBlockReader.closeStreams();
   }
 
+  @Override
   public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction) {
     return dataBlockEncoder.getEffectiveEncodingInCache(isCompaction);
   }
 
   /** For testing */
+  @Override
   public HFileBlock.FSReader getUncachedBlockReader() {
     return fsBlockReader;
   }
@@ -1612,6 +1614,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return curBlock != null;
     }
 
+    @Override
     public void setNonSeekedState() {
       reset();
     }
@@ -1713,6 +1716,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
 
+    @Override
     protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
       return dataBlockEncoder.getFirstKeyCellInBlock(getEncodedBuffer(curBlock));
     }
@@ -1730,6 +1734,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return seeker.seekToKeyInBlock(key, seekBefore);
     }
 
+    @Override
     public int compareKey(CellComparator comparator, Cell key) {
       return seeker.compareKey(comparator, key);
     }
@@ -1776,6 +1781,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * Returns false if block prefetching was requested for this file and has
    * not completed, true otherwise
    */
+  @Override
   @VisibleForTesting
   public boolean prefetchComplete() {
     return PrefetchExecutor.isCompleted(path);

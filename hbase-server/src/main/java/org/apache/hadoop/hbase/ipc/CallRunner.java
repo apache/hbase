@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -32,8 +33,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
@@ -116,20 +115,17 @@ public class CallRunner {
       String error = null;
       Pair<Message, CellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
-      TraceScope traceScope = null;
       try {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
           throw new ServerNotRunningYetException("Server " +
               (address != null ? address : "(channel closed)") + " is not running yet");
         }
-        if (call.getTraceInfo() != null) {
-          String serviceName =
-              call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
-          String methodName = (call.getMethod() != null) ? call.getMethod().getName() : "";
-          String traceString = serviceName + "." + methodName;
-          traceScope = Trace.startSpan(traceString, call.getTraceInfo());
-        }
+        String serviceName =
+            call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
+        String methodName = (call.getMethod() != null) ? call.getMethod().getName() : "";
+        String traceString = serviceName + "." + methodName;
+        TraceUtil.createTrace(traceString);
         // make the call
         resultPair = this.rpcServer.call(call, this.status);
       } catch (TimeoutIOException e){
@@ -150,9 +146,6 @@ public class CallRunner {
           throw (Error)e;
         }
       } finally {
-        if (traceScope != null) {
-          traceScope.close();
-        }
         RpcServer.CurCall.set(null);
         if (resultPair != null) {
           this.rpcServer.addCallSize(call.getSize() * -1);

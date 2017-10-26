@@ -58,16 +58,17 @@ import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
-import org.apache.htrace.impl.ProbabilitySampler;
+import org.apache.htrace.core.ProbabilitySampler;
+import org.apache.htrace.core.Sampler;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import com.codahale.metrics.ConsoleReporter;
@@ -172,15 +173,13 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       Random rand = new Random(Thread.currentThread().getId());
       WAL wal = region.getWAL();
 
-      TraceScope threadScope =
-        Trace.startSpan("WALPerfEval." + Thread.currentThread().getName());
-      try {
+      try (TraceScope threadScope = TraceUtil.createTrace("WALPerfEval." + Thread.currentThread().getName())) {
         long startTime = System.currentTimeMillis();
         int lastSync = 0;
+        TraceUtil.addSampler(loopSampler);
         for (int i = 0; i < numIterations; ++i) {
-          assert Trace.currentSpan() == threadScope.getSpan() : "Span leak detected.";
-          TraceScope loopScope = Trace.startSpan("runLoopIter" + i, loopSampler);
-          try {
+          assert Tracer.getCurrentSpan() == threadScope.getSpan() : "Span leak detected.";
+          try (TraceScope loopScope = TraceUtil.createTrace("runLoopIter" + i)) {
             long now = System.nanoTime();
             Put put = setupPut(rand, key, value, numFamilies);
             WALEdit walEdit = new WALEdit();
@@ -196,16 +195,12 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
               }
             }
             latencyHistogram.update(System.nanoTime() - now);
-          } finally {
-            loopScope.close();
           }
         }
         long totalTime = (System.currentTimeMillis() - startTime);
         logBenchmarkResult(Thread.currentThread().getName(), numIterations, totalTime);
       } catch (Exception e) {
         LOG.error(getClass().getSimpleName() + " Thread failed", e);
-      } finally {
-        threadScope.close();
       }
     }
   }
@@ -315,8 +310,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     LOG.info("FileSystem: " + fs);
 
     SpanReceiverHost receiverHost = trace ? SpanReceiverHost.getInstance(getConf()) : null;
-    final Sampler<?> sampler = trace ? Sampler.ALWAYS : Sampler.NEVER;
-    TraceScope scope = Trace.startSpan("WALPerfEval", sampler);
+    final Sampler sampler = trace ? Sampler.ALWAYS : Sampler.NEVER;
+    TraceUtil.addSampler(sampler);
+    TraceScope scope = TraceUtil.createTrace("WALPerfEval");
 
     try {
       if (rootRegionDir == null) {
@@ -338,8 +334,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           // a table per desired region means we can avoid carving up the key space
           final HTableDescriptor htd = createHTableDescriptor(i, numFamilies);
           regions[i] = openRegion(fs, rootRegionDir, htd, wals, roll, roller);
-          benchmarks[i] = Trace.wrap(new WALPutBenchmark(regions[i], htd, numIterations, noSync,
-              syncInterval, traceFreq));
+          benchmarks[i] = TraceUtil.wrap(new WALPutBenchmark(regions[i], htd, numIterations, noSync,
+              syncInterval, traceFreq), "");
         }
         ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics).
           outputTo(System.out).convertRatesTo(TimeUnit.SECONDS).filter(MetricFilter.ALL).build();
@@ -389,9 +385,15 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       }
     } finally {
       // We may be called inside a test that wants to keep on using the fs.
-      if (!noclosefs) fs.close();
-      scope.close();
-      if (receiverHost != null) receiverHost.closeReceivers();
+      if (!noclosefs) {
+        fs.close();
+      }
+      if (scope != null) {
+        scope.close();
+      }
+      if (receiverHost != null) {
+        receiverHost.closeReceivers();
+      }
     }
 
     return(0);

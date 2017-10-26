@@ -563,7 +563,7 @@ public class TestSimpleRpcScheduler {
     ServerCall putCall = new ServerCall(1, null, null,
         RPCProtos.RequestHeader.newBuilder().setMethodName("mutate").build(),
         RequestConverter.buildMutateRequest(Bytes.toBytes("abc"), new Put(Bytes.toBytes("row"))),
-        null, null, 9, null, null, timestamp, 0, null, null, null) {
+        null, null, 9, null, timestamp, 0, null, null, null) {
 
       @Override
       public void sendResponseIfReady() throws IOException {

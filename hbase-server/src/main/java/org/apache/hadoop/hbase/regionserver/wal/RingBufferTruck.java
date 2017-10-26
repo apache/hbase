@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.htrace.core.Span;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.htrace.Span;
 
 /**
  * A 'truck' to carry a payload across the ring buffer from Handler to WAL. Has EITHER a

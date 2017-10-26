@@ -818,7 +818,7 @@ public class TableMapReduceUtil {
       com.google.protobuf.Message.class,
       org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.class,
       org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
-      org.apache.htrace.Trace.class,
+      org.apache.htrace.core.Tracer.class,
       com.codahale.metrics.MetricRegistry.class,
       org.apache.commons.lang3.ArrayUtils.class,
       com.fasterxml.jackson.databind.ObjectMapper.class,

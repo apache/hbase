@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.htrace.TraceInfo;
 
 /**
  * Datastructure that holds all necessary to a method invocation and then afterward, carries the
@@ -43,10 +42,10 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
       justification = "Can't figure why this complaint is happening... see below")
   SimpleServerCall(int id, final BlockingService service, final MethodDescriptor md,
       RequestHeader header, Message param, CellScanner cellScanner,
-      SimpleServerRpcConnection connection, long size, TraceInfo tinfo,
+      SimpleServerRpcConnection connection, long size,
       final InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerResponder responder) {
-    super(id, service, md, header, param, cellScanner, connection, size, tinfo, remoteAddress,
+    super(id, service, md, header, param, cellScanner, connection, size, remoteAddress,
         receiveTime, timeout, reservoir, cellBlockBuilder, reqCleanup);
     this.responder = responder;
   }

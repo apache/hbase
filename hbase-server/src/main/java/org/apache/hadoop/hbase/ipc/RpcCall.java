@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.htrace.TraceInfo;
 
 /**
  * Interface of all necessary to carry out a RPC method invocation on the server.
@@ -133,9 +132,4 @@ public interface RpcCall extends RpcCallContext {
    * @return A short string format of this call without possibly lengthy params
    */
   String toShortString();
-
-  /**
-   * @return TraceInfo attached to this call.
-   */
-  TraceInfo getTraceInfo();
 }

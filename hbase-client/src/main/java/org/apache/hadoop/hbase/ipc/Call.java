@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.htrace.Span;
-import org.apache.htrace.Trace;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.Tracer;
 
 /** A call waiting for a value. */
 @InterfaceAudience.Private
@@ -73,7 +73,7 @@ class Call {
     this.timeout = timeout;
     this.priority = priority;
     this.callback = callback;
-    this.span = Trace.currentSpan();
+    this.span = Tracer.getCurrentSpan();
   }
 
   @Override

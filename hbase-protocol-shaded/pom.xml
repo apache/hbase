@@ -230,6 +230,10 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->

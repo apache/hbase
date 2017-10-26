@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -51,11 +53,8 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
  * Thread that flushes cache on request
@@ -447,7 +446,7 @@ class MemStoreFlusher implements FlushRequester {
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
           if (!this.server.compactSplitThread.requestSplit(region)) {
             try {
-              this.server.compactSplitThread.requestSystemCompaction((HRegion) region,
+              this.server.compactSplitThread.requestSystemCompaction(region,
                 Thread.currentThread().getName());
             } catch (IOException e) {
               e = e instanceof RemoteException ?
@@ -572,12 +571,10 @@ class MemStoreFlusher implements FlushRequester {
    * amount of memstore consumption.
    */
   public void reclaimMemStoreMemory() {
-    TraceScope scope = Trace.startSpan("MemStoreFluser.reclaimMemStoreMemory");
+    TraceScope scope = TraceUtil.createTrace("MemStoreFluser.reclaimMemStoreMemory");
     FlushType flushType = isAboveHighWaterMark();
     if (flushType != FlushType.NORMAL) {
-      if (Trace.isTracing()) {
-        scope.getSpan().addTimelineAnnotation("Force Flush. We're above high water mark.");
-      }
+      TraceUtil.addTimelineAnnotation("Force Flush. We're above high water mark.");
       long start = EnvironmentEdgeManager.currentTime();
       synchronized (this.blockSignal) {
         boolean blocked = false;
@@ -640,7 +637,9 @@ class MemStoreFlusher implements FlushRequester {
     } else if (isAboveLowWaterMark() != FlushType.NORMAL) {
       wakeupFlushThread();
     }
-    scope.close();
+    if(scope!= null) {
+      scope.close();
+    }
   }
 
   private void logMsg(String string1, long val, long max) {
