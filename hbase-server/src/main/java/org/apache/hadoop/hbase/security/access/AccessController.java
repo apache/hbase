@@ -1264,10 +1264,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+  public void preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final boolean newValue, final MasterSwitchType switchType) throws IOException {
     requirePermission(getActiveUser(ctx), "setSplitOrMergeEnabled", Action.ADMIN);
-    return false;
   }
 
   @Override
@@ -1282,10 +1281,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> c,
+  public void preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> c,
       boolean newValue) throws IOException {
     requirePermission(getActiveUser(c), "balanceSwitch", Action.ADMIN);
-    return newValue;
   }
 
   @Override

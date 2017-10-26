@@ -35,11 +35,25 @@ import org.apache.yetus.audience.InterfaceStability;
 public class ObserverContextImpl<E extends CoprocessorEnvironment> implements ObserverContext<E> {
   private E env;
   private boolean bypass;
+  /**
+   * Is this operation bypassable?
+   */
+  private final boolean bypassable;
+  /**
+   * Is this operation completable?
+   */
   private boolean complete;
+  private final boolean completable;
   private final User caller;
 
   public ObserverContextImpl(User caller) {
+    this(caller, false, false);
+  }
+
+  public ObserverContextImpl(User caller, boolean bypassable, boolean completable) {
     this.caller = caller;
+    this.bypassable = bypassable;
+    this.completable = completable;
   }
 
   public E getEnvironment() {
@@ -50,11 +64,25 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
     this.env = env;
   }
 
+  public boolean isBypassable() {
+    return this.bypassable;
+  };
+
   public void bypass() {
+    if (!this.bypassable) {
+      throw new UnsupportedOperationException("This method does not support 'bypass'.");
+    }
     bypass = true;
   }
 
+  public boolean isCompleable() {
+    return this.completable;
+  };
+
   public void complete() {
+    if (!this.completable) {
+      throw new UnsupportedOperationException("This method does not support 'complete'.");
+    }
     complete = true;
   }
 
@@ -63,6 +91,9 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * coprocessors, {@code false} otherwise.
    */
   public boolean shouldBypass() {
+    if (!isBypassable()) {
+      return false;
+    }
     if (bypass) {
       bypass = false;
       return true;
@@ -75,6 +106,9 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * coprocessors, {@code false} otherwise.
    */
   public boolean shouldComplete() {
+    if (!isCompleable()) {
+      return false;
+    }
     if (complete) {
       complete = false;
       return true;

@@ -331,7 +331,7 @@ public class MasterRpcServices extends RSRpcServices
     boolean newValue = b;
     try {
       if (master.cpHost != null) {
-        newValue = master.cpHost.preBalanceSwitch(newValue);
+        master.cpHost.preBalanceSwitch(newValue);
       }
       try {
         if (mode == BalanceSwitchMode.SYNC) {
@@ -509,9 +509,7 @@ public class MasterRpcServices extends RSRpcServices
 
       final AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
       if (master.cpHost != null) {
-        if (master.cpHost.preAssign(regionInfo)) {
-          return arr;
-        }
+        master.cpHost.preAssign(regionInfo);
       }
       LOG.info(master.getClientIdAuditPrefix() + " assign " + regionInfo.getRegionNameAsString());
       master.getAssignmentManager().assign(regionInfo, true);
@@ -1517,9 +1515,7 @@ public class MasterRpcServices extends RSRpcServices
 
       RegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
-        if (master.cpHost.preUnassign(hri, force)) {
-          return urr;
-        }
+        master.cpHost.preUnassign(hri, force);
       }
       LOG.debug(master.getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
           + " in current location if it is online and reassign.force=" + force);
@@ -1704,13 +1700,10 @@ public class MasterRpcServices extends RSRpcServices
         MasterSwitchType switchType = convert(masterSwitchType);
         boolean oldValue = master.isSplitOrMergeEnabled(switchType);
         response.addPrevValue(oldValue);
-        boolean bypass = false;
         if (master.cpHost != null) {
-          bypass = master.cpHost.preSetSplitOrMergeEnabled(newValue, switchType);
+          master.cpHost.preSetSplitOrMergeEnabled(newValue, switchType);
         }
-        if (!bypass) {
-          master.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
-        }
+        master.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
         if (master.cpHost != null) {
           master.cpHost.postSetSplitOrMergeEnabled(newValue, switchType);
         }
@@ -2155,17 +2148,9 @@ public class MasterRpcServices extends RSRpcServices
     ListDeadServersResponse.Builder response = ListDeadServersResponse.newBuilder();
     try {
       master.checkInitialized();
-      if (master.cpHost != null) {
-        master.cpHost.preListDeadServers();
-      }
-
       Set<ServerName> servers = master.getServerManager().getDeadServers().copyServerNames();
       for (ServerName server : servers) {
         response.addServerName(ProtobufUtil.toServerName(server));
-      }
-
-      if (master.cpHost != null) {
-        master.cpHost.postListDeadServers();
       }
     } catch (IOException io) {
       throw new ServiceException(io);

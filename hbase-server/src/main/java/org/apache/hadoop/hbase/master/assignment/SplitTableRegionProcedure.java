@@ -709,10 +709,7 @@ public class SplitTableRegionProcedure
     final List<Mutation> metaEntries = new ArrayList<Mutation>();
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      if (cpHost.preSplitBeforeMETAAction(getSplitRow(), metaEntries, getUser())) {
-        throw new IOException("Coprocessor bypassing region " +
-            getParentRegion().getRegionNameAsString() + " split.");
-      }
+      cpHost.preSplitBeforeMETAAction(getSplitRow(), metaEntries, getUser());
       try {
         for (Mutation p : metaEntries) {
           RegionInfo.parseRegionName(p.getRow());

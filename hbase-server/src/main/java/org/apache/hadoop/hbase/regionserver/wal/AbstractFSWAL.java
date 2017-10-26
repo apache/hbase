@@ -909,12 +909,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
 
     // Coprocessor hook.
-    if (!coprocessorHost.preWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit())) {
-      if (entry.getEdit().isReplay()) {
-        // Set replication scope null so that this won't be replicated
-        entry.getKey().serializeReplicationScope(false);
-      }
-    }
+    coprocessorHost.preWALWrite(entry.getRegionInfo(), entry.getKey(), entry.getEdit());
     if (!listeners.isEmpty()) {
       for (WALActionsListener i : listeners) {
         i.visitLogEntryBeforeWrite(entry.getKey(), entry.getEdit());

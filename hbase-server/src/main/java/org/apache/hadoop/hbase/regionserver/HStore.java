@@ -936,7 +936,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   /**
    * Snapshot this stores memstore. Call before running
-   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask, ThroughputController)}
+   * {@link #flushCache(long, MemStoreSnapshot, MonitoredTask, ThroughputController,
+   * FlushLifeCycleTracker)}
    *  so it has some work to do.
    */
   void snapshot() {
@@ -1670,10 +1671,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         // First, see if coprocessor would want to override selection.
         if (this.getCoprocessorHost() != null) {
           final List<HStoreFile> candidatesForCoproc = compaction.preSelect(this.filesCompacting);
-          boolean override = false;
-          //TODO: is it correct way to get CompactionRequest?
-          override = getCoprocessorHost().preCompactSelection(this, candidatesForCoproc,
-            tracker, user);
+          boolean override = getCoprocessorHost().preCompactSelection(this,
+              candidatesForCoproc, tracker, user);
           if (override) {
             // Coprocessor is overriding normal file selection.
             compaction.forceSelect(new CompactionRequestImpl(candidatesForCoproc));

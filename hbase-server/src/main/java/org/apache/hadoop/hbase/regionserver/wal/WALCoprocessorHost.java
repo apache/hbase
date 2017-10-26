@@ -139,31 +139,29 @@ public class WALCoprocessorHost
     }
   }
 
-
   /**
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @return true if default behavior should be bypassed, false otherwise
-   * @throws IOException
+   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
+   * with something that doesn't expose IntefaceAudience.Private classes.
    */
-  public boolean preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
+  @Deprecated
+  public void preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
-    return execOperationWithResult(false, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<WALObserver, Boolean>(walObserverGetter) {
+    // Not bypassable.
+    if (this.coprocEnvironments.isEmpty()) {
+      return;
+    }
+    execOperation(new WALObserverOperation() {
       @Override
-      public Boolean call(WALObserver oserver) throws IOException {
-        return oserver.preWALWrite(this, info, logKey, logEdit);
+      public void call(WALObserver oserver) throws IOException {
+        oserver.preWALWrite(this, info, logKey, logEdit);
       }
     });
   }
-
   /**
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @throws IOException
+   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
+   * with something that doesn't expose IntefaceAudience.Private classes.
    */
+  @Deprecated
   public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {

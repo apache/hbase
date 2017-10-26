@@ -73,7 +73,6 @@ public interface MasterObserver {
    * Called before a new table is created by
    * {@link org.apache.hadoop.hbase.master.HMaster}.  Called as part of create
    * table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param desc the TableDescriptor for the table
    * @param regions the initial regions created for the table
@@ -95,7 +94,6 @@ public interface MasterObserver {
    * Called before a new table is created by
    * {@link org.apache.hadoop.hbase.master.HMaster}.  Called as part of create
    * table procedure and it is async to the create RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param desc the TableDescriptor for the table
@@ -123,7 +121,6 @@ public interface MasterObserver {
   /**
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} deletes a
    * table.  Called as part of delete table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
@@ -143,7 +140,6 @@ public interface MasterObserver {
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} deletes a
    * table.  Called as part of delete table procedure and
    * it is async to the delete RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -156,7 +152,6 @@ public interface MasterObserver {
    * Called after {@link org.apache.hadoop.hbase.master.HMaster} deletes a
    * table.  Called as part of delete table procedure and it is async to the
    * delete RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -168,7 +163,6 @@ public interface MasterObserver {
   /**
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} truncates a
    * table.  Called as part of truncate table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
@@ -190,7 +184,6 @@ public interface MasterObserver {
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} truncates a
    * table.  Called as part of truncate table procedure and it is async
    * to the truncate RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -203,7 +196,6 @@ public interface MasterObserver {
    * Called after {@link org.apache.hadoop.hbase.master.HMaster} truncates a
    * table.  Called as part of truncate table procedure and it is async to the
    * truncate RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -215,7 +207,6 @@ public interface MasterObserver {
   /**
    * Called prior to modifying a table's properties.  Called as part of modify
    * table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param htd the TableDescriptor
@@ -236,7 +227,6 @@ public interface MasterObserver {
   /**
    * Called prior to modifying a table's properties.  Called as part of modify
    * table procedure and it is async to the modify table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -250,7 +240,6 @@ public interface MasterObserver {
   /**
    * Called after to modifying a table's properties.  Called as part of modify
    * table procedure and it is async to the modify table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -263,7 +252,6 @@ public interface MasterObserver {
 
   /**
    * Called prior to enabling a table.  Called as part of enable table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
@@ -282,7 +270,6 @@ public interface MasterObserver {
   /**
    * Called prior to enabling a table.  Called as part of enable table procedure
    * and it is async to the enable table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -305,7 +292,6 @@ public interface MasterObserver {
   /**
    * Called prior to disabling a table.  Called as part of disable table RPC
    * call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
@@ -324,7 +310,6 @@ public interface MasterObserver {
   /**
    * Called prior to disabling a table.  Called as part of disable table procedure
    * and it is asyn to the disable table RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    *
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -448,8 +433,7 @@ public interface MasterObserver {
       final RegionInfo regionInfo, final boolean force) throws IOException {}
 
   /**
-   * Called prior to marking a given region as offline. <code>ctx.bypass()</code> will not have any
-   * impact on this hook.
+   * Called prior to marking a given region as offline.
    * @param ctx the environment to interact with the framework and master
    * @param regionInfo
    */
@@ -484,14 +468,13 @@ public interface MasterObserver {
 
   /**
    * Called prior to setting split / merge switch
+   * Supports Coprocessor 'bypass'.
    * @param ctx the coprocessor instance's environment
    * @param newValue the new value submitted in the call
    * @param switchType type of switch
    */
-  default boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue, final MasterSwitchType switchType) throws IOException {
-    return false;
-  }
+  default void preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue, final MasterSwitchType switchType) throws IOException {}
 
   /**
    * Called after setting split / merge switch
@@ -538,8 +521,7 @@ public interface MasterObserver {
       final RegionInfo regionInfoB) throws IOException {}
 
   /**
-   * This will be called before update META step as part of split transaction. Calling
-   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the split
+   * This will be called before update META step as part of split transaction.
    * @param ctx the environment to interact with the framework and master
    * @param splitKey
    * @param metaEntries
@@ -552,8 +534,6 @@ public interface MasterObserver {
 
   /**
    * This will be called after update META step as part of split transaction
-   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
-   * effect in this hook.
    * @param ctx the environment to interact with the framework and master
    */
   default void preSplitRegionAfterMETAAction(
@@ -570,7 +550,6 @@ public interface MasterObserver {
 
   /**
    * Called before the regions merge.
-   * Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} to skip the merge.
    * @param ctx the environment to interact with the framework and master
    */
   default void preMergeRegionsAction(
@@ -587,8 +566,7 @@ public interface MasterObserver {
       final RegionInfo mergedRegion) throws IOException {}
 
   /**
-   * This will be called before update META step as part of regions merge transaction. Calling
-   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the merge
+   * This will be called before update META step as part of regions merge transaction.
    * @param ctx the environment to interact with the framework and master
    * @param metaEntries mutations to execute on hbase:meta atomically with regions merge updates.
    *        Any puts or deletes to execute on hbase:meta can be added to the mutations.
@@ -618,12 +596,9 @@ public interface MasterObserver {
   /**
    * Called prior to modifying the flag used to enable/disable region balancing.
    * @param ctx the coprocessor instance's environment
-   * @param newValue the new flag value submitted in the call
    */
-  default boolean preBalanceSwitch(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final boolean newValue) throws IOException {
-    return newValue;
-  }
+  default void preBalanceSwitch(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final boolean newValue) throws IOException {}
 
   /**
    * Called after the flag to enable/disable balancing has changed.
@@ -667,7 +642,6 @@ public interface MasterObserver {
   /**
    * Called before a new snapshot is taken.
    * Called as part of snapshot RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
    * @param tableDescriptor the TableDescriptor of the table to snapshot
@@ -689,7 +663,6 @@ public interface MasterObserver {
 
   /**
    * Called before listSnapshots request has been processed.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor of the snapshot to list
    */
@@ -698,7 +671,6 @@ public interface MasterObserver {
 
   /**
    * Called after listSnapshots request has been processed.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor of the snapshot to list
    */
@@ -708,7 +680,6 @@ public interface MasterObserver {
   /**
    * Called before a snapshot is cloned.
    * Called as part of restoreSnapshot RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
    * @param tableDescriptor the TableDescriptor of the table to create
@@ -731,7 +702,6 @@ public interface MasterObserver {
   /**
    * Called before a snapshot is restored.
    * Called as part of restoreSnapshot RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor for the snapshot
    * @param tableDescriptor the TableDescriptor of the table to restore
@@ -754,7 +724,6 @@ public interface MasterObserver {
   /**
    * Called before a snapshot is deleted.
    * Called as part of deleteSnapshot RPC call.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param snapshot the SnapshotDescriptor of the snapshot to delete
    */
@@ -774,7 +743,7 @@ public interface MasterObserver {
    * Called before a getTableDescriptors request has been processed.
    * @param ctx the environment to interact with the framework and master
    * @param tableNamesList the list of table names, or null if querying for all
-   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param descriptors an empty list, can be filled with what to return in coprocessor
    * @param regex regular expression used for filtering the table names
    */
   default void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -795,7 +764,7 @@ public interface MasterObserver {
   /**
    * Called before a getTableNames request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param descriptors an empty list, can be filled with what to return by coprocessor
    * @param regex regular expression used for filtering the table names
    */
   default void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -815,7 +784,6 @@ public interface MasterObserver {
   /**
    * Called before a new namespace is created by
    * {@link org.apache.hadoop.hbase.master.HMaster}.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param ns the NamespaceDescriptor for the table
    */
@@ -832,7 +800,6 @@ public interface MasterObserver {
   /**
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} deletes a
    * namespace
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param namespace the name of the namespace
    */
@@ -849,7 +816,6 @@ public interface MasterObserver {
 
   /**
    * Called prior to modifying a namespace's properties.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param ns the NamespaceDescriptor
    */
@@ -883,7 +849,7 @@ public interface MasterObserver {
   /**
    * Called before a listNamespaceDescriptors request has been processed.
    * @param ctx the environment to interact with the framework and master
-   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param descriptors an empty list, can be filled with what to return by coprocessor
    */
   default void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<NamespaceDescriptor> descriptors) throws IOException {}
@@ -1013,7 +979,6 @@ public interface MasterObserver {
 
   /**
    * Called before merge regions request.
-   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx coprocessor environment
    * @param regionsToMerge regions to be merged
    */

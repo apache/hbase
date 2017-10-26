@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -70,21 +69,20 @@ public interface WALObserver {
   /**
    * Called before a {@link WALEdit}
    * is writen to WAL.
-   *
-   * @return true if default behavior should be bypassed, false otherwise
+   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
+   * damage.
    * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
    * InterfaceAudience classes such as WALKey and WALEdit. Will be removed in hbase-3.0.0.
    */
-  // TODO: return value is not used
   @Deprecated
-  default boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-    return false;
-  }
+  default void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called after a {@link WALEdit}
    * is writen to WAL.
+   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
+   * damage.
    * @deprecated Since hbase-2.0.0. To be replaced with an alternative that does not expose
    * InterfaceAudience classes such as WALKey and WALEdit. Will be removed in hbase-3.0.0.
    */

@@ -177,6 +177,8 @@ public interface RegionObserver {
    * Called prior to selecting the {@link StoreFile StoreFiles} to compact from the list of
    * available candidates. To alter the files used for compaction, you may mutate the passed in list
    * of candidates. If you remove all the candidates then the compaction will be canceled.
+   * <p>Supports Coprocessor 'bypass' -- 'bypass' is how this method indicates that it changed
+   * the passed in <code>candidates</code>.
    * @param c the environment provided by the region server
    * @param store the store where compaction is being requested
    * @param candidates the store files currently available for compaction
@@ -390,7 +392,10 @@ public interface RegionObserver {
    * @param byteNow - timestamp bytes
    * @param get - the get formed using the current cell's row. Note that the get does not specify
    *          the family and qualifier
+   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
+   * with something that doesn't expose IntefaceAudience.Private classes.
    */
+  @Deprecated
   default void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> c,
       Mutation mutation, Cell cell, byte[] byteNow, Get get) throws IOException {}
 
@@ -435,8 +440,10 @@ public interface RegionObserver {
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.
    * @param c the environment provided by the region server
-   * @param miniBatchOp batch of Mutations applied to region.
+   * @param miniBatchOp batch of Mutations applied to region. Coprocessors are discouraged from
+   *                    manipulating its state.
    */
+  // Coprocessors can do a form of bypass by changing state in miniBatchOp.
   default void postBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {}
 
@@ -926,6 +933,8 @@ public interface RegionObserver {
   /**
    * Called before a {@link WALEdit}
    * replayed for this region.
+   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
+   * damage.
    * @param ctx the environment provided by the region server
    * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
    * with something that doesn't expose IntefaceAudience.Private classes.
@@ -937,6 +946,8 @@ public interface RegionObserver {
   /**
    * Called after a {@link WALEdit}
    * replayed for this region.
+   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
+   * damage.
    * @param ctx the environment provided by the region server
    * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
    * with something that doesn't expose IntefaceAudience.Private classes.

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,14 +35,12 @@ import java.util.function.Function;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
@@ -548,11 +545,20 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     ObserverGetter<C, O> observerGetter;
 
     ObserverOperation(ObserverGetter<C, O> observerGetter) {
-      this(observerGetter, RpcServer.getRequestUser().orElse(null));
+      this(observerGetter, null);
     }
 
     ObserverOperation(ObserverGetter<C, O> observerGetter, User user) {
-      super(user);
+      this(observerGetter, user, false);
+    }
+
+    ObserverOperation(ObserverGetter<C, O> observerGetter, boolean bypassable) {
+      this(observerGetter, null, bypassable);
+    }
+
+    ObserverOperation(ObserverGetter<C, O> observerGetter, User user, boolean bypassable) {
+      super(user != null? user: RpcServer.getRequestUser().orElse(null),
+          bypassable, bypassable/*'completable': make completable same as bypassable*/);
       this.observerGetter = observerGetter;
     }
 
@@ -572,6 +578,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user) {
       super(observerGetter, user);
+    }
+
+    public ObserverOperationWithoutResult(ObserverGetter<C, O> observerGetter, User user,
+        boolean bypassable) {
+      super(observerGetter, user, bypassable);
     }
 
     /**
@@ -594,15 +605,23 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
 
     private R result;
 
-    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter) {
-      super(observerGetter);
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result) {
+      this(observerGetter, result, false);
     }
 
-    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, User user) {
-      super(observerGetter, user);
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
+        boolean bypassable) {
+      this(observerGetter, result, null, bypassable);
     }
 
-    void setResult(final R result) {
+    public ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result,
+        User user) {
+      this(observerGetter, result, user, false);
+    }
+
+    private ObserverOperationWithResult(ObserverGetter<C, O> observerGetter, R result, User user,
+        boolean bypassable) {
+      super(observerGetter, user, bypassable);
       this.result = result;
     }
 
@@ -621,38 +640,27 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   //////////////////////////////////////////////////////////////////////////////////////////
   // Functions to execute observer hooks and handle results (if any)
   //////////////////////////////////////////////////////////////////////////////////////////
-  protected <O, R> R execOperationWithResult(final R defaultValue,
+
+  /**
+   * Do not call with an observerOperation that is null! Have the caller check.
+   */
+  protected <O, R> R execOperationWithResult(
       final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
-    if (observerOperation == null) {
-      return defaultValue;
-    }
-    observerOperation.setResult(defaultValue);
-    execOperation(observerOperation);
-    return observerOperation.getResult();
+    boolean bypass = execOperation(observerOperation);
+    R result = observerOperation.getResult();
+    return bypass == observerOperation.isBypassable()? result: null;
   }
 
-  // what does bypass mean?
-  protected <O, R> R execOperationWithResult(final boolean ifBypass, final R defaultValue,
-      final ObserverOperationWithResult<O, R> observerOperation) throws IOException {
-    if (observerOperation == null) {
-      return ifBypass ? null : defaultValue;
-    } else {
-      observerOperation.setResult(defaultValue);
-      boolean bypass = execOperation(true, observerOperation);
-      R result = observerOperation.getResult();
-      return bypass == ifBypass ? result : null;
-    }
-  }
-
+  /**
+   * @return True if we are to bypass (Can only be <code>true</code> if
+   * ObserverOperation#isBypassable().
+   */
   protected <O> boolean execOperation(final ObserverOperation<O> observerOperation)
       throws IOException {
-    return execOperation(true, observerOperation);
-  }
-
-  protected <O> boolean execOperation(final boolean earlyExit,
-      final ObserverOperation<O> observerOperation) throws IOException {
-    if (observerOperation == null) return false;
     boolean bypass = false;
+    if (observerOperation == null) {
+      return bypass;
+    }
     List<E> envs = coprocEnvironments.get();
     for (E env : envs) {
       observerOperation.prepare(env);
@@ -666,15 +674,16 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       } finally {
         currentThread.setContextClassLoader(cl);
       }
+      // Internal to shouldBypass, it checks if obeserverOperation#isBypassable().
       bypass |= observerOperation.shouldBypass();
-      if (earlyExit && observerOperation.shouldComplete()) {
+      // Internal to shouldComplete, it checks if obeserverOperation#isCompletable().
+      if (observerOperation.shouldComplete()) {
         break;
       }
       observerOperation.postEnvCall();
     }
     return bypass;
   }
-
 
   /**
    * Coprocessor classes can be configured in any order, based on that priority is set and
@@ -719,5 +728,4 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     }
     return bypass;
   }
-
 }

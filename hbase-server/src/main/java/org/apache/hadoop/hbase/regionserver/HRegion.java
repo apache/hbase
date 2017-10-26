@@ -2407,7 +2407,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Flushing all stores.
-   * @see #internalFlushcache(Collection, MonitoredTask, boolean)
+   * @see #internalFlushcache(Collection, MonitoredTask, boolean, FlushLifeCycleTracker)
    */
   private FlushResult internalFlushcache(MonitoredTask status) throws IOException {
     return internalFlushcache(stores.values(), status, false, FlushLifeCycleTracker.DUMMY);
@@ -2415,7 +2415,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Flushing given stores.
-   * @see #internalFlushcache(WAL, long, Collection, MonitoredTask, boolean)
+   * @see #internalFlushcache(WAL, long, Collection, MonitoredTask, boolean, FlushLifeCycleTracker)
    */
   private FlushResultImpl internalFlushcache(Collection<HStore> storesToFlush, MonitoredTask status,
       boolean writeFlushWalMarker, FlushLifeCycleTracker tracker) throws IOException {
@@ -3279,39 +3279,58 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param batchOp
    */
   private void callPreMutateCPHooks(BatchOperation<?> batchOp) throws IOException {
+    if (coprocessorHost == null) {
+      return;
+    }
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     WALEdit walEdit = new WALEdit();
-    if (coprocessorHost != null) {
-      for (int i = 0 ; i < batchOp.operations.length; i++) {
-        Mutation m = batchOp.getMutation(i);
-        if (m instanceof Put) {
-          if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
-            // pre hook says skip this Put
-            // mark as success and skip in doMiniBatchMutation
-            batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
-          }
-        } else if (m instanceof Delete) {
-          Delete curDel = (Delete) m;
-          if (curDel.getFamilyCellMap().isEmpty()) {
-            // handle deleting a row case
-            prepareDelete(curDel);
-          }
-          if (coprocessorHost.preDelete(curDel, walEdit, m.getDurability())) {
-            // pre hook says skip this Delete
-            // mark as success and skip in doMiniBatchMutation
-            batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
-          }
-        } else {
-          // In case of passing Append mutations along with the Puts and Deletes in batchMutate
-          // mark the operation return code as failure so that it will not be considered in
-          // the doMiniBatchMutation
-          batchOp.retCodeDetails[i] = new OperationStatus(OperationStatusCode.FAILURE,
-              "Put/Delete mutations only supported in batchMutate() now");
+    int noOfPuts = 0;
+    int noOfDeletes = 0;
+    for (int i = 0 ; i < batchOp.operations.length; i++) {
+      Mutation m = batchOp.getMutation(i);
+      if (m instanceof Put) {
+        if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
+          // pre hook says skip this Put
+          // mark as success and skip in doMiniBatchMutation
+          noOfPuts++;
+          batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
         }
-        if (!walEdit.isEmpty()) {
-          batchOp.walEditsFromCoprocessors[i] = walEdit;
-          walEdit = new WALEdit();
+      } else if (m instanceof Delete) {
+        Delete curDel = (Delete) m;
+        if (curDel.getFamilyCellMap().isEmpty()) {
+          // handle deleting a row case
+          prepareDelete(curDel);
         }
+        if (coprocessorHost.preDelete(curDel, walEdit, m.getDurability())) {
+          // pre hook says skip this Delete
+          // mark as success and skip in doMiniBatchMutation
+          noOfDeletes++;
+          batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
+        }
+      } else {
+        // In case of passing Append mutations along with the Puts and Deletes in batchMutate
+        // mark the operation return code as failure so that it will not be considered in
+        // the doMiniBatchMutation
+        batchOp.retCodeDetails[i] = new OperationStatus(OperationStatusCode.FAILURE,
+            "Put/Delete mutations only supported in batchMutate() now");
+      }
+      if (!walEdit.isEmpty()) {
+        batchOp.walEditsFromCoprocessors[i] = walEdit;
+        walEdit = new WALEdit();
+      }
+    }
+    // Update metrics in same way as it is done when we go the normal processing route (we now
+    // update general metrics though a Coprocessor did the work).
+    if (noOfPuts > 0) {
+      // There were some Puts in the batch.
+      if (this.metricsRegion != null) {
+        this.metricsRegion.updatePut();
+      }
+    }
+    if (noOfDeletes > 0) {
+      // There were some Deletes in the batch.
+      if (this.metricsRegion != null) {
+        this.metricsRegion.updateDelete();
       }
     }
   }
@@ -3332,7 +3351,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     int firstIndex = batchOp.nextIndexToProcess;
     int lastIndexExclusive = firstIndex;
     boolean success = false;
-    boolean doneByCoprocessor = false;
     int noOfPuts = 0;
     int noOfDeletes = 0;
     WriteEntry writeEntry = null;
@@ -3416,43 +3434,39 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
           new MiniBatchOperationInProgress<>(batchOp.getMutationsForCoprocs(),
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
-        if (coprocessorHost.preBatchMutate(miniBatchOp)) {
-          doneByCoprocessor = true;
-          return;
-        } else {
-          for (int i = firstIndex; i < lastIndexExclusive; i++) {
-            if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
-              // lastIndexExclusive was incremented above.
-              continue;
-            }
-            // we pass (i - firstIndex) below since the call expects a relative index
-            Mutation[] cpMutations = miniBatchOp.getOperationsFromCoprocessors(i - firstIndex);
-            if (cpMutations == null) {
-              continue;
-            }
-            Mutation mutation = batchOp.getMutation(i);
-            boolean skipWal = getEffectiveDurability(mutation.getDurability()) == Durability.SKIP_WAL;
-            // Else Coprocessor added more Mutations corresponding to the Mutation at this index.
-            for (int j = 0; j < cpMutations.length; j++) {
-              Mutation cpMutation = cpMutations[j];
-              checkAndPrepareMutation(cpMutation, replay, now);
+        coprocessorHost.preBatchMutate(miniBatchOp);
+        for (int i = firstIndex; i < lastIndexExclusive; i++) {
+          if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
+            // lastIndexExclusive was incremented above.
+            continue;
+          }
+          // we pass (i - firstIndex) below since the call expects a relative index
+          Mutation[] cpMutations = miniBatchOp.getOperationsFromCoprocessors(i - firstIndex);
+          if (cpMutations == null) {
+            continue;
+          }
+          Mutation mutation = batchOp.getMutation(i);
+          boolean skipWal = getEffectiveDurability(mutation.getDurability()) == Durability.SKIP_WAL;
+          // Else Coprocessor added more Mutations corresponding to the Mutation at this index.
+          for (int j = 0; j < cpMutations.length; j++) {
+            Mutation cpMutation = cpMutations[j];
+            checkAndPrepareMutation(cpMutation, replay, now);
 
-              // Acquire row locks. If not, the whole batch will fail.
-              acquiredRowLocks.add(getRowLockInternal(cpMutation.getRow(), true));
+            // Acquire row locks. If not, the whole batch will fail.
+            acquiredRowLocks.add(getRowLockInternal(cpMutation.getRow(), true));
 
-              // Returned mutations from coprocessor correspond to the Mutation at index i. We can
-              // directly add the cells from those mutations to the familyMaps of this mutation.
-              Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
-              // will get added to the memStore later
-              mergeFamilyMaps(batchOp.familyCellMaps[i], cpFamilyMap);
+            // Returned mutations from coprocessor correspond to the Mutation at index i. We can
+            // directly add the cells from those mutations to the familyMaps of this mutation.
+            Map<byte[], List<Cell>> cpFamilyMap = cpMutation.getFamilyCellMap();
+            // will get added to the memStore later
+            mergeFamilyMaps(batchOp.familyCellMaps[i], cpFamilyMap);
 
-              // The durability of returned mutation is replaced by the corresponding mutation.
-              // If the corresponding mutation contains the SKIP_WAL, we shouldn't count the
-              // cells of returned mutation.
-              if (!skipWal) {
-                for (List<Cell> cells : cpFamilyMap.values()) {
-                  cellCount += cells.size();
-                }
+            // The durability of returned mutation is replaced by the corresponding mutation.
+            // If the corresponding mutation contains the SKIP_WAL, we shouldn't count the
+            // cells of returned mutation.
+            if (!skipWal) {
+              for (List<Cell> cells : cpFamilyMap.values()) {
+                cellCount += cells.size();
               }
             }
           }
@@ -3557,13 +3571,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         if (batchOp.retCodeDetails[i] == OperationStatus.NOT_RUN) {
-          batchOp.retCodeDetails[i] =
-              success || doneByCoprocessor ? OperationStatus.SUCCESS : OperationStatus.FAILURE;
+          batchOp.retCodeDetails[i] = success? OperationStatus.SUCCESS : OperationStatus.FAILURE;
         }
       }
 
       // synced so that the coprocessor contract is adhered to.
-      if (!replay && coprocessorHost != null && !doneByCoprocessor) {
+      if (!replay && coprocessorHost != null) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
           // only for successful puts
           if (batchOp.retCodeDetails[i].getOperationStatusCode()
@@ -6964,14 +6977,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public List<Cell> get(Get get, boolean withCoprocessor, long nonceGroup, long nonce)
       throws IOException {
     List<Cell> results = new ArrayList<>();
+    long before =  EnvironmentEdgeManager.currentTime();
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
       if (coprocessorHost.preGet(get, results)) {
+        metricsUpdateForGet(results, before);
         return results;
       }
     }
-    long before =  EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
     if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
       scan.setLoadColumnFamiliesOnDemand(isLoadingCfsOnDemandDefault());
@@ -7298,6 +7312,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       try {
         Result cpResult = doCoprocessorPreCall(op, mutation);
         if (cpResult != null) {
+          // Metrics updated below in the finally block.
           return returnResults? cpResult: null;
         }
         Durability effectiveDurability = getEffectiveDurability(mutation.getDurability());

@@ -192,57 +192,54 @@ public class SecureBulkLoadManager {
       throw new DoNotRetryIOException("User token cannot be null");
     }
 
-    boolean bypass = false;
     if (region.getCoprocessorHost() != null) {
-        bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
+      region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
     }
     boolean loaded = false;
     Map<byte[], List<Path>> map = null;
 
     try {
-      if (!bypass) {
-        // Get the target fs (HBase region server fs) delegation token
-        // Since we have checked the permission via 'preBulkLoadHFile', now let's give
-        // the 'request user' necessary token to operate on the target fs.
-        // After this point the 'doAs' user will hold two tokens, one for the source fs
-        // ('request user'), another for the target fs (HBase region server principal).
-        if (userProvider.isHadoopSecurityEnabled()) {
-          FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider,"renewer");
-          targetfsDelegationToken.acquireDelegationToken(fs);
+      // Get the target fs (HBase region server fs) delegation token
+      // Since we have checked the permission via 'preBulkLoadHFile', now let's give
+      // the 'request user' necessary token to operate on the target fs.
+      // After this point the 'doAs' user will hold two tokens, one for the source fs
+      // ('request user'), another for the target fs (HBase region server principal).
+      if (userProvider.isHadoopSecurityEnabled()) {
+        FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider,"renewer");
+        targetfsDelegationToken.acquireDelegationToken(fs);
 
-          Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
-          if (targetFsToken != null
-              && (userToken == null || !targetFsToken.getService().equals(userToken.getService()))){
-            ugi.addToken(targetFsToken);
-          }
+        Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
+        if (targetFsToken != null
+            && (userToken == null || !targetFsToken.getService().equals(userToken.getService()))){
+          ugi.addToken(targetFsToken);
         }
+      }
 
-        map = ugi.doAs(new PrivilegedAction<Map<byte[], List<Path>>>() {
-          @Override
-          public Map<byte[], List<Path>> run() {
-            FileSystem fs = null;
-            try {
-              fs = FileSystem.get(conf);
-              for(Pair<byte[], String> el: familyPaths) {
-                Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
-                if(!fs.exists(stageFamily)) {
-                  fs.mkdirs(stageFamily);
-                  fs.setPermission(stageFamily, PERM_ALL_ACCESS);
-                }
+      map = ugi.doAs(new PrivilegedAction<Map<byte[], List<Path>>>() {
+        @Override
+        public Map<byte[], List<Path>> run() {
+          FileSystem fs = null;
+          try {
+            fs = FileSystem.get(conf);
+            for(Pair<byte[], String> el: familyPaths) {
+              Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
+              if(!fs.exists(stageFamily)) {
+                fs.mkdirs(stageFamily);
+                fs.setPermission(stageFamily, PERM_ALL_ACCESS);
               }
-              //We call bulkLoadHFiles as requesting user
-              //To enable access prior to staging
-              return region.bulkLoadHFiles(familyPaths, true,
-                  new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile());
-            } catch (Exception e) {
-              LOG.error("Failed to complete bulk load", e);
             }
-            return null;
+            //We call bulkLoadHFiles as requesting user
+            //To enable access prior to staging
+            return region.bulkLoadHFiles(familyPaths, true,
+                new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile());
+          } catch (Exception e) {
+            LOG.error("Failed to complete bulk load", e);
           }
-        });
-        if (map != null) {
-          loaded = true;
+          return null;
         }
+      });
+      if (map != null) {
+        loaded = true;
       }
     } finally {
       if (region.getCoprocessorHost() != null) {
