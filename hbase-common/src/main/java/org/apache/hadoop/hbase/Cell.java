@@ -133,7 +133,10 @@ public interface Cell {
 
   /**
    * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
+   * @deprecated since 2.0.0, use appropriate {@link CellUtil#isDelete} or
+   *    {@link CellUtil#isPut(Cell)} methods instead. This will be removed in 3.0.0.
    */
+  @Deprecated
   byte getTypeByte();
 
 

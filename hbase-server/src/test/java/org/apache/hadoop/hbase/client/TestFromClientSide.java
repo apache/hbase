@@ -50,6 +50,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -132,9 +133,6 @@ public class TestFromClientSide {
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Uncomment the following lines if more verbosity is needed for
@@ -151,9 +149,6 @@ public class TestFromClientSide {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -342,8 +337,6 @@ public class TestFromClientSide {
   /**
    * Test from client side of an involved filter against a multi family that
    * involves deletes.
-   *
-   * @throws Exception
    */
   @Test
   public void testWeirdCacheBehaviour() throws Exception {
@@ -468,8 +461,6 @@ public class TestFromClientSide {
    * Test filters when multiple regions.  It does counts.  Needs eye-balling of
    * logs to ensure that we're not scanning more regions that we're supposed to.
    * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @Test
   public void testFilterAcrossMultipleRegions()
@@ -4106,7 +4097,6 @@ public class TestFromClientSide {
 
   /**
    * test for HBASE-737
-   * @throws IOException
    */
   @Test
   public void testHBase737 () throws IOException {
@@ -4229,8 +4219,6 @@ public class TestFromClientSide {
   /**
    * simple test that just executes parts of the client
    * API that accept a pre-created Connection instance
-   *
-   * @throws IOException
    */
   @Test
   public void testUnmanagedHConnection() throws IOException {
@@ -4247,8 +4235,6 @@ public class TestFromClientSide {
   /**
    * test of that unmanaged HConnections are able to reconnect
    * properly (see HBASE-5058)
-   *
-   * @throws Exception
    */
   @Test
   public void testUnmanagedHConnectionReconnect() throws Exception {
@@ -4467,7 +4453,6 @@ public class TestFromClientSide {
 
   /**
    * For HBASE-2156
-   * @throws Exception
    */
   @Test
   public void testScanVariableReuse() throws Exception {
@@ -4993,7 +4978,6 @@ public class TestFromClientSide {
 
   /**
   * Test ScanMetrics
-  * @throws Exception
   */
   @Test
   @SuppressWarnings ("unused")
@@ -5131,8 +5115,6 @@ public class TestFromClientSide {
    *
    * Performs inserts, flushes, and compactions, verifying changes in the block
    * cache along the way.
-   *
-   * @throws Exception
    */
   @Test
   public void testCacheOnWriteEvictOnClose() throws Exception {
@@ -6561,5 +6543,58 @@ public class TestFromClientSide {
 
     table.close();
     admin.close();
+  }
+
+  @Test
+  public void testCellUtilTypeMethods() throws IOException {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
+
+    final byte[] row = Bytes.toBytes("p");
+    Put p = new Put(row);
+    p.addColumn(FAMILY, QUALIFIER, VALUE);
+    table.put(p);
+
+    try (ResultScanner scanner = table.getScanner(new Scan())) {
+      Result result = scanner.next();
+      assertNotNull(result);
+      CellScanner cs = result.cellScanner();
+      assertTrue(cs.advance());
+      Cell c = cs.current();
+      assertTrue(CellUtil.isPut(c));
+      assertFalse(CellUtil.isDelete(c));
+      assertFalse(cs.advance());
+      assertNull(scanner.next());
+    }
+
+    Delete d = new Delete(row);
+    d.addColumn(FAMILY, QUALIFIER);
+    table.delete(d);
+
+    Scan scan = new Scan();
+    scan.setRaw(true);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      Result result = scanner.next();
+      assertNotNull(result);
+      CellScanner cs = result.cellScanner();
+      assertTrue(cs.advance());
+
+      // First cell should be the delete (masking the Put)
+      Cell c = cs.current();
+      assertTrue("Cell should be a Delete: " + c, CellUtil.isDelete(c));
+      assertFalse("Cell should not be a Put: " + c, CellUtil.isPut(c));
+
+      // Second cell should be the original Put
+      assertTrue(cs.advance());
+      c = cs.current();
+      assertFalse("Cell should not be a Delete: " + c, CellUtil.isDelete(c));
+      assertTrue("Cell should be a Put: " + c, CellUtil.isPut(c));
+
+      // No more cells in this row
+      assertFalse(cs.advance());
+
+      // No more results in this scan
+      assertNull(scanner.next());
+    }
   }
 }
