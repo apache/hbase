@@ -893,6 +893,7 @@ public final class CellUtil {
    *         {KeyValue.Type#DeleteFamily} or a
    *         {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
+  @SuppressWarnings("deprecation")
   public static boolean isDelete(final Cell cell) {
     return PrivateCellUtil.isDelete(cell.getTypeByte());
   }
@@ -959,6 +960,14 @@ public final class CellUtil {
   public static boolean isDeleteColumnOrFamily(Cell cell) {
     int t = cell.getTypeByte();
     return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
+  }
+
+  /**
+   * @return True if this cell is a Put.
+   */
+  @SuppressWarnings("deprecation")
+  public static boolean isPut(Cell cell) {
+    return cell.getTypeByte() == Type.Put.getCode();
   }
 
   /**
