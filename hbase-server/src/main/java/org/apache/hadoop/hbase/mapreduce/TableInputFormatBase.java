@@ -128,6 +128,14 @@ extends InputFormat<ImmutableBytesWritable, Result> {
             " previous error. Please look at the previous logs lines from" +
             " the task's full log for more details.";
 
+  @Deprecated
+  /** Deprecated. No effect. */
+  public static final String INPUT_AUTOBALANCE_MAXSKEWRATIO = "hbase.mapreduce.input.autobalance" +
+      ".maxskewratio";
+  @Deprecated
+  /** Deprecated. No effect. */
+  public static final String TABLE_ROW_TEXTKEY = "hbase.table.row.textkey";
+
   /** Specify if we enable auto-balance to set number of mappers in M/R jobs. */
   public static final String MAPREDUCE_INPUT_AUTOBALANCE = "hbase.mapreduce.input.autobalance";
   /** In auto-balance, we split input by ave region size, if calculated region size is too big, we can set it. */
