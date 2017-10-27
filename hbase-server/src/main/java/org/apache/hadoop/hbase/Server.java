@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import java.io.IOException;
+
 /**
  * Defines a curated set of shared functions implemented by HBase servers (Masters
  * and RegionServers). For use internally only. Be judicious adding API. Changes cause ripples
@@ -83,15 +85,29 @@ public interface Server extends Abortable, Stoppable {
   ChoreService getChoreService();
 
   /**
-   * @return Return the FileSystem object used.
+   * @return Return the FileSystem object used (can return null!).
    */
   // TODO: On Master, return Master's. On RegionServer, return RegionServers. The FileSystems
   // may differ. TODO.
-  FileSystem getFileSystem();
+  default FileSystem getFileSystem() {
+    // This default is pretty dodgy!
+    Configuration c = getConfiguration();
+    FileSystem fs = null;
+    try {
+      if (c != null) {
+        fs = FileSystem.get(c);
+      }
+    } catch (IOException e) {
+      // If an exception, just return null
+    }
+    return fs;
+  };
 
   /**
    * @return True is the server is Stopping
    */
   // Note: This method is not part of the Stoppable Interface.
-  boolean isStopping();
+  default boolean isStopping() {
+    return false;
+  }
 }
