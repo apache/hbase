@@ -473,4 +473,13 @@ public interface Region extends ConfigurationObserver {
    * Request flush on this region.
    */
   void requestFlush(FlushLifeCycleTracker tracker) throws IOException;
+
+  /**
+   * Wait for all current flushes of the region to complete
+   *
+   * @param timeout The maximum time to wait in milliseconds.
+   * @return False when timeout elapsed but flushes are not over. True when flushes are over within
+   * max wait time period.
+   */
+  boolean waitForFlushes(long timeout);
 }
