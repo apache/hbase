@@ -57,7 +57,7 @@ public class TestFlushLifeCycleTracker {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName NAME =
-      TableName.valueOf(TestCompactionLifeCycleTracker.class.getSimpleName());
+      TableName.valueOf(TestFlushLifeCycleTracker.class.getSimpleName());
 
   private static final byte[] CF = Bytes.toBytes("CF");
 
@@ -114,11 +114,11 @@ public class TestFlushLifeCycleTracker {
       CountDownLatch arrive = ARRIVE;
       if (arrive != null) {
         arrive.countDown();
-      }
-      try {
-        BLOCK.await();
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException();
+        try {
+          BLOCK.await();
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException();
+        }
       }
     }
   }
