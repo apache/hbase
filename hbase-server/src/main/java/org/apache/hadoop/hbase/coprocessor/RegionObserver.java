@@ -733,8 +733,6 @@ public interface RegionObserver {
   /**
    * Called before the client opens a new scanner.
    * <p>
-   * Call CoprocessorEnvironment#bypass to skip default actions
-   * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
    * <p>
@@ -742,13 +740,9 @@ public interface RegionObserver {
    * invocation. If need a Cell reference for later use, copy the cell and use that.
    * @param c the environment provided by the region server
    * @param scan the Scan specification
-   * @param s if not null, the base scanner
-   * @return an RegionScanner instance to use instead of the base scanner if
-   * overriding default behavior, null otherwise
    */
-  default RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan,
-      RegionScanner s) throws IOException {
-    return s;
+  default void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+      throws IOException {
   }
 
   /**

@@ -2789,12 +2789,12 @@ public class TestHRegion {
       scan = new Scan();
       scan.addFamily(fam2);
       scan.addFamily(fam4);
-      is = (RegionScannerImpl) region.getScanner(scan);
-      assertEquals(1, ((RegionScannerImpl) is).storeHeap.getHeap().size());
+      is = region.getScanner(scan);
+      assertEquals(1, is.storeHeap.getHeap().size());
 
       scan = new Scan();
-      is = (RegionScannerImpl) region.getScanner(scan);
-      assertEquals(families.length - 1, ((RegionScannerImpl) is).storeHeap.getHeap().size());
+      is = region.getScanner(scan);
+      assertEquals(families.length - 1, is.storeHeap.getHeap().size());
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -5688,7 +5688,7 @@ public class TestHRegion {
       // create a reverse scan
       Scan scan = new Scan(Bytes.toBytes("19996"));
       scan.setReversed(true);
-      RegionScanner scanner = region.getScanner(scan);
+      RegionScannerImpl scanner = region.getScanner(scan);
 
       // flush the cache. This will reset the store scanner
       region.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
@@ -5709,7 +5709,7 @@ public class TestHRegion {
         // added here
         if (!assertDone) {
           StoreScanner current =
-              (StoreScanner) (((RegionScannerImpl) scanner).storeHeap).getCurrentForTesting();
+              (StoreScanner) (scanner.storeHeap).getCurrentForTesting();
           List<KeyValueScanner> scanners = current.getAllScannersForTesting();
           assertEquals("There should be only one scanner the store file scanner", 1,
             scanners.size());

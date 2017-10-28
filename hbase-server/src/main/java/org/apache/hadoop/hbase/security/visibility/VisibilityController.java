@@ -534,14 +534,14 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
   }
 
   @Override
-  public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
-      RegionScanner s) throws IOException {
+  public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+      throws IOException {
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
     }
     // Nothing to do if authorization is not enabled
     if (!authorizationEnabled) {
-      return s;
+      return;
     }
     Region region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
@@ -556,7 +556,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       // filtering. Checking visibility labels for META and NAMESPACE table is not needed.
       TableName table = region.getRegionInfo().getTable();
       if (table.isSystemTable() && !table.equals(LABELS_TABLE_NAME)) {
-        return s;
+        return;
       }
     }
 
@@ -570,7 +570,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         scan.setFilter(visibilityLabelFilter);
       }
     }
-    return s;
   }
 
   @Override

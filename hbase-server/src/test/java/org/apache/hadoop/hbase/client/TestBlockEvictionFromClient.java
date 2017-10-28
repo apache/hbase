@@ -1547,11 +1547,6 @@ public class TestBlockEvictionFromClient {
     public int getBatch() {
       return delegate.getBatch();
     }
-
-    @Override
-    public void shipped() throws IOException {
-      this.delegate.shipped();
-    }
   }
 
   public static class CustomInnerRegionObserverWrapper extends CustomInnerRegionObserver {

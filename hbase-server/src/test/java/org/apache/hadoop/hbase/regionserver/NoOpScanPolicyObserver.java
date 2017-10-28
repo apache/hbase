@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -56,9 +55,5 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
     return new DelegatingInternalScanner(scanner);
   }
 
-  @Override
-  public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan,
-      RegionScanner s) throws IOException {
-    return c.getEnvironment().getRegion().getScanner(scan);
-  }
+  // TODO add for postScannerOpen
 }

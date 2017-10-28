@@ -91,8 +91,8 @@ public class TestSwitchToStreamRead {
 
   @Test
   public void test() throws IOException {
-    try (RegionScanner scanner = REGION.getScanner(new Scan())) {
-      StoreScanner storeScanner = (StoreScanner) ((RegionScannerImpl) scanner)
+    try (RegionScannerImpl scanner = REGION.getScanner(new Scan())) {
+      StoreScanner storeScanner = (StoreScanner) (scanner)
           .getStoreHeapForTesting().getCurrentForTesting();
       for (KeyValueScanner kvs : storeScanner.getAllScannersForTesting()) {
         if (kvs instanceof StoreFileScanner) {

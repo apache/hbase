@@ -1150,18 +1150,15 @@ public class RegionCoprocessorHost
 
   /**
    * @param scan the Scan specification
-   * @return scanner id to return to client if default operation should be
-   * bypassed, null otherwise
    * @exception IOException Exception
    */
-  public RegionScanner preScannerOpen(final Scan scan) throws IOException {
-    return execOperationWithResult(true, null, coprocEnvironments.isEmpty() ? null :
-        new ObserverOperationWithResult<RegionObserver, RegionScanner>(regionObserverGetter) {
-          @Override
-          public RegionScanner call(RegionObserver observer) throws IOException {
-            return observer.preScannerOpen(this, scan, getResult());
-          }
-        });
+  public void preScannerOpen(final Scan scan) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preScannerOpen(this, scan);
+      }
+    });
   }
 
   /**

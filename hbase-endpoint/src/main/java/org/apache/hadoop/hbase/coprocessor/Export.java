@@ -389,10 +389,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
       if (region.getCoprocessorHost() == null) {
         scanner = region.getScanner(scan);
       } else {
-        scanner = region.getCoprocessorHost().preScannerOpen(scan);
-        if (scanner == null) {
-          scanner = region.getScanner(scan);
-        }
+        region.getCoprocessorHost().preScannerOpen(scan);
+        scanner = region.getScanner(scan);
         scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
       }
       if (scanner == null) {
