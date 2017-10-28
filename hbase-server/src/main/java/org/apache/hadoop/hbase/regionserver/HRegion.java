@@ -2836,17 +2836,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   //////////////////////////////////////////////////////////////////////////////
 
   @Override
-  public RegionScanner getScanner(Scan scan) throws IOException {
+  public RegionScannerImpl getScanner(Scan scan) throws IOException {
    return getScanner(scan, null);
   }
 
   @Override
-  public RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
+  public RegionScannerImpl getScanner(Scan scan, List<KeyValueScanner> additionalScanners)
       throws IOException {
     return getScanner(scan, additionalScanners, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  private RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
+  private RegionScannerImpl getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
       long nonceGroup, long nonce) throws IOException {
     startRegionOperation(Operation.SCAN);
     try {
@@ -2873,7 +2873,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       HConstants.NO_NONCE);
   }
 
-  protected RegionScanner instantiateRegionScanner(Scan scan,
+  protected RegionScannerImpl instantiateRegionScanner(Scan scan,
       List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
     if (scan.isReversed()) {
       if (scan.getFilter() != null) {
@@ -5862,7 +5862,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * RegionScannerImpl is used to combine scanners from multiple Stores (aka column families).
    */
-  class RegionScannerImpl implements RegionScanner, org.apache.hadoop.hbase.ipc.RpcCallback {
+  class RegionScannerImpl
+      implements RegionScanner, Shipper, org.apache.hadoop.hbase.ipc.RpcCallback {
     // Package local for testability
     KeyValueHeap storeHeap = null;
     /** Heap of key-values that are not essential for the provided filters and are thus read

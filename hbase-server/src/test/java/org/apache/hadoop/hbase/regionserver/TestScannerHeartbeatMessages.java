@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -465,7 +464,7 @@ public class TestScannerHeartbeatMessages {
 
     // Instantiate the custom heartbeat region scanners
     @Override
-    protected RegionScanner instantiateRegionScanner(Scan scan,
+    protected RegionScannerImpl instantiateRegionScanner(Scan scan,
         List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
       if (scan.isReversed()) {
         if (scan.getFilter() != null) {

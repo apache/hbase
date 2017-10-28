@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -125,10 +124,9 @@ public class TestReplicasClient {
     }
 
     @Override
-    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Scan scan, final RegionScanner s) throws IOException {
+    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan) throws IOException {
       slowdownCode(e);
-      return s;
     }
 
     @Override

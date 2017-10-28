@@ -348,18 +348,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private class RegionScannerShippedCallBack implements RpcCallback {
 
     private final String scannerName;
-    private final RegionScanner scanner;
+    private final Shipper shipper;
     private final Lease lease;
 
-    public RegionScannerShippedCallBack(String scannerName, RegionScanner scanner, Lease lease) {
+    public RegionScannerShippedCallBack(String scannerName, Shipper shipper, Lease lease) {
       this.scannerName = scannerName;
-      this.scanner = scanner;
+      this.shipper = shipper;
       this.lease = lease;
     }
 
     @Override
     public void run() throws IOException {
-      this.scanner.shipped();
+      this.shipper.shipped();
       // We're done. On way out re-add the above removed lease. The lease was temp removed for this
       // Rpc call and we are at end of the call now. Time to add it back.
       if (scanners.containsKey(scannerName)) {
@@ -1332,11 +1332,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return lastBlock;
   }
 
-  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, HRegion r,
-      boolean needCursor) throws LeaseStillHeldException {
+  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Shipper shipper,
+      HRegion r, boolean needCursor) throws LeaseStillHeldException {
     Lease lease = regionServer.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
       new ScannerListener(scannerName));
-    RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, s, lease);
+    RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, shipper, lease);
     RpcCallback closeCallback;
     if (s instanceof RpcCallback) {
       closeCallback = (RpcCallback) s;
@@ -2470,7 +2470,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
       scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
     }
-    RegionScanner scanner = null;
+    RegionScannerImpl scanner = null;
     try {
       scanner = region.getScanner(scan);
       scanner.next(results);
@@ -2481,8 +2481,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // RpcCallContext. The rpc callback will take care of closing the
           // scanner, for eg in case
           // of get()
-          assert scanner instanceof org.apache.hadoop.hbase.ipc.RpcCallback;
-          context.setCallBack((RegionScannerImpl) scanner);
+          context.setCallBack(scanner);
         } else {
           // The call is from multi() where the results from the get() are
           // aggregated and then send out to the
@@ -2898,13 +2897,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         scan.addFamily(family);
       }
     }
-    RegionScanner scanner = null;
     if (region.getCoprocessorHost() != null) {
-      scanner = region.getCoprocessorHost().preScannerOpen(scan);
+      // preScannerOpen is not allowed to return a RegionScanner. Only post hook can create a
+      // wrapper for the core created RegionScanner
+      region.getCoprocessorHost().preScannerOpen(scan);
     }
-    if (scanner == null) {
-      scanner = region.getScanner(scan);
-    }
+    RegionScannerImpl coreScanner = region.getScanner(scan);
+    Shipper shipper = coreScanner;
+    RegionScanner scanner = coreScanner;
     if (region.getCoprocessorHost() != null) {
       scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
     }
@@ -2913,7 +2913,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
-    return addScanner(scannerName, scanner, region, scan.isNeedCursorResult());
+    return addScanner(scannerName, scanner, shipper, region, scan.isNeedCursorResult());
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)

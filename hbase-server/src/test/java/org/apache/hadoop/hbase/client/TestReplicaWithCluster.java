@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
@@ -156,11 +155,9 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Scan scan, final RegionScanner s) throws IOException {
-
+    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan) throws IOException {
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
-
       // Fail for the primary replica and replica 1
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
         LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
@@ -169,8 +166,6 @@ public class TestReplicaWithCluster {
       } else {
         LOG.info("We're replica region " + replicaId);
       }
-
-      return null;
     }
   }
 
@@ -208,8 +203,8 @@ public class TestReplicaWithCluster {
     }
 
     @Override
-    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Scan scan, final RegionScanner s) throws IOException {
+    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan) throws IOException {
 
       int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
 
@@ -238,8 +233,6 @@ public class TestReplicaWithCluster {
       } else {
         LOG.info("Scan, We're replica region " + replicaId);
       }
-
-      return null;
     }
   }
 

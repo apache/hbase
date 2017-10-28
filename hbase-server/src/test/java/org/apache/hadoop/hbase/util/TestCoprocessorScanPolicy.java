@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -338,8 +337,8 @@ public class TestCoprocessorScanPolicy {
     }
 
     @Override
-    public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan,
-        RegionScanner s) throws IOException {
+    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+        throws IOException {
       Region region = c.getEnvironment().getRegion();
       TableName tableName = region.getTableDescriptor().getTableName();
       Long ttl = this.ttls.get(tableName);
@@ -350,7 +349,6 @@ public class TestCoprocessorScanPolicy {
       if (version != null) {
         scan.readVersions(version);
       }
-      return region.getScanner(scan);
     }
   }
 }

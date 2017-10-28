@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -170,12 +169,11 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     }
 
     @Override
-    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Scan scan, final RegionScanner s) throws IOException {
+    public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan) throws IOException {
       if (countOfOpen.incrementAndGet() == 2) { //slowdown openScanner randomly
         slowdownCode(e);
       }
-      return s;
     }
 
     @Override

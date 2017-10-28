@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -83,8 +82,8 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
 
     @Override
-    public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
-        RegionScanner s) throws IOException {
+    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
+        throws IOException {
       if (e.getEnvironment().getRegionInfo().isMetaRegion()) {
         int concurrency = CONCURRENCY.incrementAndGet();
         for (;;) {
@@ -98,7 +97,6 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
         }
         Threads.sleepWithoutInterrupt(10);
       }
-      return s;
     }
 
     @Override

@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
@@ -55,11 +54,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MemStoreLABImpl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
@@ -131,9 +128,9 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan,
-        RegionScanner s) throws IOException {
-      return c.getEnvironment().getRegion().getScanner(scan.setFilter(new NoDataFilter()));
+    public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
+        throws IOException {
+      scan.setFilter(new NoDataFilter());
     }
   }
 

@@ -2104,10 +2104,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
-  public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Scan scan, final RegionScanner s) throws IOException {
+  public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c, final Scan scan)
+      throws IOException {
     internalPreRead(c, scan, OpType.SCAN);
-    return s;
   }
 
   @Override
