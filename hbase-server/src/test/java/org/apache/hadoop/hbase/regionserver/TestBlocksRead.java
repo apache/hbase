@@ -189,7 +189,7 @@ public class TestBlocksRead  {
 
   private static void verifyData(Cell kv, String expectedRow,
       String expectedCol, long expectedVersion) {
-    assertTrue("RowCheck", CellUtil.matchingRow(kv,  Bytes.toBytes(expectedRow)));
+    assertTrue("RowCheck", CellUtil.matchingRows(kv,  Bytes.toBytes(expectedRow)));
     assertTrue("ColumnCheck", CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)));
     assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
     assertTrue("ValueCheck", CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)));

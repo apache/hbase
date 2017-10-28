@@ -31,8 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
@@ -167,7 +167,7 @@ class DisabledWALProvider implements WALProvider {
         final long start = System.nanoTime();
         long len = 0;
         for (Cell cell : edits.getCells()) {
-          len += CellUtil.estimatedSerializedSizeOf(cell);
+          len += PrivateCellUtil.estimatedSerializedSizeOf(cell);
         }
         final long elapsed = (System.nanoTime() - start) / 1000000L;
         for (WALActionsListener listener : this.listeners) {

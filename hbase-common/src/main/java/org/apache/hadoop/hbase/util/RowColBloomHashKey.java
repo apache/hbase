@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -57,7 +58,7 @@ public class RowColBloomHashKey extends CellHashKey {
     }
     int refLen = Bytes.SIZEOF_SHORT + rowLength;
     if (offset < refLen) {
-      return CellUtil.getRowByte(t, offset - Bytes.SIZEOF_SHORT);
+      return PrivateCellUtil.getRowByte(t, offset - Bytes.SIZEOF_SHORT);
     }
     if (offset == refLen) {
       // The fam length should return 0 assuming there is no column family.
@@ -67,7 +68,7 @@ public class RowColBloomHashKey extends CellHashKey {
     refLen += qualLength + Bytes.SIZEOF_BYTE;
     // skip the family len because actual cells may have family also
     if (offset < refLen) {
-      return CellUtil.getQualifierByte(t,
+      return PrivateCellUtil.getQualifierByte(t,
         offset - (Bytes.SIZEOF_SHORT + rowLength + Bytes.SIZEOF_BYTE));
     }
     // TODO : check if ts and type can be removed

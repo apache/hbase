@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
@@ -150,14 +150,14 @@ public class TimestampsFilter extends FilterBase {
       // but it's always better to be extra safe and protect against future
       // behavioral changes.
 
-      return CellUtil.createLastOnRowCol(currentCell);
+      return PrivateCellUtil.createLastOnRowCol(currentCell);
     }
 
     // Since we know the nextTimestampObject isn't null here there must still be
     // timestamps that can be included. Cast the Long to a long and return the
     // a cell with the current row/cf/col and the next found timestamp.
     long nextTimestamp = nextTimestampObject;
-    return CellUtil.createFirstOnRowColTS(currentCell, nextTimestamp);
+    return PrivateCellUtil.createFirstOnRowColTS(currentCell, nextTimestamp);
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {

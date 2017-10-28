@@ -31,7 +31,7 @@ public class TestTagRewriteCell {
   public void testHeapSize() {
     Cell originalCell = CellUtil.createCell(Bytes.toBytes("row"), Bytes.toBytes("value"));
     final int fakeTagArrayLength = 10;
-    Cell trCell = CellUtil.createCell(originalCell, new byte[fakeTagArrayLength]);
+    Cell trCell = PrivateCellUtil.createCell(originalCell, new byte[fakeTagArrayLength]);
 
     // Get the heapSize before the internal tags array in trCell are nuked
     long trCellHeapSize = ((HeapSize)trCell).heapSize();
@@ -39,7 +39,7 @@ public class TestTagRewriteCell {
     // Make another TagRewriteCell with the original TagRewriteCell
     // This happens on systems with more than one RegionObserver/Coproc loaded (such as
     // VisibilityController and AccessController)
-    Cell trCell2 = CellUtil.createCell(trCell, new byte[fakeTagArrayLength]);
+    Cell trCell2 = PrivateCellUtil.createCell(trCell, new byte[fakeTagArrayLength]);
 
     assertTrue("TagRewriteCell containing a TagRewriteCell's heapsize should be larger than a " +
         "single TagRewriteCell's heapsize", trCellHeapSize < ((HeapSize)trCell2).heapSize());

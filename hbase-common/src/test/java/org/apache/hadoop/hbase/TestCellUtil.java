@@ -23,7 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -266,43 +265,43 @@ public class TestCellUtil {
     byte[] d = Bytes.toBytes("d");
 
     // overlaps
-    Assert.assertTrue(CellUtil.overlappingKeys(a, b, a, b));
-    Assert.assertTrue(CellUtil.overlappingKeys(a, c, a, b));
-    Assert.assertTrue(CellUtil.overlappingKeys(a, b, a, c));
-    Assert.assertTrue(CellUtil.overlappingKeys(b, c, a, c));
-    Assert.assertTrue(CellUtil.overlappingKeys(a, c, b, c));
-    Assert.assertTrue(CellUtil.overlappingKeys(a, d, b, c));
-    Assert.assertTrue(CellUtil.overlappingKeys(b, c, a, d));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, a, b));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, c, a, b));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, a, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(b, c, a, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, c, b, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, d, b, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(b, c, a, d));
 
-    Assert.assertTrue(CellUtil.overlappingKeys(empty, b, a, b));
-    Assert.assertTrue(CellUtil.overlappingKeys(empty, b, a, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(empty, b, a, b));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(empty, b, a, c));
 
-    Assert.assertTrue(CellUtil.overlappingKeys(a, b, empty, b));
-    Assert.assertTrue(CellUtil.overlappingKeys(a, b, empty, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, b));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, c));
 
-    Assert.assertTrue(CellUtil.overlappingKeys(a, empty, a, b));
-    Assert.assertTrue(CellUtil.overlappingKeys(a, empty, a, c));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, empty, a, b));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, empty, a, c));
 
-    Assert.assertTrue(CellUtil.overlappingKeys(a, b, empty, empty));
-    Assert.assertTrue(CellUtil.overlappingKeys(empty, empty, a, b));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, empty));
+    Assert.assertTrue(PrivateCellUtil.overlappingKeys(empty, empty, a, b));
 
     // non overlaps
-    Assert.assertFalse(CellUtil.overlappingKeys(a, b, c, d));
-    Assert.assertFalse(CellUtil.overlappingKeys(c, d, a, b));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(a, b, c, d));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(c, d, a, b));
 
-    Assert.assertFalse(CellUtil.overlappingKeys(b, c, c, d));
-    Assert.assertFalse(CellUtil.overlappingKeys(b, c, c, empty));
-    Assert.assertFalse(CellUtil.overlappingKeys(b, c, d, empty));
-    Assert.assertFalse(CellUtil.overlappingKeys(c, d, b, c));
-    Assert.assertFalse(CellUtil.overlappingKeys(c, empty, b, c));
-    Assert.assertFalse(CellUtil.overlappingKeys(d, empty, b, c));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, c, d));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, c, empty));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, d, empty));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(c, d, b, c));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(c, empty, b, c));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(d, empty, b, c));
 
-    Assert.assertFalse(CellUtil.overlappingKeys(b, c, a, b));
-    Assert.assertFalse(CellUtil.overlappingKeys(b, c, empty, b));
-    Assert.assertFalse(CellUtil.overlappingKeys(b, c, empty, a));
-    Assert.assertFalse(CellUtil.overlappingKeys(a,b, b, c));
-    Assert.assertFalse(CellUtil.overlappingKeys(empty, b, b, c));
-    Assert.assertFalse(CellUtil.overlappingKeys(empty, a, b, c));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, a, b));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, empty, b));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, empty, a));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(a,b, b, c));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(empty, b, b, c));
+    Assert.assertFalse(PrivateCellUtil.overlappingKeys(empty, a, b, c));
   }
 
   @Test
@@ -310,43 +309,43 @@ public class TestCellUtil {
     // The whole key matching case
     KeyValue kv1 = new KeyValue("r1".getBytes(), "f1".getBytes(), "q1".getBytes(), null);
     Assert.assertEquals(kv1.getKeyLength(),
-        CellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, true));
+      PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, true));
     Assert.assertEquals(kv1.getKeyLength(),
-        CellUtil.findCommonPrefixInFlatKey(kv1, kv1, false, true));
+      PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, false, true));
     Assert.assertEquals(kv1.getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE,
-        CellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, false));
+      PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, false));
     // The rk length itself mismatch
     KeyValue kv2 = new KeyValue("r12".getBytes(), "f1".getBytes(), "q1".getBytes(), null);
-    Assert.assertEquals(1, CellUtil.findCommonPrefixInFlatKey(kv1, kv2, true, true));
+    Assert.assertEquals(1, PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv2, true, true));
     // part of rk is same
     KeyValue kv3 = new KeyValue("r14".getBytes(), "f1".getBytes(), "q1".getBytes(), null);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + "r1".getBytes().length,
-        CellUtil.findCommonPrefixInFlatKey(kv2, kv3, true, true));
+      PrivateCellUtil.findCommonPrefixInFlatKey(kv2, kv3, true, true));
     // entire rk is same but different cf name
     KeyValue kv4 = new KeyValue("r14".getBytes(), "f2".getBytes(), "q1".getBytes(), null);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv3.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
-        + "f".getBytes().length, CellUtil.findCommonPrefixInFlatKey(kv3, kv4, false, true));
+        + "f".getBytes().length, PrivateCellUtil.findCommonPrefixInFlatKey(kv3, kv4, false, true));
     // rk and family are same and part of qualifier
     KeyValue kv5 = new KeyValue("r14".getBytes(), "f2".getBytes(), "q123".getBytes(), null);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv3.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv4.getFamilyLength() + kv4.getQualifierLength(),
-        CellUtil.findCommonPrefixInFlatKey(kv4, kv5, true, true));
+        PrivateCellUtil.findCommonPrefixInFlatKey(kv4, kv5, true, true));
     // rk, cf and q are same. ts differs
     KeyValue kv6 = new KeyValue("rk".getBytes(), 1234L);
     KeyValue kv7 = new KeyValue("rk".getBytes(), 1235L);
     // only last byte out of 8 ts bytes in ts part differs
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + 7,
-        CellUtil.findCommonPrefixInFlatKey(kv6, kv7, true, true));
+        PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv7, true, true));
     // rk, cf, q and ts are same. Only type differs
     KeyValue kv8 = new KeyValue("rk".getBytes(), 1234L, Type.Delete);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + KeyValue.TIMESTAMP_SIZE,
-        CellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, true));
+        PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, true));
     // With out TS_TYPE check
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength(),
-        CellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, false));
+        PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, false));
   }
 
   /**
@@ -427,7 +426,7 @@ public class TestCellUtil {
     byte[] vDest = CellUtil.cloneValue(bbCell);
     assertTrue(Bytes.equals(v, vDest));
     byte[] tDest = new byte[tags.length];
-    CellUtil.copyTagTo(bbCell, tDest, 0);
+    PrivateCellUtil.copyTagsTo(bbCell, tDest, 0);
     assertTrue(Bytes.equals(tags, tDest));
   }
 
@@ -447,7 +446,7 @@ public class TestCellUtil {
     Cell bbCell2 = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
     assertTrue(CellUtil.matchingRows(bbCell1, bbCell2));
     assertTrue(CellUtil.matchingRows(kv, bbCell2));
-    assertTrue(CellUtil.matchingRow(bbCell1, r));
+    assertTrue(CellUtil.matchingRows(bbCell1, r));
     assertTrue(CellUtil.matchingFamily(bbCell1, bbCell2));
     assertTrue(CellUtil.matchingFamily(kv, bbCell2));
     assertTrue(CellUtil.matchingFamily(bbCell1, f));
@@ -475,20 +474,20 @@ public class TestCellUtil {
     KeyValue kv = new KeyValue(r, f, q, v);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
     Cell bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
-    assertEquals(ri, CellUtil.getRowAsInt(bbCell));
-    assertEquals(vl, CellUtil.getValueAsLong(bbCell));
+    assertEquals(ri, PrivateCellUtil.getRowAsInt(bbCell));
+    assertEquals(vl, PrivateCellUtil.getValueAsLong(bbCell));
     double vd = 3005.5;
     v = Bytes.toBytes(vd);
     kv = new KeyValue(r, f, q, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
     bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
-    assertEquals(vd, CellUtil.getValueAsDouble(bbCell), 0.0);
+    assertEquals(vd, PrivateCellUtil.getValueAsDouble(bbCell), 0.0);
     BigDecimal bd = new BigDecimal(9999);
     v = Bytes.toBytes(bd);
     kv = new KeyValue(r, f, q, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
     bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
-    assertEquals(bd, CellUtil.getValueAsBigDecimal(bbCell));
+    assertEquals(bd, PrivateCellUtil.getValueAsBigDecimal(bbCell));
   }
 
   @Test
@@ -502,7 +501,7 @@ public class TestCellUtil {
     KeyValue kv = new KeyValue(r, f, q1, 0, q1.length, 1234L, Type.Put, v, 0, v.length, tags);
     NonExtendedCell nonExtCell = new NonExtendedCell(kv);
     ByteArrayOutputStream os = new ByteArrayOutputStream();
-    int writeCell = CellUtil.writeCell(nonExtCell, os, true);
+    int writeCell = PrivateCellUtil.writeCell(nonExtCell, os, true);
     byte[] byteArray = os.toByteArray();
     KeyValue res = new KeyValue(byteArray);
     assertTrue(CellUtil.equals(kv, res));

@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -121,20 +122,21 @@ public class TestPrefixTreeEncoding {
     seeker.setCurrentBuffer(new SingleByteBuff(readBuffer));
 
     // Seek before the first keyvalue;
-    Cell seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, 0), CF_BYTES);
+    Cell seekKey =
+        PrivateCellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, 0), CF_BYTES);
     seeker.seekToKeyInBlock(seekKey, true);
     assertEquals(null, seeker.getCell());
 
     // Seek before the middle keyvalue;
-    seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
-        CF_BYTES);
+    seekKey = PrivateCellUtil
+        .createFirstDeleteFamilyCellOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3), CF_BYTES);
     seeker.seekToKeyInBlock(seekKey, true);
     assertNotNull(seeker.getCell());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3 - 1),
       CellUtil.cloneRow(seeker.getCell()));
 
     // Seek before the last keyvalue;
-    seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
+    seekKey = PrivateCellUtil.createFirstDeleteFamilyCellOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
     seeker.seekToKeyInBlock(seekKey, true);
     assertNotNull(seeker.getCell());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH - 1),

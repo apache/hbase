@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -166,7 +167,7 @@ public class WALEdit implements HeapSize {
   public long heapSize() {
     long ret = ClassSize.ARRAYLIST;
     for (Cell cell : cells) {
-      ret += CellUtil.estimatedHeapSizeOf(cell);
+      ret += PrivateCellUtil.estimatedHeapSizeOf(cell);
     }
     return ret;
   }
@@ -174,7 +175,7 @@ public class WALEdit implements HeapSize {
   public long estimatedSerializedSizeOf() {
     long ret = 0;
     for (Cell cell: cells) {
-      ret += CellUtil.estimatedSerializedSizeOf(cell);
+      ret += PrivateCellUtil.estimatedSerializedSizeOf(cell);
     }
     return ret;
   }

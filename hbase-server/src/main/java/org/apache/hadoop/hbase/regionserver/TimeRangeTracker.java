@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -102,7 +103,7 @@ public abstract class TimeRangeTracker {
    */
   public void includeTimestamp(final Cell cell) {
     includeTimestamp(cell.getTimestamp());
-    if (CellUtil.isDeleteColumnOrFamily(cell)) {
+    if (PrivateCellUtil.isDeleteColumnOrFamily(cell)) {
       includeTimestamp(0);
     }
   }

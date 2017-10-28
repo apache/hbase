@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -230,8 +231,8 @@ public class TestHFileBlockIndex {
       HFileBlock b =
           indexReader.seekToDataBlock(keyOnlyKey, null, true,
             true, false, null);
-      if (CellUtil.compare(CellComparatorImpl.COMPARATOR, keyOnlyKey, firstKeyInFile,
-          0, firstKeyInFile.length) < 0) {
+      if (PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, keyOnlyKey, firstKeyInFile, 0,
+        firstKeyInFile.length) < 0) {
         assertTrue(b == null);
         ++i;
         continue;
@@ -636,7 +637,7 @@ public class TestHFileBlockIndex {
           values[i] = CellUtil.cloneValue(kv);
           keyStrSet.add(Bytes.toStringBinary(k));
           if (i > 0) {
-            assertTrue((CellUtil.compare(CellComparatorImpl.COMPARATOR, kv, keys[i - 1],
+            assertTrue((PrivateCellUtil.compare(CellComparatorImpl.COMPARATOR, kv, keys[i - 1],
                 0, keys[i - 1].length)) > 0);
           }
         }

@@ -155,7 +155,7 @@ public class TestScanner {
       for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
-          assertTrue(CellUtil.matchingRow(kv,  startrow));
+          assertTrue(CellUtil.matchingRows(kv,  startrow));
           first = false;
         }
         count++;
@@ -546,7 +546,7 @@ public class TestScanner {
       // make sure returns column2 of firstRow
       assertTrue("result is not correct, keyValues : " + results,
           results.size() == 1);
-      assertTrue(CellUtil.matchingRow(results.get(0), firstRowBytes)); 
+      assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes)); 
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
       results = new ArrayList<>();
@@ -554,7 +554,7 @@ public class TestScanner {
 
       // get secondRow
       assertTrue(results.size() == 2);
-      assertTrue(CellUtil.matchingRow(results.get(0), secondRowBytes));
+      assertTrue(CellUtil.matchingRows(results.get(0), secondRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {

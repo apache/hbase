@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
@@ -1049,13 +1050,13 @@ public class TestHStore {
     Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
         .setQualifier(qf1).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
         .setValue(qf1).build();
-    CellUtil.setSequenceId(cell0, seqId);
+    PrivateCellUtil.setSequenceId(cell0, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.emptyList());
 
     Cell cell1 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
         .setQualifier(qf2).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
         .setValue(qf1).build();
-    CellUtil.setSequenceId(cell1, seqId);
+    PrivateCellUtil.setSequenceId(cell1, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
 
     seqId = 101;
@@ -1063,7 +1064,7 @@ public class TestHStore {
     Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
         .setQualifier(qf2).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
         .setValue(qf1).build();
-     CellUtil.setSequenceId(cell2, seqId);
+    PrivateCellUtil.setSequenceId(cell2, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1, cell2));
   }
 
@@ -1118,7 +1119,7 @@ public class TestHStore {
     Cell c = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
         .setQualifier(qualifier).setTimestamp(ts).setType(CellBuilder.DataType.Put)
         .setValue(value).build();
-    CellUtil.setSequenceId(c, sequenceId);
+    PrivateCellUtil.setSequenceId(c, sequenceId);
     return c;
   }
 

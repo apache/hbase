@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -749,7 +750,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     @Override
     public int compareKey(CellComparator comparator, Cell key) {
       keyOnlyKV.setKey(current.keyBuffer, 0, current.keyLength);
-      return CellUtil.compareKeyIgnoresMvcc(comparator, key, keyOnlyKV);
+      return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, keyOnlyKV);
     }
 
     @Override
@@ -1027,9 +1028,9 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         // the tags using Dictionary compression in such a case
         if (tagCompressionContext != null) {
           // Not passing tagsLength considering that parsing of the tagsLength is not costly
-          CellUtil.compressTags(out, cell, tagCompressionContext);
+          PrivateCellUtil.compressTags(out, cell, tagCompressionContext);
         } else {
-          CellUtil.writeTags(out, cell, tagsLength);
+          PrivateCellUtil.writeTags(out, cell, tagsLength);
         }
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;

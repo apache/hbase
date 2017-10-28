@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.column.ColumnSectionWriter;
@@ -274,7 +275,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
   public void write(Cell cell) {
     ensurePerCellCapacities();
 
-    rowTokenizer.addSorted(CellUtil.fillRowRange(cell, rowRange));
+    rowTokenizer.addSorted(PrivateCellUtil.fillRowRange(cell, rowRange));
     addFamilyPart(cell);
     addQualifierPart(cell);
     addTagPart(cell);
@@ -283,7 +284,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
 
 
   private void addTagPart(Cell cell) {
-    CellUtil.fillTagRange(cell, tagsRange);
+    PrivateCellUtil.fillTagRange(cell, tagsRange);
     tagsDeduplicator.add(tagsRange);
   }
 
@@ -329,13 +330,13 @@ public class PrefixTreeEncoder implements CellOutputStream {
 
   private void addFamilyPart(Cell cell) {
     if (MULITPLE_FAMILIES_POSSIBLE || totalCells == 0) {
-      CellUtil.fillFamilyRange(cell, familyRange);
+      PrivateCellUtil.fillFamilyRange(cell, familyRange);
       familyDeduplicator.add(familyRange);
     }
   }
 
   private void addQualifierPart(Cell cell) {
-    CellUtil.fillQualifierRange(cell, qualifierRange);
+    PrivateCellUtil.fillQualifierRange(cell, qualifierRange);
     qualifierDeduplicator.add(qualifierRange);
   }
 

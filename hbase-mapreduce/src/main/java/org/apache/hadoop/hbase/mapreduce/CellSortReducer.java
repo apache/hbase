@@ -23,7 +23,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -45,7 +45,7 @@ public class CellSortReducer
     TreeSet<Cell> map = new TreeSet<>(CellComparatorImpl.COMPARATOR);
     for (Cell kv : kvs) {
       try {
-        map.add(CellUtil.deepClone(kv));
+        map.add(PrivateCellUtil.deepClone(kv));
       } catch (CloneNotSupportedException e) {
         throw new IOException(e);
       }

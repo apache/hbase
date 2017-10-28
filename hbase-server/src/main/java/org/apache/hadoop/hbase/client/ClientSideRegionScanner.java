@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -83,7 +84,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     if (this.scanMetrics != null) {
       long resultSize = 0;
       for (Cell cell : values) {
-        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
+        resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
       this.scanMetrics.countOfRowsScanned.incrementAndGet();

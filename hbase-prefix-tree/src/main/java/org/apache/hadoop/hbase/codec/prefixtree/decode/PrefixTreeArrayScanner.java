@@ -22,6 +22,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.column.ColumnReader;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.row.RowNodeReader;
@@ -420,7 +421,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected int populateNonRowFieldsAndCompareTo(int cellNum, Cell key) {
     populateNonRowFields(cellNum);
-    return CellUtil.compareKeyIgnoresMvcc(comparator, this, key);
+    return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, this, key);
   }
 
   protected void populateFirstNonRowFields() {

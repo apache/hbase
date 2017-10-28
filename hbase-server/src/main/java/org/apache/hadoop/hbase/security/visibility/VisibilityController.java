@@ -44,13 +44,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -369,13 +368,13 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
             List<Cell> updatedCells = new ArrayList<>();
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
               Cell cell = cellScanner.current();
-              List<Tag> tags = CellUtil.getTags(cell);
+              List<Tag> tags = PrivateCellUtil.getTags(cell);
               if (modifiedTagFound) {
                 // Rewrite the tags by removing the modified tags.
                 removeReplicationVisibilityTag(tags);
               }
               tags.addAll(visibilityTags);
-              Cell updatedCell = CellUtil.createCell(cell, tags);
+              Cell updatedCell = PrivateCellUtil.createCell(cell, tags);
               updatedCells.add(updatedCell);
             }
             m.getFamilyCellMap().clear();
@@ -428,7 +427,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
     if (result.size() < get.getMaxVersions()) {
       // Nothing to delete
-      CellUtil.updateLatestStamp(cell, byteNow, 0);
+      PrivateCellUtil.updateLatestStamp(cell, byteNow, 0);
       return;
     }
     if (result.size() > get.getMaxVersions()) {
@@ -436,7 +435,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
           + ". Results more than the max versions obtained.");
     }
     Cell getCell = result.get(get.getMaxVersions() - 1);
-    CellUtil.setTimestamp(cell, getCell.getTimestamp());
+    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
 
     // We are bypassing here because in the HRegion.updateDeleteLatestVersionTimeStamp we would
     // update with the current timestamp after again doing a get. As the hook as already determined
@@ -472,7 +471,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       // cell visiblilty tags
       // have been modified
       Tag modifiedTag = null;
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+      Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();
         if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
@@ -484,7 +483,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       pair.setSecond(modifiedTag);
       return pair;
     }
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
     while (tagsItr.hasNext()) {
       if (RESERVED_VIS_TAG_TYPES.contains(tagsItr.next().getType())) {
         return pair;
@@ -514,7 +513,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     if (isSystemOrSuperUser()) {
       return true;
     }
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
     while (tagsItr.hasNext()) {
       if (RESERVED_VIS_TAG_TYPES.contains(tagsItr.next().getType())) {
         return false;
@@ -731,7 +730,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     tags.addAll(this.visibilityLabelService.createVisibilityExpTags(cellVisibility.getExpression(),
         true, authCheck));
     // Carry forward all other tags
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(newCell);
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(newCell);
     while (tagsItr.hasNext()) {
       Tag tag = tagsItr.next();
       if (tag.getType() != TagType.VISIBILITY_TAG_TYPE
@@ -740,7 +739,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       }
     }
 
-    Cell rewriteCell = CellUtil.createCell(newCell, tags);
+    Cell rewriteCell = PrivateCellUtil.createCell(newCell, tags);
     return rewriteCell;
   }
 

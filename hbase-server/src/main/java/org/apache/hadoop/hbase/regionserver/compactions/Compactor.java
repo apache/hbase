@@ -33,8 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -390,7 +390,7 @@ public abstract class Compactor<T extends CellSink> {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
             lastCleanCell = c;
             lastCleanCellSeqId = c.getSequenceId();
-            CellUtil.setSequenceId(c, 0);
+            PrivateCellUtil.setSequenceId(c, 0);
           } else {
             lastCleanCell = null;
             lastCleanCellSeqId = 0;
@@ -420,7 +420,7 @@ public abstract class Compactor<T extends CellSink> {
               // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
               // ShipperListener will do a clone of the last cells it refer, so need to set back
               // sequence id before ShipperListener.beforeShipped
-              CellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
+              PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
             }
             // Clone the cells that are in the writer so that they are freed of references,
             // if they are holding any.
@@ -437,7 +437,7 @@ public abstract class Compactor<T extends CellSink> {
         }
         if (lastCleanCell != null) {
           // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly
-          CellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
+          PrivateCellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
         }
         // Log the progress of long running compactions every minute if
         // logging at DEBUG level

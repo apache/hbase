@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
@@ -212,7 +213,7 @@ public class VisibilityUtils {
    */
   public static Byte extractVisibilityTags(Cell cell, List<Tag> tags) {
     Byte serializationFormat = null;
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
@@ -239,7 +240,7 @@ public class VisibilityUtils {
   public static Byte extractAndPartitionTags(Cell cell, List<Tag> visTags,
       List<Tag> nonVisTags) {
     Byte serializationFormat = null;
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
@@ -255,7 +256,7 @@ public class VisibilityUtils {
   }
 
   public static boolean isVisibilityTagsPresent(Cell cell) {
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == VISIBILITY_TAG_TYPE) {

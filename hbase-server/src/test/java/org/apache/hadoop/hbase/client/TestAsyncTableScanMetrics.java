@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -147,7 +147,7 @@ public class TestAsyncTableScanMetrics {
     List<Result> results = pair.getFirst();
     assertEquals(3, results.size());
     long bytes = results.stream().flatMap(r -> Arrays.asList(r.rawCells()).stream())
-        .mapToLong(c -> CellUtil.estimatedSerializedSizeOf(c)).sum();
+        .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
     ScanMetrics scanMetrics = pair.getSecond();
     assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());

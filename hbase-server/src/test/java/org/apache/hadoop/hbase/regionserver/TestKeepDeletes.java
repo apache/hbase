@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -349,15 +350,15 @@ public class TestKeepDeletes {
     List<Cell> kvs = new ArrayList<>();
     scan.next(kvs);
     assertEquals(8, kvs.size());
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T3);
     assertTrue(CellUtil.isDelete(kvs.get(2)));
     assertTrue(CellUtil.isDelete(kvs.get(3))); // .isDeleteType());
     assertArrayEquals(CellUtil.cloneValue(kvs.get(4)), T2);
     assertArrayEquals(CellUtil.cloneValue(kvs.get(5)), T1);
     // we have 3 CFs, so there are two more delete markers
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(6)));
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(7)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(6)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(7)));
 
     // verify that raw scans honor the passed timerange
     s = new Scan();
@@ -379,11 +380,11 @@ public class TestKeepDeletes {
     kvs = new ArrayList<>();
     scan.next(kvs);
     assertEquals(4, kvs.size());
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(0)));
     assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T1);
     // we have 3 CFs
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(2)));
-    assertTrue(CellUtil.isDeleteFamily(kvs.get(3)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(2)));
+    assertTrue(PrivateCellUtil.isDeleteFamily(kvs.get(3)));
 
     // filter old delete markers
     s = new Scan();

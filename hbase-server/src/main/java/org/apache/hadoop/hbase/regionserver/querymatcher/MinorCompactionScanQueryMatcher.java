@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 
@@ -43,7 +44,7 @@ public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher 
     }
     long mvccVersion = cell.getSequenceId();
     byte typeByte = cell.getTypeByte();
-    if (CellUtil.isDelete(typeByte)) {
+    if (PrivateCellUtil.isDelete(typeByte)) {
       if (mvccVersion > maxReadPointToTrackVersions) {
         // we should not use this delete marker to mask any cell yet.
         return MatchCode.INCLUDE;

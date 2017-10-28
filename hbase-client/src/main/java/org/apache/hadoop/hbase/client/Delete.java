@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -175,7 +174,7 @@ public class Delete extends Mutation implements Comparable<Row> {
       throw new IOException("The recently added KeyValue is not of type "
           + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
     }
-    if (!CellUtil.matchingRow(kv, this.row)) {
+    if (!CellUtil.matchingRows(kv, this.row)) {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }

@@ -326,7 +326,7 @@ public class TestTags {
             CellScanner cellScanner = next.cellScanner();
             cellScanner.advance();
             Cell current = cellScanner.current();
-            if (CellUtil.matchingRow(current, row)) {
+            if (CellUtil.matchingRows(current, row)) {
               assertEquals(1, TestCoprocessorForTags.tags.size());
               Tag tag = TestCoprocessorForTags.tags.get(0);
               assertEquals(bigTagLen, tag.getValueLength());
@@ -351,7 +351,7 @@ public class TestTags {
             CellScanner cellScanner = next.cellScanner();
             cellScanner.advance();
             Cell current = cellScanner.current();
-            if (CellUtil.matchingRow(current, row)) {
+            if (CellUtil.matchingRows(current, row)) {
               assertEquals(1, TestCoprocessorForTags.tags.size());
               Tag tag = TestCoprocessorForTags.tags.get(0);
               assertEquals(bigTagLen, tag.getValueLength());

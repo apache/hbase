@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -273,7 +274,7 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   private boolean filterColumnValue(final Cell cell) {
-    int compareResult = CellUtil.compareValue(cell, this.comparator);
+    int compareResult = PrivateCellUtil.compareValue(cell, this.comparator);
     return CompareFilter.compare(this.op, compareResult);
   }
 

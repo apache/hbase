@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -177,7 +178,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
         firstKeyInChunk = CellUtil.copyRow(cell);
       } else {
         firstKeyInChunk =
-            CellUtil.getCellKeySerializedAsKeyValueKey(CellUtil.createFirstOnRowCol(cell));
+            PrivateCellUtil
+                .getCellKeySerializedAsKeyValueKey(PrivateCellUtil.createFirstOnRowCol(cell));
       }
       allocateNewChunk();
     }

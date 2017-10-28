@@ -26,6 +26,7 @@ import java.util.PriorityQueue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
@@ -187,7 +188,7 @@ public class FuzzyRowFilter extends FilterBase {
       return null;
     }
     byte[] nextRowKey = tracker.nextRow();
-    return CellUtil.createFirstOnRow(nextRowKey, 0, (short) nextRowKey.length);
+    return PrivateCellUtil.createFirstOnRow(nextRowKey, 0, (short) nextRowKey.length);
   }
 
   /**

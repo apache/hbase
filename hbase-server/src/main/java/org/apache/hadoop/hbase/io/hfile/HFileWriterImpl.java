@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -239,7 +240,7 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = CellUtil.compareKeyIgnoresMvcc(comparator, lastCell, cell);
+      int keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, lastCell, cell);
 
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
@@ -341,7 +342,7 @@ public class HFileWriterImpl implements HFile.Writer {
     int onDiskSize = blockWriter.getOnDiskSizeWithHeader();
     Cell indexEntry =
       getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
-    dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
+    dataBlockIndexWriter.addEntry(PrivateCellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += blockWriter.getUncompressedSizeWithHeader();
     if (cacheConf.shouldCacheDataOnWrite()) {
@@ -397,7 +398,7 @@ public class HFileWriterImpl implements HFile.Writer {
       }
       // If midRow is null, just return 'right'. Can't do optimization.
       if (midRow == null) return right;
-      return CellUtil.createFirstOnRow(midRow);
+      return PrivateCellUtil.createFirstOnRow(midRow);
     }
     // Rows are same. Compare on families.
     diff = comparator.compareFamilies(left, right);
@@ -419,7 +420,7 @@ public class HFileWriterImpl implements HFile.Writer {
       // If midRow is null, just return 'right'. Can't do optimization.
       if (midRow == null) return right;
       // Return new Cell where we use right row and then a mid sort family.
-      return CellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
+      return PrivateCellUtil.createFirstOnRowFamily(right, midRow, 0, midRow.length);
     }
     // Families are same. Compare on qualifiers.
     diff = comparator.compareQualifiers(left, right);
@@ -441,7 +442,7 @@ public class HFileWriterImpl implements HFile.Writer {
       // If midRow is null, just return 'right'. Can't do optimization.
       if (midRow == null) return right;
       // Return new Cell where we use right row and family and then a mid sort qualifier.
-      return CellUtil.createFirstOnRowCol(right, midRow, 0, midRow.length);
+      return PrivateCellUtil.createFirstOnRowCol(right, midRow, 0, midRow.length);
     }
     // No opportunity for optimization. Just return right key.
     return right;
@@ -738,7 +739,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
     blockWriter.write(cell);
 
-    totalKeyLength += CellUtil.estimatedSerializedSizeOfKey(cell);
+    totalKeyLength += PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += cell.getValueLength();
 
     // Are we the first key in this block?
@@ -776,7 +777,7 @@ public class HFileWriterImpl implements HFile.Writer {
     if (lastCell != null) {
       // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
-      byte [] lastKey = CellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
+      byte [] lastKey = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
       fileInfo.append(FileInfo.LASTKEY, lastKey, false);
     }
 

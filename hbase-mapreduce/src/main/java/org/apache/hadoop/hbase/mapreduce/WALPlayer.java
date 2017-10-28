@@ -211,7 +211,7 @@ public class WALPlayer extends Configured implements Tool {
               // Aggregate as much as possible into a single Put/Delete
               // operation before writing to the context.
               if (lastCell == null || lastCell.getTypeByte() != cell.getTypeByte()
-                  || !CellUtil.matchingRow(lastCell, cell)) {
+                  || !CellUtil.matchingRows(lastCell, cell)) {
                 // row or type changed, write out aggregate KVs.
                 if (put != null) {
                   context.write(tableOut, put);

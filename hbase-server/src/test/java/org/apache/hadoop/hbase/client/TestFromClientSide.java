@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -263,7 +264,7 @@ public class TestFromClientSide {
      s.setMaxVersions();
      scanner = h.getScanner(s);
      kvs = scanner.next().rawCells();
-     assertTrue(CellUtil.isDeleteFamily(kvs[0]));
+     assertTrue(PrivateCellUtil.isDeleteFamily(kvs[0]));
      assertArrayEquals(T3, CellUtil.cloneValue(kvs[1]));
      assertTrue(CellUtil.isDelete(kvs[2]));
      assertArrayEquals(T2, CellUtil.cloneValue(kvs[3]));
@@ -5064,7 +5065,7 @@ public class TestFromClientSide {
     int numBytes = 0;
     for (Result result : scanner.next(1)) {
       for (Cell cell: result.listCells()) {
-        numBytes += CellUtil.estimatedSerializedSizeOf(cell);
+        numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     scanner.close();
@@ -5081,7 +5082,7 @@ public class TestFromClientSide {
     numBytes = 0;
     for (Result result : scanner.next(1)) {
       for (Cell cell: result.listCells()) {
-        numBytes += CellUtil.estimatedSerializedSizeOf(cell);
+        numBytes += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     scanner.close();

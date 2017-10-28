@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -892,11 +893,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
         List<Tag> tags = new ArrayList<>();
         tags.add(new ArrayBackedTag(AccessControlLists.ACL_TAG_TYPE, perms));
-        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell);
+        Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(cell);
         while (tagIterator.hasNext()) {
           tags.add(tagIterator.next());
         }
-        newCells.add(CellUtil.createCell(cell, tags));
+        newCells.add(PrivateCellUtil.createCell(cell, tags));
       }
       // This is supposed to be safe, won't CME
       e.setValue(newCells);
@@ -921,7 +922,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       return;
     }
     for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-      Iterator<Tag> tagsItr = CellUtil.tagsIterator(cellScanner.current());
+      Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cellScanner.current());
       while (tagsItr.hasNext()) {
         if (tagsItr.next().getType() == AccessControlLists.ACL_TAG_TYPE) {
           throw new AccessDeniedException("Mutation contains cell with reserved type tag");
@@ -2059,7 +2060,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     List<Tag> aclTags = Lists.newArrayList();
     ListMultimap<String,Permission> perms = ArrayListMultimap.create();
     if (oldCell != null) {
-      Iterator<Tag> tagIterator = CellUtil.tagsIterator(oldCell);
+      Iterator<Tag> tagIterator = PrivateCellUtil.tagsIterator(oldCell);
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {
@@ -2098,7 +2099,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       return newCell;
     }
 
-    Cell rewriteCell = CellUtil.createCell(newCell, tags);
+    Cell rewriteCell = PrivateCellUtil.createCell(newCell, tags);
     return rewriteCell;
   }
 

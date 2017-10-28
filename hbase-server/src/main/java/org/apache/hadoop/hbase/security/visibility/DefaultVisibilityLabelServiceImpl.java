@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
@@ -184,7 +185,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         if (CellUtil.matchingQualifier(cell, LABEL_QUALIFIER)) {
           labels.put(
               Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()),
-              CellUtil.getRowAsInt(cell));
+              PrivateCellUtil.getRowAsInt(cell));
         } else {
           // These are user cells who has authorization for this label
           String user = Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
@@ -194,7 +195,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
             auths = new ArrayList<>();
             userAuths.put(user, auths);
           }
-          auths.add(CellUtil.getRowAsInt(cell));
+          auths.add(PrivateCellUtil.getRowAsInt(cell));
         }
       }
     }
@@ -350,7 +351,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         scanner.next(results);
         if (results.isEmpty()) break;
         Cell cell = results.get(0);
-        int ordinal = CellUtil.getRowAsInt(cell);
+        int ordinal = PrivateCellUtil.getRowAsInt(cell);
         String label = this.labelsCache.getLabel(ordinal);
         if (label != null) {
           auths.add(label);
@@ -387,7 +388,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         scanner.next(results);
         if (results.isEmpty()) break;
         Cell cell = results.get(0);
-        int ordinal = CellUtil.getRowAsInt(cell);
+        int ordinal = PrivateCellUtil.getRowAsInt(cell);
         String label = this.labelsCache.getLabel(ordinal);
         if (label != null) {
           auths.add(label);
@@ -491,7 +492,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       @Override
       public boolean evaluate(Cell cell) throws IOException {
         boolean visibilityTagPresent = false;
-        Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+        Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
         while (tagsItr.hasNext()) {
           boolean includeKV = true;
           Tag tag = tagsItr.next();

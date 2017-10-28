@@ -30,6 +30,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -165,7 +166,8 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
    * Else return MAX_VALUE.
    */
   protected long prepare(Cell cell) {
-    boolean matchCq = CellUtil.matchingQualifier(cell, lastCqArray, lastCqOffset, lastCqLength);
+    boolean matchCq =
+        PrivateCellUtil.matchingQualifier(cell, lastCqArray, lastCqOffset, lastCqLength);
     if (!matchCq) {
       // The last cell is family-level delete and this is not, or the cq is changed,
       // we should construct delColMap as a deep copy of delFamMap.
@@ -175,7 +177,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
       }
       countCurrentCol = 0;
     }
-    if (matchCq && !CellUtil.isDelete(lastCqType) && lastCqType == cell.getTypeByte()
+    if (matchCq && !PrivateCellUtil.isDelete(lastCqType) && lastCqType == cell.getTypeByte()
         && lastCqTs == cell.getTimestamp()) {
       // Put with duplicate timestamp, ignore.
       return lastCqMvcc;
@@ -300,7 +302,7 @@ public class NewVersionBehaviorTracker implements ColumnTracker, DeleteTracker {
   @Override
   public MatchCode checkVersions(Cell cell, long timestamp, byte type,
       boolean ignoreCount) throws IOException {
-    assert !CellUtil.isDelete(type);
+    assert !PrivateCellUtil.isDelete(type);
     // We drop old version in #isDeleted, so here we won't SKIP because of versioning. But we should
     // consider TTL.
     if (ignoreCount) {

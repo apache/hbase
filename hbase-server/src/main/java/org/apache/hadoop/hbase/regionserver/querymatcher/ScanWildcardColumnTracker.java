@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
@@ -130,7 +131,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * delete
    */
   private MatchCode checkVersion(byte type, long timestamp) {
-    if (!CellUtil.isDelete(type)) {
+    if (!PrivateCellUtil.isDelete(type)) {
       currentCount++;
     }
     if (currentCount > maxVersions) {

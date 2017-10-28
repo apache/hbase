@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -318,7 +318,7 @@ public abstract class Segment {
   protected long heapSizeChange(Cell cell, boolean succ) {
     if (succ) {
       return ClassSize
-          .align(indexEntrySize() + CellUtil.estimatedHeapSizeOf(cell));
+          .align(indexEntrySize() + PrivateCellUtil.estimatedHeapSizeOf(cell));
     }
     return 0;
   }

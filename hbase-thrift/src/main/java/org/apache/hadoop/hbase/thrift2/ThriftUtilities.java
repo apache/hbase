@@ -30,6 +30,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
@@ -171,7 +172,7 @@ public class ThriftUtilities {
       col.setTimestamp(kv.getTimestamp());
       col.setValue(CellUtil.cloneValue(kv));
       if (kv.getTagsLength() > 0) {
-        col.setTags(CellUtil.getTagArray(kv));
+        col.setTags(PrivateCellUtil.getTagsArray(kv));
       }
       columnValues.add(col);
     }

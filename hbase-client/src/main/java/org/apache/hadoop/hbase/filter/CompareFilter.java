@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
@@ -137,7 +137,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareRow(cell, comparator);
+    int compareResult = PrivateCellUtil.compareRow(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -146,7 +146,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareRow(cell, comparator);
+    int compareResult = PrivateCellUtil.compareRow(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -160,7 +160,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareFamily(cell, comparator);
+    int compareResult = PrivateCellUtil.compareFamily(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -169,7 +169,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareFamily(cell, comparator);
+    int compareResult = PrivateCellUtil.compareFamily(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -184,7 +184,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareQualifier(cell, comparator);
+    int compareResult = PrivateCellUtil.compareQualifier(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -194,7 +194,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareQualifier(cell, comparator);
+    int compareResult = PrivateCellUtil.compareQualifier(cell, comparator);
     return compare(op, compareResult);
   }
 
@@ -209,7 +209,7 @@ public abstract class CompareFilter extends FilterBase {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareValue(cell, comparator);
+    int compareResult = PrivateCellUtil.compareValue(cell, comparator);
     return compare(compareOp, compareResult);
   }
 
@@ -218,7 +218,7 @@ public abstract class CompareFilter extends FilterBase {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = CellUtil.compareValue(cell, comparator);
+    int compareResult = PrivateCellUtil.compareValue(cell, comparator);
     return compare(op, compareResult);
   }
 

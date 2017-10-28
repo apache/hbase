@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
@@ -728,7 +729,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         offsetFromPos += Bytes.SIZEOF_LONG;
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
         bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen);
-        int comp = CellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
+        int comp =
+            PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
         offsetFromPos += klen + vlen;
         if (this.reader.getFileContext().isIncludesTags()) {
           // Read short as unsigned, high byte first
@@ -811,7 +813,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         } else {
           // The comparison with no_next_index_key has to be checked
           if (this.nextIndexedKey != null &&
-              (this.nextIndexedKey == KeyValueScanner.NO_NEXT_INDEXED_KEY || CellUtil
+              (this.nextIndexedKey == KeyValueScanner.NO_NEXT_INDEXED_KEY || PrivateCellUtil
                   .compareKeyIgnoresMvcc(reader.getComparator(), key, nextIndexedKey) < 0)) {
             // The reader shall continue to scan the current data block instead
             // of querying the
@@ -865,7 +867,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return false;
       }
       Cell firstKey = getFirstKeyCellInBlock(seekToBlock);
-      if (CellUtil.compareKeyIgnoresMvcc(reader.getComparator(), firstKey, key) >= 0) {
+      if (PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), firstKey, key) >= 0) {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
         // The key we are interested in
         if (previousBlockOffset == -1) {
@@ -1229,7 +1231,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public int compareKey(CellComparator comparator, Cell key) {
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
       this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen);
-      return CellUtil.compareKeyIgnoresMvcc(comparator, key, this.bufBackedKeyOnlyKv);
+      return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, this.bufBackedKeyOnlyKv);
     }
 
     @Override

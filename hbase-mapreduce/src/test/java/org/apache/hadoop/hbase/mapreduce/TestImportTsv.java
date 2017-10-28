@@ -480,8 +480,8 @@ public class TestImportTsv implements Configurable {
           numRows++;
           assertEquals(2, res.size());
           List<Cell> kvs = res.listCells();
-          assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
-          assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
           assertTrue(CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
           // Only one result set is expected, so let it loop.

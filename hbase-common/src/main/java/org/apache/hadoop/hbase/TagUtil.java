@@ -232,7 +232,7 @@ public final class TagUtil {
    * Add to <code>tagsOrNull</code> any Tags <code>cell</code> is carrying or null if none.
    */
   public static List<Tag> carryForwardTags(final List<Tag> tagsOrNull, final Cell cell) {
-    Iterator<Tag> itr = CellUtil.tagsIterator(cell);
+    Iterator<Tag> itr = PrivateCellUtil.tagsIterator(cell);
     if (itr == EMPTY_TAGS_ITR) {
       // If no Tags, return early.
       return tagsOrNull;

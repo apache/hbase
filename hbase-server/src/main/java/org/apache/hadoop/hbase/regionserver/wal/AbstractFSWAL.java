@@ -53,8 +53,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -936,7 +936,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     long len = 0;
     if (!listeners.isEmpty()) {
       for (Cell cell : e.getEdit().getCells()) {
-        len += CellUtil.estimatedSerializedSizeOf(cell);
+        len += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       for (WALActionsListener listener : listeners) {
         listener.postAppend(len, elapsedTime, e.getKey(), e.getEdit());

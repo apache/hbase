@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -375,7 +376,7 @@ public class TestImportExport {
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
       Cell[] res = r.rawCells();
-      assertTrue(CellUtil.isDeleteFamily(res[0]));
+      assertTrue(PrivateCellUtil.isDeleteFamily(res[0]));
       assertEquals(now+4, res[1].getTimestamp());
       assertEquals(now+3, res[2].getTimestamp());
       assertTrue(CellUtil.isDelete(res[3]));

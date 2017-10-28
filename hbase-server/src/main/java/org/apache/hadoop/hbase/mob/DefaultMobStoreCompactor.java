@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.CellSink;
@@ -248,7 +249,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                 Cell mobCell = mobStore.resolve(c, false);
                 if (mobCell.getValueLength() != 0) {
                   // put the mob data back to the store file
-                  CellUtil.setSequenceId(mobCell, c.getSequenceId());
+                  PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
                   writer.append(mobCell);
                   cellsCountCompactedFromMob++;
                   cellsSizeCompactedFromMob += mobCell.getValueLength();

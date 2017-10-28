@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.IsolationLevel;
@@ -397,7 +398,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scanner.seek(seekKey);
           Cell c = scanner.peek();
           if (c != null) {
-            totalScannersSoughtBytes += CellUtil.estimatedSerializedSizeOf(c);
+            totalScannersSoughtBytes += PrivateCellUtil.estimatedSerializedSizeOf(c);
           }
         }
       } else {
@@ -568,7 +569,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         ++kvsScanned;
       }
       checkScanOrder(prevCell, cell, comparator);
-      int cellSize = CellUtil.estimatedSerializedSizeOf(cell);
+      int cellSize = PrivateCellUtil.estimatedSerializedSizeOf(cell);
       bytesRead += cellSize;
       prevCell = cell;
       scannerContext.setLastPeekedCell(cell);
@@ -606,7 +607,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             totalBytesRead += cellSize;
 
             // Update the progress of the scanner context
-            scannerContext.incrementSizeProgress(cellSize, CellUtil.estimatedHeapSizeOf(cell));
+            scannerContext.incrementSizeProgress(cellSize,
+              PrivateCellUtil.estimatedHeapSizeOf(cell));
             scannerContext.incrementBatchProgress(1);
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
@@ -940,7 +942,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   protected boolean seekToNextRow(Cell c) throws IOException {
-    return reseek(CellUtil.createLastOnRow(c));
+    return reseek(PrivateCellUtil.createLastOnRow(c));
   }
 
   /**

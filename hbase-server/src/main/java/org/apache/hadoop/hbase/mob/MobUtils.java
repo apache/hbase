@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -175,7 +176,7 @@ public final class MobUtils {
    */
   public static boolean isMobReferenceCell(Cell cell) {
     if (cell.getTagsLength() > 0) {
-      Tag tag = CellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
+      Tag tag = PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
       return tag != null;
     }
     return false;
@@ -188,7 +189,7 @@ public final class MobUtils {
    */
   public static Tag getTableNameTag(Cell cell) {
     if (cell.getTagsLength() > 0) {
-      return CellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
+      return PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
     }
     return null;
   }
@@ -501,7 +502,7 @@ public final class MobUtils {
 
   public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {
     byte[] refValue = Bytes.add(Bytes.toBytes(cell.getValueLength()), fileName);
-    return CellUtil.createCell(cell, refValue, TagUtil.concatTags(refCellTags, cell));
+    return PrivateCellUtil.createCell(cell, refValue, TagUtil.concatTags(refCellTags, cell));
   }
 
   /**
@@ -761,7 +762,7 @@ public final class MobUtils {
    * @return The real mob value length.
    */
   public static int getMobValueLength(Cell cell) {
-    return CellUtil.getValueAsInt(cell);
+    return PrivateCellUtil.getValueAsInt(cell);
   }
 
   /**
@@ -891,7 +892,7 @@ public final class MobUtils {
    * @return A delete marker with the ref tag.
    */
   public static Cell createMobRefDeleteMarker(Cell cell) {
-    return CellUtil.createCell(cell, TagUtil.concatTags(REF_DELETE_MARKER_TAG_BYTES, cell));
+    return PrivateCellUtil.createCell(cell, TagUtil.concatTags(REF_DELETE_MARKER_TAG_BYTES, cell));
   }
 
   /**

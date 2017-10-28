@@ -186,7 +186,7 @@ public class TestDefaultMemStore {
       while (s.next(result)) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
-        assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
+        assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         count++;
         // Row count is same as column count.
         assertEquals(rowCount, result.size());
@@ -210,7 +210,7 @@ public class TestDefaultMemStore {
       while (s.next(result)) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
-        assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
+        assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         // Row count is same as column count.
         assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
         count++;

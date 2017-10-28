@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
@@ -195,12 +196,12 @@ public class TestStoreScanner {
     public Cell getNextIndexedKey() {
       // Fake block boundaries by having index of next block change as we go through scan.
       return count.get() > CELL_GRID_BLOCK4_BOUNDARY?
-          CellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK5_BOUNDARY]):
+          PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK5_BOUNDARY]):
             count.get() > CELL_GRID_BLOCK3_BOUNDARY?
-                CellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK4_BOUNDARY]):
+                PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK4_BOUNDARY]):
                   count.get() > CELL_GRID_BLOCK2_BOUNDARY?
-                      CellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK3_BOUNDARY]):
-                        CellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK2_BOUNDARY]);
+                      PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK3_BOUNDARY]):
+                        PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK2_BOUNDARY]);
     }
   };
 
@@ -239,7 +240,8 @@ public class TestStoreScanner {
     @Override
     public Cell getNextIndexedKey() {
       // Fake block boundaries by having index of next block change as we go through scan.
-      return CellUtil.createFirstOnRow(CELL_WITH_VERSIONS[CELL_WITH_VERSIONS_BLOCK2_BOUNDARY]);
+      return PrivateCellUtil
+          .createFirstOnRow(CELL_WITH_VERSIONS[CELL_WITH_VERSIONS_BLOCK2_BOUNDARY]);
     }
   };
 

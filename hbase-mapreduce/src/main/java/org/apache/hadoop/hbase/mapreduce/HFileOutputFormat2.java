@@ -51,8 +51,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -247,7 +247,7 @@ public class HFileOutputFormat2
         }
 
         byte[] rowKey = CellUtil.cloneRow(kv);
-        int length = (CellUtil.estimatedSerializedSizeOf(kv)) - Bytes.SIZEOF_INT;
+        int length = (PrivateCellUtil.estimatedSerializedSizeOf(kv)) - Bytes.SIZEOF_INT;
         byte[] family = CellUtil.cloneFamily(kv);
         byte[] tableNameBytes = null;
         if (writeMultipleTables) {
@@ -337,7 +337,7 @@ public class HFileOutputFormat2
 
         // we now have the proper WAL writer. full steam ahead
         // TODO : Currently in SettableTimeStamp but this will also move to ExtendedCell
-        CellUtil.updateLatestStamp(cell, this.now);
+        PrivateCellUtil.updateLatestStamp(cell, this.now);
         wl.writer.append(kv);
         wl.written += length;
 

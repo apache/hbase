@@ -3464,7 +3464,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     if (!result.isEmpty()) {
       // verify that we are on the row we want:
       Cell kv = result.get(0);
-      if (!CellUtil.matchingRow(kv, get.getRow())) {
+      if (!CellUtil.matchingRows(kv, get.getRow())) {
         result.clear();
       }
     }

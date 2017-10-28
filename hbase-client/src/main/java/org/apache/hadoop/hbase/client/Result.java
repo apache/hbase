@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -297,7 +298,7 @@ public class Result implements CellScannable, CellScanner {
     byte[] familyNotNull = notNullBytes(family);
     byte[] qualifierNotNull = notNullBytes(qualifier);
     Cell searchTerm =
-        CellUtil.createFirstOnRow(kvs[0].getRowArray(),
+        PrivateCellUtil.createFirstOnRow(kvs[0].getRowArray(),
             kvs[0].getRowOffset(), kvs[0].getRowLength(),
             familyNotNull, 0, (byte)familyNotNull.length,
             qualifierNotNull, 0, qualifierNotNull.length);
@@ -408,7 +409,8 @@ public class Result implements CellScannable, CellScanner {
     if (pos == -1) {
       return null;
     }
-    if (CellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset, qlength)) {
+    if (PrivateCellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset,
+      qlength)) {
       return kvs[pos];
     }
     return null;
@@ -858,7 +860,7 @@ public class Result implements CellScannable, CellScanner {
       return size;
     }
     for (Cell c : result.rawCells()) {
-      size += CellUtil.estimatedHeapSizeOf(c);
+      size += PrivateCellUtil.estimatedHeapSizeOf(c);
     }
     return size;
   }

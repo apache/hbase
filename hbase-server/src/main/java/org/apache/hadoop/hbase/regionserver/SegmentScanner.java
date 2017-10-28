@@ -25,7 +25,7 @@ import java.util.SortedSet;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -205,14 +205,14 @@ public class SegmentScanner implements KeyValueScanner {
     boolean keepSeeking;
     Cell key = cell;
     do {
-      Cell firstKeyOnRow = CellUtil.createFirstOnRow(key);
+      Cell firstKeyOnRow = PrivateCellUtil.createFirstOnRow(key);
       SortedSet<Cell> cellHead = segment.headSet(firstKeyOnRow);
       Cell lastCellBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
       if (lastCellBeforeRow == null) {
         current = null;
         return false;
       }
-      Cell firstKeyOnPreviousRow = CellUtil.createFirstOnRow(lastCellBeforeRow);
+      Cell firstKeyOnPreviousRow = PrivateCellUtil.createFirstOnRow(lastCellBeforeRow);
       this.stopSkippingKVsIfNextRow = true;
       seek(firstKeyOnPreviousRow);
       this.stopSkippingKVsIfNextRow = false;
@@ -243,7 +243,7 @@ public class SegmentScanner implements KeyValueScanner {
       return false;
     }
 
-    Cell firstCellOnLastRow = CellUtil.createFirstOnRow(higherCell);
+    Cell firstCellOnLastRow = PrivateCellUtil.createFirstOnRow(higherCell);
 
     if (seek(firstCellOnLastRow)) {
       return true;

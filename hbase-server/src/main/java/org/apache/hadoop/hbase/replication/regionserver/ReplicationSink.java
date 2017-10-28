@@ -305,7 +305,7 @@ public class ReplicationSink {
    */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
     return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte() ||
-        !CellUtil.matchingRow(previousCell, cell);
+        !CellUtil.matchingRows(previousCell, cell);
   }
 
   private java.util.UUID toUUID(final HBaseProtos.UUID uuid) {

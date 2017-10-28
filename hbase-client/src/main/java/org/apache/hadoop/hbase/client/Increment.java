@@ -96,7 +96,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     byte [] family = CellUtil.cloneFamily(cell);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
-    if (!CellUtil.matchingRow(cell, this.row)) {
+    if (!CellUtil.matchingRows(cell, this.row)) {
       throw new WrongRowIOException("The row in " + cell +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }

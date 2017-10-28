@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -2958,7 +2959,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         Cell cell = cells.get(i);
         //  Check if time is LATEST, change to time of most recent addition if so
         //  This is expensive.
-        if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP && CellUtil.isDeleteType(cell)) {
+        if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP
+            && PrivateCellUtil.isDeleteType(cell)) {
           byte[] qual = CellUtil.cloneQualifier(cell);
 
           Integer count = kvCount.get(qual);
@@ -2981,7 +2983,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             updateDeleteLatestVersionTimeStamp(cell, get, count, byteNow);
           }
         } else {
-          CellUtil.updateLatestStamp(cell, byteNow, 0);
+          PrivateCellUtil.updateLatestStamp(cell, byteNow, 0);
         }
       }
     }
@@ -2993,14 +2995,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     if (result.size() < count) {
       // Nothing to delete
-      CellUtil.updateLatestStamp(cell, byteNow, 0);
+      PrivateCellUtil.updateLatestStamp(cell, byteNow, 0);
       return;
     }
     if (result.size() > count) {
       throw new RuntimeException("Unexpected size: " + result.size());
     }
     Cell getCell = result.get(count - 1);
-    CellUtil.setTimestamp(cell, getCell.getTimestamp());
+    PrivateCellUtil.setTimestamp(cell, getCell.getTimestamp());
   }
 
   @Override
@@ -3753,7 +3755,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         } else if (result.size() == 1 && !valueIsNull) {
           Cell kv = result.get(0);
           cellTs = kv.getTimestamp();
-          int compareResult = CellUtil.compareValue(kv, comparator);
+          int compareResult = PrivateCellUtil.compareValue(kv, comparator);
           matches = matches(op, compareResult);
         }
         // If matches put the new put or delete the new delete
@@ -3876,7 +3878,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (List<Cell> cells: cellItr) {
       if (cells == null) return;
       for (Cell cell : cells) {
-        CellUtil.setSequenceId(cell, sequenceId);
+        PrivateCellUtil.setSequenceId(cell, sequenceId);
       }
     }
   }
@@ -3894,7 +3896,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
-        CellUtil.updateLatestStamp(cells.get(i), now, 0);
+        PrivateCellUtil.updateLatestStamp(cells.get(i), now, 0);
       }
     }
   }
@@ -3919,7 +3921,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         List<Tag> newTags = TagUtil.carryForwardTags(null, cell);
         newTags = TagUtil.carryForwardTTLTag(newTags, m.getTTL());
         // Rewrite the cell with the updated set of tags
-        cells.set(i, CellUtil.createCell(cell, newTags));
+        cells.set(i, PrivateCellUtil.createCell(cell, newTags));
       }
     }
   }
@@ -4379,7 +4381,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               skippedEdits++;
               continue;
             }
-            CellUtil.setSequenceId(cell, currentReplaySeqId);
+            PrivateCellUtil.setSequenceId(cell, currentReplaySeqId);
 
             restoreEdit(store, cell, memstoreSize);
             editsCount++;
@@ -6147,7 +6149,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @return true When there are more cells in the row to be read
      */
     private boolean moreCellsInRow(final Cell nextKv, Cell currentRowCell) {
-      return nextKv != null && CellUtil.matchingRow(nextKv, currentRowCell);
+      return nextKv != null && CellUtil.matchingRows(nextKv, currentRowCell);
     }
 
     /*
@@ -6298,8 +6300,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             scannerContext.setTimeProgress(timeProgress);
             scannerContext.incrementBatchProgress(results.size());
             for (Cell cell : results) {
-              scannerContext.incrementSizeProgress(CellUtil.estimatedSerializedSizeOf(cell),
-                  CellUtil.estimatedHeapSizeOf(cell));
+              scannerContext.incrementSizeProgress(PrivateCellUtil.estimatedSerializedSizeOf(cell),
+                PrivateCellUtil.estimatedHeapSizeOf(cell));
             }
           }
 
@@ -6388,17 +6390,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         throws IOException {
       Cell nextJoinedKv = joinedHeap.peek();
       boolean matchCurrentRow =
-          nextJoinedKv != null && CellUtil.matchingRow(nextJoinedKv, currentRowCell);
+          nextJoinedKv != null && CellUtil.matchingRows(nextJoinedKv, currentRowCell);
       boolean matchAfterSeek = false;
 
       // If the next value in the joined heap does not match the current row, try to seek to the
       // correct row
       if (!matchCurrentRow) {
-        Cell firstOnCurrentRow = CellUtil.createFirstOnRow(currentRowCell);
+        Cell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
         boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
         matchAfterSeek =
             seekSuccessful && joinedHeap.peek() != null
-                && CellUtil.matchingRow(joinedHeap.peek(), currentRowCell);
+                && CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
       }
 
       return matchCurrentRow || matchAfterSeek;
@@ -6426,7 +6428,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert this.joinedContinuationRow == null: "Trying to go to next row during joinedHeap read.";
       Cell next;
       while ((next = this.storeHeap.peek()) != null &&
-             CellUtil.matchingRow(next, curRowCell)) {
+             CellUtil.matchingRows(next, curRowCell)) {
         this.storeHeap.next(MOCKED_LIST);
       }
       resetFilters();
@@ -6474,7 +6476,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       boolean result = false;
       startRegionOperation();
-      Cell kv = CellUtil.createFirstOnRow(row, 0, (short) row.length);
+      Cell kv = PrivateCellUtil.createFirstOnRow(row, 0, (short) row.length);
       try {
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);
@@ -7146,7 +7148,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               if (walEdit.isEmpty()) {
                 // If walEdit is empty, we put nothing in WAL. WAL stamps Cells with sequence id.
                 // If no WAL, need to stamp it here.
-                CellUtil.setSequenceId(cell, sequenceId);
+                PrivateCellUtil.setSequenceId(cell, sequenceId);
               }
               applyToMemStore(getStore(cell), cell, memstoreAccounting);
             }
@@ -7565,8 +7567,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               .setTags(TagUtil.fromList(tags))
               .build();
     } else {
-      CellUtil.updateLatestStamp(delta, now);
-      return CollectionUtils.isEmpty(tags) ? delta : CellUtil.createCell(delta, tags);
+      PrivateCellUtil.updateLatestStamp(delta, now);
+      return CollectionUtils.isEmpty(tags) ? delta : PrivateCellUtil.createCell(delta, tags);
     }
   }
 
@@ -7579,7 +7581,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // throw DoNotRetryIOException instead of IllegalArgumentException
       throw new DoNotRetryIOException("Field is not a long, it's " + len + " bytes wide");
     }
-    return CellUtil.getValueAsLong(cell);
+    return PrivateCellUtil.getValueAsLong(cell);
   }
 
   /**

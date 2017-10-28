@@ -714,7 +714,7 @@ public class TestCellBasedHFileOutputFormat2  {
             assertEquals(FAMILIES.length, res.rawCells().length);
             Cell first = res.rawCells()[0];
             for (Cell kv : res.rawCells()) {
-              assertTrue(CellUtil.matchingRow(first, kv));
+              assertTrue(CellUtil.matchingRows(first, kv));
               assertTrue(Bytes.equals(CellUtil.cloneValue(first), CellUtil.cloneValue(kv)));
             }
           }

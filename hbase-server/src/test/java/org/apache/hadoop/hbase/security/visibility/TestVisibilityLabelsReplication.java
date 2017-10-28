@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -417,7 +418,7 @@ public class TestVisibilityLabelsReplication {
             List<Tag> tagList = new ArrayList<>(kv.getTags().size() + 1);
             tagList.add(tag);
             tagList.addAll(kv.getTags());
-            Cell newcell = CellUtil.createCell(kv, tagList);
+            Cell newcell = PrivateCellUtil.createCell(kv, tagList);
             ((List<Cell>) updatedCells).add(newcell);
           }
         }

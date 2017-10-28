@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
@@ -91,7 +92,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       }
 
       //keep hunting for the rest of the row
-      byte searchForByte = CellUtil.getRowByte(key, currentNodeDepth);
+      byte searchForByte = PrivateCellUtil.getRowByte(key, currentNodeDepth);
       fanIndex = currentRowNode.whichFanNode(searchForByte);
       if(fanIndex < 0){//no matching row.  return early
         int insertionPoint = -fanIndex - 1;
@@ -140,7 +141,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       }
 
       //keep hunting for the rest of the row
-      byte searchForByte = CellUtil.getRowByte(key, currentNodeDepth);
+      byte searchForByte = PrivateCellUtil.getRowByte(key, currentNodeDepth);
       fanIndex = currentRowNode.whichFanNode(searchForByte);
       if(fanIndex < 0){//no matching row.  return early
         int insertionPoint = -fanIndex - 1;
@@ -287,7 +288,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       if (i >= key.getRowLength()) {// key was shorter, so it's first
         return -1;
       }
-      byte keyByte = CellUtil.getRowByte(key, i);
+      byte keyByte = PrivateCellUtil.getRowByte(key, i);
       byte thisByte = rowBuffer[i];
       if (keyByte == thisByte) {
         continue;
