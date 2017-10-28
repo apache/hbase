@@ -27,8 +27,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
@@ -58,7 +58,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
           HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
       get.getFamilyMap().get(fam2), now - ttl, now, null);
     Cell kv = new KeyValue(row1, fam2, col2, 1, data);
-    Cell cell = CellUtil.createLastOnRowCol(kv);
+    Cell cell = PrivateCellUtil.createLastOnRowCol(kv);
     qm.setToNewRow(kv);
     MatchCode code = qm.match(cell);
     assertFalse(code.compareTo(MatchCode.SEEK_NEXT_COL) != 0);

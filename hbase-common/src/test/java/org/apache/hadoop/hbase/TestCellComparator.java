@@ -72,23 +72,28 @@ public class TestCellComparator {
   public void testCompareCellWithKey() throws Exception {
     KeyValue kv1 = new KeyValue(row1, fam1, qual1, val);
     KeyValue kv2 = new KeyValue(row2, fam1, qual1, val);
-    assertTrue((CellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) < 0);
+    assertTrue(
+      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) < 0);
 
     kv1 = new KeyValue(row1, fam2, qual1, val);
     kv2 = new KeyValue(row1, fam1, qual1, val);
-    assertTrue((CellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
+    assertTrue(
+      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
 
     kv1 = new KeyValue(row1, fam1, qual1, 1l, val);
     kv2 = new KeyValue(row1, fam1, qual1, 2l, val);
-    assertTrue((CellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
+    assertTrue(
+      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
 
     kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
     kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Maximum);
-    assertTrue((CellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
+    assertTrue(
+      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
 
     kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
     kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    assertTrue((CellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) == 0);
+    assertTrue(
+      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) == 0);
   }
 
   @Test

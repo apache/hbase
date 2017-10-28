@@ -40,9 +40,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -320,7 +320,7 @@ public final class ConnectionUtils {
     long estimatedHeapSizeOfResult = 0;
     // We don't make Iterator here
     for (Cell cell : rs.rawCells()) {
-      estimatedHeapSizeOfResult += CellUtil.estimatedHeapSizeOf(cell);
+      estimatedHeapSizeOfResult += PrivateCellUtil.estimatedHeapSizeOf(cell);
     }
     return estimatedHeapSizeOfResult;
   }
@@ -331,7 +331,7 @@ public final class ConnectionUtils {
       return result;
     }
     // not the same row
-    if (!CellUtil.matchingRow(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
+    if (!PrivateCellUtil.matchingRows(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
       return result;
     }
     Cell[] rawCells = result.rawCells();
@@ -462,7 +462,7 @@ public final class ConnectionUtils {
     long resultSize = 0;
     for (Result rr : rrs) {
       for (Cell cell : rr.rawCells()) {
-        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
+        resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     scanMetrics.countOfBytesInResults.addAndGet(resultSize);

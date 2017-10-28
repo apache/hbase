@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -2367,11 +2368,11 @@ public class TestHRegion {
       InternalScanner s = region.getScanner(scan);
       List<Cell> results = new ArrayList<>();
       s.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), rowA));
+      assertTrue(CellUtil.matchingRows(results.get(0), rowA));
 
       results.clear();
       s.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), rowB));
+      assertTrue(CellUtil.matchingRows(results.get(0), rowB));
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -2608,7 +2609,7 @@ public class TestHRegion {
       Result res = region.get(get);
       assertEquals(expected.length, res.size());
       for (int i = 0; i < res.size(); i++) {
-        assertTrue(CellUtil.matchingRow(expected[i], res.rawCells()[i]));
+        assertTrue(CellUtil.matchingRows(expected[i], res.rawCells()[i]));
         assertTrue(CellUtil.matchingFamily(expected[i], res.rawCells()[i]));
         assertTrue(CellUtil.matchingQualifier(expected[i], res.rawCells()[i]));
       }
@@ -2883,7 +2884,7 @@ public class TestHRegion {
       res = new ArrayList<>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
 
       // Result 2
@@ -2894,7 +2895,7 @@ public class TestHRegion {
       res = new ArrayList<>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3014,7 +3015,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3096,7 +3097,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3216,7 +3217,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3342,7 +3343,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -4869,7 +4870,7 @@ public class TestHRegion {
       Cell[] raw = result.rawCells();
       assertEquals(families.length, result.size());
       for (int j = 0; j < families.length; j++) {
-        assertTrue(CellUtil.matchingRow(raw[j], row));
+        assertTrue(CellUtil.matchingRows(raw[j], row));
         assertTrue(CellUtil.matchingFamily(raw[j], families[j]));
         assertTrue(CellUtil.matchingQualifier(raw[j], qf));
       }

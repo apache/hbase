@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -253,7 +253,7 @@ public class StoreFileReader {
         if (columns != null && columns.size() == 1) {
           byte[] column = columns.first();
           // create the required fake key
-          Cell kvKey = CellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
+          Cell kvKey = PrivateCellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
           return passesGeneralRowColBloomFilter(kvKey);
         }
 
@@ -336,7 +336,7 @@ public class StoreFileReader {
     if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
       kvKey = cell;
     } else {
-      kvKey = CellUtil.createFirstOnRowCol(cell);
+      kvKey = PrivateCellUtil.createFirstOnRowCol(cell);
     }
     return checkGeneralBloomFilter(null, kvKey, bloomFilter);
   }
@@ -381,7 +381,7 @@ public class StoreFileReader {
           // columns, a file might be skipped if using row+col Bloom filter.
           // In order to ensure this file is included an additional check is
           // required looking only for a row bloom.
-          Cell rowBloomKey = CellUtil.createFirstOnRow(kvKey);
+          Cell rowBloomKey = PrivateCellUtil.createFirstOnRow(kvKey);
           // hbase:meta does not have blooms. So we need not have special interpretation
           // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
           if (keyIsAfterLast

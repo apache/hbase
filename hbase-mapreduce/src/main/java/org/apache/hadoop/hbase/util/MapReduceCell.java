@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -226,43 +227,43 @@ public class MapReduceCell extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public void setSequenceId(long seqId) throws IOException {
-    CellUtil.setSequenceId(cell, seqId);
+    PrivateCellUtil.setSequenceId(cell, seqId);
   }
 
   @Override
   public void setTimestamp(long ts) throws IOException {
-    CellUtil.setTimestamp(cell, ts);
+    PrivateCellUtil.setTimestamp(cell, ts);
   }
 
   @Override
   public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-    CellUtil.setTimestamp(cell, ts, tsOffset);
+    PrivateCellUtil.setTimestamp(cell, ts, tsOffset);
   }
 
   @Override
   public long heapSize() {
-    return CellUtil.estimatedHeapSizeOf(cell);
+    return PrivateCellUtil.estimatedHeapSizeOf(cell);
   }
 
   @Override
   public int write(OutputStream out, boolean withTags) throws IOException {
-    return CellUtil.writeCell(cell, out, withTags);
+    return PrivateCellUtil.writeCell(cell, out, withTags);
   }
 
   @Override
   public int getSerializedSize(boolean withTags) {
-    return CellUtil.estimatedSerializedSizeOf(cell) - Bytes.SIZEOF_INT;
+    return PrivateCellUtil.estimatedSerializedSizeOf(cell) - Bytes.SIZEOF_INT;
   }
 
   @Override
   public void write(ByteBuffer buf, int offset) {
-    CellUtil.writeCellToBuffer(cell, buf, offset);
+    PrivateCellUtil.writeCellToBuffer(cell, buf, offset);
   }
 
   @Override
   public ExtendedCell deepClone() {
     try {
-      return (ExtendedCell) CellUtil.deepClone(cell);
+      return (ExtendedCell) PrivateCellUtil.deepClone(cell);
     } catch (CloneNotSupportedException e) {
       throw new RuntimeException(e);
     }

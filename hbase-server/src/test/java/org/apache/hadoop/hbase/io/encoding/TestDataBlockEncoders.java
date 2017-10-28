@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -237,7 +238,7 @@ public class TestDataBlockEncoders {
     for (boolean seekBefore : new boolean[] { false, true }) {
       checkSeekingConsistency(encodedSeekers, seekBefore, sampleKv.get(sampleKv.size() - 1));
       KeyValue midKv = sampleKv.get(sampleKv.size() / 2);
-      Cell lastMidKv =CellUtil.createLastOnRowCol(midKv);
+      Cell lastMidKv =PrivateCellUtil.createLastOnRowCol(midKv);
       checkSeekingConsistency(encodedSeekers, seekBefore, lastMidKv);
     }
     LOG.info("Done");
@@ -292,9 +293,9 @@ public class TestDataBlockEncoders {
       do {
         KeyValue expectedKeyValue = sampleKv.get(i);
         Cell cell = seeker.getCell();
-        if (CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expectedKeyValue,
+        if (PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expectedKeyValue,
           cell) != 0) {
-          int commonPrefix = CellUtil
+          int commonPrefix = PrivateCellUtil
               .findCommonPrefixInFlatKey(expectedKeyValue, cell, false, true);
           fail(String.format("next() produces wrong results "
               + "encoder: %s i: %d commonPrefix: %d" + "\n expected %s\n actual      %s", encoder
@@ -327,8 +328,8 @@ public class TestDataBlockEncoders {
           getEncodingContext(Compression.Algorithm.NONE, encoding), this.useOffheapData);
       Cell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
       KeyValue firstKv = sampleKv.get(0);
-      if (0 != CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, key, firstKv)) {
-        int commonPrefix = CellUtil.findCommonPrefixInFlatKey(key, firstKv, false, true);
+      if (0 != PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, key, firstKv)) {
+        int commonPrefix = PrivateCellUtil.findCommonPrefixInFlatKey(key, firstKv, false, true);
         fail(String.format("Bug in '%s' commonPrefix %d", encoder.toString(), commonPrefix));
       }
     }
@@ -346,7 +347,7 @@ public class TestDataBlockEncoders {
       Cell actualKeyValue = seeker.getCell();
       ByteBuffer actualKey = null;
       if (seeker instanceof PrefixTreeSeeker) {
-        byte[] serializedKey = CellUtil.getCellKeySerializedAsKeyValueKey(seeker.getKey());
+        byte[] serializedKey = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(seeker.getKey());
         actualKey = ByteBuffer.wrap(KeyValueUtil.createKeyValueFromKey(serializedKey).getKey());
       } else {
         actualKey = ByteBuffer.wrap(((KeyValue) seeker.getKey()).getKey());

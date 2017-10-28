@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -81,7 +82,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public ByteBuffer getValueShallowCopy() {
-    return CellUtil.getValueBufferShallowCopy(ptSearcher.current());
+    return PrivateCellUtil.getValueBufferShallowCopy(ptSearcher.current());
   }
 
   /**

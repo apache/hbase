@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -208,21 +209,21 @@ public class WALCellCodec implements Codec {
       // To support tags
       int tagsLength = cell.getTagsLength();
       StreamUtils.writeRawVInt32(out, tagsLength);
-      CellUtil.compressRow(out, cell, compression.rowDict);
-      CellUtil.compressFamily(out, cell, compression.familyDict);
-      CellUtil.compressQualifier(out, cell, compression.qualifierDict);
+      PrivateCellUtil.compressRow(out, cell, compression.rowDict);
+      PrivateCellUtil.compressFamily(out, cell, compression.familyDict);
+      PrivateCellUtil.compressQualifier(out, cell, compression.qualifierDict);
       // Write timestamp, type and value as uncompressed.
       StreamUtils.writeLong(out, cell.getTimestamp());
       out.write(cell.getTypeByte());
-      CellUtil.writeValue(out, cell, cell.getValueLength());
+      PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
       if (tagsLength > 0) {
         if (compression.tagCompressionContext != null) {
           // Write tags using Dictionary compression
-          CellUtil.compressTags(out, cell, compression.tagCompressionContext);
+          PrivateCellUtil.compressTags(out, cell, compression.tagCompressionContext);
         } else {
           // Tag compression is disabled within the WAL compression. Just write the tags bytes as
           // it is.
-          CellUtil.writeTags(out, cell, tagsLength);
+          PrivateCellUtil.writeTags(out, cell, tagsLength);
         }
       }
     }

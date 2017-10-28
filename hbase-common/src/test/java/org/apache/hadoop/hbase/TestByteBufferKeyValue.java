@@ -166,9 +166,9 @@ public class TestByteBufferKeyValue {
     Tag tag2 = resTags.get(1);
     assertEquals(tag2.getType(), tag2.getType());
     assertEquals(TagUtil.getValueAsString(t2), TagUtil.getValueAsString(tag2));
-    Tag res = CellUtil.getTag(offheapKV, (byte) 2);
+    Tag res = PrivateCellUtil.getTag(offheapKV, (byte) 2);
     assertEquals(TagUtil.getValueAsString(t2), TagUtil.getValueAsString(tag2));
-    res = CellUtil.getTag(offheapKV, (byte) 3);
+    res = PrivateCellUtil.getTag(offheapKV, (byte) 3);
     assertNull(res);
   }
 

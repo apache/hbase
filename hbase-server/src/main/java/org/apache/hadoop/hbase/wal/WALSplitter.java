@@ -2354,7 +2354,7 @@ public class WALSplitter {
 
       boolean isNewRowOrType =
           previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
-              || !CellUtil.matchingRow(previousCell, cell);
+              || !CellUtil.matchingRows(previousCell, cell);
       if (isNewRowOrType) {
         // Create new mutation
         if (CellUtil.isDelete(cell)) {

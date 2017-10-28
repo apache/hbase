@@ -262,7 +262,7 @@ public class TestCoprocessorScanPolicy {
           if (version == 0) {
             return c -> true;
           } else {
-            if (row == null || !CellUtil.matchingRow(firstCell, row)) {
+            if (row == null || !CellUtil.matchingRows(firstCell, row)) {
               row = CellUtil.cloneRow(firstCell);
               // reset qualifier as there is a row change
               qualifier = null;

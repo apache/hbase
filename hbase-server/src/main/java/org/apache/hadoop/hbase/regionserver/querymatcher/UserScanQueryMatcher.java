@@ -22,6 +22,7 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -63,7 +64,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     if (scan.includeStartRow()) {
       return createStartKeyFromRow(scan.getStartRow(), scanInfo);
     } else {
-      return CellUtil.createLastOnRow(scan.getStartRow());
+      return PrivateCellUtil.createLastOnRow(scan.getStartRow());
     }
   }
 

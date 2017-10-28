@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -60,17 +60,17 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, klength);
       ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      CellUtil.writeFlatKey(cell, (DataOutput)out);
+      PrivateCellUtil.writeFlatKey(cell, (DataOutput)out);
     } else {
       // find a common prefix and skip it
-      int common = CellUtil.findCommonPrefixInFlatKey(cell, state.prevCell, true, true);
+      int common = PrivateCellUtil.findCommonPrefixInFlatKey(cell, state.prevCell, true, true);
       ByteBufferUtils.putCompressedInt(out, klength - common);
       ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, common);
       writeKeyExcludingCommon(cell, common, out);
     }
     // Write the value part
-    CellUtil.writeValue(out, cell, vlength);
+    PrivateCellUtil.writeValue(out, cell, vlength);
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     size += afterEncodingKeyValue(cell, out, encodingContext);
     state.prevCell = cell;
@@ -83,11 +83,11 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
       // Previous and current rows are different. Need to write the differing part followed by
       // cf,q,ts and type
-      CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
+      PrivateCellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
       byte fLen = cell.getFamilyLength();
       out.writeByte(fLen);
-      CellUtil.writeFamily(out, cell, fLen);
-      CellUtil.writeQualifier(out, cell, cell.getQualifierLength());
+      PrivateCellUtil.writeFamily(out, cell, fLen);
+      PrivateCellUtil.writeQualifier(out, cell, cell.getQualifierLength());
       out.writeLong(cell.getTimestamp());
       out.writeByte(cell.getTypeByte());
     } else {
@@ -99,7 +99,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       int commonQualPrefix = Math.min(commonPrefix, qLen);
       int qualPartLenToWrite = qLen - commonQualPrefix;
       if (qualPartLenToWrite > 0) {
-        CellUtil.writeQualifierSkippingBytes(out, cell, qLen, commonQualPrefix);
+        PrivateCellUtil.writeQualifierSkippingBytes(out, cell, qLen, commonQualPrefix);
       }
       commonPrefix -= commonQualPrefix;
       // Common part in TS also?

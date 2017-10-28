@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.TagType;
@@ -284,7 +285,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
         boolean visibilityTagPresent = false;
         // Save an object allocation where we can
         if (cell.getTagsLength() > 0) {
-          Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell);
+          Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(cell);
           while (tagsItr.hasNext()) {
             boolean includeKV = true;
             Tag tag = tagsItr.next();

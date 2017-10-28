@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
@@ -107,7 +107,7 @@ public class PrefixTreeCell extends ByteBufferCell implements SettableSequenceId
       return false;
     }
     // Temporary hack to maintain backwards compatibility with KeyValue.equals
-    return CellUtil.equalsIgnoreMvccVersion(this, (Cell) obj);
+    return PrivateCellUtil.equalsIgnoreMvccVersion(this, (Cell) obj);
 
     // TODO return CellComparator.equals(this, (Cell)obj);//see HBASE-6907
   }

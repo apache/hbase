@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -133,9 +134,9 @@ public class Import extends Configured implements Tool {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(CellUtil.estimatedSerializedSizeOfKey(kv));
+      out.writeInt(PrivateCellUtil.estimatedSerializedSizeOfKey(kv));
       out.writeInt(0);
-      CellUtil.writeFlatKey(kv, out);
+      PrivateCellUtil.writeFlatKey(kv, out);
     }
 
     @Override
@@ -210,9 +211,8 @@ public class Import extends Configured implements Tool {
           LOG.trace("Considering the row."
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
-        if (filter == null
-            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
-                (short) row.getLength()))) {
+        if (filter == null || !filter.filterRowKey(
+          PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(), (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
@@ -276,7 +276,7 @@ public class Import extends Configured implements Tool {
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
         if (filter == null
-            || !filter.filterRowKey(CellUtil.createFirstOnRow(row.get(), row.getOffset(),
+            || !filter.filterRowKey(PrivateCellUtil.createFirstOnRow(row.get(), row.getOffset(),
                 (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
@@ -332,7 +332,7 @@ public class Import extends Configured implements Tool {
             + Bytes.toString(key.get(), key.getOffset(), key.getLength()));
       }
       if (filter == null
-          || !filter.filterRowKey(CellUtil.createFirstOnRow(key.get(), key.getOffset(),
+          || !filter.filterRowKey(PrivateCellUtil.createFirstOnRow(key.get(), key.getOffset(),
               (short) key.getLength()))) {
         processKV(key, result, context, put, delete);
       }
@@ -354,7 +354,7 @@ public class Import extends Configured implements Tool {
          * submit multiple DeleteFamily tombstones in single Delete request then we are maintaining
          * only newest in hbase table and ignoring other. Check - HBASE-12065
          */
-        if (CellUtil.isDeleteFamily(kv)) {
+        if (PrivateCellUtil.isDeleteFamily(kv)) {
           Delete deleteFamily = new Delete(key.get());
           deleteFamily.add(kv);
           if (durability != null) {

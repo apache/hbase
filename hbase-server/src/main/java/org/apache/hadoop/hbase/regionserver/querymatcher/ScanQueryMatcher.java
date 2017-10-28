@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -148,7 +149,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // Look for a TTL tag first. Use it instead of the family setting if
     // found. If a cell has multiple TTLs, resolve the conflict by using the
     // first tag encountered.
-    Iterator<Tag> i = CellUtil.tagsIterator(cell);
+    Iterator<Tag> i = PrivateCellUtil.tagsIterator(cell);
     while (i.hasNext()) {
       Tag t = i.next();
       if (TagType.TTL_TAG_TYPE == t.getType()) {
@@ -296,7 +297,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRow
     // see TestFromClientSide3#testScanAfterDeletingSpecifiedRowV2
     if (cell.getQualifierLength() == 0) {
-      Cell nextKey = CellUtil.createNextOnRowCol(cell);
+      Cell nextKey = PrivateCellUtil.createNextOnRowCol(cell);
       if (nextKey != cell) {
         return nextKey;
       }
@@ -305,10 +306,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return CellUtil.createLastOnRowCol(cell);
+      return PrivateCellUtil.createLastOnRowCol(cell);
     } else {
-      return CellUtil.createFirstOnRowCol(cell, nextColumn.getBuffer(), nextColumn.getOffset(),
-        nextColumn.getLength());
+      return PrivateCellUtil.createFirstOnRowCol(cell, nextColumn.getBuffer(),
+        nextColumn.getOffset(), nextColumn.getLength());
     }
   }
 
@@ -318,7 +319,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell currentCell) {
-    return CellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
+    return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null, 0,
       0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
@@ -330,10 +331,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return CellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell, 0, 0, null,
         0, 0, HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
-      return CellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
+      return PrivateCellUtil.compareKeyBasedOnColHint(rowComparator, nextIndexed, currentCell,
         currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),
         nextColumn.getOffset(), nextColumn.getLength(), HConstants.LATEST_TIMESTAMP,
         Type.Maximum.getCode());
@@ -353,7 +354,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   @Override
   public void beforeShipped() throws IOException {
     if (this.currentRow != null) {
-      this.currentRow = CellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
+      this.currentRow = PrivateCellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
     }
     if (columns != null) {
       columns.beforeShipped();
@@ -361,7 +362,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   }
 
   protected static Cell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
-    return CellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
+    return PrivateCellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
   }
 
   protected static Pair<DeleteTracker, ColumnTracker> getTrackers(RegionCoprocessorHost host,

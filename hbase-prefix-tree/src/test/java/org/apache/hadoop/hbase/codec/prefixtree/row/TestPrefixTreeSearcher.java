@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -150,7 +151,7 @@ public class TestPrefixTreeSearcher {
           KeyValue kv = rows.getInputs().get(i);
 
           //nextRow
-          Cell inputNextRow = CellUtil.createFirstOnNextRow(kv);
+          Cell inputNextRow = PrivateCellUtil.createFirstOnNextRow(kv);
 
           CellScannerPosition position = beforeVsAfterOnMiss
               ? searcher.positionAtOrBefore(inputNextRow)

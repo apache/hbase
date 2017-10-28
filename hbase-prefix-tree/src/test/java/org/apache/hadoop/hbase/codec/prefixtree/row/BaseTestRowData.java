@@ -37,7 +37,7 @@ public abstract class BaseTestRowData implements TestRowData {
     for (int i = 1; i < inputs.size(); ++i) {
       KeyValue lastKv = inputs.get(i - 1);
       KeyValue kv = inputs.get(i);
-      if (!CellUtil.matchingRow(lastKv, kv)) {
+      if (!CellUtil.matchingRows(lastKv, kv)) {
         rowStartIndexes.add(i);
       }
     }

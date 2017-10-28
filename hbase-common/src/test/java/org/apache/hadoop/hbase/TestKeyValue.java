@@ -470,7 +470,7 @@ public class TestKeyValue extends TestCase {
     }
     assertTrue(meta1Ok);
     assertTrue(meta2Ok);
-    Iterator<Tag> tagItr = CellUtil.tagsIterator(kv);
+    Iterator<Tag> tagItr = PrivateCellUtil.tagsIterator(kv);
     //Iterator<Tag> tagItr = kv.tagsIterator();
     assertTrue(tagItr.hasNext());
     Tag next = tagItr.next();
@@ -484,7 +484,7 @@ public class TestKeyValue extends TestCase {
     Bytes.equals(TagUtil.cloneValue(next), metaValue2);
     assertFalse(tagItr.hasNext());
 
-    tagItr = CellUtil.tagsIterator(kv);
+    tagItr = PrivateCellUtil.tagsIterator(kv);
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
     assertEquals(10, next.getValueLength());

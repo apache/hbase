@@ -163,7 +163,7 @@ public class KeyValueUtil {
     pos = CellUtil.copyValueTo(cell, output, pos);
     if (withTags && (cell.getTagsLength() > 0)) {
       pos = Bytes.putAsShort(output, pos, cell.getTagsLength());
-      pos = CellUtil.copyTagTo(cell, output, pos);
+      pos = PrivateCellUtil.copyTagsTo(cell, output, pos);
     }
     return pos;
   }
@@ -179,7 +179,7 @@ public class KeyValueUtil {
     int tagsLength = cell.getTagsLength();
     if (withTags && (tagsLength > 0)) {
       offset = ByteBufferUtils.putAsShort(buf, offset, tagsLength);// Tags length
-      offset = CellUtil.copyTagTo(cell, buf, offset);// Tags bytes
+      offset = PrivateCellUtil.copyTagsTo(cell, buf, offset);// Tags bytes
     }
     return offset;
   }

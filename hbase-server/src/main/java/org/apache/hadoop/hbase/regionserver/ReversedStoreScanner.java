@@ -71,7 +71,7 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
       throws IOException {
     // Seek all scanners to the start of the Row (or if the exact matching row
     // key does not exist, then to the start of the previous matching Row).
-    if (CellUtil.matchingRow(seekKey, HConstants.EMPTY_START_ROW)) {
+    if (CellUtil.matchingRows(seekKey, HConstants.EMPTY_START_ROW)) {
       for (KeyValueScanner scanner : scanners) {
         scanner.seekToLastRow();
       }

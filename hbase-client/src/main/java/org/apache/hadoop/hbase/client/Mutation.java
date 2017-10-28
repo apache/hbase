@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
@@ -225,7 +226,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
                 c.getQualifierLength()));
     stringMap.put("timestamp", c.getTimestamp());
     stringMap.put("vlen", c.getValueLength());
-    List<Tag> tags = CellUtil.getTags(c);
+    List<Tag> tags = PrivateCellUtil.getTags(c);
     if (tags != null) {
       List<String> tagsString = new ArrayList<>(tags.size());
       for (Tag t : tags) {
@@ -437,7 +438,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
           size * ClassSize.REFERENCE);
 
       for(Cell cell : entry.getValue()) {
-        heapsize += CellUtil.estimatedHeapSizeOf(cell);
+        heapsize += PrivateCellUtil.estimatedHeapSizeOf(cell);
       }
     }
     heapsize += getAttributeSize();

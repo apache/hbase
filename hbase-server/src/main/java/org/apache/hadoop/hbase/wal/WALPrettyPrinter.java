@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -339,7 +340,7 @@ public class WALPrettyPrinter {
     stringMap.put("vlen", cell.getValueLength());
     if (cell.getTagsLength() > 0) {
       List<String> tagsString = new ArrayList<>();
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell);
+      Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();
         tagsString.add((tag.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(tag)));

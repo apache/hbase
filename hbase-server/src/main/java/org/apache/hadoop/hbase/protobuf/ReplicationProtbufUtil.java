@@ -31,8 +31,8 @@ import java.util.UUID;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -146,7 +146,7 @@ public class ReplicationProtbufUtil {
       List<Cell> cells = edit.getCells();
       // Add up the size.  It is used later serializing out the kvs.
       for (Cell cell: cells) {
-        size += CellUtil.estimatedSerializedSizeOf(cell);
+        size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       // Collect up the cells
       allCells.add(cells);

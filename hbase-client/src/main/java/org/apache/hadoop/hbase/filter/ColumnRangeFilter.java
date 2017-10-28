@@ -26,6 +26,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
@@ -224,7 +225,7 @@ public class ColumnRangeFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return CellUtil.createFirstOnRowCol(cell, this.minColumn, 0, len(this.minColumn));
+    return PrivateCellUtil.createFirstOnRowCol(cell, this.minColumn, 0, len(this.minColumn));
   }
 
   @Override

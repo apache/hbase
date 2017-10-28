@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -136,7 +137,7 @@ public class HFileTestUtil {
           kv = MobUtils.createMobRefCell(kv, key, tableNameTag);
 
           // verify that the kv has the tag.
-          Tag t = CellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
+          Tag t = PrivateCellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
           if (t == null) {
             throw new IllegalStateException("Tag didn't stick to KV " + kv.toString());
           }
@@ -160,7 +161,7 @@ public class HFileTestUtil {
     ResultScanner s = table.getScanner(new Scan());
     for (Result r : s) {
       for (Cell c : r.listCells()) {
-        Tag t = CellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
+        Tag t = PrivateCellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
         if (t == null) {
           fail(c.toString() + " has null tag");
           continue;

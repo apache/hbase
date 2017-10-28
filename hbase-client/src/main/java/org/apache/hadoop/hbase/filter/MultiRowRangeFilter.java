@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
@@ -138,7 +139,7 @@ public class MultiRowRangeFilter extends FilterBase {
   @Override
   public Cell getNextCellHint(Cell currentKV) {
     // skip to the next range's start row
-    return CellUtil.createFirstOnRow(range.startRow, 0,
+    return PrivateCellUtil.createFirstOnRow(range.startRow, 0,
         (short) range.startRow.length);
   }
 

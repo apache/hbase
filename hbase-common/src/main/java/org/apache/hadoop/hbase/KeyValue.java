@@ -1617,7 +1617,7 @@ public class KeyValue implements ExtendedCell {
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      return CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.META_COMPARATOR, left, right);
+      return PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.META_COMPARATOR, left, right);
     }
 
     @Override
@@ -1839,7 +1839,7 @@ public class KeyValue implements ExtendedCell {
     }
 
     public int compareOnlyKeyPortion(Cell left, Cell right) {
-      return CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, right);
+      return PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, right);
     }
 
     /**

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 //import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -265,7 +266,7 @@ public class HFileBlockIndex {
 
         // Adding blockKeys
         for (Cell key : blockKeys) {
-          heapSize += ClassSize.align(CellUtil.estimatedHeapSizeOf(key));
+          heapSize += ClassSize.align(PrivateCellUtil.estimatedHeapSizeOf(key));
         }
       }
       // Add comparator and the midkey atomicreference
@@ -767,7 +768,7 @@ public class HFileBlockIndex {
         // TODO avoid array call.
         nonRootIndex.asSubByteBuffer(midKeyOffset, midLength, pair);
         nonRootIndexkeyOnlyKV.setKey(pair.getFirst(), pair.getSecond(), midLength);
-        int cmp = CellUtil.compareKeyIgnoresMvcc(comparator, key, nonRootIndexkeyOnlyKV);
+        int cmp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, nonRootIndexkeyOnlyKV);
 
         // key lives above the midpoint
         if (cmp > 0)

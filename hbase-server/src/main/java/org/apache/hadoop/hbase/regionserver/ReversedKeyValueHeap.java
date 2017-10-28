@@ -107,7 +107,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
     KeyValueScanner scanner;
     while ((scanner = heap.poll()) != null) {
       Cell topKey = scanner.peek();
-      if ((CellUtil.matchingRow(seekKey, topKey) && comparator
+      if ((CellUtil.matchingRows(seekKey, topKey) && comparator
           .getComparator().compare(seekKey, topKey) <= 0)
           || comparator.getComparator().compareRows(seekKey, topKey) > 0) {
         heap.add(scanner);

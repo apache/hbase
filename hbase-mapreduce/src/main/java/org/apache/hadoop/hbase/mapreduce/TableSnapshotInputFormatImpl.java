@@ -25,10 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
 import org.apache.hadoop.hbase.client.IsolationLevel;
@@ -363,7 +363,7 @@ public class TableSnapshotInputFormatImpl {
       if (numSplits > 1) {
         byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
         for (int i = 0; i < sp.length - 1; i++) {
-          if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
+          if (PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
                   sp[i + 1])) {
             // compute HDFS locations from snapshot files (which will get the locations for
             // referred hfiles)
@@ -379,8 +379,8 @@ public class TableSnapshotInputFormatImpl {
           }
         }
       } else {
-        if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
-                hri.getEndKey())) {
+        if (PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
+          hri.getStartKey(), hri.getEndKey())) {
           // compute HDFS locations from snapshot files (which will get the locations for
           // referred hfiles)
           List<String> hosts = getBestLocations(conf,

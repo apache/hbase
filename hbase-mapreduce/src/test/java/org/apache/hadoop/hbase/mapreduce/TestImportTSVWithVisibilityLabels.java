@@ -448,8 +448,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
           LOG.debug("Getting results " + res.size());
           assertTrue(res.size() == 2);
           List<Cell> kvs = res.listCells();
-          assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
-          assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
           assertTrue(CellUtil.matchingValue(kvs.get(1),
               Bytes.toBytes("VALUE" + 2 * valueMultiplier)));

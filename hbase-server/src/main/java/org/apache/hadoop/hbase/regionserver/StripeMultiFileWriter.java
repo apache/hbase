@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -297,7 +298,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
         sanityCheckLeft(left, cell);
         doCreateWriter = true;
       } else if (lastRowInCurrentWriter != null
-          && !CellUtil.matchingRow(cell, lastRowInCurrentWriter, 0,
+          && !PrivateCellUtil.matchingRows(cell, lastRowInCurrentWriter, 0,
             lastRowInCurrentWriter.length)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Stopping to use a writer after [" + Bytes.toString(lastRowInCurrentWriter)

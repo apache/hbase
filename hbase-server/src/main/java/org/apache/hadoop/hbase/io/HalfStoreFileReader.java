@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -210,11 +211,11 @@ public class HalfStoreFileReader extends StoreFileReader {
       @Override
       public int seekTo(Cell key) throws IOException {
         if (top) {
-          if (CellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
+          if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
             return -1;
           }
         } else {
-          if (CellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) >= 0) {
+          if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) >= 0) {
             // we would place the scanner in the second half.
             // it might be an error to return false here ever...
             boolean res = delegate.seekBefore(splitCell);
@@ -235,11 +236,11 @@ public class HalfStoreFileReader extends StoreFileReader {
         // except
         // that we call reseekTo (and not seekTo) on the delegate.
         if (top) {
-          if (CellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
+          if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) < 0) {
             return -1;
           }
         } else {
-          if (CellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) >= 0) {
+          if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) >= 0) {
             // we would place the scanner in the second half.
             // it might be an error to return false here ever...
             boolean res = delegate.seekBefore(splitCell);
@@ -261,13 +262,13 @@ public class HalfStoreFileReader extends StoreFileReader {
       public boolean seekBefore(Cell key) throws IOException {
         if (top) {
           Optional<Cell> fk = getFirstKey();
-          if (CellUtil.compareKeyIgnoresMvcc(getComparator(), key, fk.get()) <= 0) {
+          if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, fk.get()) <= 0) {
             return false;
           }
         } else {
           // The equals sign isn't strictly necessary just here to be consistent
           // with seekTo
-          if (CellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) >= 0) {
+          if (PrivateCellUtil.compareKeyIgnoresMvcc(getComparator(), key, splitCell) >= 0) {
             boolean ret = this.delegate.seekBefore(splitCell);
             if (ret) {
               atEnd = false;

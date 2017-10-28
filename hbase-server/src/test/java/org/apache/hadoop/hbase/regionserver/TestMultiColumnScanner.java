@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Delete;
@@ -265,8 +266,8 @@ public class TestMultiColumnScanner {
             }
             assertTrue("Scanner returned additional key/value: " + kv + ", "
                 + queryInfo + deleteInfo + ";", kvPos < kvs.size());
-            assertTrue("Scanner returned wrong key/value; " + queryInfo
-                + deleteInfo + ";", CellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
+            assertTrue("Scanner returned wrong key/value; " + queryInfo + deleteInfo + ";",
+              PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
             ++kvPos;
             ++numResults;
           }

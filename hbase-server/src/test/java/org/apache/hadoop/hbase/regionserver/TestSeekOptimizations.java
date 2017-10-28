@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -459,7 +460,7 @@ public class TestSeekOptimizations {
 
     int i;
     for (i = 0; i < minLen
-        && CellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expected.get(i),
+        && PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, expected.get(i),
           actual.get(i)) == 0; ++i) {
     }
 

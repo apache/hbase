@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
@@ -58,7 +59,7 @@ class VisibilityLabelFilter extends FilterBase {
   @Override
   public ReturnCode filterCell(final Cell cell) throws IOException {
     if (curFamily.getBytes() == null
-        || !(CellUtil.matchingFamily(cell, curFamily.getBytes(), curFamily.getOffset(),
+        || !(PrivateCellUtil.matchingFamily(cell, curFamily.getBytes(), curFamily.getOffset(),
             curFamily.getLength()))) {
       curFamily.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
       // For this family, all the columns can have max of curFamilyMaxVersions versions. No need to
@@ -68,9 +69,8 @@ class VisibilityLabelFilter extends FilterBase {
       // Family is changed. Just unset curQualifier.
       curQualifier.unset();
     }
-    if (curQualifier.getBytes() == null
-        || !(CellUtil.matchingQualifier(cell, curQualifier.getBytes(), curQualifier.getOffset(),
-            curQualifier.getLength()))) {
+    if (curQualifier.getBytes() == null || !(PrivateCellUtil.matchingQualifier(cell,
+      curQualifier.getBytes(), curQualifier.getOffset(), curQualifier.getLength()))) {
       curQualifier.set(cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength());
       curQualMetVersions = 0;

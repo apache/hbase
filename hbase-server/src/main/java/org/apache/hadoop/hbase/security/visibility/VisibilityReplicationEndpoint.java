@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -101,7 +102,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
                 continue;
               }
               // Recreate the cell with the new tags and the existing tags
-              Cell newCell = CellUtil.createCell(cell, nonVisTags);
+              Cell newCell = PrivateCellUtil.createCell(cell, nonVisTags);
               newEdit.add(newCell);
             } else {
               newEdit.add(cell);

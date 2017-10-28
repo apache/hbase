@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
@@ -930,7 +931,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (r.maxCellSize > 0) {
       CellScanner cells = m.cellScanner();
       while (cells.advance()) {
-        int size = CellUtil.estimatedSerializedSizeOf(cells.current());
+        int size = PrivateCellUtil.estimatedSerializedSizeOf(cells.current());
         if (size > r.maxCellSize) {
           String msg = "Cell with size " + size + " exceeds limit of " + r.maxCellSize + " bytes";
           if (LOG.isDebugEnabled()) {
@@ -1300,7 +1301,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   Object addSize(RpcCallContext context, Result r, Object lastBlock) {
     if (context != null && r != null && !r.isEmpty()) {
       for (Cell c : r.rawCells()) {
-        context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(c));
+        context.incrementResponseCellSize(PrivateCellUtil.estimatedSerializedSizeOf(c));
 
         // Since byte buffers can point all kinds of crazy places it's harder to keep track
         // of which blocks are kept alive by what byte buffer.
@@ -3061,7 +3062,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               // so then we need to increase the numOfCompleteRows.
               if (results.isEmpty()) {
                 if (rsh.rowOfLastPartialResult != null &&
-                    !CellUtil.matchingRow(values.get(0), rsh.rowOfLastPartialResult)) {
+                    !CellUtil.matchingRows(values.get(0), rsh.rowOfLastPartialResult)) {
                   numOfCompleteRows++;
                   checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
                     builder);
@@ -3069,7 +3070,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               } else {
                 Result lastResult = results.get(results.size() - 1);
                 if (lastResult.mayHaveMoreCellsInRow() &&
-                    !CellUtil.matchingRow(values.get(0), lastResult.getRow())) {
+                    !CellUtil.matchingRows(values.get(0), lastResult.getRow())) {
                   numOfCompleteRows++;
                   checkLimitOfRows(numOfCompleteRows, limitOfRows, moreRows, scannerContext,
                     builder);

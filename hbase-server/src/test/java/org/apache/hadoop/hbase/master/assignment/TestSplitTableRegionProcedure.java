@@ -519,7 +519,7 @@ public class TestSplitTableRegionProcedure {
       Cell[] raw = result.rawCells();
       assertEquals(families.length, result.size());
       for (int j = 0; j < families.length; j++) {
-        assertTrue(CellUtil.matchingRow(raw[j], row));
+        assertTrue(CellUtil.matchingRows(raw[j], row));
         assertTrue(CellUtil.matchingFamily(raw[j], families[j]));
       }
     }

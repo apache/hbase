@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
@@ -262,7 +262,7 @@ public class StoreFileScanner implements KeyValueScanner {
   protected void setCurrentCell(Cell newVal) throws IOException {
     this.cur = newVal;
     if (this.cur != null && this.reader.isBulkLoaded() && !this.reader.isSkipResetSeqId()) {
-      CellUtil.setSequenceId(cur, this.reader.getSequenceID());
+      PrivateCellUtil.setSequenceId(cur, this.reader.getSequenceID());
     }
   }
 
@@ -381,7 +381,8 @@ public class StoreFileScanner implements KeyValueScanner {
       if (reader.getBloomFilterType() == BloomType.ROWCOL) {
         haveToSeek = reader.passesGeneralRowColBloomFilter(kv);
       } else if (canOptimizeForNonNullColumn
-          && ((CellUtil.isDeleteFamily(kv) || CellUtil.isDeleteFamilyVersion(kv)))) {
+          && ((PrivateCellUtil.isDeleteFamily(kv)
+              || PrivateCellUtil.isDeleteFamilyVersion(kv)))) {
         // if there is no such delete family kv in the store file,
         // then no need to seek.
         haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getRowArray(), kv.getRowOffset(),
@@ -405,7 +406,7 @@ public class StoreFileScanner implements KeyValueScanner {
         // a higher timestamp than the max timestamp in this file. We know that
         // the next point when we have to consider this file again is when we
         // pass the max timestamp of this file (with the same row/column).
-        setCurrentCell(CellUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
+        setCurrentCell(PrivateCellUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
       } else {
         // This will be the case e.g. when we need to seek to the next
         // row/column, and we don't know exactly what they are, so we set the
@@ -423,7 +424,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // key/value and the store scanner will progress to the next column. This
     // is obviously not a "real real" seek, but unlike the fake KV earlier in
     // this method, we want this to be propagated to ScanQueryMatcher.
-    setCurrentCell(CellUtil.createLastOnRowCol(kv));
+    setCurrentCell(PrivateCellUtil.createLastOnRowCol(kv));
 
     realSeekDone = true;
     return true;
@@ -492,14 +493,14 @@ public class StoreFileScanner implements KeyValueScanner {
         boolean keepSeeking = false;
         Cell key = originalKey;
         do {
-          Cell seekKey = CellUtil.createFirstOnRow(key);
+          Cell seekKey = PrivateCellUtil.createFirstOnRow(key);
           if (seekCount != null) seekCount.increment();
           if (!hfs.seekBefore(seekKey)) {
             this.cur = null;
             return false;
           }
           Cell curCell = hfs.getCell();
-          Cell firstKeyOfPreviousRow = CellUtil.createFirstOnRow(curCell);
+          Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
 
           if (seekCount != null) seekCount.increment();
           if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
@@ -542,7 +543,7 @@ public class StoreFileScanner implements KeyValueScanner {
     if (!lastRow.isPresent()) {
       return false;
     }
-    Cell seekKey = CellUtil.createFirstOnRow(lastRow.get());
+    Cell seekKey = PrivateCellUtil.createFirstOnRow(lastRow.get());
     if (seek(seekKey)) {
       return true;
     } else {

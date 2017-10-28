@@ -282,7 +282,7 @@ public class TestFilter {
     scanner.next(results);
     for (Cell keyValue : results) {
       assertTrue("The rows with ROWS_TWO as row key should be appearing.",
-          CellUtil.matchingRow(keyValue, ROWS_THREE[1]));
+          CellUtil.matchingRows(keyValue, ROWS_THREE[1]));
     }
     // again try to reseek to a value before ROWS_THREE[1]
     scanner.reseek(ROWS_ONE[1]);
@@ -1720,7 +1720,7 @@ public class TestFilter {
       for (Cell kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() +
             ", match=" + kvs[idx].toString());
-        assertTrue("Row mismatch", CellUtil.matchingRow(kv, kvs[idx]));
+        assertTrue("Row mismatch", CellUtil.matchingRows(kv, kvs[idx]));
         assertTrue("Family mismatch", CellUtil.matchingFamily(kv, kvs[idx]));
         assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
         assertTrue("Value mismatch", CellUtil.matchingValue(kv, kvs[idx]));
@@ -1752,7 +1752,7 @@ public class TestFilter {
         LOG.info("row=" + row + ", result=" + kv.toString() +
             ", match=" + kvs[idx].toString());
 
-        assertTrue("Row mismatch", CellUtil.matchingRow(kv, kvs[idx]));
+        assertTrue("Row mismatch", CellUtil.matchingRows(kv, kvs[idx]));
         assertTrue("Family mismatch", CellUtil.matchingFamily(kv, kvs[idx]));
         assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
         assertFalse("Should not have returned whole value", CellUtil.matchingValue(kv, kvs[idx]));
@@ -2078,7 +2078,7 @@ public class TestFilter {
     int i = 5;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertTrue(CellUtil.matchingRows(results.get(0), Bytes.toBytes("row" + i)));
       assertEquals(Bytes.toInt(CellUtil.cloneValue(results.get(0))), i%2);
       results.clear();
     }
@@ -2096,7 +2096,7 @@ public class TestFilter {
     results = new ArrayList<>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertTrue(CellUtil.matchingRows(results.get(0), Bytes.toBytes("row" + i)));
       assertEquals(Bytes.toInt(CellUtil.cloneValue(results.get(0))), i%2);
       results.clear();
     }
@@ -2112,13 +2112,13 @@ public class TestFilter {
     results = new ArrayList<>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertTrue(CellUtil.matchingRows(results.get(0), Bytes.toBytes("row" + i)));
       assertEquals(Bytes.toInt(CellUtil.cloneValue(results.get(0))), i%2);
       results.clear();
     }
     for (i=5; i<=9; i++) {
       scanner.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertTrue(CellUtil.matchingRows(results.get(0), Bytes.toBytes("row" + i)));
       assertEquals(Bytes.toInt(CellUtil.cloneValue(results.get(0))), i%2);
       results.clear();
     }
@@ -2133,13 +2133,13 @@ public class TestFilter {
     results = new ArrayList<>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertTrue(CellUtil.matchingRows(results.get(0), Bytes.toBytes("row" + i)));
       assertEquals(Bytes.toInt(CellUtil.cloneValue(results.get(0))), i%2);
       results.clear();
     }
     for (i=5; i<=9; i++) {
       scanner.next(results);
-      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertTrue(CellUtil.matchingRows(results.get(0), Bytes.toBytes("row" + i)));
       assertEquals(Bytes.toInt(CellUtil.cloneValue(results.get(0))), i%2);
       results.clear();
     }

@@ -40,8 +40,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -666,7 +666,7 @@ public class HRegionFileSystem {
       try {
         if (top) {
           //check if larger than last key.
-          Cell splitKey = CellUtil.createFirstOnRow(splitRow);
+          Cell splitKey = PrivateCellUtil.createFirstOnRow(splitRow);
           Optional<Cell> lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
           if (!lastKey.isPresent()) {
@@ -677,7 +677,7 @@ public class HRegionFileSystem {
           }
         } else {
           //check if smaller than first key
-          Cell splitKey = CellUtil.createLastOnRow(splitRow);
+          Cell splitKey = PrivateCellUtil.createLastOnRow(splitRow);
           Optional<Cell> firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
           if (!firstKey.isPresent()) {

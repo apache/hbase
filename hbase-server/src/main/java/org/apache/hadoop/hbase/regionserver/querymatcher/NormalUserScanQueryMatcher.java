@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -66,7 +67,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     }
     long timestamp = cell.getTimestamp();
     byte typeByte = cell.getTypeByte();
-    if (CellUtil.isDelete(typeByte)) {
+    if (PrivateCellUtil.isDelete(typeByte)) {
       boolean includeDeleteMarker = seePastDeleteMarkers ? tr.withinTimeRange(timestamp)
           : tr.withinOrAfterTimeRange(timestamp);
       if (includeDeleteMarker) {

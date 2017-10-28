@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
@@ -190,7 +191,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     }
     do {
       int comp;
-      comp = CellUtil.compareKeyIgnoresMvcc(comparator, seekCell, current.currentKey);
+      comp = PrivateCellUtil.compareKeyIgnoresMvcc(comparator, seekCell, current.currentKey);
       if (comp == 0) { // exact match
         if (seekBefore) {
           if (!previous.isValid()) {
@@ -244,7 +245,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   @Override
   public int compareKey(CellComparator comparator, Cell key) {
-    return CellUtil.compareKeyIgnoresMvcc(comparator, key, current.currentKey);
+    return PrivateCellUtil.compareKeyIgnoresMvcc(comparator, key, current.currentKey);
   }
 
   protected void decodeFirst() {

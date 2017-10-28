@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -375,7 +376,7 @@ public class TestHStoreFile extends HBaseTestCase {
              (topScanner.isSeeked() && topScanner.next())) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
 
-        if ((CellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
+        if ((PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
           key.arrayOffset(), key.limit())) > 0) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" +
               midkey);
@@ -428,8 +429,8 @@ public class TestHStoreFile extends HBaseTestCase {
           topScanner.next()) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
         keyOnlyKV.setKey(key.array(), 0 + key.arrayOffset(), key.limit());
-        assertTrue(CellUtil.compare(topScanner.getReader().getComparator(), keyOnlyKV, badmidkey, 0,
-          badmidkey.length) >= 0);
+        assertTrue(PrivateCellUtil.compare(topScanner.getReader().getComparator(), keyOnlyKV,
+          badmidkey, 0, badmidkey.length) >= 0);
         if (first) {
           first = false;
           KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);

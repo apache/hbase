@@ -23,6 +23,7 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 
@@ -103,7 +104,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   public ScanQueryMatcher.MatchCode checkColumn(Cell cell, byte type) {
     // delete markers should never be passed to an
     // *Explicit*ColumnTracker
-    assert !CellUtil.isDelete(type);
+    assert !PrivateCellUtil.isDelete(type);
     do {
       // No more columns left, we are done with this query
       if (done()) {
@@ -152,7 +153,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   @Override
   public ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
       boolean ignoreCount) throws IOException {
-    assert !CellUtil.isDelete(type);
+    assert !PrivateCellUtil.isDelete(type);
     if (ignoreCount) {
       return ScanQueryMatcher.MatchCode.INCLUDE;
     }

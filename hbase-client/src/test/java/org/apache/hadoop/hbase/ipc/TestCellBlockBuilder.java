@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
@@ -91,7 +92,7 @@ public class TestCellBlockBuilder {
   static CellScanner getSizedCellScanner(final Cell[] cells) {
     int size = -1;
     for (Cell cell : cells) {
-      size += CellUtil.estimatedSerializedSizeOf(cell);
+      size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
     }
     final int totalSize = ClassSize.align(size);
     final CellScanner cellScanner = CellUtil.createCellScanner(cells);
