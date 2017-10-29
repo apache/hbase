@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -623,6 +622,21 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * Called prior to opening store scanner for compaction.
+   */
+  public ScanInfo preCompactScannerOpen(HStore store, ScanType scanType,
+      CompactionLifeCycleTracker tracker, CompactionRequest request, User user) throws IOException {
+    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo());
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation(user) {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preCompactScannerOpen(this, store, scanType, builder, tracker, request);
+      }
+    });
+    return builder.build();
+  }
+
+  /**
    * Called prior to rewriting the store files selected for compaction
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
@@ -663,6 +677,22 @@ public class RegionCoprocessorHost
         observer.postCompact(this, store, resultFile, tracker, request);
       }
     });
+  }
+
+  /**
+   * Invoked before create StoreScanner for flush.
+   * @throws IOException
+   */
+  public ScanInfo preFlushScannerOpen(HStore store, FlushLifeCycleTracker tracker)
+      throws IOException {
+    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo());
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preFlushScannerOpen(this, store, builder, tracker);
+      }
+    });
+    return builder.build();
   }
 
   /**
@@ -1261,6 +1291,20 @@ public class RegionCoprocessorHost
         observer.postScannerClose(this, s);
       }
     });
+  }
+
+  /**
+   * Called before open store scanner for user scan.
+   */
+  public ScanInfo preStoreScannerOpen(HStore store) throws IOException {
+    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo());
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperation() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preStoreScannerOpen(this, store, builder);
+      }
+    });
+    return builder.build();
   }
 
   /**

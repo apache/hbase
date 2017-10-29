@@ -49,7 +49,6 @@ public class ScanInfo {
   private long cellsPerTimeoutCheck;
   private boolean parallelSeekEnabled;
   private final long preadMaxBytes;
-  private final Configuration conf;
   private final boolean newVersionBehavior;
 
   public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
@@ -64,10 +63,18 @@ public class ScanInfo {
    *          major compaction.
    * @param comparator The store's comparator
    */
-  public ScanInfo(final Configuration conf, final ColumnFamilyDescriptor family, final long ttl,
-      final long timeToPurgeDeletes, final CellComparator comparator) {
+  public ScanInfo(Configuration conf, ColumnFamilyDescriptor family, long ttl,
+      long timeToPurgeDeletes, CellComparator comparator) {
     this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl,
-        family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator, family.isNewVersionBehavior());
+        family.getKeepDeletedCells(), family.getBlocksize(), timeToPurgeDeletes, comparator,
+        family.isNewVersionBehavior());
+  }
+
+  private static long getCellsPerTimeoutCheck(Configuration conf) {
+    long perHeartbeat = conf.getLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK,
+      StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK);
+    return perHeartbeat > 0 ? perHeartbeat
+        : StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
   }
 
   /**
@@ -82,10 +89,20 @@ public class ScanInfo {
    * @param keepDeletedCells Store's keepDeletedCells setting
    * @param comparator The store's comparator
    */
-  public ScanInfo(final Configuration conf, final byte[] family, final int minVersions,
-      final int maxVersions, final long ttl, final KeepDeletedCells keepDeletedCells,
-      final long blockSize, final long timeToPurgeDeletes, final CellComparator comparator,
-      final boolean newVersionBehavior) {
+  public ScanInfo(Configuration conf, byte[] family, int minVersions, int maxVersions, long ttl,
+      KeepDeletedCells keepDeletedCells, long blockSize, long timeToPurgeDeletes,
+      CellComparator comparator, boolean newVersionBehavior) {
+    this(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes, comparator,
+        conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT),
+        conf.getBoolean("hbase.storescanner.use.pread", false), getCellsPerTimeoutCheck(conf),
+        conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false),
+        conf.getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 4 * blockSize), newVersionBehavior);
+  }
+
+  private ScanInfo(byte[] family, int minVersions, int maxVersions, long ttl,
+      KeepDeletedCells keepDeletedCells, long timeToPurgeDeletes, CellComparator comparator,
+      long tableMaxRowSize, boolean usePread, long cellsPerTimeoutCheck,
+      boolean parallelSeekEnabled, long preadMaxBytes, boolean newVersionBehavior) {
     this.family = family;
     this.minVersions = minVersions;
     this.maxVersions = maxVersions;
@@ -93,23 +110,12 @@ public class ScanInfo {
     this.keepDeletedCells = keepDeletedCells;
     this.timeToPurgeDeletes = timeToPurgeDeletes;
     this.comparator = comparator;
-    this.tableMaxRowSize =
-      conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
-    this.usePread = conf.getBoolean("hbase.storescanner.use.pread", false);
-    long perHeartbeat =
-      conf.getLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK,
-        StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK);
-    this.cellsPerTimeoutCheck = perHeartbeat > 0?
-        perHeartbeat: StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
-    this.parallelSeekEnabled =
-      conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false);
-    this.preadMaxBytes = conf.getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 4 * blockSize);
-    this.conf = conf;
+    this.tableMaxRowSize = tableMaxRowSize;
+    this.usePread = usePread;
+    this.cellsPerTimeoutCheck = cellsPerTimeoutCheck;
+    this.parallelSeekEnabled = parallelSeekEnabled;
+    this.preadMaxBytes = preadMaxBytes;
     this.newVersionBehavior = newVersionBehavior;
-  }
-
-  public Configuration getConfiguration() {
-    return this.conf;
   }
 
   long getTableMaxRowSize() {
@@ -162,5 +168,13 @@ public class ScanInfo {
 
   public boolean isNewVersionBehavior() {
     return newVersionBehavior;
+  }
+
+  /**
+   * Used for CP users for customizing max versions and ttl.
+   */
+  ScanInfo customize(int maxVersions, long ttl) {
+    return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, ttl, comparator,
+        ttl, usePread, maxVersions, parallelSeekEnabled, ttl, newVersionBehavior);
   }
 }

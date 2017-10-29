@@ -124,11 +124,10 @@ public class TestFromClientSideScanExcpetion {
     }
 
     @Override
-    protected KeyValueScanner createScanner(Scan scan, NavigableSet<byte[]> targetCols, long readPt)
-        throws IOException {
-      return scan.isReversed()
-          ? new ReversedStoreScanner(this, getScanInfo(), scan, targetCols, readPt)
-          : new MyStoreScanner(this, getScanInfo(), scan, targetCols, readPt);
+    protected KeyValueScanner createScanner(Scan scan, ScanInfo scanInfo,
+        NavigableSet<byte[]> targetCols, long readPt) throws IOException {
+      return scan.isReversed() ? new ReversedStoreScanner(this, scanInfo, scan, targetCols, readPt)
+          : new MyStoreScanner(this, scanInfo, scan, targetCols, readPt);
     }
   }
 

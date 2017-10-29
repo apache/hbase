@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -28,20 +27,19 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
 import org.apache.curator.retry.RetryForever;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This is an example showing how a RegionObserver could configured via ZooKeeper in order to
@@ -170,33 +168,24 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
     return OptionalLong.of(Bytes.toLong(bytes));
   }
 
-  private InternalScanner wrap(InternalScanner scanner) {
-    OptionalLong optExpireBefore = getExpireBefore();
-    if (!optExpireBefore.isPresent()) {
-      return scanner;
+  private void resetTTL(ScanOptions options) {
+    OptionalLong expireBefore = getExpireBefore();
+    if (!expireBefore.isPresent()) {
+      return;
     }
-    long expireBefore = optExpireBefore.getAsLong();
-    return new DelegatingInternalScanner(scanner) {
-
-      @Override
-      public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
-        boolean moreRows = scanner.next(result, scannerContext);
-        result.removeIf(c -> c.getTimestamp() < expireBefore);
-        return moreRows;
-      }
-    };
+    options.setTTL(EnvironmentEdgeManager.currentTime() - expireBefore.getAsLong());
   }
 
   @Override
-  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
-    return wrap(scanner);
+  public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+    resetTTL(options);
   }
 
   @Override
-  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+  public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
       CompactionRequest request) throws IOException {
-    return wrap(scanner);
+    resetTTL(options);
   }
 }

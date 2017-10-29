@@ -207,15 +207,16 @@ public class TestStripeCompactor {
 
     return new StripeCompactor(conf, store) {
       @Override
-      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
-          long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
-          byte[] dropDeletesToRow) throws IOException {
+      protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
+          List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
+          byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
         return scanner;
       }
 
       @Override
-      protected InternalScanner createScanner(HStore store, List<StoreFileScanner> scanners,
-          ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
+      protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
+          List<StoreFileScanner> scanners, ScanType scanType, long smallestReadPoint,
+          long earliestPutTs) throws IOException {
         return scanner;
       }
     };

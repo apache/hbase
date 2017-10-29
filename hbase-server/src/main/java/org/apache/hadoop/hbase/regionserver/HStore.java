@@ -1909,7 +1909,6 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     this.forceMajor = true;
   }
 
-
   //////////////////////////////////////////////////////////////////////////////
   // File administration
   //////////////////////////////////////////////////////////////////////////////
@@ -1922,21 +1921,27 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
    * @return a scanner over the current key values
    * @throws IOException on failure
    */
-  public KeyValueScanner getScanner(Scan scan,
-      final NavigableSet<byte []> targetCols, long readPt) throws IOException {
+  public KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols, long readPt)
+      throws IOException {
     lock.readLock().lock();
     try {
-      return createScanner(scan, targetCols, readPt);
+      ScanInfo scanInfo;
+      if (this.getCoprocessorHost() != null) {
+        scanInfo = this.getCoprocessorHost().preStoreScannerOpen(this);
+      } else {
+        scanInfo = getScanInfo();
+      }
+      return createScanner(scan, scanInfo, targetCols, readPt);
     } finally {
       lock.readLock().unlock();
     }
   }
 
-  protected KeyValueScanner createScanner(Scan scan, final NavigableSet<byte[]> targetCols,
-      long readPt) throws IOException {
-    return scan.isReversed() ? new ReversedStoreScanner(this,
-      getScanInfo(), scan, targetCols, readPt) : new StoreScanner(this,
-      getScanInfo(), scan, targetCols, readPt);
+  // HMobStore will override this method to return its own implementation.
+  protected KeyValueScanner createScanner(Scan scan, ScanInfo scanInfo,
+      NavigableSet<byte[]> targetCols, long readPt) throws IOException {
+    return scan.isReversed() ? new ReversedStoreScanner(this, scanInfo, scan, targetCols, readPt)
+        : new StoreScanner(this, scanInfo, scan, targetCols, readPt);
   }
 
   /**

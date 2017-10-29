@@ -403,6 +403,8 @@ public class TestHRegion {
     RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
     when(mockedCPHost.preFlush(Mockito.isA(HStore.class), Mockito.isA(InternalScanner.class),
       Mockito.isA(FlushLifeCycleTracker.class))).thenReturn(null);
+    when(mockedCPHost.preFlushScannerOpen(Mockito.isA(HStore.class),
+      Mockito.isA(FlushLifeCycleTracker.class))).thenReturn(store.getScanInfo());
     region.setCoprocessorHost(mockedCPHost);
     region.put(put);
     region.flush(true);

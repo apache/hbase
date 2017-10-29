@@ -211,11 +211,9 @@ public class TestCompaction {
       // Multiple versions allowed for an entry, so the delete isn't enough
       // Lower TTL and expire to ensure that all our entries have been wiped
       final int ttl = 1000;
-      for (HStore store: this.r.stores.values()) {
+      for (HStore store : this.r.stores.values()) {
         ScanInfo old = store.getScanInfo();
-        ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
-            old.getMaxVersions(), ttl, old.getKeepDeletedCells(), HConstants.DEFAULT_BLOCKSIZE, 0,
-            old.getComparator(), old.isNewVersionBehavior());
+        ScanInfo si = old.customize(old.getMaxVersions(), ttl);
         store.setScanInfo(si);
       }
       Thread.sleep(ttl);

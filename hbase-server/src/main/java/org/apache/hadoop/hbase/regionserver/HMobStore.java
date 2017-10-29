@@ -144,8 +144,8 @@ public class HMobStore extends HStore {
    * the mob files should be performed after the seek in HBase is done.
    */
   @Override
-  protected KeyValueScanner createScanner(Scan scan, final NavigableSet<byte[]> targetCols,
-      long readPt) throws IOException {
+  protected KeyValueScanner createScanner(Scan scan, ScanInfo scanInfo,
+      NavigableSet<byte[]> targetCols, long readPt) throws IOException {
     if (MobUtils.isRefOnlyScan(scan)) {
       Filter refOnlyFilter = new MobReferenceOnlyFilter();
       Filter filter = scan.getFilter();
@@ -155,9 +155,8 @@ public class HMobStore extends HStore {
         scan.setFilter(refOnlyFilter);
       }
     }
-    return scan.isReversed()
-        ? new ReversedMobStoreScanner(this, getScanInfo(), scan, targetCols, readPt)
-        : new MobStoreScanner(this, getScanInfo(), scan, targetCols, readPt);
+    return scan.isReversed() ? new ReversedMobStoreScanner(this, scanInfo, scan, targetCols, readPt)
+        : new MobStoreScanner(this, scanInfo, scan, targetCols, readPt);
   }
 
   /**

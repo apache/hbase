@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.OptionalInt;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -108,9 +107,11 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
    */
   private StoreScanner createScanner(HStore store, List<KeyValueScanner> scanners)
       throws IOException {
-    // Get all available versions
-    return new StoreScanner(store, store.getScanInfo(), OptionalInt.of(Integer.MAX_VALUE), scanners,
-        ScanType.COMPACT_RETAIN_DELETES, store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+    // FIXME: This is the old comment 'Get all available versions'
+    // But actually if we really reset the ScanInfo to get all available versions then lots of UTs
+    // will fail
+    return new StoreScanner(store, store.getScanInfo(), scanners, ScanType.COMPACT_RETAIN_DELETES,
+        store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
   }
 
   /* Refill kev-value set (should be invoked only when KVS is empty)

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -130,9 +131,19 @@ public interface RegionObserver {
       FlushLifeCycleTracker tracker) throws IOException {}
 
   /**
+   * Called before we open store scanner for flush. You can use the {@code options} to change max
+   * versions and TTL for the scanner being opened.
+   * @param c the environment provided by the region server
+   * @param store the store where flush is being requested
+   * @param options used to change max versions and TTL for the scanner being opened
+   */
+  default void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      ScanOptions options,FlushLifeCycleTracker tracker) throws IOException {}
+
+  /**
    * Called before a Store's memstore is flushed to disk.
    * @param c the environment provided by the region server
-   * @param store the store where compaction is being requested
+   * @param store the store where flush is being requested
    * @param scanner the scanner over existing data used in the store file
    * @param tracker tracker used to track the life cycle of a flush
    * @return the scanner to use during compaction.  Should not be {@code null}
@@ -187,6 +198,20 @@ public interface RegionObserver {
   default void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       List<? extends StoreFile> selected, CompactionLifeCycleTracker tracker,
       CompactionRequest request) {}
+
+  /**
+   * Called before we open store scanner for compaction. You can use the {@code options} to change max
+   * versions and TTL for the scanner being opened.
+   * @param c the environment provided by the region server
+   * @param store the store being compacted
+   * @param scanType type of Scan
+   * @param options used to change max versions and TTL for the scanner being opened
+   * @param tracker tracker used to track the life cycle of a compaction
+   * @param request the requested compaction
+   */
+  default void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {}
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into a new
@@ -856,6 +881,27 @@ public interface RegionObserver {
    */
   default void postScannerClose(ObserverContext<RegionCoprocessorEnvironment> ctx,
       InternalScanner s) throws IOException {}
+
+  /**
+   * Called before a store opens a new scanner.
+   * <p>
+   * This hook is called when a "user" scanner is opened. Use {@code preFlushScannerOpen} and
+   * {@code preCompactScannerOpen} to inject flush/compaction.
+   * <p>
+   * Notice that, this method is used to change the inherent max versions and TTL for a Store. For
+   * example, you can change the max versions option for a {@link Scan} object to 10 in
+   * {@code preScannerOpen}, but if the max versions config on the Store is 1, then you still can
+   * only read 1 version. You need also to inject here to change the max versions to 10 if you want
+   * to get more versions.
+   * @param ctx the environment provided by the region server
+   * @param store the store which we want to get scanner from
+   * @param options used to change max versions and TTL for the scanner being opened
+   * @see #preFlushScannerOpen(ObserverContext, Store, ScanOptions, FlushLifeCycleTracker)
+   * @see #preCompactScannerOpen(ObserverContext, Store, ScanType, ScanOptions,
+   *      CompactionLifeCycleTracker, CompactionRequest)
+   */
+  default void preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> ctx, Store store,
+      ScanOptions options) throws IOException {}
 
   /**
    * Called before replaying WALs for this region.
