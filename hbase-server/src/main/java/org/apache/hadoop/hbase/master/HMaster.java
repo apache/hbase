@@ -543,13 +543,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     try {
       super.run();
     } finally {
-      // If on way out, then we are no longer active master.
-      this.clusterSchemaService.stopAsync();
-      try {
-        this.clusterSchemaService.awaitTerminated(getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
-          DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
-      } catch (TimeoutException te) {
-        LOG.warn("Failed shutdown of clusterSchemaService", te);
+      if (this.clusterSchemaService != null) {
+        // If on way out, then we are no longer active master.
+        this.clusterSchemaService.stopAsync();
+        try {
+          this.clusterSchemaService.awaitTerminated(
+              getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
+              DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
+        } catch (TimeoutException te) {
+          LOG.warn("Failed shutdown of clusterSchemaService", te);
+        }
       }
       this.activeMaster = false;
     }
