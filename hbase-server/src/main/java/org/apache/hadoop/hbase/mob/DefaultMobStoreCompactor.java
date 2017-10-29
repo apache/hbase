@@ -22,7 +22,6 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.OptionalInt;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
@@ -72,10 +72,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
 
     @Override
-    public InternalScanner createScanner(List<StoreFileScanner> scanners,
+    public InternalScanner createScanner(ScanInfo scanInfo, List<StoreFileScanner> scanners,
         ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
-      return new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), scanners, scanType,
-          smallestReadPoint, fd.earliestPutTs);
+      return new StoreScanner(store, scanInfo, scanners, scanType, smallestReadPoint,
+          fd.earliestPutTs);
     }
   };
 

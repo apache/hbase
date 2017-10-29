@@ -80,9 +80,14 @@ abstract class StoreFlusher {
    */
   protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
       long smallestReadPoint, FlushLifeCycleTracker tracker) throws IOException {
-    InternalScanner scanner =
-        new StoreScanner(store, store.getScanInfo(), OptionalInt.empty(), snapshotScanners,
-            ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
+    ScanInfo scanInfo;
+    if (store.getCoprocessorHost() != null) {
+      scanInfo = store.getCoprocessorHost().preFlushScannerOpen(store, tracker);
+    } else {
+      scanInfo = store.getScanInfo();
+    }
+    InternalScanner scanner = new StoreScanner(store, scanInfo, snapshotScanners,
+        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
     assert scanner != null;
     if (store.getCoprocessorHost() != null) {
       try {

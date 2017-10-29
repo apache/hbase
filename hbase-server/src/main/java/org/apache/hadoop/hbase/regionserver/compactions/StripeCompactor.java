@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
@@ -66,13 +67,13 @@ public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFil
     }
 
     @Override
-    public InternalScanner createScanner(List<StoreFileScanner> scanners, ScanType scanType,
-        FileDetails fd, long smallestReadPoint) throws IOException {
+    public InternalScanner createScanner(ScanInfo scanInfo, List<StoreFileScanner> scanners,
+        ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
       return (majorRangeFromRow == null)
-          ? StripeCompactor.this.createScanner(store, scanners, scanType, smallestReadPoint,
-            fd.earliestPutTs)
-          : StripeCompactor.this.createScanner(store, scanners, smallestReadPoint, fd.earliestPutTs,
-            majorRangeFromRow, majorRangeToRow);
+          ? StripeCompactor.this.createScanner(store, scanInfo, scanners, scanType,
+            smallestReadPoint, fd.earliestPutTs)
+          : StripeCompactor.this.createScanner(store, scanInfo, scanners, smallestReadPoint,
+            fd.earliestPutTs, majorRangeFromRow, majorRangeToRow);
     }
   }
 

@@ -292,9 +292,7 @@ public class TestMajorCompaction {
     final int ttl = 1000;
     for (HStore store : r.getStores()) {
       ScanInfo old = store.getScanInfo();
-      ScanInfo si = new ScanInfo(old.getConfiguration(), old.getFamily(), old.getMinVersions(),
-          old.getMaxVersions(), ttl, old.getKeepDeletedCells(), old.getPreadMaxBytes(), 0,
-          old.getComparator(), old.isNewVersionBehavior());
+      ScanInfo si = old.customize(old.getMaxVersions(), ttl);
       store.setScanInfo(si);
     }
     Thread.sleep(1000);
