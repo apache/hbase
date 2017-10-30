@@ -97,7 +97,7 @@ public class SaslUtil {
    * @param rpcProtection Value of 'hbase.rpc.protection' configuration.
    * @return Map with values for SASL properties.
    */
-  static Map<String, String> initSaslProperties(String rpcProtection) {
+  public static Map<String, String> initSaslProperties(String rpcProtection) {
     String saslQop;
     if (rpcProtection.isEmpty()) {
       saslQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
