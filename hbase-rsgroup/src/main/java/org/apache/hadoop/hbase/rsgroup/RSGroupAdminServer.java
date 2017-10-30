@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Service to support Region Server Grouping (HBase-6721)
@@ -276,6 +277,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
     }
     for(TableName table: tables) {
+      if (master.getAssignmentManager().getTableStateManager().isTableState(table,
+          ZooKeeperProtos.Table.State.DISABLED,
+          ZooKeeperProtos.Table.State.DISABLING)) {
+        LOG.debug("Skipping move regions because the table" + table + " is disabled.");
+        continue;
+      }
       TableLock lock = master.getTableLockManager().writeLock(table, "Group: table move");
       try {
         lock.acquire();
