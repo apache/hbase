@@ -33,10 +33,10 @@ When should I use HBase?::
   See <<arch.overview>> in the Architecture chapter.
 
 Are there other HBase FAQs?::
-  See the FAQ that is up on the wiki, link:http://wiki.apache.org/hadoop/Hbase/FAQ[HBase Wiki FAQ].
+  See the FAQ that is up on the wiki, link:https://wiki.apache.org/hadoop/Hbase/FAQ[HBase Wiki FAQ].
 
 Does HBase support SQL?::
-  Not really. SQL-ish support for HBase via link:http://hive.apache.org/[Hive] is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the <<datamodel>> section for examples on the HBase client.
+  Not really. SQL-ish support for HBase via link:https://hive.apache.org/[Hive] is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the <<datamodel>> section for examples on the HBase client.
 
 How can I find examples of NoSQL/HBase?::
   See the link to the BigTable paper in <<other.info>>, as well as the other papers.

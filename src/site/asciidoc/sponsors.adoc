@@ -19,7 +19,7 @@ under the License.
 
 = Apache HBase(TM) Sponsors
 
-First off, thanks to link:http://www.apache.org/foundation/thanks.html[all who sponsor] our parent, the Apache Software Foundation.
+First off, thanks to link:https://www.apache.org/foundation/thanks.html[all who sponsor] our parent, the Apache Software Foundation.
 
 The below companies have been gracious enough to provide their commerical tool offerings free of charge to the Apache HBase(TM) project.
 
@@ -32,5 +32,5 @@ The below companies have been gracious enough to provide their commerical tool o
 * Thank you to Boris at link:http://www.vectorportal.com/[Vector Portal] for granting us a license on the image on which our logo is based.
 
 == Sponsoring the Apache Software Foundation">
-To contribute to the Apache Software Foundation, a good idea in our opinion, see the link:http://www.apache.org/foundation/sponsorship.html[ASF Sponsorship] page.
+To contribute to the Apache Software Foundation, a good idea in our opinion, see the link:https://www.apache.org/foundation/sponsorship.html[ASF Sponsorship] page.
 

@@ -101,7 +101,7 @@ The `hbase:meta` table structure is as follows:
 
 .Values
 
-* `info:regioninfo` (serialized link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html[HRegionInfo] instance for this region)
+* `info:regioninfo` (serialized link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html[HRegionInfo] instance for this region)
 * `info:server` (server:port of the RegionServer containing this region)
 * `info:serverstartcode` (start-time of the RegionServer process containing this region)
 
@@ -119,7 +119,7 @@ If a region has both an empty start and an empty end key, it is the only region 
 ====
 
 In the (hopefully unlikely) event that programmatic processing of catalog metadata
-is required, see the link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html#parseFrom-byte:A-[RegionInfo.parseFrom] utility.
+is required, see the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html#parseFrom-byte:A-[RegionInfo.parseFrom] utility.
 
 [[arch.catalog.startup]]
 === Startup Sequencing
@@ -141,7 +141,7 @@ Should a region be reassigned either by the master load balancer or because a Re
 
 See <<master.runtime>> for more information about the impact of the Master on HBase Client communication.
 
-Administrative functions are done via an instance of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin]
+Administrative functions are done via an instance of link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin]
 
 [[client.connections]]
 === Cluster Connections
@@ -157,12 +157,12 @@ Finally, be sure to cleanup your `Connection` instance before exiting.
 `Connections` are heavyweight objects but thread-safe so you can create one for your application and keep the instance around.
 `Table`, `Admin` and `RegionLocator` instances are lightweight.
 Create as you go and then let go as soon as you are done by closing them.
-See the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/package-summary.html[Client Package Javadoc Description] for example usage of the new HBase 1.0 API.
+See the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/package-summary.html[Client Package Javadoc Description] for example usage of the new HBase 1.0 API.
 
 ==== API before HBase 1.0.0
 
-Instances of `HTable` are the way to interact with an HBase cluster earlier than 1.0.0. _link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances are not thread-safe_. Only one thread can use an instance of Table at any given time.
-When creating Table instances, it is advisable to use the same link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration] instance.
+Instances of `HTable` are the way to interact with an HBase cluster earlier than 1.0.0. _link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances are not thread-safe_. Only one thread can use an instance of Table at any given time.
+When creating Table instances, it is advisable to use the same link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration] instance.
 This will ensure sharing of ZooKeeper and socket instances to the RegionServers which is usually what you want.
 For example, this is preferred:
 
@@ -183,7 +183,7 @@ HBaseConfiguration conf2 = HBaseConfiguration.create();
 HTable table2 = new HTable(conf2, "myTable");
 ----
 
-For more information about how connections are handled in the HBase client, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ConnectionFactory.html[ConnectionFactory].
+For more information about how connections are handled in the HBase client, see link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ConnectionFactory.html[ConnectionFactory].
 
 [[client.connection.pooling]]
 ===== Connection Pooling
@@ -207,19 +207,19 @@ try (Connection connection = ConnectionFactory.createConnection(conf);
 [WARNING]
 ====
 Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by link:https://issues.apache.org/jira/browse/HBASE-6580[HBASE-6580], or `HConnection`, which is deprecated in HBase 1.0 by `Connection`.
-Please use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Connection.html[Connection] instead.
+Please use link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Connection.html[Connection] instead.
 ====
 
 [[client.writebuffer]]
 === WriteBuffer and Batch Methods
 
-In HBase 1.0 and later, link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
+In HBase 1.0 and later, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
 
-In HBase 2.0 and later, link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] does not use BufferedMutator to execute the ``Put`` operation. Refer to link:https://issues.apache.org/jira/browse/HBASE-18500[HBASE-18500] for more information.
+In HBase 2.0 and later, link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] does not use BufferedMutator to execute the ``Put`` operation. Refer to link:https://issues.apache.org/jira/browse/HBASE-18500[HBASE-18500] for more information.
 
 For additional information on write durability, review the link:/acid-semantics.html[ACID semantics] page.
 
-For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[batch] methods on Table.
+For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[batch] methods on Table.
 
 [[async.client]]
 === Asynchronous Client ===
@@ -263,7 +263,7 @@ Information on non-Java clients and custom protocols is covered in <<external_ap
 [[client.filter]]
 == Client Request Filters
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be optionally configured with link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[filters] which are applied on the RegionServer.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] instances can be optionally configured with link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/Filter.html[filters] which are applied on the RegionServer.
 
 Filters can be confusing because there are many different types, and it is best to approach them by understanding the groups of Filter functionality.
 
@@ -275,7 +275,7 @@ Structural Filters contain other Filters.
 [[client.filter.structural.fl]]
 ==== FilterList
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FilterList.html[FilterList] represents a list of Filters with a relationship of `FilterList.Operator.MUST_PASS_ALL` or `FilterList.Operator.MUST_PASS_ONE` between the Filters.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FilterList.html[FilterList] represents a list of Filters with a relationship of `FilterList.Operator.MUST_PASS_ALL` or `FilterList.Operator.MUST_PASS_ONE` between the Filters.
 The following example shows an 'or' between two Filters (checking for either 'my value' or 'my other value' on the same attribute).
 
 [source,java]
@@ -305,7 +305,7 @@ scan.setFilter(list);
 ==== SingleColumnValueFilter
 
 A SingleColumnValueFilter (see:
-http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)
+https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html)
 can be used to test column values for equivalence (`CompareOperaor.EQUAL`),
 inequality (`CompareOperaor.NOT_EQUAL`), or ranges (e.g., `CompareOperaor.GREATER`). The following is an
 example of testing equivalence of a column to a String value "my value"...
@@ -330,7 +330,7 @@ These Comparators are used in concert with other Filters, such as <<client.filte
 [[client.filter.cvp.rcs]]
 ==== RegexStringComparator
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html[RegexStringComparator] supports regular expressions for value comparisons.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html[RegexStringComparator] supports regular expressions for value comparisons.
 
 [source,java]
 ----
@@ -349,7 +349,7 @@ See the Oracle JavaDoc for link:http://download.oracle.com/javase/6/docs/api/jav
 [[client.filter.cvp.substringcomparator]]
 ==== SubstringComparator
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html[SubstringComparator] can be used to determine if a given substring exists in a value.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html[SubstringComparator] can be used to determine if a given substring exists in a value.
 The comparison is case-insensitive.
 
 [source,java]
@@ -368,12 +368,12 @@ scan.setFilter(filter);
 [[client.filter.cvp.bfp]]
 ==== BinaryPrefixComparator
 
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html[BinaryPrefixComparator].
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html[BinaryPrefixComparator].
 
 [[client.filter.cvp.bc]]
 ==== BinaryComparator
 
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html[BinaryComparator].
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html[BinaryComparator].
 
 [[client.filter.kvm]]
 === KeyValue Metadata
@@ -383,18 +383,18 @@ As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters eva
 [[client.filter.kvm.ff]]
 ==== FamilyFilter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html[FamilyFilter] can be used to filter on the ColumnFamily.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html[FamilyFilter] can be used to filter on the ColumnFamily.
 It is generally a better idea to select ColumnFamilies in the Scan than to do it with a Filter.
 
 [[client.filter.kvm.qf]]
 ==== QualifierFilter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html[QualifierFilter] can be used to filter based on Column (aka Qualifier) name.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html[QualifierFilter] can be used to filter based on Column (aka Qualifier) name.
 
 [[client.filter.kvm.cpf]]
 ==== ColumnPrefixFilter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html[ColumnPrefixFilter] can be used to filter based on the lead portion of Column (aka Qualifier) names.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html[ColumnPrefixFilter] can be used to filter based on the lead portion of Column (aka Qualifier) names.
 
 A ColumnPrefixFilter seeks ahead to the first column matching the prefix in each row and for each involved column family.
 It can be used to efficiently get a subset of the columns in very wide rows.
@@ -427,7 +427,7 @@ rs.close();
 [[client.filter.kvm.mcpf]]
 ==== MultipleColumnPrefixFilter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html[MultipleColumnPrefixFilter] behaves like ColumnPrefixFilter but allows specifying multiple prefixes.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html[MultipleColumnPrefixFilter] behaves like ColumnPrefixFilter but allows specifying multiple prefixes.
 
 Like ColumnPrefixFilter, MultipleColumnPrefixFilter efficiently seeks ahead to the first column matching the lowest prefix and also seeks past ranges of columns between prefixes.
 It can be used to efficiently get discontinuous sets of columns from very wide rows.
@@ -457,7 +457,7 @@ rs.close();
 [[client.filter.kvm.crf]]
 ==== ColumnRangeFilter
 
-A link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html[ColumnRangeFilter] allows efficient intra row scanning.
+A link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html[ColumnRangeFilter] allows efficient intra row scanning.
 
 A ColumnRangeFilter can seek ahead to the first matching column for each involved column family.
 It can be used to efficiently get a 'slice' of the columns of a very wide row.
@@ -498,7 +498,7 @@ Note:  Introduced in HBase 0.92
 [[client.filter.row.rf]]
 ==== RowFilter
 
-It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RowFilter.html[RowFilter] can also be used.
+It is generally a better idea to use the startRow/stopRow methods on Scan for row selection, however link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RowFilter.html[RowFilter] can also be used.
 
 [[client.filter.utility]]
 === Utility
@@ -507,7 +507,7 @@ It is generally a better idea to use the startRow/stopRow methods on Scan for ro
 ==== FirstKeyOnlyFilter
 
 This is primarily used for rowcount jobs.
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter].
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter].
 
 [[architecture.master]]
 == Master
@@ -634,7 +634,7 @@ However, latencies tend to be less erratic across time, because there is less ga
 If the BucketCache is deployed in off-heap mode, this memory is not managed by the GC at all.
 This is why you'd use BucketCache, so your latencies are less erratic and to mitigate GCs and heap fragmentation.
 See Nick Dimiduk's link:http://www.n10k.com/blog/blockcache-101/[BlockCache 101] for comparisons running on-heap vs off-heap tests.
-Also see link:http://people.apache.org/~stack/bc/[Comparing BlockCache Deploys] which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
+Also see link:https://people.apache.org/~stack/bc/[Comparing BlockCache Deploys] which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise if you are experiencing cache churn (or you want your cache to exist beyond the vagaries of java GC), use BucketCache.
 
 When you enable BucketCache, you are enabling a two tier caching system, an L1 cache which is implemented by an instance of LruBlockCache and an off-heap L2 cache which is implemented by BucketCache.
 Management of these two tiers and the policy that dictates how blocks move between them is done by `CombinedBlockCache`.
@@ -645,7 +645,7 @@ See <<offheap.blockcache>> for more detail on going off-heap.
 ==== General Cache Configurations
 
 Apart from the cache implementation itself, you can set some general configuration options to control how the cache performs.
-See http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html.
+See https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html.
 After setting any of these options, restart or rolling restart your cluster for the configuration to take effect.
 Check logs for errors or unexpected behavior.
 
@@ -755,7 +755,7 @@ Since link:https://issues.apache.org/jira/browse/HBASE-4683[HBASE-4683 Always ca
 ===== How to Enable BucketCache
 
 The usual deploy of BucketCache is via a managing class that sets up two caching tiers: an L1 on-heap cache implemented by LruBlockCache and a second L2 cache implemented with BucketCache.
-The managing class is link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html[CombinedBlockCache] by default.
+The managing class is link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html[CombinedBlockCache] by default.
 The previous link describes the caching 'policy' implemented by CombinedBlockCache.
 In short, it works by keeping meta blocks -- INDEX and BLOOM in the L1, on-heap LruBlockCache tier -- and DATA blocks are kept in the L2, BucketCache tier.
 It is possible to amend this behavior in HBase since version 1.0 and ask that a column family have both its meta and DATA blocks hosted on-heap in the L1 tier by setting `cacheDataInL1` via `(HColumnDescriptor.setCacheDataInL1(true)` or in the shell, creating or amending column families setting `CACHE_DATA_IN_L1` to true: e.g.
@@ -881,7 +881,7 @@ The compressed BlockCache is disabled by default. To enable it, set `hbase.block
 
 As write requests are handled by the region server, they accumulate in an in-memory storage system called the _memstore_. Once the memstore fills, its content are written to disk as additional store files. This event is called a _memstore flush_. As store files accumulate, the RegionServer will <<compaction,compact>> them into fewer, larger files. After each flush or compaction finishes, the amount of data stored in the region has changed. The RegionServer consults the region split policy to determine if the region has grown too large or should be split for another policy-specific reason. A region split request is enqueued if the policy recommends it.
 
-Logically, the process of splitting a region is simple. We find a suitable point in the keyspace of the region where we should divide the region in half, then split the region's data into two new regions at that point. The details of the process however are not simple.  When a split happens, the newly created _daughter regions_ do not rewrite all the data into new files immediately. Instead, they create small files similar to symbolic link files, named link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/Reference.html[Reference files], which point to either the top or bottom part of the parent store file according to the split point. The reference file is used just like a regular data file, but only half of the records are considered. The region can only be split if there are no more references to the immutable data files of the parent region. Those reference files are cleaned gradually by compactions, so that the region will stop referring to its parents files, and can be split further.
+Logically, the process of splitting a region is simple. We find a suitable point in the keyspace of the region where we should divide the region in half, then split the region's data into two new regions at that point. The details of the process however are not simple.  When a split happens, the newly created _daughter regions_ do not rewrite all the data into new files immediately. Instead, they create small files similar to symbolic link files, named link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/Reference.html[Reference files], which point to either the top or bottom part of the parent store file according to the split point. The reference file is used just like a regular data file, but only half of the records are considered. The region can only be split if there are no more references to the immutable data files of the parent region. Those reference files are cleaned gradually by compactions, so that the region will stop referring to its parents files, and can be split further.
 
 Although splitting the region is a local decision made by the RegionServer, the split process itself must coordinate with many actors. The RegionServer notifies the Master before and after the split, updates the `.META.` table so that clients can discover the new daughter regions, and rearranges the directory structure and data files in HDFS. Splitting is a multi-task process. To enable rollback in case of an error, the RegionServer keeps an in-memory journal about the execution state. The steps taken by the RegionServer to execute the split are illustrated in <<regionserver_split_process_image>>. Each step is labeled with its step number. Actions from RegionServers or Master are shown in red, while actions from the clients are show in green.
 
@@ -915,7 +915,7 @@ Under normal operations, the WAL is not needed because data changes move from th
 However, if a RegionServer crashes or becomes unavailable before the MemStore is flushed, the WAL ensures that the changes to the data can be replayed.
 If writing to the WAL fails, the entire operation to modify the data fails.
 
-HBase uses an implementation of the link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/wal/WAL.html[WAL] interface.
+HBase uses an implementation of the link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/wal/WAL.html[WAL] interface.
 Usually, there is only one instance of a WAL per RegionServer.
 The RegionServer records Puts and Deletes to it, before recording them to the <<store.memstore>> for the affected <<store>>.
 
@@ -1389,12 +1389,12 @@ The HDFS client does the following by default when choosing locations to write r
 . Second replica is written to a random node on another rack
 . Third replica is written on the same rack as the second, but on a different node chosen randomly
 . Subsequent replicas are written on random nodes on the cluster.
-  See _Replica Placement: The First Baby Steps_ on this page: link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS Architecture]
+  See _Replica Placement: The First Baby Steps_ on this page: link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS Architecture]
 
 Thus, HBase eventually achieves locality for a region after a flush or a compaction.
 In a RegionServer failover situation a RegionServer may be assigned regions with non-local StoreFiles (because none of the replicas are local), however as new data is written in the region, or the table is compacted and StoreFiles are re-written, they will become "local" to the RegionServer.
 
-For more information, see _Replica Placement: The First Baby Steps_ on this page: link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS Architecture] and also Lars George's blog on link:http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html[HBase and HDFS locality].
+For more information, see _Replica Placement: The First Baby Steps_ on this page: link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS Architecture] and also Lars George's blog on link:http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html[HBase and HDFS locality].
 
 [[arch.region.splits]]
 === Region Splits
@@ -1409,9 +1409,9 @@ See <<disable.splitting>> for how to manually manage splits (and for why you mig
 
 ==== Custom Split Policies
 You can override the default split policy using a custom
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+).
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+).
 Typically a custom split policy should extend HBase's default split policy:
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html[IncreasingToUpperBoundRegionSplitPolicy].
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html[IncreasingToUpperBoundRegionSplitPolicy].
 
 The policy can set globally through the HBase configuration or on a per-table
 basis.
@@ -1485,13 +1485,13 @@ Using a Custom Algorithm::
   As parameters, you give it the algorithm, desired number of regions, and column families.
   It includes two split algorithms.
   The first is the
-  `link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.HexStringSplit.html[HexStringSplit]`
+  `link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.HexStringSplit.html[HexStringSplit]`
   algorithm, which assumes the row keys are hexadecimal strings.
   The second,
-  `link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.UniformSplit.html[UniformSplit]`,
+  `link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.UniformSplit.html[UniformSplit]`,
   assumes the row keys are random byte arrays.
   You will probably need to develop your own
-  `link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.SplitAlgorithm.html[SplitAlgorithm]`,
+  `link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/RegionSplitter.SplitAlgorithm.html[SplitAlgorithm]`,
   using the provided ones as models.
 
 === Online Region Merges
@@ -1567,7 +1567,7 @@ StoreFiles are where your data lives.
 
 ===== HFile Format
 
-The _HFile_ file format is based on the SSTable file described in the link:http://research.google.com/archive/bigtable.html[BigTable [2006]] paper and on Hadoop's link:http://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html[TFile] (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on link:http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html[HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs] makes for a thorough introduction to HBase's HFile.
+The _HFile_ file format is based on the SSTable file described in the link:http://research.google.com/archive/bigtable.html[BigTable [2006]] paper and on Hadoop's link:https://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html[TFile] (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on link:http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html[HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs] makes for a thorough introduction to HBase's HFile.
 Matteo Bertozzi has also put up a helpful description, link:http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw[HBase I/O: HFile].
 
 For more information, see the HFile source code.
@@ -2393,7 +2393,7 @@ See the `LoadIncrementalHFiles` class for more information.
 
 As HBase runs on HDFS (and each StoreFile is written as a file on HDFS), it is important to have an understanding of the HDFS Architecture especially in terms of how it stores files, handles failovers, and replicates blocks.
 
-See the Hadoop documentation on link:http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS Architecture] for more information.
+See the Hadoop documentation on link:https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS Architecture] for more information.
 
 [[arch.hdfs.nn]]
 === NameNode
@@ -2797,7 +2797,7 @@ if (result.isStale()) {
 === Resources
 
 . More information about the design and implementation can be found at the jira issue: link:https://issues.apache.org/jira/browse/HBASE-10070[HBASE-10070]
-. HBaseCon 2014 talk: link:http://hbase.apache.org/www.hbasecon.com/#2014-PresentationsRecordings[HBase Read High Availability Using Timeline-Consistent Region Replicas] also contains some details and link:http://www.slideshare.net/enissoz/hbase-high-availability-for-reads-with-time[slides].
+. HBaseCon 2014 talk: link:https://hbase.apache.org/www.hbasecon.com/#2014-PresentationsRecordings[HBase Read High Availability Using Timeline-Consistent Region Replicas] also contains some details and link:http://www.slideshare.net/enissoz/hbase-high-availability-for-reads-with-time[slides].
 
 ifdef::backend-docbook[]
 [index]

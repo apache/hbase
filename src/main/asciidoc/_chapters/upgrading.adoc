@@ -125,14 +125,14 @@ for warning about incompatible changes). All effort will be made to provide a de
 [[hbase.client.api.surface]]
 ==== HBase API Surface
 
-HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:http://yetus.apache.org/documentation/0.5.0/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
+HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses link:https://yetus.apache.org/documentation/0.5.0/interface-classification/[Apache Yetus Audience Annotations] to guide downstream expectations for stability.
 
-* InterfaceAudience (link:http://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
+* InterfaceAudience (link:https://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceAudience.html[javadocs]): captures the intended audience, possible values include:
   - Public: safe for end users and external projects
   - LimitedPrivate: used for internals we expect to be pluggable, such as coprocessors
   - Private: strictly for use within HBase itself
 Classes which are defined as `IA.Private` may be used as parameters or return values for interfaces which are declared `IA.LimitedPrivate`. Treat the `IA.Private` object as opaque; do not try to access its methods or fields directly.
-* InterfaceStability (link:http://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
+* InterfaceStability (link:https://yetus.apache.org/documentation/0.5.0/audience-annotations-apidocs/org/apache/yetus/audience/InterfaceStability.html[javadocs]): describes what types of interface changes are permitted. Possible values include:
   - Stable: the interface is fixed and is not expected to change
   - Evolving: the interface may change in future minor verisons
   - Unstable: the interface may change at any time
@@ -159,7 +159,7 @@ HBase Private API::
 === Pre 1.0 versions
 
 .HBase Pre-1.0 versions are all EOM
-NOTE: For new installations, do not deploy 0.94.y, 0.96.y, or 0.98.y.  Deploy our stable version. See link:https://issues.apache.org/jira/browse/HBASE-11642[EOL 0.96], link:https://issues.apache.org/jira/browse/HBASE-16215[clean up of EOM releases], and link:http://www.apache.org/dist/hbase/[the header of our downloads].
+NOTE: For new installations, do not deploy 0.94.y, 0.96.y, or 0.98.y.  Deploy our stable version. See link:https://issues.apache.org/jira/browse/HBASE-11642[EOL 0.96], link:https://issues.apache.org/jira/browse/HBASE-16215[clean up of EOM releases], and link:https://www.apache.org/dist/hbase/[the header of our downloads].
 
 Before the semantic versioning scheme pre-1.0, HBase tracked either Hadoop's versions (0.2x) or 0.9x versions. If you are into the arcane, checkout our old wiki page on link:https://web.archive.org/web/20150905071342/https://wiki.apache.org/hadoop/Hbase/HBaseVersions[HBase Versioning] which tries to connect the HBase version dots. Below sections cover ONLY the releases before 1.0.
 

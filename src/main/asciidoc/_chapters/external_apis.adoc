@@ -29,7 +29,7 @@
 
 This chapter will cover access to Apache HBase either through non-Java languages and
 through custom protocols. For information on using the native HBase APIs, refer to
-link:http://hbase.apache.org/apidocs/index.html[User API Reference] and the
+link:https://hbase.apache.org/apidocs/index.html[User API Reference] and the
 <<hbase_apis,HBase APIs>> chapter.
 
 == REST
@@ -641,8 +641,8 @@ represent persistent data.
 This code example has the following dependencies:
 
 . HBase 0.90.x or newer
-. commons-beanutils.jar (http://commons.apache.org/)
-. commons-pool-1.5.5.jar (http://commons.apache.org/)
+. commons-beanutils.jar (https://commons.apache.org/)
+. commons-pool-1.5.5.jar (https://commons.apache.org/)
 . transactional-tableindexed for HBase 0.90 (https://github.com/hbase-trx/hbase-transactional-tableindexed)
 
 .Download `hbase-jdo`
@@ -802,7 +802,7 @@ with HBase.
 ----
 resolvers += "Apache HBase" at "https://repository.apache.org/content/repositories/releases"
 
-resolvers += "Thrift" at "http://people.apache.org/~rawson/repo/"
+resolvers += "Thrift" at "https://people.apache.org/~rawson/repo/"
 
 libraryDependencies ++= Seq(
     "org.apache.hadoop" % "hadoop-core" % "0.20.2",

@@ -20,13 +20,13 @@ under the License.
 = Apache HBase (TM) Metrics
 
 == Introduction
-Apache HBase (TM) emits Hadoop link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+Apache HBase (TM) emits Hadoop link:https://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html[metrics].
 
 == Setup
 
-First read up on Hadoop link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+First read up on Hadoop link:https://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html[metrics].
 
-If you are using ganglia, the link:http://wiki.apache.org/hadoop/GangliaMetrics[GangliaMetrics] wiki page is useful read.
+If you are using ganglia, the link:https://wiki.apache.org/hadoop/GangliaMetrics[GangliaMetrics] wiki page is useful read.
 
 To have HBase emit metrics, edit `$HBASE_HOME/conf/hadoop-metrics.properties` and enable metric 'contexts' per plugin.  As of this writing, hadoop supports *file* and *ganglia* plugins. Yes, the hbase metrics files is named hadoop-metrics rather than _hbase-metrics_ because currently at least the hadoop metrics system has the properties filename hardcoded. Per metrics _context_, comment out the NullContext and enable one or more plugins instead.
 

@@ -29,11 +29,11 @@ under the License.
   <body>
     <section name="Introduction">
       <p>
-      Apache HBase (TM) emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      Apache HBase (TM) emits Hadoop <a href="http://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
       </p>
       </section>
       <section name="Setup">
-      <p>First read up on Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      <p>First read up on Hadoop <a href="http://hadoop.apache.org/core/docs/stable/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
       If you are using ganglia, the <a href="http://wiki.apache.org/hadoop/GangliaMetrics">GangliaMetrics</a>
       wiki page is useful read.</p>
       <p>To have HBase emit metrics, edit <code>$HBASE_HOME/conf/hadoop-metrics.properties</code>

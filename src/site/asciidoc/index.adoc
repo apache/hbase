@@ -20,7 +20,7 @@ under the License.
 = Apache HBase&#153; Home
 
 .Welcome to Apache HBase(TM)
-link:http://www.apache.org/[Apache HBase(TM)] is the link:http://hadoop.apache.org[Hadoop] database, a distributed, scalable, big data store.
+link:https://www.apache.org/[Apache HBase(TM)] is the link:https://hadoop.apache.org[Hadoop] database, a distributed, scalable, big data store.
 
 .When Would I Use Apache HBase?
 Use Apache HBase when you need random, realtime read/write access to your Big Data. +

@@ -47,7 +47,7 @@ See also Robert Yokota's link:https://blogs.apache.org/hbase/entry/hbase-applica
 [[schema.creation]]
 ==  Schema Creation
 
-HBase schemas can be created or updated using the <<shell>> or by using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
+HBase schemas can be created or updated using the <<shell>> or by using link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
 
 Tables must be disabled when making ColumnFamily modifications, for example:
 
@@ -223,7 +223,7 @@ You could also optimize things so that certain pairs of keys were always in the 
 A third common trick for preventing hotspotting is to reverse a fixed-width or numeric row key so that the part that changes the most often (the least significant digit) is first.
 This effectively randomizes row keys, but sacrifices row ordering properties.
 
-See https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/11/10/discussion-on-designing-hbase-tables, and link:http://phoenix.apache.org/salted.html[article on Salted Tables] from the Phoenix project, and the discussion in the comments of link:https://issues.apache.org/jira/browse/HBASE-11682[HBASE-11682] for more information about avoiding hotspotting.
+See https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/11/10/discussion-on-designing-hbase-tables, and link:https://phoenix.apache.org/salted.html[article on Salted Tables] from the Phoenix project, and the discussion in the comments of link:https://issues.apache.org/jira/browse/HBASE-11682[HBASE-11682] for more information about avoiding hotspotting.
 
 [[timeseries]]
 ===  Monotonically Increasing Row Keys/Timeseries Data
@@ -433,7 +433,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
 [[schema.versions.max]]
 === Maximum Number of Versions
 
-The maximum number of row versions to store is configured per column family via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+The maximum number of row versions to store is configured per column family via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 The default for max versions is 1.
 This is an important parameter because as described in <<datamodel>> section HBase does _not_ overwrite row values, but rather stores different values per row by time (and qualifier). Excess versions are removed during major compactions.
 The number of max versions may need to be increased or decreased depending on application needs.
@@ -443,14 +443,14 @@ It is not recommended setting the number of max versions to an exceedingly high 
 [[schema.minversions]]
 ===  Minimum Number of Versions
 
-Like maximum number of row versions, the minimum number of row versions to keep is configured per column family via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+Like maximum number of row versions, the minimum number of row versions to keep is configured per column family via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 The default for min versions is 0, which means the feature is disabled.
 The minimum number of row versions parameter is used together with the time-to-live parameter and can be combined with the number of row versions parameter to allow configurations such as "keep the last T minutes worth of data, at most N versions, _but keep at least M versions around_" (where M is the value for minimum number of row versions, M<N). This parameter should only be set when time-to-live is enabled for a column family and must be less than the number of row versions.
 
 [[supported.datatypes]]
 ==  Supported Datatypes
 
-HBase supports a "bytes-in/bytes-out" interface via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
+HBase supports a "bytes-in/bytes-out" interface via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] and link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html[Result], so anything that can be converted to an array of bytes can be stored as a value.
 Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
 
 There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask); search the mailing list for conversations on this topic.
@@ -459,7 +459,7 @@ Take that into consideration when making your design, as well as block size for 
 
 === Counters
 
-One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in `Table`.
+One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in `Table`.
 
 Synchronization on counters are done on the RegionServer, not in the client.
 
@@ -479,7 +479,7 @@ Store files which contains only expired rows are deleted on minor compaction.
 Setting `hbase.store.delete.expired.storefile` to `false` disables this feature.
 Setting minimum number of versions to other than 0 also disables this.
 
-See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information.
 
 Recent versions of HBase also support setting time to live on a per cell basis.
 See link:https://issues.apache.org/jira/browse/HBASE-10560[HBASE-10560] for more information.
@@ -494,7 +494,7 @@ There are two notable differences between cell TTL handling and ColumnFamily TTL
 ==  Keeping Deleted Cells
 
 By default, delete markers extend back to the beginning of time.
-Therefore, link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] operations will not see a deleted cell (row or column), even when the Get or Scan operation indicates a time range before the delete marker was placed.
+Therefore, link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] operations will not see a deleted cell (row or column), even when the Get or Scan operation indicates a time range before the delete marker was placed.
 
 ColumnFamilies can optionally keep deleted cells.
 In this case, deleted cells can still be retrieved, as long as these operations specify a time range that ends before the timestamp of any delete that would affect the cells.
@@ -684,7 +684,7 @@ in the table (e.g. make sure values are in the range 1-10). Constraints could
 also be used to enforce referential integrity, but this is strongly discouraged
 as it will dramatically decrease the write throughput of the tables where integrity
 checking is enabled. Extensive documentation on using Constraints can be found at
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/constraint/Constraint.html[Constraint]
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/constraint/Constraint.html[Constraint]
 since version 0.94.
 
 [[schema.casestudies]]
@@ -1095,7 +1095,7 @@ The tl;dr version is that you should probably go with one row per user+value, an
 
 Your two options mirror a common question people have when designing HBase schemas: should I go "tall" or "wide"? Your first schema is "tall": each row represents one value for one user, and so there are many rows in the table for each user; the row key is user + valueid, and there would be (presumably) a single column qualifier that means "the value". This is great if you want to scan over rows in sorted order by row key (thus my question above, about whether these ids are sorted correctly). You can start a scan at any user+valueid, read the next 30, and be done.
 What you're giving up is the ability to have transactional guarantees around all the rows for one user, but it doesn't sound like you need that.
-Doing it this way is generally recommended (see here http://hbase.apache.org/book.html#schema.smackdown).
+Doing it this way is generally recommended (see here https://hbase.apache.org/book.html#schema.smackdown).
 
 Your second option is "wide": you store a bunch of values in one row, using different qualifiers (where the qualifier is the valueid). The simple way to do that would be to just store ALL values for one user in a single row.
 I'm guessing you jumped to the "paginated" version because you're assuming that storing millions of columns in a single row would be bad for performance, which may or may not be true; as long as you're not trying to do too much in a single request, or do things like scanning over and returning all of the cells in the row, it shouldn't be fundamentally worse.

@@ -22,11 +22,11 @@ under the License.
 
 == Introduction
 
-link:http://hbase.apache.org[Apache HBase (TM)] is a distributed, column-oriented store, modeled after Google's link:http://research.google.com/archive/bigtable.html[BigTable]. Apache HBase is built on top of link:http://hadoop.apache.org[Hadoop] for its link:http://hadoop.apache.org/mapreduce[MapReduce] link:http://hadoop.apache.org/hdfs[distributed file system] implementations. All these projects are open-source and part of the link:http://www.apache.org[Apache Software Foundation].
+link:https://hbase.apache.org[Apache HBase (TM)] is a distributed, column-oriented store, modeled after Google's link:http://research.google.com/archive/bigtable.html[BigTable]. Apache HBase is built on top of link:https://hadoop.apache.org[Hadoop] for its link:https://hadoop.apache.org/mapreduce[MapReduce] link:https://hadoop.apache.org/hdfs[distributed file system] implementations. All these projects are open-source and part of the link:https://www.apache.org[Apache Software Foundation].
 
 == Purpose
 
-This document explains the *intricacies* of running Apache HBase on Windows using Cygwin* as an all-in-one single-node installation for testing and development. The HBase link:http://hbase.apache.org/apidocs/overview-summary.html#overview_description[Overview] and link:book.html#getting_started[QuickStart] guides on the other hand go a long way in explaning how to setup link:http://hadoop.apache.org/hbase[HBase] in more complex deployment scenarios.
+This document explains the *intricacies* of running Apache HBase on Windows using Cygwin* as an all-in-one single-node installation for testing and development. The HBase link:https://hbase.apache.org/apidocs/overview-summary.html#overview_description[Overview] and link:book.html#getting_started[QuickStart] guides on the other hand go a long way in explaning how to setup link:https://hadoop.apache.org/hbase[HBase] in more complex deployment scenarios.
 
 == Installation
 
@@ -86,7 +86,7 @@ HBase (and Hadoop) rely on link:http://nl.wikipedia.org/wiki/Secure_Shell[*SSH*]
 
 === HBase
 
-Download the *latest release* of Apache HBase from link:http://www.apache.org/dyn/closer.cgi/hbase/. As the Apache HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final *installation* directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use `/usr/local/` (or [`*Root* directory]\usr\local` in Windows slang). You should end up with a `/usr/local/hbase-_versi` installation in Cygwin.
+Download the *latest release* of Apache HBase from link:https://www.apache.org/dyn/closer.cgi/hbase/. As the Apache HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final *installation* directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use `/usr/local/` (or [`*Root* directory]\usr\local` in Windows slang). You should end up with a `/usr/local/hbase-_versi` installation in Cygwin.
 
 This finishes installation. We go on with the configuration.
 
