@@ -25,7 +25,6 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,10 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -350,7 +347,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
        Map<ServerName, List<HRegionInfo>> existingAssignments){
     Map<ServerName, List<HRegionInfo>> correctAssignments =
         new TreeMap<ServerName, List<HRegionInfo>>();
-    List<HRegionInfo> misplacedRegions = new LinkedList<HRegionInfo>();
     correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<HRegionInfo>());
     for (Map.Entry<ServerName, List<HRegionInfo>> assignments : existingAssignments.entrySet()){
       ServerName sName = assignments.getKey();
@@ -371,12 +367,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
           correctAssignments.get(sName).add(region);
         }
       }
-    }
-
-    //TODO bulk unassign?
-    //unassign misplaced regions, so that they are assigned to correct groups.
-    for(HRegionInfo info: misplacedRegions) {
-      this.masterServices.getAssignmentManager().unassign(info);
     }
     return correctAssignments;
   }
