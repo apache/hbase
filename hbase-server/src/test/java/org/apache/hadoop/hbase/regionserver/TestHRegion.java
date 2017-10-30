@@ -42,6 +42,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.math.BigDecimal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -113,6 +114,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
+import org.apache.hadoop.hbase.filter.BigDecimalComparator;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -1783,6 +1785,8 @@ public class TestHRegion {
     byte[] qf1 = Bytes.toBytes("qualifier");
     byte[] val1 = Bytes.toBytes("value1");
     byte[] val2 = Bytes.toBytes("value2");
+    BigDecimal bd1 = new BigDecimal(Double.MAX_VALUE);
+    BigDecimal bd2 = new BigDecimal(Double.MIN_VALUE);
 
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
@@ -1803,6 +1807,25 @@ public class TestHRegion {
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val2),
           put, true);
       assertEquals(false, res);
+
+      // Putting data in key
+      put = new Put(row1);
+      put.addColumn(fam1, qf1, Bytes.toBytes(bd1));
+      region.put(put);
+
+      // checkAndPut with wrong value
+      res =
+          region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
+              bd2), put, true);
+      assertEquals(false, res);
+
+      // checkAndDelete with wrong value
+      delete = new Delete(row1);
+      delete.addFamily(fam1);
+      res =
+          region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
+              bd2), put, true);
+      assertEquals(false, res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -1815,6 +1838,7 @@ public class TestHRegion {
     byte[] fam1 = Bytes.toBytes("fam1");
     byte[] qf1 = Bytes.toBytes("qualifier");
     byte[] val1 = Bytes.toBytes("value1");
+    BigDecimal bd1 = new BigDecimal(Double.MIN_VALUE);
 
     // Setting up region
     this.region = initHRegion(tableName, method, CONF, fam1);
@@ -1834,6 +1858,25 @@ public class TestHRegion {
       delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
           delete, true);
+      assertEquals(true, res);
+
+      // Putting data in key
+      put = new Put(row1);
+      put.addColumn(fam1, qf1, Bytes.toBytes(bd1));
+      region.put(put);
+
+      // checkAndPut with correct value
+      res =
+          region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
+              bd1), put, true);
+      assertEquals(true, res);
+
+      // checkAndDelete with correct value
+      delete = new Delete(row1);
+      delete.addColumn(fam1, qf1);
+      res =
+          region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BigDecimalComparator(
+              bd1), delete, true);
       assertEquals(true, res);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
