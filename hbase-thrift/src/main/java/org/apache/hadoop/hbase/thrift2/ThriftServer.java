@@ -23,7 +23,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -35,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslServer;
 
 import org.apache.commons.cli.CommandLine;
@@ -197,8 +195,7 @@ public class ThriftServer extends Configured implements Tool {
     } else if (qop == null) {
       return new TTransportFactory();
     } else {
-      Map<String, String> saslProperties = new HashMap<>();
-      saslProperties.put(Sasl.QOP, qop.getSaslQop());
+      Map<String, String> saslProperties = SaslUtil.initSaslProperties(qop.name());
       TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
       saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
         new SaslGssCallbackHandler() {
