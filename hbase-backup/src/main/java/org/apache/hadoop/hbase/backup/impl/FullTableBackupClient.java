@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_ATTEM
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_MAX_ATTEMPTS_KEY;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_MAX_ATTEMPTS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -92,8 +93,15 @@ public class FullTableBackupClient extends TableBackupClient {
       args[2] = "-copy-to";
       args[3] = backupInfo.getTableBackupDir(table);
 
+      String jobname = "Full-Backup_" + backupInfo.getBackupId() + "_" + table.getNameAsString();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting snapshot copy job name to : " + jobname);
+      }
+      conf.set(JOB_NAME_CONF_KEY, jobname);
+
       LOG.debug("Copy snapshot " + args[1] + " to " + args[3]);
       res = copyService.copy(backupInfo, backupManager, conf, BackupType.FULL, args);
+
       // if one snapshot export failed, do not continue for remained snapshots
       if (res != 0) {
         LOG.error("Exporting Snapshot " + args[1] + " failed with return code: " + res + ".");
@@ -101,6 +109,8 @@ public class FullTableBackupClient extends TableBackupClient {
         throw new IOException("Failed of exporting snapshot " + args[1] + " to " + args[3]
             + " with reason code " + res);
       }
+
+      conf.unset(JOB_NAME_CONF_KEY);
       LOG.info("Snapshot copy " + args[1] + " finished.");
     }
   }

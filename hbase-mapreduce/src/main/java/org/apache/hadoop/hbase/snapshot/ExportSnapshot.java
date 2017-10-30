@@ -108,6 +108,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private static final String CONF_BUFFER_SIZE = "snapshot.export.buffer.size";
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
   private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
+  private static final String CONF_MR_JOB_NAME = "mapreduce.job.name";
   protected static final String CONF_SKIP_TMP = "snapshot.export.skip.tmp";
 
   static class Testing {
@@ -807,8 +808,9 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     conf.set(CONF_SNAPSHOT_NAME, snapshotName);
     conf.set(CONF_SNAPSHOT_DIR, snapshotDir.toString());
 
+    String jobname = conf.get(CONF_MR_JOB_NAME, "ExportSnapshot-" + snapshotName);
     Job job = new Job(conf);
-    job.setJobName("ExportSnapshot-" + snapshotName);
+    job.setJobName(jobname);
     job.setJarByClass(ExportSnapshot.class);
     TableMapReduceUtil.addDependencyJars(job);
     job.setMapperClass(ExportMapper.class);

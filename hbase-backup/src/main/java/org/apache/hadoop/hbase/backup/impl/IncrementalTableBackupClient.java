@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -296,6 +298,13 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       String[] strArr = new String[files.length + 1];
       System.arraycopy(files, 0, strArr, 0, files.length);
       strArr[strArr.length - 1] = backupDest;
+
+      String jobname = "Incremental_Backup-HFileCopy-" + backupInfo.getBackupId();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting incremental copy HFiles job name to : " + jobname);
+      }
+      conf.set(JOB_NAME_CONF_KEY, jobname);
+
       BackupCopyJob copyService = BackupRestoreFactory.getBackupCopyJob(conf);
       int res = copyService.copy(backupInfo, backupManager, conf, BackupType.INCREMENTAL, strArr);
       if (res != 0) {
@@ -353,10 +362,12 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // a Map task for each file. We use ';' as separator
     // because WAL file names contains ','
     String dirs = StringUtils.join(dirPaths, ';');
+    String jobname = "Incremental_Backup-" + backupId + "-" + tableName.getNameAsString();
 
     Path bulkOutputPath = getBulkOutputDirForTable(tableName);
     conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+    conf.set(JOB_NAME_CONF_KEY, jobname);
     String[] playerArgs = { dirs, tableName.getNameAsString() };
 
     try {
@@ -366,6 +377,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         throw new IOException("WAL Player failed");
       }
       conf.unset(WALPlayer.INPUT_FILES_SEPARATOR_KEY);
+      conf.unset(JOB_NAME_CONF_KEY);
     } catch (IOException e) {
       throw e;
     } catch (Exception ee) {
