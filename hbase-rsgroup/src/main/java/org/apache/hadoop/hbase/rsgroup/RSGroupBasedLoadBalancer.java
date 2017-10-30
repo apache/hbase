@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,15 +44,14 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.LinkedListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * GroupBasedLoadBalancer, used when Region Server Grouping is configured (HBase-6721)
@@ -341,7 +339,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
        Map<ServerName, List<RegionInfo>> existingAssignments)
   throws HBaseIOException{
     Map<ServerName, List<RegionInfo>> correctAssignments = new TreeMap<>();
-    List<RegionInfo> misplacedRegions = new LinkedList<>();
     correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<>());
     for (Map.Entry<ServerName, List<RegionInfo>> assignments : existingAssignments.entrySet()){
       ServerName sName = assignments.getKey();
@@ -361,16 +358,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         } else {
           correctAssignments.get(sName).add(region);
         }
-      }
-    }
-
-    //TODO bulk unassign?
-    //unassign misplaced regions, so that they are assigned to correct groups.
-    for(RegionInfo info: misplacedRegions) {
-      try {
-        this.masterServices.getAssignmentManager().unassign(info);
-      } catch (IOException e) {
-        throw new HBaseIOException(e);
       }
     }
     return correctAssignments;
