@@ -48,10 +48,12 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 
 @Category(MediumTests.class)
+@Ignore("Flaky, needs to be rewritten, see HBASE-19125")
 public class TestReplicator extends TestReplicationBase {
 
   static final Log LOG = LogFactory.getLog(TestReplicator.class);
