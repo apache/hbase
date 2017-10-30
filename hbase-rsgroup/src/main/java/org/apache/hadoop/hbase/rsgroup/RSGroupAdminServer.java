@@ -406,6 +406,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       // action is required.
       if (targetGroup != null) {
         for (TableName table: tables) {
+          if (master.getAssignmentManager().isTableDisabled(table)) {
+            LOG.debug("Skipping move regions because the table" + table + " is disabled.");
+            continue;
+          }
           for (RegionInfo region :
               master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
             LOG.info("Moving region " + region.getShortNameToLog() +

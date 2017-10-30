@@ -709,6 +709,39 @@ public abstract class TestRSGroupsBase {
   }
 
   @Test
+  public void testDisabledTableMove() throws Exception {
+    final byte[] familyNameBytes = Bytes.toBytes("f");
+    String newGroupName = getGroupName(name.getMethodName());
+    final RSGroupInfo newGroup = addGroup(newGroupName, 2);
+
+    TEST_UTIL.createMultiRegionTable(tableName, familyNameBytes, 5);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        List<String> regions = getTableRegionMap().get(tableName);
+        if (regions == null) {
+          return false;
+        }
+        return getTableRegionMap().get(tableName).size() >= 5;
+      }
+    });
+
+    RSGroupInfo tableGrp = rsGroupAdmin.getRSGroupInfoOfTable(tableName);
+    assertTrue(tableGrp.getName().equals(RSGroupInfo.DEFAULT_GROUP));
+
+    //test disable table
+    admin.disableTable(tableName);
+
+    //change table's group
+    LOG.info("Moving table "+ tableName + " to " + newGroup.getName());
+    rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
+
+    //verify group change
+    Assert.assertEquals(newGroup.getName(),
+        rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+  }
+
+  @Test
   public void testMoveServersAndTables() throws Exception {
     LOG.info("testMoveServersAndTables");
     final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 1);
