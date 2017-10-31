@@ -920,7 +920,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.mvcc.advanceTo(maxSeqId);
       } finally {
         // update the stores that we are done replaying
-        stores.forEach(HStore::startReplayingFromWAL);
+        stores.forEach(HStore::stopReplayingFromWAL);
       }
     }
     this.lastReplayedOpenRegionSeqId = maxSeqId;
