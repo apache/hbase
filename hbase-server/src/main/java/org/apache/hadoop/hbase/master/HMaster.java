@@ -2436,6 +2436,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public ClusterStatus getClusterStatus(EnumSet<Option> options) throws InterruptedIOException {
     ClusterStatus.Builder builder = ClusterStatus.newBuilder();
+    // given that hbase1 can't submit the request with Option,
+    // we return all information to client if the list of Option is empty.
+    if (options.isEmpty()) {
+      options = EnumSet.allOf(Option.class);
+    }
+
     for (Option opt : options) {
       switch (opt) {
         case HBASE_VERSION: builder.setHBaseVersion(VersionInfo.getVersion()); break;

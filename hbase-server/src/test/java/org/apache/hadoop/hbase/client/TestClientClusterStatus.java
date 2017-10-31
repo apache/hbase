@@ -20,11 +20,10 @@ package org.apache.hadoop.hbase.client;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -87,23 +86,9 @@ public class TestClientClusterStatus {
 
   @Test
   public void testNone() throws Exception {
-    ClusterStatus status = ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
-    // Other cluster status info should be either null or empty.
-    Assert.assertTrue(status.getMasterCoprocessors().length == 0);
-    Assert.assertNull(status.getHBaseVersion());
-    Assert.assertTrue(status.getBackupMasters().isEmpty());
-    Assert.assertNull(status.getBalancerOn());
-    Assert.assertNull(status.getClusterId());
-    Assert.assertTrue(status.getServers().isEmpty());
-    Assert.assertTrue(status.getDeadServerNames().isEmpty());
-    Assert.assertNull(status.getMaster());
-    Assert.assertTrue(status.getBackupMasters().isEmpty());
-    Assert.assertEquals(-1, status.getMasterInfoPort());
-    // No npe thrown is expected
-    Assert.assertNotNull(status.hashCode());
-    ClusterStatus nullEqualsCheck =
-        ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
-    Assert.assertTrue(status.equals(nullEqualsCheck));
+    ClusterStatus status0 = ADMIN.getClusterStatus(EnumSet.allOf(Option.class));
+    ClusterStatus status1 = ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
+    Assert.assertEquals(status0, status1);
   }
 
   @Test
