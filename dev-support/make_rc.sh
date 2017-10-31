@@ -70,7 +70,6 @@ MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests assembly:single \
 
 tgz_mover
 
-# Now do the two builds,  one for hadoop1, then hadoop2
 deploy
 
 echo "DONE"
