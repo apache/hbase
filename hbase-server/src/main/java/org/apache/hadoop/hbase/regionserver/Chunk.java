@@ -85,6 +85,10 @@ public abstract class Chunk {
     return this.fromPool;
   }
 
+  boolean isJumbo() {
+    return size > ChunkCreator.getInstance().getChunkSize();
+  }
+
   /**
    * Actually claim the memory for this chunk. This should only be called from the thread that
    * constructed the chunk. It is thread-safe against other threads calling alloc(), who will block

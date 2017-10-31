@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -564,60 +563,6 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     assertTrue(chunkCreator.getPoolSize() > 0);
   }
 
-  @Test
-  public void testFlatteningToCellChunkMap() throws IOException {
-
-    // set memstore to flat into CellChunkMap
-    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
-    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(compactionType));
-    ((CompactingMemStore)memstore).initiateType(compactionType);
-    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
-        String.valueOf(CompactingMemStore.IndexType.CHUNK_MAP));
-    ((CompactingMemStore)memstore).setIndexType();
-    int numOfCells = 8;
-    String[] keys1 = { "A", "A", "B", "C", "D", "D", "E", "F" }; //A1, A2, B3, C4, D5, D6, E7, F8
-
-    // make one cell
-    byte[] row = Bytes.toBytes(keys1[0]);
-    byte[] val = Bytes.toBytes(keys1[0] + 0);
-    KeyValue kv =
-        new KeyValue(row, Bytes.toBytes("testfamily"), Bytes.toBytes("testqualifier"),
-            System.currentTimeMillis(), val);
-
-    // test 1 bucket
-    int totalCellsLen = addRowsByKeys(memstore, keys1);
-    long oneCellOnCSLMHeapSize =
-        ClassSize.align(
-            ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD + KeyValueUtil
-                .length(kv));
-
-    long totalHeapSize = numOfCells * oneCellOnCSLMHeapSize + MutableSegment.DEEP_OVERHEAD;
-    assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
-    assertEquals(totalHeapSize, ((CompactingMemStore)memstore).heapSize());
-
-    ((CompactingMemStore)memstore).flushInMemory(); // push keys to pipeline and flatten
-    assertEquals(0, memstore.getSnapshot().getCellsCount());
-    // One cell is duplicated, but it shouldn't be compacted because we are in BASIC mode.
-    // totalCellsLen should remain the same
-    long oneCellOnCCMHeapSize =
-        ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
-    totalHeapSize = MutableSegment.DEEP_OVERHEAD + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
-        + numOfCells * oneCellOnCCMHeapSize;
-
-    assertEquals(totalCellsLen, regionServicesForStores.getMemStoreSize());
-    assertEquals(totalHeapSize, ((CompactingMemStore)memstore).heapSize());
-
-    MemStoreSize size = memstore.getFlushableSize();
-    MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
-    region.decrMemStoreSize(size);  // simulate flusher
-    ImmutableSegment s = memstore.getSnapshot();
-    assertEquals(numOfCells, s.getCellsCount());
-    assertEquals(0, regionServicesForStores.getMemStoreSize());
-
-    memstore.clearSnapshot(snapshot.getId());
-  }
-
   //////////////////////////////////////////////////////////////////////////////
   // Compaction tests
   //////////////////////////////////////////////////////////////////////////////
@@ -793,7 +738,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.clearSnapshot(snapshot.getId());
   }
 
-  private int addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
+  protected int addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");
     long size = hmc.getActive().keySize();

@@ -58,6 +58,7 @@ public class TestCellFlatSet extends TestCase {
     return new Object[] { "SMALL_CHUNKS", "NORMAL_CHUNKS" }; // test with different chunk sizes
   }
   private static final int NUM_OF_CELLS = 4;
+  private static final int SMALL_CHUNK_SIZE = 64;
   private Cell ascCells[];
   private CellArrayMap ascCbOnHeap;
   private Cell descCells[];
@@ -69,8 +70,7 @@ public class TestCellFlatSet extends TestCase {
 
   private CellChunkMap ascCCM;   // for testing ascending CellChunkMap with one chunk in array
   private CellChunkMap descCCM;  // for testing descending CellChunkMap with one chunk in array
-  private CellChunkMap ascMultCCM; // testing ascending CellChunkMap with multiple chunks in array
-  private CellChunkMap descMultCCM;// testing descending CellChunkMap with multiple chunks in array
+  private final boolean smallChunks;
   private static ChunkCreator chunkCreator;
 
 
@@ -81,12 +81,13 @@ public class TestCellFlatSet extends TestCase {
       chunkCreator = ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false,
           globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
       assertTrue(chunkCreator != null);
+      smallChunks = false;
     } else {
       // chunkCreator with smaller chunk size, so only 3 cell-representations can accommodate a chunk
-      chunkCreator = ChunkCreator.initialize(64, false,
+      chunkCreator = ChunkCreator.initialize(SMALL_CHUNK_SIZE, false,
           globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
       assertTrue(chunkCreator != null);
-
+      smallChunks = true;
     }
   }
 
@@ -125,9 +126,9 @@ public class TestCellFlatSet extends TestCase {
     ascCCM = setUpCellChunkMap(true);
     descCCM = setUpCellChunkMap(false);
 
-
-//    ascMultCCM = setUpCellChunkMap(true);
-//    descMultCCM = setUpCellChunkMap(false);
+    if (smallChunks == true) {    // check jumbo chunks as well
+      ascCCM = setUpJumboCellChunkMap(true);
+    }
   }
 
   /* Create and test ascending CellSet based on CellArrayMap */
@@ -278,8 +279,8 @@ public class TestCellFlatSet extends TestCase {
 
     // allocate new chunks and use the data chunk to hold the full data of the cells
     // and the index chunk to hold the cell-representations
-    Chunk dataChunk = chunkCreator.getChunk();
-    Chunk idxChunk  = chunkCreator.getChunk();
+    Chunk dataChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+    Chunk idxChunk  = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
     // the array of index chunks to be used as a basis for CellChunkMap
     Chunk chunkArray[] = new Chunk[8];  // according to test currently written 8 is way enough
     int chunkArrayIdx = 0;
@@ -287,15 +288,16 @@ public class TestCellFlatSet extends TestCase {
 
     ByteBuffer idxBuffer = idxChunk.getData();  // the buffers of the chunks
     ByteBuffer dataBuffer = dataChunk.getData();
-    int dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;          // offset inside data buffer
-    int idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;           // skip the space for chunk ID
+    int dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;        // offset inside data buffer
+    int idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;         // skip the space for chunk ID
 
     Cell[] cellArray = asc ? ascCells : descCells;
 
     for (Cell kv: cellArray) {
       // do we have enough space to write the cell data on the data chunk?
       if (dataOffset + KeyValueUtil.length(kv) > chunkCreator.getChunkSize()) {
-        dataChunk = chunkCreator.getChunk();    // allocate more data chunks if needed
+        // allocate more data chunks if needed
+        dataChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
         dataBuffer = dataChunk.getData();
         dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
@@ -304,7 +306,8 @@ public class TestCellFlatSet extends TestCase {
 
       // do we have enough space to write the cell-representation on the index chunk?
       if (idxOffset + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkCreator.getChunkSize()) {
-        idxChunk = chunkCreator.getChunk();    // allocate more index chunks if needed
+        // allocate more index chunks if needed
+        idxChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
         idxBuffer = idxChunk.getData();
         idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
         chunkArray[chunkArrayIdx++] = idxChunk;
@@ -313,6 +316,55 @@ public class TestCellFlatSet extends TestCase {
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataStartOfset);          // offset
       idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, KeyValueUtil.length(kv)); // length
       idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId());     // seqId
+    }
+
+    return new CellChunkMap(CellComparatorImpl.COMPARATOR,chunkArray,0,NUM_OF_CELLS,!asc);
+  }
+
+  /* Create CellChunkMap with four cells inside the data jumbo chunk. This test is working only
+  ** with small chunks sized SMALL_CHUNK_SIZE (64) bytes */
+  private CellChunkMap setUpJumboCellChunkMap(boolean asc) {
+    int smallChunkSize = SMALL_CHUNK_SIZE+8;
+    // allocate new chunks and use the data JUMBO chunk to hold the full data of the cells
+    // and the normal index chunk to hold the cell-representations
+    Chunk dataJumboChunk =
+        chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP, smallChunkSize);
+    Chunk idxChunk  = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+    // the array of index chunks to be used as a basis for CellChunkMap
+    Chunk[] chunkArray = new Chunk[8];  // according to test currently written 8 is way enough
+    int chunkArrayIdx = 0;
+    chunkArray[chunkArrayIdx++] = idxChunk;
+
+    ByteBuffer idxBuffer = idxChunk.getData();  // the buffers of the chunks
+    ByteBuffer dataBuffer = dataJumboChunk.getData();
+    int dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;          // offset inside data buffer
+    int idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;           // skip the space for chunk ID
+
+    Cell[] cellArray = asc ? ascCells : descCells;
+
+    for (Cell kv: cellArray) {
+      int dataStartOfset = dataOffset;
+      dataOffset = KeyValueUtil.appendTo(kv, dataBuffer, dataOffset, false); // write deep cell data
+
+      // do we have enough space to write the cell-representation on the index chunk?
+      if (idxOffset + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkCreator.getChunkSize()) {
+        // allocate more index chunks if needed
+        idxChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP);
+        idxBuffer = idxChunk.getData();
+        idxOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
+        chunkArray[chunkArrayIdx++] = idxChunk;
+      }
+      // write data chunk id
+      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataJumboChunk.getId());
+      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, dataStartOfset);          // offset
+      idxOffset = ByteBufferUtils.putInt(idxBuffer, idxOffset, KeyValueUtil.length(kv)); // length
+      idxOffset = ByteBufferUtils.putLong(idxBuffer, idxOffset, kv.getSequenceId());     // seqId
+
+      // Jumbo chunks are working only with one cell per chunk, thus always allocate a new jumbo
+      // data chunk for next cell
+      dataJumboChunk = chunkCreator.getChunk(CompactingMemStore.IndexType.CHUNK_MAP,smallChunkSize);
+      dataBuffer = dataJumboChunk.getData();
+      dataOffset = ChunkCreator.SIZEOF_CHUNK_HEADER;
     }
 
     return new CellChunkMap(CellComparatorImpl.COMPARATOR,chunkArray,0,NUM_OF_CELLS,!asc);
