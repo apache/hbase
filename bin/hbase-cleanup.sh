@@ -101,11 +101,11 @@ clean_up() {
     execute_zk_command "rmr ${zparent}";
     ;;
   --cleanHdfs)
-    execute_hdfs_command "-rmr ${hrootdir}"
+    execute_hdfs_command "-rm -R ${hrootdir}"
     ;;
   --cleanAll)
     execute_zk_command "rmr ${zparent}";
-    execute_hdfs_command "-rmr ${hrootdir}"
+    execute_hdfs_command "-rm -R ${hrootdir}"
     ;;
   --cleanAcls)
     execute_clean_acls;
