@@ -22,15 +22,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestWeakObjectPool {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
+      withLookingForStuckThread(true).build();
   ObjectPool<String, Object> pool;
 
   @Before
@@ -89,7 +94,7 @@ public class TestWeakObjectPool {
     Assert.assertNotEquals(hash1, System.identityHashCode(obj3));
   }
 
-  @Test(timeout=1000)
+  @Test
   public void testCongestion() throws Exception {
     final int THREAD_COUNT = 100;
 
