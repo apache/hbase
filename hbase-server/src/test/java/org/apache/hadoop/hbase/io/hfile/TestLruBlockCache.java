@@ -32,6 +32,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -56,6 +60,7 @@ public class TestLruBlockCache {
     final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
+    final Configuration conf = HBaseConfiguration.create();
     final LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
@@ -84,6 +89,17 @@ public class TestLruBlockCache {
       service.shutdown();
       // The test may fail here if the evict thread frees the blocks too fast
       service.awaitTermination(10, TimeUnit.MINUTES);
+      Waiter.waitFor(conf, 10000, 100, new ExplainingPredicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return cache.getBlockCount() == 0;
+        }
+
+        @Override
+        public String explainFailure() throws Exception {
+          return "Cache block count failed to return to 0";
+        }
+      });
       assertEquals(0, cache.getBlockCount());
       assertEquals(cache.getOverhead(), cache.getCurrentSize());
     }
