@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -150,8 +152,10 @@ public class RestoreTablesClient {
     if (manifest.getType() == BackupType.FULL) {
       LOG.info("Restoring '" + sTable + "' to '" + tTable + "' from full" + " backup image "
           + tableBackupPath.toString());
+      conf.set(JOB_NAME_CONF_KEY, "Full_Restore-" + backupId + "-" + tTable);
       restoreTool.fullRestoreTable(conn, tableBackupPath, sTable, tTable, truncateIfExists,
         lastIncrBackupId);
+      conf.unset(JOB_NAME_CONF_KEY);
     } else { // incremental Backup
       throw new IOException("Unexpected backup type " + image.getType());
     }
@@ -175,6 +179,7 @@ public class RestoreTablesClient {
     LOG.info("Restoring '" + sTable + "' to '" + tTable + "' from log dirs: " + dirs);
     Path[] paths = new Path[dirList.size()];
     dirList.toArray(paths);
+    conf.set(JOB_NAME_CONF_KEY, "Incremental_Restore-" + backupId + "-" + tTable);
     restoreTool.incrementalRestoreTable(conn, tableBackupPath, paths, new TableName[] { sTable },
       new TableName[] { tTable }, lastIncrBackupId);
     LOG.info(sTable + " has been successfully restored to " + tTable);

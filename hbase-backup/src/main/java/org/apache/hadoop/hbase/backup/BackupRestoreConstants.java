@@ -93,6 +93,7 @@ public interface BackupRestoreConstants {
   public static final String OPTION_YARN_QUEUE_NAME_DESC = "Yarn queue name to run backup create command on";
   public static final String OPTION_YARN_QUEUE_NAME_RESTORE_DESC = "Yarn queue name to run backup restore command on";
 
+  public final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   public static final String BACKUP_CONFIG_STRING =  BackupRestoreConstants.BACKUP_ENABLE_KEY + "=true\n"
       + "hbase.master.logcleaner.plugins="
