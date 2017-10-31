@@ -371,7 +371,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testForceTrigger() throws InterruptedException {
     final int period = 100;
-    final int delta = 5;
+    final int delta = 10;
     ChoreService service = new ChoreService("testForceTrigger");
     final CountingChore chore = new CountingChore("countingChore", period);
     try {
