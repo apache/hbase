@@ -51,13 +51,13 @@ public final class SegmentFactory {
   // for compaction
   public ImmutableSegment createImmutableSegmentByCompaction(final Configuration conf,
       final CellComparator comparator, MemStoreSegmentsIterator iterator, int numOfCells,
-      CompactingMemStore.IndexType idxType)
+      CompactingMemStore.IndexType idxType, MemStoreCompactionStrategy.Action action)
       throws IOException {
 
     MemStoreLAB memStoreLAB = MemStoreLAB.newInstance(conf);
     return
         createImmutableSegment(
-            conf,comparator,iterator,memStoreLAB,numOfCells,MemStoreCompactor.Action.COMPACT,idxType);
+            conf,comparator,iterator,memStoreLAB,numOfCells,action,idxType);
   }
 
   // create empty immutable segment
@@ -82,13 +82,14 @@ public final class SegmentFactory {
   // for merge
   public ImmutableSegment createImmutableSegmentByMerge(final Configuration conf,
       final CellComparator comparator, MemStoreSegmentsIterator iterator, int numOfCells,
-      List<ImmutableSegment> segments, CompactingMemStore.IndexType idxType)
+      List<ImmutableSegment> segments, CompactingMemStore.IndexType idxType,
+      MemStoreCompactionStrategy.Action action)
       throws IOException {
 
     MemStoreLAB memStoreLAB = getMergedMemStoreLAB(conf, segments);
     return
         createImmutableSegment(
-            conf,comparator,iterator,memStoreLAB,numOfCells,MemStoreCompactor.Action.MERGE,idxType);
+            conf,comparator,iterator,memStoreLAB,numOfCells,action,idxType);
 
   }
 
@@ -96,18 +97,18 @@ public final class SegmentFactory {
   // for flattening
   public ImmutableSegment createImmutableSegmentByFlattening(
       CSLMImmutableSegment segment, CompactingMemStore.IndexType idxType,
-      MemStoreSizing memstoreSizing) {
+      MemStoreSizing memstoreSizing, MemStoreCompactionStrategy.Action action) {
     ImmutableSegment res = null;
     switch (idxType) {
-    case CHUNK_MAP:
-      res = new CellChunkImmutableSegment(segment, memstoreSizing);
-      break;
-    case CSLM_MAP:
-      assert false; // non-flat segment can not be the result of flattening
-      break;
-    case ARRAY_MAP:
-      res = new CellArrayImmutableSegment(segment, memstoreSizing);
-      break;
+      case CHUNK_MAP:
+        res = new CellChunkImmutableSegment(segment, memstoreSizing, action);
+        break;
+      case CSLM_MAP:
+        assert false; // non-flat segment can not be the result of flattening
+        break;
+      case ARRAY_MAP:
+        res = new CellArrayImmutableSegment(segment, memstoreSizing, action);
+        break;
     }
     return res;
   }
@@ -116,7 +117,7 @@ public final class SegmentFactory {
   //****** private methods to instantiate concrete store segments **********//
   private ImmutableSegment createImmutableSegment(final Configuration conf, final CellComparator comparator,
       MemStoreSegmentsIterator iterator, MemStoreLAB memStoreLAB, int numOfCells,
-      MemStoreCompactor.Action action, CompactingMemStore.IndexType idxType) {
+      MemStoreCompactionStrategy.Action action, CompactingMemStore.IndexType idxType) {
 
     ImmutableSegment res = null;
     switch (idxType) {

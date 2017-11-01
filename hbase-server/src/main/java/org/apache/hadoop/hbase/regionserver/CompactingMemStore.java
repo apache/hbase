@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,13 +67,13 @@ public class CompactingMemStore extends AbstractMemStore {
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
-  private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.25;
+  private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.02;
 
   private static final Log LOG = LogFactory.getLog(CompactingMemStore.class);
   private HStore store;
   private RegionServicesForStores regionServices;
   private CompactionPipeline pipeline;
-  private MemStoreCompactor compactor;
+  protected MemStoreCompactor compactor;
 
   private long inmemoryFlushSize;       // the threshold on active size for in-memory flush
   private final AtomicBoolean inMemoryFlushInProgress = new AtomicBoolean(false);
@@ -81,7 +82,7 @@ public class CompactingMemStore extends AbstractMemStore {
   private boolean inWalReplay = false;
 
   @VisibleForTesting
-  private final AtomicBoolean allowCompaction = new AtomicBoolean(true);
+  protected final AtomicBoolean allowCompaction = new AtomicBoolean(true);
   private boolean compositeSnapshot = true;
 
   /**
@@ -119,7 +120,8 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   @VisibleForTesting
-  protected MemStoreCompactor createMemStoreCompactor(MemoryCompactionPolicy compactionPolicy) {
+  protected MemStoreCompactor createMemStoreCompactor(MemoryCompactionPolicy compactionPolicy)
+      throws IllegalArgumentIOException {
     return new MemStoreCompactor(this, compactionPolicy);
   }
 
@@ -205,6 +207,7 @@ public class CompactingMemStore extends AbstractMemStore {
       } else {
         pushTailToSnapshot();
       }
+      compactor.resetStats();
     }
     return new MemStoreSnapshot(snapshotId, this.snapshot);
   }
@@ -298,10 +301,6 @@ public class CompactingMemStore extends AbstractMemStore {
     this.compositeSnapshot = useCompositeSnapshot;
   }
 
-  public boolean isCompositeSnapshot() {
-    return this.compositeSnapshot;
-  }
-
   public boolean swapCompactedSegments(VersionedSegmentsList versionedList, ImmutableSegment result,
       boolean merge) {
     // last true stands for updating the region size
@@ -313,8 +312,8 @@ public class CompactingMemStore extends AbstractMemStore {
    *           with version taken earlier. This version must be passed as a parameter here.
    *           The flattening happens only if versions match.
    */
-  public void flattenOneSegment(long requesterVersion) {
-    pipeline.flattenOneSegment(requesterVersion, indexType);
+  public void flattenOneSegment(long requesterVersion,  MemStoreCompactionStrategy.Action action) {
+    pipeline.flattenOneSegment(requesterVersion, indexType, action);
   }
 
   // setter is used only for testability
@@ -543,27 +542,9 @@ public class CompactingMemStore extends AbstractMemStore {
     }
   }
 
-  //----------------------------------------------------------------------
-  //methods for tests
-  //----------------------------------------------------------------------
   @VisibleForTesting
   boolean isMemStoreFlushingInMemory() {
     return inMemoryFlushInProgress.get();
-  }
-
-  @VisibleForTesting
-  void disableCompaction() {
-    allowCompaction.set(false);
-  }
-
-  @VisibleForTesting
-  void enableCompaction() {
-    allowCompaction.set(true);
-  }
-
-  @VisibleForTesting
-  void initiateType(MemoryCompactionPolicy compactionType) {
-    compactor.initiateAction(compactionType);
   }
 
   /**

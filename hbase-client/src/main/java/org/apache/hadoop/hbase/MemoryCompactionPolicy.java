@@ -42,5 +42,11 @@ public enum MemoryCompactionPolicy {
    * on-disk compaction does after the data is flushed to disk). This policy is most useful for
    * applications with high data churn or small working sets.
    */
-  EAGER
+  EAGER,
+  /**
+   * Adaptive compaction adapts to the workload. It applies either index compaction or data
+   * compaction based on the ratio of duplicate cells in the data.
+   */
+  ADAPTIVE
+
 }

@@ -141,7 +141,7 @@ public class TestRecoveredEdits {
     // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
     // we flush at 1MB, that there are at least 3 flushed files that are there because of the
     // replay of edits.
-    if(policy == MemoryCompactionPolicy.EAGER) {
+    if(policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() >= 1);
     } else {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
