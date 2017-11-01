@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -42,11 +43,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestSnapshotWithAcl extends SecureTestUtil {
 
-  public TableName TEST_TABLE = TableName.valueOf("TestSnapshotWithAcl");
+  public TableName TEST_TABLE = TableName.valueOf(UUID.randomUUID().toString());
 
   private static final int ROW_COUNT = 30000;
 
@@ -119,6 +121,7 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
     // Enable EXEC permission checking
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
     TEST_UTIL.startMiniCluster();
+    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
     MasterCoprocessorHost cpHost =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
@@ -190,11 +193,11 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
     loadData();
     verifyRows(TEST_TABLE);
 
-    String snapshotName1 = "testSnapshot1";
+    String snapshotName1 = UUID.randomUUID().toString();
     admin.snapshot(snapshotName1, TEST_TABLE);
 
     // clone snapshot with restoreAcl true.
-    TableName tableName1 = TableName.valueOf("tableName1");
+    TableName tableName1 = TableName.valueOf(UUID.randomUUID().toString());
     admin.cloneSnapshot(snapshotName1, tableName1, true);
     verifyRows(tableName1);
     verifyAllowed(new AccessReadAction(tableName1), USER_OWNER, USER_RO, USER_RW);
@@ -203,7 +206,7 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
     verifyDenied(new AccessWriteAction(tableName1), USER_RO, USER_NONE);
 
     // clone snapshot with restoreAcl false.
-    TableName tableName2 = TableName.valueOf("tableName2");
+    TableName tableName2 = TableName.valueOf(UUID.randomUUID().toString());
     admin.cloneSnapshot(snapshotName1, tableName2, false);
     verifyRows(tableName2);
     verifyAllowed(new AccessReadAction(tableName2), USER_OWNER);
