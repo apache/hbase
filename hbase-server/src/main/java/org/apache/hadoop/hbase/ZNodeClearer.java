@@ -183,7 +183,7 @@ public class ZNodeClearer {
       znodeFileContent = ZNodeClearer.readMyEphemeralNodeOnDisk();
       if(ZNodeClearer.tablesOnMaster(conf)) {
       //In case of master crash also remove rsZnode since master is also regionserver 
-        ZKUtil.deleteNodeFailSilent(zkw, znodeFileContent);  
+        ZKUtil.deleteNodeFailSilent(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode,znodeFileContent));
         return MasterAddressTracker.deleteIfEquals(zkw, 
                                     ZNodeClearer.parseMasterServerName(znodeFileContent));
       } else {
