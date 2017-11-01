@@ -258,51 +258,26 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
         jdk "JDK 1.8 (latest)"
       }
       steps {
-        sh 'mvn --version --offline'
-        dir ("component") {
-          sh '''#!/bin/bash -e
-            echo "Clean..."
-            mvn --batch-mode -DskipTests clean
-            echo "Step 3 Build the source tarball"
-            mvn -Prelease --batch-mode -Dmaven.repo.local="${WORKSPACE}/.m2-for-repo" install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml
-'''
-        }
-        dir ("unpacked_src_tarball") {
-          sh '''#!/bin/bash -e
-            echo "Unpack the source tarball"
-            tar --strip-components=1 -xzf ../component/hbase-assembly/target/hbase-*-src.tar.gz
-            echo "Building from source artifact."
-            mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${WORKSPACE}/.m2-for-src" clean install assembly:single
-            echo "Clean up after checking ability to build."
-            mvn -DskipTests --batch-mode clean
-'''
-        }
-        dir ("component") {
-          sh '''#!/bin/bash -e
-            echo "Clean up the source checkout"
-            mvn -DskipTests --batch-mode clean
-            echo "Diff against source tree"
-            diff --binary --recursive . ../unpacked_src_tarball >../diff_output || true
-'''
-        }
-        // expectation check largely based on HBASE-14952
         sh '''#!/bin/bash -e
-          echo "Checking against things we don't expect to include in the source tarball (git related, hbase-native-client, etc.)"
-          cat >known_excluded <<END
-Only in .: .git
-Only in .: .gitattributes
-Only in .: .gitignore
-Only in .: hbase-native-client
-END
-          if ! diff known_excluded diff_output >/dev/null ; then
-            echo "Any output here are unexpected differences between the source artifact we'd make for an RC and the current branch."
-            echo "The expected differences are on the < side and the current differences are on the > side."
-            echo "In a given set of differences, '.' refers to the branch in the repo and 'unpacked_src_tarball' refers to what we pulled out of the tarball."
-            diff known_excluded diff_output
-          else
-            echo "Everything looks as expected."
-          fi
+          echo "Setting up directories"
+          rm -rf "output-srctarball" && mkdir "output-srctarball"
+          rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
+          rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
+          rm -rf ".m2-for-src" && mkdir ".m2-for-src"
 '''
+        sh """#!/bin/bash -e
+          ${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh \
+              --intermediate-file-dir output-srctarball \
+              --unpack-temp-dir unpacked_src_tarball \
+              --maven-m2-initial .m2-for-repo \
+              --maven-m2-src-build .m2-for-src \
+              ${env.BASEDIR}
+"""
+      }
+      post {
+        always {
+          archive 'output-srctarball/*'
+        }
       }
     }
   }
