@@ -30,7 +30,7 @@ String format = "html";
 // apply requested filter
 List<? extends MonitoredTask> tasks = taskMonitor.getTasks(filter);
 long now = System.currentTimeMillis();
-Collections.reverse(tasks);
+Collections.sort(tasks, (t1, t2) -> Long.compare(t1.getStateTime(), t2.getStateTime()));
 boolean first = true;
 </%java>
 <%if format.equals("json")%>
