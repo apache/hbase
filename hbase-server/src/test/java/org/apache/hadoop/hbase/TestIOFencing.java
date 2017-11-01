@@ -368,7 +368,7 @@ public class TestIOFencing {
           Thread.sleep(1000);
         }
       }
-      if (policy == MemoryCompactionPolicy.EAGER) {
+      if (policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
         assertTrue(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT >= count);
       } else {
         assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, count);

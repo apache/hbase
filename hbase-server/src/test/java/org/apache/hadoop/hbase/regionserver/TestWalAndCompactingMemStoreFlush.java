@@ -775,7 +775,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.BASIC));
     // length of pipeline that requires merge
-    conf.setInt(MemStoreCompactor.COMPACTING_MEMSTORE_THRESHOLD_KEY, 1);
+    conf.setInt(MemStoreCompactionStrategy.COMPACTING_MEMSTORE_THRESHOLD_KEY, 1);
 
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushWithBasicAndMerge", conf);

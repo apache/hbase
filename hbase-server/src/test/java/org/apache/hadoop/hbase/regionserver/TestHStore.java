@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -1177,7 +1178,8 @@ public class TestHStore {
   }
 
   @Test
-  public void testFlushBeforeCompletingScanWithFilterHint() throws IOException, InterruptedException {
+  public void testFlushBeforeCompletingScanWithFilterHint() throws IOException,
+      InterruptedException {
     final AtomicBoolean timeToGetHint = new AtomicBoolean(false);
     final int expectedSize = 2;
     testFlushBeforeCompletingScan(new MyListHook() {
@@ -1364,7 +1366,8 @@ public class TestHStore {
     myStore.add(createCell(qf3, ts, seqId, oldValue), memStoreSizing);
     long snapshotId = id++;
     // push older data into snapshot -- phase (1/4)
-    StoreFlushContext storeFlushCtx = store.createFlushContext(snapshotId, FlushLifeCycleTracker.DUMMY);
+    StoreFlushContext storeFlushCtx = store.createFlushContext(snapshotId, FlushLifeCycleTracker
+        .DUMMY);
     storeFlushCtx.prepare();
 
     // insert current data into active -- phase (2/4)
@@ -1464,7 +1467,7 @@ public class TestHStore {
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStoreWithCustomCompactor.class.getName());
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushSize));
     // Set the lower threshold to invoke the "MERGE" policy
-    conf.set(MemStoreCompactor.COMPACTING_MEMSTORE_THRESHOLD_KEY, String.valueOf(0));
+    conf.set(MemStoreCompactionStrategy.COMPACTING_MEMSTORE_THRESHOLD_KEY, String.valueOf(0));
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
         .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("thisisavarylargevalue");
@@ -1551,8 +1554,8 @@ public class TestHStore {
   private class MyStore extends HStore {
     private final MyStoreHook hook;
 
-    MyStore(final HRegion region, final ColumnFamilyDescriptor family, final Configuration confParam,
-        MyStoreHook hook, boolean switchToPread) throws IOException {
+    MyStore(final HRegion region, final ColumnFamilyDescriptor family, final Configuration
+        confParam, MyStoreHook hook, boolean switchToPread) throws IOException {
       super(region, family, confParam);
       this.hook = hook;
     }
@@ -1669,7 +1672,8 @@ public class TestHStore {
   private static class MyMemStoreCompactor extends MemStoreCompactor {
     private static final AtomicInteger RUNNER_COUNT = new AtomicInteger(0);
     private static final CountDownLatch START_COMPACTOR_LATCH = new CountDownLatch(1);
-    public MyMemStoreCompactor(CompactingMemStore compactingMemStore, MemoryCompactionPolicy compactionPolicy) {
+    public MyMemStoreCompactor(CompactingMemStore compactingMemStore, MemoryCompactionPolicy
+        compactionPolicy) throws IllegalArgumentIOException {
       super(compactingMemStore, compactionPolicy);
     }
 
@@ -1697,7 +1701,8 @@ public class TestHStore {
     }
 
     @Override
-    protected MemStoreCompactor createMemStoreCompactor(MemoryCompactionPolicy compactionPolicy) {
+    protected MemStoreCompactor createMemStoreCompactor(MemoryCompactionPolicy compactionPolicy)
+        throws IllegalArgumentIOException {
       return new MyMemStoreCompactor(this, compactionPolicy);
     }
 

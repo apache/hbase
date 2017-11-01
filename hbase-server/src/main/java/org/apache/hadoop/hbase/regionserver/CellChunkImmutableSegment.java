@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -48,7 +49,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
    * The given iterator returns the Cells that "survived" the compaction.
    */
   protected CellChunkImmutableSegment(CellComparator comparator, MemStoreSegmentsIterator iterator,
-      MemStoreLAB memStoreLAB, int numOfCells, MemStoreCompactor.Action action) {
+      MemStoreLAB memStoreLAB, int numOfCells, MemStoreCompactionStrategy.Action action) {
     super(null, comparator, memStoreLAB); // initialize the CellSet with NULL
     incSize(0, DEEP_OVERHEAD_CCM); // initiate the heapSize with the size of the segment metadata
     // build the new CellSet based on CellArrayMap and update the CellSet of the new Segment
@@ -61,12 +62,13 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
    * The given iterator returns the Cells that "survived" the compaction.
    */
   protected CellChunkImmutableSegment(CSLMImmutableSegment segment,
-      MemStoreSizing memstoreSizing) {
+      MemStoreSizing memstoreSizing, MemStoreCompactionStrategy.Action action) {
     super(segment); // initiailize the upper class
     incSize(0,-CSLMImmutableSegment.DEEP_OVERHEAD_CSLM + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM);
     int numOfCells = segment.getCellsCount();
     // build the new CellSet based on CellChunkMap
-    reinitializeCellSet(numOfCells, segment.getScanner(Long.MAX_VALUE), segment.getCellSet());
+    reinitializeCellSet(numOfCells, segment.getScanner(Long.MAX_VALUE), segment.getCellSet(),
+        action);
     // arrange the meta-data size, decrease all meta-data sizes related to SkipList;
     // add sizes of CellChunkMap entry, decrease also Cell object sizes
     // (reinitializeCellSet doesn't take the care for the sizes)
@@ -90,15 +92,17 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   /*------------------------------------------------------------------------*/
   // Create CellSet based on CellChunkMap from compacting iterator
   private void initializeCellSet(int numOfCells, MemStoreSegmentsIterator iterator,
-      MemStoreCompactor.Action action) {
+      MemStoreCompactionStrategy.Action action) {
 
     // calculate how many chunks we will need for index
     int chunkSize = ChunkCreator.getInstance().getChunkSize();
     int numOfCellsInChunk = CellChunkMap.NUM_OF_CELL_REPS_IN_CHUNK;
-    int numberOfChunks = calculateNumberOfChunks(numOfCells,numOfCellsInChunk);
+    int numberOfChunks = calculateNumberOfChunks(numOfCells, numOfCellsInChunk);
     int numOfCellsAfterCompaction = 0;
     int currentChunkIdx = 0;
     int offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
+    int numUniqueKeys=0;
+    Cell prev = null;
     // all index Chunks are allocated from ChunkCreator
     Chunk[] chunks = new Chunk[numberOfChunks];
     for (int i=0; i < numberOfChunks; i++) {
@@ -112,7 +116,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
         currentChunkIdx++;              // continue to the next index chunk
         offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
-      if (action == MemStoreCompactor.Action.COMPACT) {
+      if (action == MemStoreCompactionStrategy.Action.COMPACT) {
         c = maybeCloneWithAllocator(c); // for compaction copy cell to the new segment (MSLAB copy)
       }
       offsetInCurentChunk = // add the Cell reference to the index chunk
@@ -122,11 +126,27 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       // second parameter true, because in compaction/merge the addition of the cell to new segment
       // is always successful
       updateMetaInfo(c, true, null); // updates the size per cell
+      if(action == MemStoreCompactionStrategy.Action.MERGE_COUNT_UNIQUE_KEYS) {
+        //counting number of unique keys
+        if (prev != null) {
+          if (!CellUtil.matchingRowColumnBytes(prev, c)) {
+            numUniqueKeys++;
+          }
+        } else {
+          numUniqueKeys++;
+        }
+      }
+      prev = c;
+    }
+    if(action == MemStoreCompactionStrategy.Action.COMPACT) {
+      numUniqueKeys = numOfCells;
+    } else if(action != MemStoreCompactionStrategy.Action.MERGE_COUNT_UNIQUE_KEYS) {
+      numUniqueKeys = CellSet.UNKNOWN_NUM_UNIQUES;
     }
     // build the immutable CellSet
     CellChunkMap ccm =
         new CellChunkMap(getComparator(), chunks, 0, numOfCellsAfterCompaction, false);
-    this.setCellSet(null, new CellSet(ccm));  // update the CellSet of this Segment
+    this.setCellSet(null, new CellSet(ccm, numUniqueKeys));  // update the CellSet of this Segment
   }
 
   /*------------------------------------------------------------------------*/
@@ -135,12 +155,13 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   // This is a service for not-flat immutable segments
   // Assumption: cells do not exceed chunk size!
   private void reinitializeCellSet(
-      int numOfCells, KeyValueScanner segmentScanner, CellSet oldCellSet) {
+      int numOfCells, KeyValueScanner segmentScanner, CellSet oldCellSet,
+      MemStoreCompactionStrategy.Action action) {
     Cell curCell;
     // calculate how many chunks we will need for metadata
     int chunkSize = ChunkCreator.getInstance().getChunkSize();
     int numOfCellsInChunk = CellChunkMap.NUM_OF_CELL_REPS_IN_CHUNK;
-    int numberOfChunks = calculateNumberOfChunks(numOfCells,numOfCellsInChunk);
+    int numberOfChunks = calculateNumberOfChunks(numOfCells, numOfCellsInChunk);
     // all index Chunks are allocated from ChunkCreator
     Chunk[] chunks = new Chunk[numberOfChunks];
     for (int i=0; i < numberOfChunks; i++) {
@@ -150,6 +171,8 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     int currentChunkIdx = 0;
     int offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
 
+    int numUniqueKeys=0;
+    Cell prev = null;
     try {
       while ((curCell = segmentScanner.next()) != null) {
         assert (curCell instanceof ByteBufferKeyValue); // shouldn't get here anything but ByteBufferKeyValue
@@ -161,6 +184,20 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
         offsetInCurentChunk =
             createCellReference((ByteBufferKeyValue) curCell, chunks[currentChunkIdx].getData(),
                 offsetInCurentChunk);
+        if(action == MemStoreCompactionStrategy.Action.FLATTEN_COUNT_UNIQUE_KEYS) {
+          //counting number of unique keys
+          if (prev != null) {
+            if (!CellUtil.matchingRowColumn(prev, curCell)) {
+              numUniqueKeys++;
+            }
+          } else {
+            numUniqueKeys++;
+          }
+        }
+        prev = curCell;
+      }
+      if(action != MemStoreCompactionStrategy.Action.FLATTEN_COUNT_UNIQUE_KEYS) {
+        numUniqueKeys = CellSet.UNKNOWN_NUM_UNIQUES;
       }
     } catch (IOException ie) {
       throw new IllegalStateException(ie);
@@ -169,7 +206,8 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     }
 
     CellChunkMap ccm = new CellChunkMap(getComparator(), chunks, 0, numOfCells, false);
-    this.setCellSet(oldCellSet, new CellSet(ccm)); // update the CellSet of this Segment
+    // update the CellSet of this Segment
+    this.setCellSet(oldCellSet, new CellSet(ccm, numUniqueKeys));
   }
 
   /*------------------------------------------------------------------------*/

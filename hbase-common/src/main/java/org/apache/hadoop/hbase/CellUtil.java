@@ -1612,6 +1612,35 @@ public final class CellUtil {
     return matchingColumn(left, right);
   }
 
+  public static boolean matchingRowColumnBytes(final Cell left, final Cell right) {
+    int lrowlength = left.getRowLength();
+    int rrowlength = right.getRowLength();
+    int lfamlength = left.getFamilyLength();
+    int rfamlength = right.getFamilyLength();
+    int lqlength = left.getQualifierLength();
+    int rqlength = right.getQualifierLength();
+    // match length
+    if ((lrowlength + lfamlength + lqlength) !=
+        (rrowlength + rfamlength + rqlength)) {
+      return false;
+    }
+
+    // match row
+    if (!Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
+        right.getRowOffset(), rrowlength)) {
+      return false;
+    }
+    //match family
+    if (!Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), lfamlength,
+        right.getFamilyArray(), right.getFamilyOffset(), rfamlength)) {
+      return false;
+    }
+    //match qualifier
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+        lqlength, right.getQualifierArray(), right.getQualifierOffset(),
+        rqlength);
+  }
+
   /**
    * Compares the cell's qualifier with the given byte[]
    * @param left the cell for which the qualifier has to be compared

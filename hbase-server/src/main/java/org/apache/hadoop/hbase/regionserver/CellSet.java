@@ -41,6 +41,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class CellSet implements NavigableSet<Cell>  {
+
+  public static final int UNKNOWN_NUM_UNIQUES = -1;
   // Implemented on top of a {@link java.util.concurrent.ConcurrentSkipListMap}
   // Differ from CSLS in one respect, where CSLS does "Adds the specified element to this set if it
   // is not already present.", this implementation "Adds the specified element to this set EVEN
@@ -48,12 +50,22 @@ public class CellSet implements NavigableSet<Cell>  {
   // Otherwise, has same attributes as ConcurrentSkipListSet
   private final NavigableMap<Cell, Cell> delegatee; ///
 
+  private final int numUniqueKeys;
+
   CellSet(final CellComparator c) {
     this.delegatee = new ConcurrentSkipListMap<>(c);
+    this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
+  CellSet(final NavigableMap<Cell, Cell> m, int numUniqueKeys) {
+    this.delegatee = m;
+    this.numUniqueKeys = numUniqueKeys;
+  }
+
+  @VisibleForTesting
   CellSet(final NavigableMap<Cell, Cell> m) {
     this.delegatee = m;
+    this.numUniqueKeys = UNKNOWN_NUM_UNIQUES;
   }
 
   @VisibleForTesting
@@ -83,7 +95,7 @@ public class CellSet implements NavigableSet<Cell>  {
 
   public NavigableSet<Cell> headSet(final Cell toElement,
       boolean inclusive) {
-    return new CellSet(this.delegatee.headMap(toElement, inclusive));
+    return new CellSet(this.delegatee.headMap(toElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
   public Cell higher(Cell e) {
@@ -120,7 +132,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   public NavigableSet<Cell> tailSet(Cell fromElement, boolean inclusive) {
-    return new CellSet(this.delegatee.tailMap(fromElement, inclusive));
+    return new CellSet(this.delegatee.tailMap(fromElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
   public Comparator<? super Cell> comparator() {
@@ -186,5 +198,9 @@ public class CellSet implements NavigableSet<Cell>  {
 
   public <T> T[] toArray(T[] a) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
+  }
+
+  public int getNumUniqueKeys() {
+    return numUniqueKeys;
   }
 }

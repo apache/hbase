@@ -278,19 +278,17 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     }
     String className;
     switch (inMemoryCompaction) {
-    case BASIC:
-    case EAGER:
-      Class<? extends CompactingMemStore> clz =
-          conf.getClass(MEMSTORE_CLASS_NAME, CompactingMemStore.class, CompactingMemStore.class);
-      className = clz.getName();
-      this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
-          this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
-      break;
-    case NONE:
-    default:
-      className = DefaultMemStore.class.getName();
-      this.memstore = ReflectionUtils.newInstance(DefaultMemStore.class,
-        new Object[] { conf, this.comparator });
+      case NONE:
+        className = DefaultMemStore.class.getName();
+        this.memstore = ReflectionUtils.newInstance(DefaultMemStore.class,
+            new Object[] { conf, this.comparator });
+        break;
+      default:
+        Class<? extends CompactingMemStore> clz = conf.getClass(MEMSTORE_CLASS_NAME,
+          CompactingMemStore.class, CompactingMemStore.class);
+        className = clz.getName();
+        this.memstore = ReflectionUtils.newInstance(clz, new Object[] { conf, this.comparator, this,
+            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction });
     }
     LOG.info("Memstore class name is " + className);
     this.offPeakHours = OffPeakHours.getInstance(conf);
