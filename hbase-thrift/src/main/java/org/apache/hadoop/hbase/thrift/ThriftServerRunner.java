@@ -81,6 +81,8 @@ import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.jetty.SslSelectChannelConnectorSecure;
+import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
@@ -196,7 +198,7 @@ public class ThriftServerRunner implements Runnable {
   private final HBaseHandler hbaseHandler;
   private final UserGroupInformation realUser;
 
-  private final String qop;
+  private SaslUtil.QualityOfProtection qop;
   private String host;
 
   private final boolean securityEnabled;
@@ -320,7 +322,10 @@ public class ThriftServerRunner implements Runnable {
     this.handler = HbaseHandlerMetricsProxy.newInstance(
       hbaseHandler, metrics, conf);
     this.realUser = userProvider.getCurrent().getUGI();
-    qop = conf.get(THRIFT_QOP_KEY);
+    String strQop = conf.get(THRIFT_QOP_KEY);
+    if (strQop != null) {
+      this.qop = SaslUtil.getQop(strQop);
+    }
     doAsEnabled = conf.getBoolean(THRIFT_SUPPORT_PROXYUSER, false);
     if (doAsEnabled) {
       if (!conf.getBoolean(USE_HTTP_CONF_KEY, false)) {
@@ -328,10 +333,14 @@ public class ThriftServerRunner implements Runnable {
       }
     }
     if (qop != null) {
-      if (!qop.equals("auth") && !qop.equals("auth-int")
-          && !qop.equals("auth-conf")) {
-        throw new IOException("Invalid " + THRIFT_QOP_KEY + ": " + qop
-          + ", it must be 'auth', 'auth-int', or 'auth-conf'");
+      if (qop != SaslUtil.QualityOfProtection.AUTHENTICATION &&
+          qop != SaslUtil.QualityOfProtection.INTEGRITY &&
+          qop != SaslUtil.QualityOfProtection.PRIVACY) {
+        throw new IOException(String.format("Invalide %s: It must be one of %s, %s, or %s.",
+                              THRIFT_QOP_KEY,
+                              QualityOfProtection.AUTHENTICATION.name(),
+                              QualityOfProtection.INTEGRITY.name(),
+                              QualityOfProtection.PRIVACY.name()));
       }
       if (!securityEnabled) {
         throw new IOException("Thrift server must"
@@ -475,7 +484,8 @@ public class ThriftServerRunner implements Runnable {
       String name = SecurityUtil.getUserFromPrincipal(
         conf.get("hbase.thrift.kerberos.principal"));
       Map<String, String> saslProperties = new HashMap<String, String>();
-      saslProperties.put(Sasl.QOP, qop);
+      saslProperties.put(Sasl.QOP, qop.getSaslQop());
+      saslProperties.put(Sasl.SERVER_AUTH, "true");
       TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
       saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
         new SaslGssCallbackHandler() {

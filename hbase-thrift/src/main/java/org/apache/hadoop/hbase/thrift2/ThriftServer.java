@@ -192,6 +192,7 @@ public class ThriftServer {
     } else {
       Map<String, String> saslProperties = new HashMap<String, String>();
       saslProperties.put(Sasl.QOP, qop.getSaslQop());
+      saslProperties.put(Sasl.SERVER_AUTH, "true");
       TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
       saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
         new SaslGssCallbackHandler() {
