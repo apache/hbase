@@ -158,7 +158,6 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_SKIP_INIT = "skip_init";
   protected static final String OPT_INIT_ONLY = "init_only";
   protected static final String NUM_TABLES = "num_tables";
-  protected static final String OPT_REGIONS_PER_SERVER = "regions_per_server";
   protected static final String OPT_BATCHUPDATE = "batchupdate";
   protected static final String OPT_UPDATE = "update";
 
@@ -351,10 +350,6 @@ public class LoadTestTool extends AbstractHBaseTool {
       "A positive integer number. When a number n is speicfied, load test "
           + "tool  will load n table parallely. -tn parameter value becomes "
           + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
-
-    addOptWithArg(OPT_REGIONS_PER_SERVER,
-      "A positive integer number. When a number n is specified, load test "
-          + "tool will create the test table with n regions per server");
 
     addOptWithArg(OPT_ENCRYPTION, OPT_ENCRYPTION_USAGE);
     addOptNoArg(OPT_DEFERRED_LOG_FLUSH, OPT_DEFERRED_LOG_FLUSH_USAGE);
