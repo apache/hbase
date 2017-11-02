@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.MapReduceCell;
@@ -42,7 +42,7 @@ public class CellSortReducer
   protected void reduce(ImmutableBytesWritable row, Iterable<Cell> kvs,
       Reducer<ImmutableBytesWritable, Cell, ImmutableBytesWritable, Cell>.Context context)
   throws java.io.IOException, InterruptedException {
-    TreeSet<Cell> map = new TreeSet<>(CellComparatorImpl.COMPARATOR);
+    TreeSet<Cell> map = new TreeSet<>(CellComparator.getInstance());
     for (Cell kv : kvs) {
       try {
         map.add(PrivateCellUtil.deepClone(kv));

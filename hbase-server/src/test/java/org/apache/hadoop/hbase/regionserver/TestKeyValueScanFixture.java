@@ -24,7 +24,7 @@ import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -46,7 +46,7 @@ public class TestKeyValueScanFixture extends TestCase {
         KeyValueTestUtil.create("RowB", "family", "qf1",
             10, KeyValue.Type.Put, "value-10")
     };
-    KeyValueScanner scan = new KeyValueScanFixture(CellComparatorImpl.COMPARATOR, kvs);
+    KeyValueScanner scan = new KeyValueScanFixture(CellComparator.getInstance(), kvs);
 
     KeyValue kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowA"));
     // should seek to this:

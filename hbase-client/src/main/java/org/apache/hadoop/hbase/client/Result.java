@@ -35,7 +35,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -304,7 +303,7 @@ public class Result implements CellScannable, CellScanner {
             qualifierNotNull, 0, qualifierNotNull.length);
 
     // pos === ( -(insertion point) - 1)
-    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparatorImpl.COMPARATOR);
+    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.getInstance());
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;
@@ -349,7 +348,7 @@ public class Result implements CellScannable, CellScanner {
         qualifier, qoffset, qlength);
 
     // pos === ( -(insertion point) - 1)
-    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparatorImpl.COMPARATOR);
+    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.getInstance());
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;

@@ -1552,7 +1552,7 @@ public final class CellUtil {
   }
 
   public static boolean matchingTimestamp(Cell a, Cell b) {
-    return CellComparatorImpl.COMPARATOR.compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
+    return CellComparator.getInstance().compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
   }
 
   /**

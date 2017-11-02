@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -78,11 +78,11 @@ class FSWALEntry extends Entry {
   @VisibleForTesting
   static Set<byte[]> collectFamilies(List<Cell> cells) {
     if (CollectionUtils.isEmpty(cells)) {
-      return Collections.<byte[]> emptySet();
+      return Collections.emptySet();
     } else {
       return cells.stream()
            .filter(v -> !CellUtil.matchingFamily(v, WALEdit.METAFAMILY))
-           .collect(toCollection(() -> new TreeSet<>(CellComparatorImpl.COMPARATOR::compareFamilies)))
+           .collect(toCollection(() -> new TreeSet<>(CellComparator.getInstance()::compareFamilies)))
            .stream()
            .map(CellUtil::cloneFamily)
            .collect(toCollection(() -> new TreeSet<>(Bytes.BYTES_COMPARATOR)));

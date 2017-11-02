@@ -40,7 +40,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -218,10 +218,8 @@ public class Import extends Configured implements Tool {
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
-      justification="This is wrong, yes, but we should be purging Writables, not fixing them")
     public int compareTo(CellWritableComparable o) {
-      return CellComparatorImpl.COMPARATOR.compare(this.kv, ((CellWritableComparable)o).kv);
+      return CellComparator.getInstance().compare(this.kv, o.kv);
     }
 
     public static class CellWritableComparator extends WritableComparator {

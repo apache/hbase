@@ -96,7 +96,7 @@ public class KeyValue implements ExtendedCell {
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
-   * @deprecated Use {@link CellComparatorImpl#COMPARATOR} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
+   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
