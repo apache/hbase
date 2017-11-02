@@ -33,7 +33,7 @@ pipeline {
     TOOLS = "${env.WORKSPACE}/tools"
     // where we check out to across stages
     BASEDIR = "${env.WORKSPACE}/component"
-    YETUS_RELEASE = '0.5.0'
+    YETUS_RELEASE = '0.6.0'
     // where we'll write everything from different steps.
     OUTPUT_RELATIVE_GENERAL = 'output-general'
     OUTPUTDIR_GENERAL = "${env.WORKSPACE}/output-general"
