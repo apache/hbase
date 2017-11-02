@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
 import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.validateArgAndGetPB;
 
+import com.google.protobuf.Message;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -29,6 +31,7 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallback;
 import org.apache.hadoop.hbase.client.RawScanResultConsumer;
@@ -42,8 +45,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateServi
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.google.protobuf.Message;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the Region Server side via
@@ -120,6 +121,10 @@ public class AsyncAggregationClient {
     return ci.getPromotedValueFromProto(t);
   }
 
+  private static byte[] nullToEmpty(byte[] b) {
+    return b != null ? b : HConstants.EMPTY_BYTE_ARRAY;
+  }
+
   public static <R, S, P extends Message, Q extends Message, T extends Message> CompletableFuture<R>
       max(RawAsyncTable table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<R> future = new CompletableFuture<>();
@@ -149,10 +154,11 @@ public class AsyncAggregationClient {
         return max;
       }
     };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getMax(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getMax(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
@@ -185,10 +191,11 @@ public class AsyncAggregationClient {
         return min;
       }
     };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getMin(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getMin(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
@@ -217,10 +224,11 @@ public class AsyncAggregationClient {
         return count;
       }
     };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getRowNum(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getRowNum(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
@@ -251,10 +259,11 @@ public class AsyncAggregationClient {
         return sum;
       }
     };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getSum(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getSum(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
@@ -288,10 +297,11 @@ public class AsyncAggregationClient {
         return ci.divideForAvg(sum, count);
       }
     };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getAvg(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getAvg(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
@@ -330,10 +340,11 @@ public class AsyncAggregationClient {
         return Math.sqrt(avgSq - avg * avg);
       }
     };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getStd(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getStd(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
@@ -368,10 +379,11 @@ public class AsyncAggregationClient {
             return map;
           }
         };
-    table.coprocessorService(channel -> AggregateService.newStub(channel),
-      (stub, controller, rpcCallback) -> stub.getMedian(controller, req, rpcCallback),
-      scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-      callback);
+    table
+        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+          (stub, controller, rpcCallback) -> stub.getMedian(controller, req, rpcCallback), callback)
+        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
