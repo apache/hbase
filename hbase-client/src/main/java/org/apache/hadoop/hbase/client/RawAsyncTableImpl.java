@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
-import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 
@@ -29,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +35,7 @@ import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.SingleRequestCallerBuilder;
@@ -560,19 +558,64 @@ class RawAsyncTableImpl implements RawAsyncTable {
     });
   }
 
-  @Override
-  public <S, R> void coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable, byte[] startKey, boolean startKeyInclusive, byte[] endKey,
-      boolean endKeyInclusive, CoprocessorCallback<R> callback) {
-    byte[] nonNullStartKey = Optional.ofNullable(startKey).orElse(EMPTY_START_ROW);
-    byte[] nonNullEndKey = Optional.ofNullable(endKey).orElse(EMPTY_END_ROW);
-    List<HRegionLocation> locs = new ArrayList<>();
-    conn.getLocator()
-        .getRegionLocation(tableName, nonNullStartKey,
-          startKeyInclusive ? RegionLocateType.CURRENT : RegionLocateType.AFTER, operationTimeoutNs)
-        .whenComplete(
-          (loc, error) -> onLocateComplete(stubMaker, callable, callback, locs, nonNullEndKey,
-            endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error));
+  private final class CoprocessorServiceBuilderImpl<S, R>
+      implements CoprocessorServiceBuilder<S, R> {
+
+    private final Function<RpcChannel, S> stubMaker;
+
+    private final CoprocessorCallable<S, R> callable;
+
+    private final CoprocessorCallback<R> callback;
+
+    private byte[] startKey = HConstants.EMPTY_START_ROW;
+
+    private boolean startKeyInclusive;
+
+    private byte[] endKey = HConstants.EMPTY_END_ROW;
+
+    private boolean endKeyInclusive;
+
+    public CoprocessorServiceBuilderImpl(Function<RpcChannel, S> stubMaker,
+        CoprocessorCallable<S, R> callable, CoprocessorCallback<R> callback) {
+      this.stubMaker = Preconditions.checkNotNull(stubMaker, "stubMaker is null");
+      this.callable = Preconditions.checkNotNull(callable, "callable is null");
+      this.callback = Preconditions.checkNotNull(callback, "callback is null");
+    }
+
+    @Override
+    public CoprocessorServiceBuilderImpl<S, R> fromRow(byte[] startKey, boolean inclusive) {
+      this.startKey = Preconditions.checkNotNull(startKey,
+        "startKey is null. Consider using" +
+            " an empty byte array, or just do not call this method if you want to start selection" +
+            " from the first region");
+      this.startKeyInclusive = inclusive;
+      return this;
+    }
+
+    @Override
+    public CoprocessorServiceBuilderImpl<S, R> toRow(byte[] endKey, boolean inclusive) {
+      this.endKey = Preconditions.checkNotNull(endKey,
+        "endKey is null. Consider using" +
+            " an empty byte array, or just do not call this method if you want to continue" +
+            " selection to the last region");
+      this.endKeyInclusive = inclusive;
+      return this;
+    }
+
+    @Override
+    public void execute() {
+      conn.getLocator().getRegionLocation(tableName, startKey,
+        startKeyInclusive ? RegionLocateType.CURRENT : RegionLocateType.AFTER, operationTimeoutNs)
+          .whenComplete(
+            (loc, error) -> onLocateComplete(stubMaker, callable, callback, new ArrayList<>(),
+              endKey, endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error));
+    }
   }
 
+  @Override
+  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+      Function<RpcChannel, S> stubMaker, CoprocessorCallable<S, R> callable,
+      CoprocessorCallback<R> callback) {
+    return new CoprocessorServiceBuilderImpl<>(stubMaker, callable, callback);
+  }
 }
