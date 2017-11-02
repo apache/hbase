@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -106,7 +105,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   private int avgValueLen = -1;
 
   /** Key comparator */
-  private CellComparator comparator = CellComparatorImpl.COMPARATOR;
+  private CellComparator comparator = CellComparator.getInstance();
 
   /** Size of this file. */
   private final long fileSize;

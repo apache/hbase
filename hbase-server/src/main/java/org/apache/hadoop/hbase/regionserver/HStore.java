@@ -56,7 +56,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -778,7 +777,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
                   + CellUtil.getCellKeyAsString(prevCell) + " current="
                   + CellUtil.getCellKeyAsString(cell));
             }
-            if (CellComparatorImpl.COMPARATOR.compareFamilies(prevCell, cell) != 0) {
+            if (CellComparator.getInstance().compareFamilies(prevCell, cell) != 0) {
               throw new InvalidHFileException("Previous key had different"
                   + " family compared to current key: path=" + srcPath
                   + " previous="

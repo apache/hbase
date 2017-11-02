@@ -39,7 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -336,7 +336,7 @@ public final class ConnectionUtils {
     }
     Cell[] rawCells = result.rawCells();
     int index =
-        Arrays.binarySearch(rawCells, keepCellsAfter, CellComparatorImpl.COMPARATOR::compareWithoutRow);
+        Arrays.binarySearch(rawCells, keepCellsAfter, CellComparator.getInstance()::compareWithoutRow);
     if (index < 0) {
       index = -index - 1;
     } else {

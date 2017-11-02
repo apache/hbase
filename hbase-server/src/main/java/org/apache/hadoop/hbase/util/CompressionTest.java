@@ -24,6 +24,7 @@ import java.util.Locale;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -140,7 +141,7 @@ public class CompressionTest {
       scanner.seekTo(); // position to the start of file
       // Scanner does not do Cells yet. Do below for now till fixed.
       cc = scanner.getCell();
-      if (CellComparatorImpl.COMPARATOR.compareRows(c, cc) != 0) {
+      if (CellComparator.getInstance().compareRows(c, cc) != 0) {
         throw new Exception("Read back incorrect result: " + c.toString() + " vs " + cc.toString());
       }
     } finally {

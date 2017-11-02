@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -86,7 +86,7 @@ public abstract class FilterListBase extends FilterBase {
   }
 
   protected int compareCell(Cell a, Cell b) {
-    int cmp = CellComparatorImpl.COMPARATOR.compare(a, b);
+    int cmp = CellComparator.getInstance().compare(a, b);
     return reversed ? -1 * cmp : cmp;
   }
 

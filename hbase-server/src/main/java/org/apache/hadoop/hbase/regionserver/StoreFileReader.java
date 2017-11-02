@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -372,7 +371,7 @@ public class StoreFileReader {
           if (bloomFilterType == BloomType.ROW) {
             keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
           } else {
-            keyIsAfterLast = (CellComparatorImpl.COMPARATOR.compare(kvKey, lastBloomKeyOnlyKV)) > 0;
+            keyIsAfterLast = (CellComparator.getInstance().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
           }
         }
 
@@ -385,7 +384,7 @@ public class StoreFileReader {
           // hbase:meta does not have blooms. So we need not have special interpretation
           // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
           if (keyIsAfterLast
-              && (CellComparatorImpl.COMPARATOR.compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0) {
+              && (CellComparator.getInstance().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0) {
             exists = false;
           } else {
             exists =

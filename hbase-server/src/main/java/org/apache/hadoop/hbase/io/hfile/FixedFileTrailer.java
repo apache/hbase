@@ -110,7 +110,7 @@ public class FixedFileTrailer {
 
   /** Raw key comparator class name in version 3 */
   // We could write the actual class name from 2.0 onwards and handle BC
-  private String comparatorClassName = CellComparatorImpl.COMPARATOR.getClass().getName();
+  private String comparatorClassName = CellComparator.getInstance().getClass().getName();
 
   /** The encryption key */
   private byte[] encryptionKey;

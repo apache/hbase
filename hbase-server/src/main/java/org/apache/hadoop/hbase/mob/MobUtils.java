@@ -42,8 +42,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -682,7 +681,7 @@ public final class MobUtils {
 
     StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs)
         .withFilePath(path)
-        .withComparator(CellComparatorImpl.COMPARATOR).withBloomType(bloomType)
+        .withComparator(CellComparator.getInstance()).withBloomType(bloomType)
         .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }

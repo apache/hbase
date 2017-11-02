@@ -25,9 +25,19 @@ import org.apache.yetus.audience.InterfaceStability;
  * Comparator for comparing cells and has some specialized methods that allows comparing individual
  * cell components like row, family, qualifier and timestamp
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface CellComparator extends Comparator<Cell> {
+  /**
+   * A comparator for ordering cells in user-space tables. Useful when writing cells in sorted
+   * order as necessary for bulk import (i.e. via MapReduce)
+   * <p>
+   * CAUTION: This comparator may provide inaccurate ordering for cells from system tables,
+   * and should not be relied upon in that case.
+   */
+  static CellComparator getInstance() {
+    return CellComparatorImpl.COMPARATOR;
+  }
 
   /**
    * Lexographically compares two cells. The key part of the cell is taken for comparison which

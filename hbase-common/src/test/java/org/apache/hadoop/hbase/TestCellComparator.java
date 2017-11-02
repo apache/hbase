@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 @Category({MiscTests.class, SmallTests.class})
 public class TestCellComparator {
 
-  private CellComparatorImpl comparator = CellComparatorImpl.COMPARATOR;
+  private CellComparator comparator = CellComparator.getInstance();
   byte[] row1 = Bytes.toBytes("row1");
   byte[] row2 = Bytes.toBytes("row2");
   byte[] row_1_0 = Bytes.toBytes("row10");
@@ -53,7 +53,7 @@ public class TestCellComparator {
 
     kv1 = new KeyValue(row1, fam2, qual1, val);
     kv2 = new KeyValue(row1, fam1, qual1, val);
-    assertTrue((CellComparatorImpl.COMPARATOR.compareFamilies(kv1, kv2) > 0));
+    assertTrue((comparator.compareFamilies(kv1, kv2) > 0));
 
     kv1 = new KeyValue(row1, fam1, qual1, 1l, val);
     kv2 = new KeyValue(row1, fam1, qual1, 2l, val);
@@ -110,16 +110,17 @@ public class TestCellComparator {
     kv = new KeyValue(r2, f1, q1, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
     Cell bbCell2 = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
+    // compareColumns not on CellComparator so use Impl directly
     assertEquals(0, CellComparatorImpl.COMPARATOR.compareColumns(bbCell1, bbCell2));
     assertEquals(0, CellComparatorImpl.COMPARATOR.compareColumns(bbCell1, kv));
     kv = new KeyValue(r2, f1, q2, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
     Cell bbCell3 = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
-    assertEquals(0, CellComparatorImpl.COMPARATOR.compareFamilies(bbCell2, bbCell3));
-    assertTrue(CellComparatorImpl.COMPARATOR.compareQualifiers(bbCell2, bbCell3) < 0);
+    assertEquals(0, comparator.compareFamilies(bbCell2, bbCell3));
+    assertTrue(comparator.compareQualifiers(bbCell2, bbCell3) < 0);
     assertTrue(CellComparatorImpl.COMPARATOR.compareColumns(bbCell2, bbCell3) < 0);
 
-    assertEquals(0, CellComparatorImpl.COMPARATOR.compareRows(bbCell2, bbCell3));
-    assertTrue(CellComparatorImpl.COMPARATOR.compareRows(bbCell1, bbCell2) < 0);
+    assertEquals(0, comparator.compareRows(bbCell2, bbCell3));
+    assertTrue(comparator.compareRows(bbCell1, bbCell2) < 0);
   }
 }

@@ -25,7 +25,6 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
@@ -882,7 +881,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
                   qualCommonPrefix);
               comp = compareCommonQualifierPrefix(seekCell, keyOnlyKV, qualCommonPrefix);
               if (comp == 0) {
-                comp = CellComparatorImpl.COMPARATOR.compareTimestamps(seekCell, keyOnlyKV);
+                comp = CellComparator.getInstance().compareTimestamps(seekCell, keyOnlyKV);
                 if (comp == 0) {
                   // Compare types. Let the delete types sort ahead of puts;
                   // i.e. types

@@ -46,7 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -402,12 +402,12 @@ public class HFileOutputFormat2
           wl.writer =
               new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), fs)
                   .withOutputDir(familydir).withBloomType(bloomType)
-                  .withComparator(CellComparatorImpl.COMPARATOR).withFileContext(hFileContext).build();
+                  .withComparator(CellComparator.getInstance()).withFileContext(hFileContext).build();
         } else {
           wl.writer =
               new StoreFileWriter.Builder(conf, new CacheConfig(tempConf), new HFileSystem(fs))
                   .withOutputDir(familydir).withBloomType(bloomType)
-                  .withComparator(CellComparatorImpl.COMPARATOR).withFileContext(hFileContext)
+                  .withComparator(CellComparator.getInstance()).withFileContext(hFileContext)
                   .withFavoredNodes(favoredNodes).build();
         }
 

@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -88,8 +87,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   @Before
   public void setUp() throws Exception {
     compactingSetUp();
-    this.memstore = new MyCompactingMemStore(HBaseConfiguration.create(), CellComparatorImpl
-        .COMPARATOR,
+    this.memstore = new MyCompactingMemStore(HBaseConfiguration.create(), CellComparator.getInstance(),
         store, regionServicesForStores, MemoryCompactionPolicy.EAGER);
   }
 
@@ -149,7 +147,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(),
-        CellComparatorImpl.COMPARATOR, store, regionServicesForStores,
+        CellComparator.getInstance(), store, regionServicesForStores,
         MemoryCompactionPolicy.EAGER);
     this.memstore.add(kv1.clone(), null);
     // As compaction is starting in the background the repetition
@@ -192,7 +190,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     Thread.sleep(1);
     addRows(this.memstore);
     Cell closestToEmpty = ((CompactingMemStore)this.memstore).getNextRow(KeyValue.LOWESTKEY);
-    assertTrue(CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
+    assertTrue(CellComparator.getInstance().compareRows(closestToEmpty,
         new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((CompactingMemStore)this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
@@ -200,7 +198,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
       } else {
-        assertTrue(CellComparatorImpl.COMPARATOR.compareRows(nr,
+        assertTrue(CellComparator.getInstance().compareRows(nr,
             new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
       }
     }
@@ -218,7 +216,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
           assertTrue("Row name",
-            CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
+            CellComparator.getInstance().compareRows(left, row1, 0, row1.length) == 0);
           assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
           List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -45,7 +45,7 @@ public class AbstractTestScanQueryMatcher {
   protected Get get;
 
   protected long ttl = Long.MAX_VALUE;
-  protected CellComparatorImpl rowComparator;
+  protected CellComparator rowComparator;
   protected Scan scan;
 
   @Before
@@ -72,6 +72,6 @@ public class AbstractTestScanQueryMatcher {
     get.addColumn(fam2, col5);
     this.scan = new Scan(get);
 
-    rowComparator = CellComparatorImpl.COMPARATOR;
+    rowComparator = CellComparator.getInstance();
   }
 }
