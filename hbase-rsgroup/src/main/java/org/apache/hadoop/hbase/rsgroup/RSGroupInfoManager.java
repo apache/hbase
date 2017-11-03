@@ -36,6 +36,10 @@ import org.apache.hadoop.hbase.net.Address;
  */
 @InterfaceAudience.Private
 public interface RSGroupInfoManager {
+
+  String REASSIGN_WAIT_INTERVAL_KEY = "hbase.rsgroup.reassign.wait";
+  long DEFAULT_REASSIGN_WAIT_INTERVAL = 30 * 1000L;
+
   //Assigned before user tables
   TableName RSGROUP_TABLE_NAME =
       TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
