@@ -56,7 +56,9 @@ public class ZooKeeperMainServer {
       while (!this.zk.getState().isConnected()) {
         Thread.sleep(1);
         if (stopWatch.elapsed(TimeUnit.SECONDS) > 10) {
-          throw new InterruptedException("Failed connect " + this.zk);
+          throw new InterruptedException("Failed connect after waiting " +
+              stopWatch.elapsed(TimeUnit.SECONDS) + "seconds; state=" + this.zk.getState() +
+              "; " + this.zk);
         }
       }
     }

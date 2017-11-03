@@ -935,7 +935,7 @@ public class AssignmentManager implements ServerListener {
     wakeServerReportEvent(serverNode);
   }
 
-  public void checkOnlineRegionsReportForMeta(final ServerStateNode serverNode,
+  void checkOnlineRegionsReportForMeta(final ServerStateNode serverNode,
       final Set<byte[]> regionNames) {
     try {
       for (byte[] regionName: regionNames) {
@@ -951,7 +951,7 @@ public class AssignmentManager implements ServerListener {
         final RegionStateNode regionNode = regionStates.getOrCreateRegionNode(hri);
         LOG.info("META REPORTED: " + regionNode);
         if (!reportTransition(regionNode, serverNode, TransitionCode.OPENED, 0)) {
-          LOG.warn("META REPORTED but no procedure found");
+          LOG.warn("META REPORTED but no procedure found (complete?)");
           regionNode.setRegionLocation(serverNode.getServerName());
         } else if (LOG.isTraceEnabled()) {
           LOG.trace("META REPORTED: " + regionNode);
@@ -1183,17 +1183,26 @@ public class AssignmentManager implements ServerListener {
       public void visitRegionState(final RegionInfo regionInfo, final State state,
           final ServerName regionLocation, final ServerName lastHost, final long openSeqNum) {
         final RegionStateNode regionNode = regionStates.getOrCreateRegionNode(regionInfo);
+        State localState = state;
+        if (localState == null) {
+          // No region state column data in hbase:meta table! Are I doing a rolling upgrade from
+          // hbase1 to hbase2? Am I restoring a SNAPSHOT or otherwise adding a region to hbase:meta?
+          // In any of these cases, state is empty. For now, presume OFFLINE but there are probably
+          // cases where we need to probe more to be sure this correct; TODO informed by experience.
+          LOG.info(regionInfo.getEncodedName() + " state=null; presuming " + State.OFFLINE);
+          localState = State.OFFLINE;
+        }
         synchronized (regionNode) {
           if (!regionNode.isInTransition()) {
-            regionNode.setState(state);
+            regionNode.setState(localState);
             regionNode.setLastHost(lastHost);
             regionNode.setRegionLocation(regionLocation);
             regionNode.setOpenSeqNum(openSeqNum);
 
-            if (state == State.OPEN) {
+            if (localState == State.OPEN) {
               assert regionLocation != null : "found null region location for " + regionNode;
               regionStates.addRegionToServer(regionLocation, regionNode);
-            } else if (state == State.OFFLINE || regionInfo.isOffline()) {
+            } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
               regionStates.addToOfflineRegions(regionNode);
             } else {
               // These regions should have a procedure in replay

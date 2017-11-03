@@ -542,11 +542,19 @@ public class RegionStates {
     return !getTableRegionStates(tableName).isEmpty();
   }
 
+  /**
+   * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
+   */
   public List<RegionInfo> getRegionsOfTable(final TableName table) {
     return getRegionsOfTable(table, false);
   }
 
-  List<RegionInfo> getRegionsOfTable(final TableName table, final boolean offline) {
+  /**
+   * @return Return the regions of the table; does not include OFFLINE unless you set
+   * <code>offline</code> to true. Does not include regions that are in the
+   * {@link State#SPLIT} state.
+   */
+  public List<RegionInfo> getRegionsOfTable(final TableName table, final boolean offline) {
     final ArrayList<RegionStateNode> nodes = getTableRegionStateNodes(table);
     final ArrayList<RegionInfo> hris = new ArrayList<RegionInfo>(nodes.size());
     for (RegionStateNode node: nodes) {

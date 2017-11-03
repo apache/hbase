@@ -295,12 +295,13 @@ public class RecoverableZooKeeper {
 
   private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
       String opName) throws KeeperException {
-    LOG.debug("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e);
     if (!retryCounter.shouldRetry()) {
       LOG.error("ZooKeeper " + opName + " failed after "
         + retryCounter.getMaxAttempts() + " attempts");
       throw e;
     }
+    LOG.debug("Retry, connectivity issue (JVM Pause?); quorum=" + quorumServers + "," +
+        "exception=" + e);
   }
 
   /**
