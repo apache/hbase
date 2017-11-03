@@ -557,11 +557,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public Map<String, HRegion> getRecoveringRegions() {
-    return null;
-  }
-
-  @Override
   public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
       UpdateFavoredNodesRequest request) throws ServiceException {
     return null;

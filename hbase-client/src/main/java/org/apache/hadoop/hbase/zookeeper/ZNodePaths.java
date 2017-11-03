@@ -72,8 +72,6 @@ public class ZNodePaths {
   public final String switchZNode;
   // znode containing the lock for the tables
   public final String tableLockZNode;
-  // znode containing the state of recovering regions
-  public final String recoveringRegionsZNode;
   // znode containing namespace descriptors
   public final String namespaceZNode;
   // znode of indicating master maintenance mode
@@ -116,8 +114,6 @@ public class ZNodePaths {
     switchZNode = ZKUtil.joinZNode(baseZNode, conf.get("zookeeper.znode.switch", "switch"));
     tableLockZNode = ZKUtil.joinZNode(baseZNode,
       conf.get("zookeeper.znode.tableLock", "table-lock"));
-    recoveringRegionsZNode = ZKUtil.joinZNode(baseZNode,
-      conf.get("zookeeper.znode.recovering.regions", "recovering-regions"));
     namespaceZNode = ZKUtil.joinZNode(baseZNode,
       conf.get("zookeeper.znode.namespace", "namespace"));
     masterMaintZNode = ZKUtil.joinZNode(baseZNode,
@@ -142,10 +138,9 @@ public class ZNodePaths {
         + ", clusterIdZNode=" + clusterIdZNode + ", splitLogZNode=" + splitLogZNode
         + ", balancerZNode=" + balancerZNode + ", regionNormalizerZNode=" + regionNormalizerZNode
         + ", switchZNode=" + switchZNode + ", tableLockZNode=" + tableLockZNode
-        + ", recoveringRegionsZNode=" + recoveringRegionsZNode + ", namespaceZNode="
-        + namespaceZNode + ", masterMaintZNode=" + masterMaintZNode + ", replicationZNode="
-        + replicationZNode + ", peersZNode=" + peersZNode + ", queuesZNode=" + queuesZNode
-        + ", hfileRefsZNode=" + hfileRefsZNode + "]";
+        + ", namespaceZNode=" + namespaceZNode + ", masterMaintZNode=" + masterMaintZNode
+        + ", replicationZNode=" + replicationZNode + ", peersZNode=" + peersZNode
+        + ", queuesZNode=" + queuesZNode + ", hfileRefsZNode=" + hfileRefsZNode + "]";
   }
 
   /**

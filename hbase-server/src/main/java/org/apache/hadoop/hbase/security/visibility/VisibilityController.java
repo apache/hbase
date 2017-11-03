@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -224,8 +223,6 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
       // the system.
       labelsTable.setValue(HTableDescriptor.SPLIT_POLICY,
           DisabledRegionSplitPolicy.class.getName());
-      labelsTable.setValue(Bytes.toBytes(HConstants.DISALLOW_WRITES_IN_RECOVERING),
-          Bytes.toBytes(true));
       try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
         admin.createTable(labelsTable);
       }
@@ -265,22 +262,11 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         this.accessControllerAvailable = CoprocessorHost.getLoadedCoprocessors()
           .contains(AccessController.class.getName());
       }
-      // Defer the init of VisibilityLabelService on labels region until it is in recovering state.
-      if (!e.getEnvironment().getRegion().isRecovering()) {
-        initVisibilityLabelService(e.getEnvironment());
-      }
+      initVisibilityLabelService(e.getEnvironment());
     } else {
       checkAuths = e.getEnvironment().getConfiguration()
           .getBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, false);
       initVisibilityLabelService(e.getEnvironment());
-    }
-  }
-
-  @Override
-  public void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> e) {
-    if (this.labelsRegion) {
-      initVisibilityLabelService(e.getEnvironment());
-      LOG.debug("post labels region log replay");
     }
   }
 

@@ -46,10 +46,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -2088,56 +2085,5 @@ public class ZKUtil {
       }
       return 0;
     }
-  }
-
-  /**
-   * @param regionLastFlushedSequenceId the flushed sequence id of a region which is the min of its
-   *          store max seq ids
-   * @param storeSequenceIds column family to sequence Id map
-   * @return Serialized protobuf of <code>RegionSequenceIds</code> with pb magic prefix prepended
-   *         suitable for use to filter wal edits in distributedLogReplay mode
-   */
-  public static byte[] regionSequenceIdsToByteArray(final Long regionLastFlushedSequenceId,
-      final Map<byte[], Long> storeSequenceIds) {
-    ClusterStatusProtos.RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
-        ClusterStatusProtos.RegionStoreSequenceIds.newBuilder();
-    ClusterStatusProtos.StoreSequenceId.Builder storeSequenceIdBuilder =
-        ClusterStatusProtos.StoreSequenceId.newBuilder();
-    if (storeSequenceIds != null) {
-      for (Map.Entry<byte[], Long> e : storeSequenceIds.entrySet()){
-        byte[] columnFamilyName = e.getKey();
-        Long curSeqId = e.getValue();
-        storeSequenceIdBuilder.setFamilyName(UnsafeByteOperations.unsafeWrap(columnFamilyName));
-        storeSequenceIdBuilder.setSequenceId(curSeqId);
-        regionSequenceIdsBuilder.addStoreSequenceId(storeSequenceIdBuilder.build());
-        storeSequenceIdBuilder.clear();
-      }
-    }
-    regionSequenceIdsBuilder.setLastFlushedSequenceId(regionLastFlushedSequenceId);
-    byte[] result = regionSequenceIdsBuilder.build().toByteArray();
-    return ProtobufUtil.prependPBMagic(result);
-  }
-
-  /**
-   * @param bytes Content of serialized data of RegionStoreSequenceIds
-   * @return a RegionStoreSequenceIds object
-   * @throws DeserializationException
-   */
-  public static RegionStoreSequenceIds parseRegionStoreSequenceIds(final byte[] bytes)
-      throws DeserializationException {
-    if (bytes == null || !ProtobufUtil.isPBMagicPrefix(bytes)) {
-      throw new DeserializationException("Unable to parse RegionStoreSequenceIds.");
-    }
-    RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
-        ClusterStatusProtos.RegionStoreSequenceIds.newBuilder();
-    int pblen = ProtobufUtil.lengthOfPBMagic();
-    RegionStoreSequenceIds storeIds = null;
-    try {
-      ProtobufUtil.mergeFrom(regionSequenceIdsBuilder, bytes, pblen, bytes.length - pblen);
-      storeIds = regionSequenceIdsBuilder.build();
-    } catch (IOException e) {
-      throw new DeserializationException(e);
-    }
-    return storeIds;
   }
 }

@@ -36,7 +36,7 @@ message GetRegionInfoRequest {
 message GetRegionInfoResponse {
   required RegionInfo region_info = 1;
   optional CompactionState compaction_state = 2;
-  optional bool isRecovering = 3;
+  // optional bool DEPRECATED_isRecovering = 3;
 
   enum CompactionState {
     NONE = 0;
@@ -78,7 +78,7 @@ message OpenRegionRequest {
     optional uint32 version_of_offline_node = 2;
     repeated ServerName favored_nodes = 3;
     // open region for distributedLogReplay
-    optional bool openForDistributedLogReplay = 4;
+    // optional bool DEPRECATED_openForDistributedLogReplay = 4;
   }
 }
 

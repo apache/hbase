@@ -119,12 +119,6 @@ public interface RegionObserver {
   default void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {}
 
   /**
-   * Called after the log replay on the region is over.
-   * @param c the environment provided by the region server
-   */
-  default void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> c) {}
-
-  /**
    * Called before the memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @param tracker tracker used to track the life cycle of a flush
@@ -965,6 +959,7 @@ public interface RegionObserver {
    * @param info the RegionInfo for this region
    * @param edits the file of recovered edits
    */
+  // todo: what about these?
   default void preReplayWALs(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, Path edits) throws IOException {}
 

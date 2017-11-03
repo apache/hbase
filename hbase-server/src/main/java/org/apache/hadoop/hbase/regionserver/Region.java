@@ -72,9 +72,6 @@ public interface Region extends ConfigurationObserver {
   /** @return True if closing process has started */
   boolean isClosing();
 
-  /** @return True if region is in recovering state */
-  boolean isRecovering();
-
   /** @return True if region is read only */
   boolean isReadOnly();
 

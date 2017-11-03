@@ -79,7 +79,6 @@ public class TestSplitWalDataLoss {
   @Before
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 30000);
-    testUtil.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     testUtil.startMiniCluster(2);
     Admin admin = testUtil.getAdmin();
     admin.createNamespace(namespace);

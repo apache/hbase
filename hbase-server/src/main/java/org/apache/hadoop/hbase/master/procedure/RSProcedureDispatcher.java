@@ -510,7 +510,7 @@ public class RSProcedureDispatcher
     public OpenRegionRequest.RegionOpenInfo buildRegionOpenInfoRequest(
         final MasterProcedureEnv env) {
       return RequestConverter.buildRegionOpenInfo(getRegionInfo(),
-        env.getAssignmentManager().getFavoredNodes(getRegionInfo()), false);
+        env.getAssignmentManager().getFavoredNodes(getRegionInfo()));
     }
   }
 

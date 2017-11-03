@@ -129,7 +129,6 @@ public class TestVisibilityLabelsReplication {
   public void setup() throws Exception {
     // setup configuration
     conf = HBaseConfiguration.create();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     conf.setInt("hfile.format.version", 3);
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf.setInt("replication.source.size.capacity", 10240);

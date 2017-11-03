@@ -323,7 +323,7 @@ public class TestIOFencing {
         @Override
         public boolean evaluate() throws Exception {
           Region newRegion = newServer.getOnlineRegion(REGION_NAME);
-          return newRegion != null && !newRegion.isRecovering();
+          return newRegion != null;
         }
       });
 

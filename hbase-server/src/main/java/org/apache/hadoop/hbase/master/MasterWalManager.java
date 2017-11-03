@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -37,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -84,7 +82,6 @@ public class MasterWalManager {
   // create the split log lock
   private final Lock splitLogLock = new ReentrantLock();
   private final SplitLogManager splitLogManager;
-  private final boolean distributedLogReplay;
 
   // Is the fileystem ok?
   private volatile boolean fsOk = true;
@@ -101,7 +98,6 @@ public class MasterWalManager {
     this.rootDir = rootDir;
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
-    this.distributedLogReplay = this.splitLogManager.isLogReplaying();
 
     this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
   }
@@ -279,33 +275,8 @@ public class MasterWalManager {
     return logDirs;
   }
 
-  /**
-   * Mark regions in recovering state when distributedLogReplay are set true
-   * @param serverName Failed region server whose wals to be replayed
-   * @param regions Set of regions to be recovered
-   */
-  public void prepareLogReplay(ServerName serverName, Set<RegionInfo> regions) throws IOException {
-    if (!this.distributedLogReplay) {
-      return;
-    }
-    // mark regions in recovering state
-    if (regions == null || regions.isEmpty()) {
-      return;
-    }
-    this.splitLogManager.markRegionsRecovering(serverName, regions);
-  }
-
   public void splitLog(final Set<ServerName> serverNames) throws IOException {
     splitLog(serverNames, NON_META_FILTER);
-  }
-
-  /**
-   * Wrapper function on {@link SplitLogManager#removeStaleRecoveringRegions(Set)}
-   * @param failedServers A set of known failed servers
-   */
-  void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
-      throws IOException, InterruptedIOException {
-    this.splitLogManager.removeStaleRecoveringRegions(failedServers);
   }
 
   /**

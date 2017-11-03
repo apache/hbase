@@ -112,8 +112,6 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-
 /**
  * Test replay of edits out of a WAL split.
  */
@@ -127,7 +125,6 @@ public abstract class AbstractTestWALReplay {
   private Path logDir;
   private FileSystem fs;
   private Configuration conf;
-  private RecoveryMode mode;
   private WALFactory wals;
 
   @Rule
@@ -165,9 +162,6 @@ public abstract class AbstractTestWALReplay {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
     }
-    this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-            HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG) ?
-        RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     this.wals = new WALFactory(conf, null, currentTest.getMethodName());
   }
 
@@ -908,7 +902,7 @@ public abstract class AbstractTestWALReplay {
     assertNotNull(listStatus);
     assertTrue(listStatus.length > 0);
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
-        this.fs, this.conf, null, null, null, null, mode, wals);
+        this.fs, this.conf, null, null, null, wals);
     FileStatus[] listStatus1 = this.fs.listStatus(
       new Path(FSUtils.getTableDir(hbaseRootDir, tableName), new Path(hri.getEncodedName(),
           "recovered.edits")), new PathFilter() {
@@ -1062,10 +1056,8 @@ public abstract class AbstractTestWALReplay {
       first = fs.getFileStatus(smallFile);
       second = fs.getFileStatus(largeFile);
     }
-    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null, null,
-      RecoveryMode.LOG_SPLITTING, wals);
-    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null, null,
-      RecoveryMode.LOG_SPLITTING, wals);
+    WALSplitter.splitLogFile(hbaseRootDir, first, fs, conf, null, null, null, wals);
+    WALSplitter.splitLogFile(hbaseRootDir, second, fs, conf, null, null, null, wals);
     WAL wal = createWAL(this.conf, hbaseRootDir, logName);
     region = HRegion.openHRegion(conf, this.fs, hbaseRootDir, hri, htd, wal);
     assertTrue(region.getOpenSeqNum() > mvcc.getWritePoint());
