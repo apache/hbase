@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -120,9 +120,9 @@ public class EnableTableProcedure
         // Get the replica count
         int regionReplicaCount = hTableDescriptor.getRegionReplication();
 
-        // Get the regions for the table from the memory
+        // Get the regions for the table from memory; get both online and offline regions ('true').
         List<RegionInfo> regionsOfTable =
-            env.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
+            env.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName, true);
 
         if (regionReplicaCount > 1) {
           int currentMaxReplica = 0;

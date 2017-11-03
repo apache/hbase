@@ -656,7 +656,7 @@ public class ServerManager {
     }
 
     if (!master.getAssignmentManager().isFailoverCleanupDone()) {
-      LOG.info("AssignmentManager hasn't finished failover cleanup; waiting");
+      LOG.debug("AssignmentManager failover cleanup not done.");
     }
 
     for (Map.Entry<ServerName, Boolean> entry : requeuedDeadServers.entrySet()) {
