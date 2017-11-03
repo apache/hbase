@@ -124,7 +124,6 @@ import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
-import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -368,14 +367,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /** Saved state from replaying prepare flush cache */
   private PrepareFlushResult prepareFlushResult = null;
-
-  /**
-   * Config setting for whether to allow writes when a region is in recovering or not.
-   */
-  private boolean disallowWritesInRecovering = false;
-
-  // When a region is in recovering state, it can only accept writes not reads
-  private volatile boolean recovering = false;
 
   private volatile Optional<ConfigurationManager> configurationManager;
 
@@ -798,13 +789,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
       this.metricsRegionWrapper = new MetricsRegionWrapperImpl(this);
       this.metricsRegion = new MetricsRegion(this.metricsRegionWrapper);
-
-      Map<String, HRegion> recoveringRegions = rsServices.getRecoveringRegions();
-      String encodedName = getRegionInfo().getEncodedName();
-      if (recoveringRegions != null && recoveringRegions.containsKey(encodedName)) {
-        this.recovering = true;
-        recoveringRegions.put(encodedName, this);
-      }
     } else {
       this.metricsRegionWrapper = null;
       this.metricsRegion = null;
@@ -814,10 +798,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("Instantiated " + this);
     }
 
-    // by default, we allow writes against a region when it's in recovering
-    this.disallowWritesInRecovering =
-        conf.getBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING,
-          HConstants.DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG);
     configurationManager = Optional.empty();
 
     // disable stats tracking system tables, but check the config for everything else
@@ -959,13 +939,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqid = maxSeqId;
-
-    // In distributedLogReplay mode, we don't know the last change sequence number because region
-    // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
-    // overlaps used sequence numbers
     if (this.writestate.writesEnabled) {
-      nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs
-          .getRegionDir(), nextSeqid, (this.recovering ? (this.flushPerChanges + 10000000) : 1));
+      nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(),
+          this.fs.getRegionDir(), nextSeqid, 1);
     } else {
       nextSeqid++;
     }
@@ -1327,64 +1303,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public boolean isReadOnly() {
     return this.writestate.isReadOnly();
-  }
-
-  /**
-   * Reset recovering state of current region
-   */
-  public void setRecovering(boolean newState) {
-    boolean wasRecovering = this.recovering;
-    // Before we flip the recovering switch (enabling reads) we should write the region open
-    // event to WAL if needed
-    if (wal != null && getRegionServerServices() != null && !writestate.readOnly
-        && wasRecovering && !newState) {
-
-      // force a flush only if region replication is set up for this region. Otherwise no need.
-      boolean forceFlush = getTableDescriptor().getRegionReplication() > 1;
-
-      MonitoredTask status = TaskMonitor.get().createStatus("Recovering region " + this);
-
-      try {
-        // force a flush first
-        if (forceFlush) {
-          status.setStatus("Flushing region " + this + " because recovery is finished");
-          internalFlushcache(status);
-        }
-
-        status.setStatus("Writing region open event marker to WAL because recovery is finished");
-        try {
-          long seqId = openSeqNum;
-          // obtain a new seqId because we possibly have writes and flushes on top of openSeqNum
-          if (wal != null) {
-            seqId = getNextSequenceId(wal);
-          }
-          writeRegionOpenMarker(wal, seqId);
-        } catch (IOException e) {
-          // We cannot rethrow this exception since we are being called from the zk thread. The
-          // region has already opened. In this case we log the error, but continue
-          LOG.warn(getRegionInfo().getEncodedName() + " : was not able to write region opening "
-              + "event to WAL, continuing", e);
-        }
-      } catch (IOException ioe) {
-        // Distributed log replay semantics does not necessarily require a flush, since the replayed
-        // data is already written again in the WAL. So failed flush should be fine.
-        LOG.warn(getRegionInfo().getEncodedName() + " : was not able to flush "
-            + "event to WAL, continuing", ioe);
-      } finally {
-        status.cleanup();
-      }
-    }
-
-    this.recovering = newState;
-    if (wasRecovering && !recovering) {
-      // Call only when wal replay is over.
-      coprocessorHost.postLogReplay();
-    }
-  }
-
-  @Override
-  public boolean isRecovering() {
-    return this.recovering;
   }
 
   @Override
@@ -7026,11 +6944,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     checkClassLoading();
     this.openSeqNum = initialize(reporter);
     this.mvcc.advanceTo(openSeqNum);
-    if (wal != null && getRegionServerServices() != null && !writestate.readOnly
-        && !recovering) {
-      // Only write the region open event marker to WAL if (1) we are not read-only
-      // (2) dist log replay is off or we are not recovering. In case region is
-      // recovering, the open event will be written at setRecovering(false)
+    if (wal != null && getRegionServerServices() != null && !writestate.readOnly) {
+      // Only write the region open event marker to WAL if we are not read-only.
       writeRegionOpenMarker(wal, openSeqNum);
     }
     return this;
@@ -7843,9 +7758,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      51 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      50 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
-      6 * Bytes.SIZEOF_BOOLEAN);
+      3 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
@@ -8017,12 +7932,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return null;
     }
 
-    // Can't split region which is in recovering state
-    if (this.isRecovering()) {
-      LOG.info("Cannot split region " + this.getRegionInfo().getEncodedName() + " in recovery.");
-      return null;
-    }
-
     // Can't split a region that is closing.
     if (this.isClosing()) {
       return null;
@@ -8077,22 +7986,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       case GET:  // read operations
       case SCAN:
         checkReadsEnabled();
-      case INCREMENT: // write operations
-      case APPEND:
-      case SPLIT_REGION:
-      case MERGE_REGION:
-      case PUT:
-      case DELETE:
-      case BATCH_MUTATE:
-      case COMPACT_REGION:
-      case SNAPSHOT:
-        // when a region is in recovering state, no read, split, merge or snapshot is allowed
-        if (isRecovering() && (this.disallowWritesInRecovering ||
-              (op != Operation.PUT && op != Operation.DELETE && op != Operation.BATCH_MUTATE))) {
-          throw new RegionInRecoveryException(getRegionInfo().getRegionNameAsString() +
-            " is recovering; cannot take reads");
-        }
-        break;
       default:
         break;
     }

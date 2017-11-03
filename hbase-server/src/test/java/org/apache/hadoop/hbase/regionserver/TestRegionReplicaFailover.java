@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -57,14 +55,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Tests failover of secondary region replicas.
  */
-@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 public class TestRegionReplicaFailover {
 
@@ -90,19 +84,6 @@ public class TestRegionReplicaFailover {
 
   private HTableDescriptor htd;
 
-  /*
-   * We are testing with dist log split and dist log replay separately
-   */
-  @Parameters
-  public static Collection<Object[]> getParameters() {
-    Object[][] params =
-        new Boolean[][] { /*{true}, Disable DLR!!! It is going to be removed*/ {false} };
-    return Arrays.asList(params);
-  }
-
-  @Parameterized.Parameter(0)
-  public boolean distributedLogReplay;
-
   @Before
   public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
@@ -112,7 +93,6 @@ public class TestRegionReplicaFailover {
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, true);
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, distributedLogReplay);
 
     HTU.startMiniCluster(NB_SERVERS);
     htd = HTU.createTableDescriptor(

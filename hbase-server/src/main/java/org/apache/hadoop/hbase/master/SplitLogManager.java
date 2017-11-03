@@ -25,7 +25,6 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.I
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,7 +35,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,19 +48,16 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
  * Distributes the task of log splitting to the available region servers.
@@ -106,15 +101,6 @@ public class SplitLogManager {
 
   private long unassignedTimeout;
   private long lastTaskCreateTime = Long.MAX_VALUE;
-  private long checkRecoveringTimeThreshold = 15000; // 15 seconds
-  private final List<Pair<Set<ServerName>, Boolean>> failedRecoveringRegionDeletions = Collections
-      .synchronizedList(new ArrayList<Pair<Set<ServerName>, Boolean>>());
-
-  /**
-   * In distributedLogReplay mode, we need touch both splitlog and recovering-regions znodes in one
-   * operation. So the lock is used to guard such cases.
-   */
-  protected final ReentrantLock recoveringRegionLock = new ReentrantLock();
 
   @VisibleForTesting
   final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<>();
@@ -141,7 +127,6 @@ public class SplitLogManager {
       SplitLogManagerDetails details = new SplitLogManagerDetails(tasks, master, failedDeletions);
       coordination.setDetails(details);
       coordination.init();
-      // Determine recovery mode
     }
     this.unassignedTimeout =
         conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
@@ -252,7 +237,6 @@ public class SplitLogManager {
     long t = EnvironmentEdgeManager.currentTime();
     long totalSize = 0;
     TaskBatch batch = new TaskBatch();
-    Boolean isMetaRecovery = (filter == null) ? null : false;
     for (FileStatus lf : logfiles) {
       // TODO If the log file is still being written to - which is most likely
       // the case for the last log file - then its length will show up here
@@ -266,13 +250,6 @@ public class SplitLogManager {
       }
     }
     waitForSplittingCompletion(batch, status);
-    // remove recovering regions
-    if (filter == MasterWalManager.META_FILTER /* reference comparison */) {
-      // we split meta regions and user regions separately therefore logfiles are either all for
-      // meta or user regions but won't for both( we could have mixed situations in tests)
-      isMetaRecovery = true;
-    }
-    removeRecoveringRegions(serverNames, isMetaRecovery);
 
     if (batch.done != batch.installed) {
       batch.isDead = true;
@@ -384,61 +361,6 @@ public class SplitLogManager {
   }
 
   /**
-   * It removes recovering regions under /hbase/recovering-regions/[encoded region name] so that the
-   * region server hosting the region can allow reads to the recovered region
-   * @param serverNames servers which are just recovered
-   * @param isMetaRecovery whether current recovery is for the meta region on {@code serverNames}
-   */
-  private void removeRecoveringRegions(final Set<ServerName> serverNames, Boolean isMetaRecovery) {
-    if (!isLogReplaying()) {
-      // the function is only used in WALEdit direct replay mode
-      return;
-    }
-    if (serverNames == null || serverNames.isEmpty()) return;
-
-    Set<String> recoveredServerNameSet = new HashSet<>();
-    for (ServerName tmpServerName : serverNames) {
-      recoveredServerNameSet.add(tmpServerName.getServerName());
-    }
-
-    this.recoveringRegionLock.lock();
-    try {
-      getSplitLogManagerCoordination().removeRecoveringRegions(
-        recoveredServerNameSet, isMetaRecovery);
-    } catch (IOException e) {
-      LOG.warn("removeRecoveringRegions got exception. Will retry", e);
-      if (serverNames != null && !serverNames.isEmpty()) {
-        this.failedRecoveringRegionDeletions.add(new Pair<>(serverNames, isMetaRecovery));
-      }
-    } finally {
-      this.recoveringRegionLock.unlock();
-    }
-  }
-
-  /**
-   * It removes stale recovering regions under /hbase/recovering-regions/[encoded region name]
-   * during master initialization phase.
-   * @param failedServers A set of known failed servers
-   * @throws IOException
-   */
-  void removeStaleRecoveringRegions(final Set<ServerName> failedServers) throws IOException,
-      InterruptedIOException {
-    Set<String> knownFailedServers = new HashSet<>();
-    if (failedServers != null) {
-      for (ServerName tmpServerName : failedServers) {
-        knownFailedServers.add(tmpServerName.getServerName());
-      }
-    }
-
-    this.recoveringRegionLock.lock();
-    try {
-      getSplitLogManagerCoordination().removeStaleRecoveringRegions(knownFailedServers);
-    } finally {
-      this.recoveringRegionLock.unlock();
-    }
-  }
-
-  /**
    * @param path
    * @param batch
    * @return null on success, existing task on error
@@ -531,54 +453,6 @@ public class SplitLogManager {
       deadWorkers.addAll(serverNames);
     }
     LOG.info("dead splitlog workers " + serverNames);
-  }
-
-  /**
-   * This function is to set recovery mode from outstanding split log tasks from before or current
-   * configuration setting
-   * @param isForInitialization
-   * @throws IOException throws if it's impossible to set recovery mode
-   */
-  public void setRecoveryMode(boolean isForInitialization) throws IOException {
-    getSplitLogManagerCoordination().setRecoveryMode(isForInitialization);
-  }
-
-  public void markRegionsRecovering(ServerName server, Set<RegionInfo> userRegions)
-      throws InterruptedIOException, IOException {
-    if (userRegions == null || (!isLogReplaying())) {
-      return;
-    }
-    try {
-      this.recoveringRegionLock.lock();
-      // mark that we're creating recovering regions
-      getSplitLogManagerCoordination().markRegionsRecovering(server, userRegions);
-    } finally {
-      this.recoveringRegionLock.unlock();
-    }
-
-  }
-
-  /**
-   * @return whether log is replaying
-   */
-  public boolean isLogReplaying() {
-    if (server.getCoordinatedStateManager() == null) return false;
-    return getSplitLogManagerCoordination().isReplaying();
-  }
-
-  /**
-   * @return whether log is splitting
-   */
-  public boolean isLogSplitting() {
-    if (server.getCoordinatedStateManager() == null) return false;
-    return getSplitLogManagerCoordination().isSplitting();
-  }
-
-  /**
-   * @return the current log recovery mode
-   */
-  public RecoveryMode getRecoveryMode() {
-    return getSplitLogManagerCoordination().getRecoveryMode();
   }
 
   /**
@@ -753,30 +627,11 @@ public class SplitLogManager {
         }
         failedDeletions.removeAll(tmpPaths);
       }
-
-      // Garbage collect left-over
-      long timeInterval =
-          EnvironmentEdgeManager.currentTime()
-              - getSplitLogManagerCoordination().getLastRecoveryTime();
-      if (!failedRecoveringRegionDeletions.isEmpty()
-          || (tot == 0 && tasks.isEmpty() && (timeInterval > checkRecoveringTimeThreshold))) {
-        // inside the function there have more checks before GC anything
-        if (!failedRecoveringRegionDeletions.isEmpty()) {
-          List<Pair<Set<ServerName>, Boolean>> previouslyFailedDeletions =
-              new ArrayList<>(failedRecoveringRegionDeletions);
-          failedRecoveringRegionDeletions.removeAll(previouslyFailedDeletions);
-          for (Pair<Set<ServerName>, Boolean> failedDeletion : previouslyFailedDeletions) {
-            removeRecoveringRegions(failedDeletion.getFirst(), failedDeletion.getSecond());
-          }
-        } else {
-          removeRecoveringRegions(null, null);
-        }
-      }
     }
   }
 
   public enum ResubmitDirective {
-    CHECK(), FORCE();
+    CHECK(), FORCE()
   }
 
   public enum TerminationStatus {

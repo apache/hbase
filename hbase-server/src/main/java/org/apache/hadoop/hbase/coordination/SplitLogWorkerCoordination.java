@@ -17,7 +17,6 @@
   * limitations under the License.
   */
 package org.apache.hadoop.hbase.coordination;
-import java.io.IOException;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +24,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
@@ -33,7 +31,7 @@ import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
- * Coordinated operations for {@link SplitLogWorker} and 
+ * Coordinated operations for {@link SplitLogWorker} and
  * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important
  * methods for SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
@@ -51,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 public interface SplitLogWorkerCoordination {
 
 /* SplitLogWorker part */
-  public static final int DEFAULT_MAX_SPLITTERS = 2;
+  int DEFAULT_MAX_SPLITTERS = 2;
 
   /**
    * Initialize internal values. This method should be used when corresponding SplitLogWorker
@@ -127,15 +125,11 @@ public interface SplitLogWorkerCoordination {
    * Interface for log-split tasks Used to carry implementation details in encapsulated way through
    * Handlers to the coordination API.
    */
-  static interface SplitTaskDetails {
+  interface SplitTaskDetails {
 
     /**
      * @return full file path in HDFS for the WAL file to be split.
      */
     String getWALFile();
   }
-
-  RegionStoreSequenceIds getRegionFlushedSequenceId(String failedServerName, String key)
-      throws IOException;
-
 }

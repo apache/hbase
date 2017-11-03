@@ -265,12 +265,6 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Map<String, HRegion> getRecoveringRegions() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
   public ServerNonceManager getNonceManager() {
     // TODO Auto-generated method stub
     return null;

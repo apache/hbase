@@ -1524,31 +1524,15 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
     if (AccessControlLists.isAclRegion(region)) {
       aclRegion = true;
-      // When this region is under recovering state, initialize will be handled by postLogReplay
-      if (!region.isRecovering()) {
-        try {
-          initialize(env);
-        } catch (IOException ex) {
-          // if we can't obtain permissions, it's better to fail
-          // than perform checks incorrectly
-          throw new RuntimeException("Failed to initialize permissions cache", ex);
-        }
-      }
-    } else {
-      initialized = true;
-    }
-  }
-
-  @Override
-  public void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> c) {
-    if (aclRegion) {
       try {
-        initialize(c.getEnvironment());
+        initialize(env);
       } catch (IOException ex) {
         // if we can't obtain permissions, it's better to fail
         // than perform checks incorrectly
         throw new RuntimeException("Failed to initialize permissions cache", ex);
       }
+    } else {
+      initialized = true;
     }
   }
 

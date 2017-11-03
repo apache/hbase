@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -66,7 +65,6 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);

@@ -57,8 +57,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.replication.BaseWALEntryFilter;
-import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,7 +73,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 
@@ -108,44 +105,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private int operationTimeout;
 
   private ExecutorService pool;
-
-  /**
-   * Skips the entries which has original seqId. Only entries persisted via distributed log replay
-   * have their original seq Id fields set.
-   */
-  private static class SkipReplayedEditsFilter extends BaseWALEntryFilter {
-    @Override
-    public Entry filter(Entry entry) {
-      // if orig seq id is set, skip replaying the entry
-      if (entry.getKey().getOrigLogSeqNum() > 0) {
-        return null;
-      }
-      return entry;
-    }
-  }
-
-  @Override
-  public WALEntryFilter getWALEntryfilter() {
-    WALEntryFilter superFilter = super.getWALEntryfilter();
-    WALEntryFilter skipReplayedEditsFilter = getSkipReplayedEditsFilter();
-
-    if (superFilter == null) {
-      return skipReplayedEditsFilter;
-    }
-
-    if (skipReplayedEditsFilter == null) {
-      return superFilter;
-    }
-
-    ArrayList<WALEntryFilter> filters = Lists.newArrayList();
-    filters.add(superFilter);
-    filters.add(skipReplayedEditsFilter);
-    return new ChainWALEntryFilter(filters);
-  }
-
-  protected WALEntryFilter getSkipReplayedEditsFilter() {
-    return new SkipReplayedEditsFilter();
-  }
 
   @Override
   public void init(Context context) throws IOException {

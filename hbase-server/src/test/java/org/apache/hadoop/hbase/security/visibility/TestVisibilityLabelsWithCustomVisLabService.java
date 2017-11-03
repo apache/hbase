@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
@@ -42,7 +41,6 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);

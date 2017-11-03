@@ -27,23 +27,15 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.S
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination.TaskFinisher.Status;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
@@ -51,7 +43,6 @@ import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -66,8 +57,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
  * ZooKeeper based implementation of
@@ -92,15 +81,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   SplitLogManagerDetails details;
 
-  // When lastRecoveringNodeCreationTime is older than the following threshold, we'll check
-  // whether to GC stale recovering znodes
-  private volatile long lastRecoveringNodeCreationTime = 0;
-
   public boolean ignoreZKDeleteForTesting = false;
-
-  private RecoveryMode recoveryMode;
-
-  private boolean isDrainingDone = false;
 
   public ZKSplitLogManagerCoordination(Configuration conf, ZooKeeperWatcher watcher) {
     super(watcher);
@@ -124,7 +105,6 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     this.zkretries = conf.getLong("hbase.splitlog.zk.retries", DEFAULT_ZK_RETRIES);
     this.resubmitThreshold = conf.getLong("hbase.splitlog.max.resubmit", DEFAULT_MAX_RESUBMIT);
     this.timeout = conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT, DEFAULT_TIMEOUT);
-    setRecoveryMode(true);
     if (this.watcher != null) {
       this.watcher.registerListener(this);
       lookForOrphans();
@@ -222,7 +202,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     }
     LOG.info("resubmitting task " + path);
     task.incarnation.incrementAndGet();
-    boolean result = resubmit(this.details.getServerName(), path, version);
+    boolean result = resubmit(path, version);
     if (!result) {
       task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
       return false;
@@ -254,7 +234,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     // might miss the watch-trigger that creation of RESCAN node provides.
     // Since the TimeoutMonitor will keep resubmitting UNASSIGNED tasks
     // therefore this behavior is safe.
-    SplitLogTask slt = new SplitLogTask.Done(this.details.getServerName(), getRecoveryMode());
+    SplitLogTask slt = new SplitLogTask.Done(this.details.getServerName());
     this.watcher
         .getRecoverableZooKeeper()
         .getZooKeeper()
@@ -276,83 +256,6 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         .getData(path, this.watcher, new GetDataAsyncCallback(),
           Long.valueOf(-1) /* retry count */);
     SplitLogCounters.tot_mgr_get_data_queued.increment();
-  }
-
-  /**
-   * It removes recovering regions under /hbase/recovering-regions/[encoded region name] so that the
-   * region server hosting the region can allow reads to the recovered region
-   * @param recoveredServerNameSet servers which are just recovered
-   * @param isMetaRecovery whether current recovery is for the meta region on
-   *          <code>serverNames</code>
-   */
-  @Override
-  public void removeRecoveringRegions(final Set<String> recoveredServerNameSet,
-      Boolean isMetaRecovery)
-  throws IOException {
-    final String metaEncodeRegionName = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName();
-    int count = 0;
-    try {
-      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.splitLogZNode);
-      if (tasks != null) {
-        int listSize = tasks.size();
-        for (int i = 0; i < listSize; i++) {
-          if (!ZKSplitLog.isRescanNode(tasks.get(i))) {
-            count++;
-          }
-        }
-      }
-      if (count == 0 && this.details.getMaster().isInitialized()
-          && !this.details.getMaster().getServerManager().areDeadServersInProgress()) {
-        // No splitting work items left
-        ZKSplitLog.deleteRecoveringRegionZNodes(watcher, null);
-        // reset lastRecoveringNodeCreationTime because we cleared all recovering znodes at
-        // this point.
-        lastRecoveringNodeCreationTime = Long.MAX_VALUE;
-      } else if (!recoveredServerNameSet.isEmpty()) {
-        // Remove recovering regions which don't have any RS associated with it
-        List<String> regions = ZKUtil.listChildrenNoWatch(watcher,
-          watcher.znodePaths.recoveringRegionsZNode);
-        if (regions != null) {
-          int listSize = regions.size();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Processing recovering " + regions + " and servers "  +
-                recoveredServerNameSet + ", isMetaRecovery=" + isMetaRecovery);
-          }
-          for (int i = 0; i < listSize; i++) {
-            String region = regions.get(i);
-            if (isMetaRecovery != null) {
-              if ((isMetaRecovery && !region.equalsIgnoreCase(metaEncodeRegionName))
-                  || (!isMetaRecovery && region.equalsIgnoreCase(metaEncodeRegionName))) {
-                // skip non-meta regions when recovering the meta region or
-                // skip the meta region when recovering user regions
-                continue;
-              }
-            }
-            String nodePath = ZKUtil.joinZNode(watcher.znodePaths.recoveringRegionsZNode, region);
-            List<String> failedServers = ZKUtil.listChildrenNoWatch(watcher, nodePath);
-            if (failedServers == null || failedServers.isEmpty()) {
-              ZKUtil.deleteNode(watcher, nodePath);
-              continue;
-            }
-            if (recoveredServerNameSet.containsAll(failedServers)) {
-              ZKUtil.deleteNodeRecursively(watcher, nodePath);
-            } else {
-              int tmpFailedServerSize = failedServers.size();
-              for (int j = 0; j < tmpFailedServerSize; j++) {
-                String failedServer = failedServers.get(j);
-                if (recoveredServerNameSet.contains(failedServer)) {
-                  String tmpPath = ZKUtil.joinZNode(nodePath, failedServer);
-                  ZKUtil.deleteNode(watcher, tmpPath);
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (KeeperException ke) {
-      LOG.warn("removeRecoveringRegionsFromZK got zookeeper exception. Will retry", ke);
-      throw new IOException(ke);
-    }
   }
 
   private void deleteNode(String path, Long retries) {
@@ -415,7 +318,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   }
 
   private void createNode(String path, Long retry_count) {
-    SplitLogTask slt = new SplitLogTask.Unassigned(details.getServerName(), getRecoveryMode());
+    SplitLogTask slt = new SplitLogTask.Unassigned(details.getServerName());
     ZKUtil.asyncCreate(this.watcher, path, slt.toByteArray(), new CreateAsyncCallback(),
       retry_count);
     SplitLogCounters.tot_mgr_node_create_queued.increment();
@@ -438,7 +341,6 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         .getData(path, this.watcher, new GetDataAsyncCallback(), retry_count);
     SplitLogCounters.tot_mgr_get_data_queued.increment();
   }
-
 
   private void getDataSetWatchSuccess(String path, byte[] data, int version)
       throws DeserializationException {
@@ -589,77 +491,6 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         + " rescan nodes");
   }
 
-  /**
-   * Create znodes /hbase/recovering-regions/[region_ids...]/[failed region server names ...] for
-   * all regions of the passed in region servers
-   * @param serverName the name of a region server
-   * @param userRegions user regiones assigned on the region server
-   */
-  @Override
-  public void markRegionsRecovering(final ServerName serverName, Set<RegionInfo> userRegions)
-      throws IOException, InterruptedIOException {
-    this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTime();
-    for (RegionInfo region : userRegions) {
-      String regionEncodeName = region.getEncodedName();
-      long retries = this.zkretries;
-
-      do {
-        String nodePath = ZKUtil.joinZNode(watcher.znodePaths.recoveringRegionsZNode,
-          regionEncodeName);
-        long lastRecordedFlushedSequenceId = -1;
-        try {
-          long lastSequenceId =
-              this.details.getMaster().getServerManager()
-                  .getLastFlushedSequenceId(regionEncodeName.getBytes()).getLastFlushedSequenceId();
-
-          /*
-           * znode layout: .../region_id[last known flushed sequence id]/failed server[last known
-           * flushed sequence id for the server]
-           */
-          byte[] data = ZKUtil.getData(this.watcher, nodePath);
-          if (data == null) {
-            ZKUtil
-                .createSetData(this.watcher, nodePath, ZKUtil.positionToByteArray(lastSequenceId));
-          } else {
-            lastRecordedFlushedSequenceId =
-                ZKSplitLog.parseLastFlushedSequenceIdFrom(data);
-            if (lastRecordedFlushedSequenceId < lastSequenceId) {
-              // update last flushed sequence id in the region level
-              ZKUtil.setData(this.watcher, nodePath, ZKUtil.positionToByteArray(lastSequenceId));
-            }
-          }
-          // go one level deeper with server name
-          nodePath = ZKUtil.joinZNode(nodePath, serverName.getServerName());
-          if (lastSequenceId <= lastRecordedFlushedSequenceId) {
-            // the newly assigned RS failed even before any flush to the region
-            lastSequenceId = lastRecordedFlushedSequenceId;
-          }
-          ZKUtil.createSetData(this.watcher, nodePath,
-          ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Marked " + regionEncodeName + " recovering from " + serverName +
-              ": " + nodePath);
-          }
-          // break retry loop
-          break;
-        } catch (KeeperException e) {
-          // ignore ZooKeeper exceptions inside retry loop
-          if (retries <= 1) {
-            throw new IOException(e);
-          }
-          // wait a little bit for retry
-          try {
-            Thread.sleep(20);
-          } catch (InterruptedException e1) {
-            throw new InterruptedIOException();
-          }
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException();
-        }
-      } while ((--retries) > 0);
-    }
-  }
-
   @Override
   public void nodeDataChanged(String path) {
     Task task;
@@ -672,216 +503,11 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     }
   }
 
-  /**
-   * ZooKeeper implementation of
-   * {@link SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
-   */
-  @Override
-  public void removeStaleRecoveringRegions(final Set<String> knownFailedServers)
-      throws IOException, InterruptedIOException {
-
-    try {
-      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.splitLogZNode);
-      if (tasks != null) {
-        int listSize = tasks.size();
-        for (int i = 0; i < listSize; i++) {
-          String t = tasks.get(i);
-          byte[] data;
-          try {
-            data = ZKUtil.getData(this.watcher,
-              ZKUtil.joinZNode(watcher.znodePaths.splitLogZNode, t));
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException();
-          }
-          if (data != null) {
-            SplitLogTask slt = null;
-            try {
-              slt = SplitLogTask.parseFrom(data);
-            } catch (DeserializationException e) {
-              LOG.warn("Failed parse data for znode " + t, e);
-            }
-            if (slt != null && slt.isDone()) {
-              continue;
-            }
-          }
-          // decode the file name
-          t = ZKSplitLog.getFileName(t);
-          ServerName serverName = AbstractFSWALProvider
-              .getServerNameFromWALDirectoryName(new Path(t));
-          if (serverName != null) {
-            knownFailedServers.add(serverName.getServerName());
-          } else {
-            LOG.warn("Found invalid WAL log file name:" + t);
-          }
-        }
-      }
-
-      // remove recovering regions which doesn't have any RS associated with it
-      List<String> regions = ZKUtil.listChildrenNoWatch(watcher,
-        watcher.znodePaths.recoveringRegionsZNode);
-      if (regions != null) {
-        int listSize = regions.size();
-        for (int i = 0; i < listSize; i++) {
-          String nodePath = ZKUtil.joinZNode(watcher.znodePaths.recoveringRegionsZNode,
-            regions.get(i));
-          List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(watcher, nodePath);
-          if (regionFailedServers == null || regionFailedServers.isEmpty()) {
-            ZKUtil.deleteNode(watcher, nodePath);
-            continue;
-          }
-          boolean needMoreRecovery = false;
-          int tmpFailedServerSize = regionFailedServers.size();
-          for (int j = 0; j < tmpFailedServerSize; j++) {
-            if (knownFailedServers.contains(regionFailedServers.get(j))) {
-              needMoreRecovery = true;
-              break;
-            }
-          }
-          if (!needMoreRecovery) {
-            ZKUtil.deleteNodeRecursively(watcher, nodePath);
-          }
-        }
-      }
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
-  public synchronized boolean isReplaying() {
-    return this.recoveryMode == RecoveryMode.LOG_REPLAY;
-  }
-
-  @Override
-  public synchronized boolean isSplitting() {
-    return this.recoveryMode == RecoveryMode.LOG_SPLITTING;
-  }
-
-  private List<String> listSplitLogTasks() throws KeeperException {
-    List<String> taskOrRescanList = ZKUtil.listChildrenNoWatch(watcher,
-      watcher.znodePaths.splitLogZNode);
-    if (taskOrRescanList == null || taskOrRescanList.isEmpty()) {
-      return Collections.<String> emptyList();
-    }
-    List<String> taskList = new ArrayList<>();
-    for (String taskOrRescan : taskOrRescanList) {
-      // Remove rescan nodes
-      if (!ZKSplitLog.isRescanNode(taskOrRescan)) {
-        taskList.add(taskOrRescan);
-      }
-    }
-    return taskList;
-  }
-
-  /**
-   * This function is to set recovery mode from outstanding split log tasks from before or current
-   * configuration setting
-   * @param isForInitialization
-   * @throws IOException
-   */
-  @Override
-  public void setRecoveryMode(boolean isForInitialization) throws IOException {
-    synchronized(this) {
-      if (this.isDrainingDone) {
-        // when there is no outstanding splitlogtask after master start up, we already have up to
-        // date recovery mode
-        return;
-      }
-    }
-    if (this.watcher == null) {
-      // when watcher is null(testing code) and recovery mode can only be LOG_SPLITTING
-      synchronized(this) {
-        this.isDrainingDone = true;
-        this.recoveryMode = RecoveryMode.LOG_SPLITTING;
-      }
-      return;
-    }
-    boolean hasSplitLogTask = false;
-    boolean hasRecoveringRegions = false;
-    RecoveryMode previousRecoveryMode = RecoveryMode.UNKNOWN;
-    RecoveryMode recoveryModeInConfig =
-        (isDistributedLogReplay(conf)) ? RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING;
-
-    // Firstly check if there are outstanding recovering regions
-    try {
-      List<String> regions = ZKUtil.listChildrenNoWatch(watcher,
-        watcher.znodePaths.recoveringRegionsZNode);
-      if (regions != null && !regions.isEmpty()) {
-        hasRecoveringRegions = true;
-        previousRecoveryMode = RecoveryMode.LOG_REPLAY;
-      }
-      if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
-        // Secondly check if there are outstanding split log task
-        List<String> tasks = listSplitLogTasks();
-        if (!tasks.isEmpty()) {
-          hasSplitLogTask = true;
-          if (isForInitialization) {
-            // during initialization, try to get recovery mode from splitlogtask
-            int listSize = tasks.size();
-            for (int i = 0; i < listSize; i++) {
-              String task = tasks.get(i);
-              try {
-                byte[] data = ZKUtil.getData(this.watcher,
-                  ZKUtil.joinZNode(watcher.znodePaths.splitLogZNode, task));
-                if (data == null) continue;
-                SplitLogTask slt = SplitLogTask.parseFrom(data);
-                previousRecoveryMode = slt.getMode();
-                if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
-                  // created by old code base where we don't set recovery mode in splitlogtask
-                  // we can safely set to LOG_SPLITTING because we're in master initialization code
-                  // before SSH is enabled & there is no outstanding recovering regions
-                  previousRecoveryMode = RecoveryMode.LOG_SPLITTING;
-                }
-                break;
-              } catch (DeserializationException e) {
-                LOG.warn("Failed parse data for znode " + task, e);
-              } catch (InterruptedException e) {
-                throw new InterruptedIOException();
-              }
-            }
-          }
-        }
-      }
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
-
-    synchronized (this) {
-      if (this.isDrainingDone) {
-        return;
-      }
-      if (!hasSplitLogTask && !hasRecoveringRegions) {
-        this.isDrainingDone = true;
-        this.recoveryMode = recoveryModeInConfig;
-        return;
-      } else if (!isForInitialization) {
-        // splitlogtask hasn't drained yet, keep existing recovery mode
-        return;
-      }
-
-      if (previousRecoveryMode != RecoveryMode.UNKNOWN) {
-        this.isDrainingDone = (previousRecoveryMode == recoveryModeInConfig);
-        this.recoveryMode = previousRecoveryMode;
-      } else {
-        this.recoveryMode = recoveryModeInConfig;
-      }
-    }
-  }
-
-  /**
-   * Returns if distributed log replay is turned on or not
-   * @param conf
-   * @return true when distributed log replay is turned on
-   */
-  private boolean isDistributedLogReplay(Configuration conf) {
-    return false;
-  }
-
-  private boolean resubmit(ServerName serverName, String path, int version) {
+  private boolean resubmit(String path, int version) {
     try {
       // blocking zk call but this is done from the timeout thread
       SplitLogTask slt =
-          new SplitLogTask.Unassigned(this.details.getServerName(), getRecoveryMode());
+          new SplitLogTask.Unassigned(this.details.getServerName());
       if (ZKUtil.setData(this.watcher, path, slt.toByteArray(), version) == false) {
         LOG.debug("failed to resubmit task " + path + " version changed");
         return false;
@@ -1107,16 +733,6 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   @Override
   public SplitLogManagerDetails getDetails() {
     return details;
-  }
-
-  @Override
-  public synchronized RecoveryMode getRecoveryMode() {
-    return recoveryMode;
-  }
-
-  @Override
-  public long getLastRecoveryTime() {
-    return lastRecoveringNodeCreationTime;
   }
 
   /**

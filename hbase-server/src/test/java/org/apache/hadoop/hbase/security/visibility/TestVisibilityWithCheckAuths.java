@@ -70,7 +70,6 @@ public class TestVisibilityWithCheckAuths {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, true);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,

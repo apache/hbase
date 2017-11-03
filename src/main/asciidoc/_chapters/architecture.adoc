@@ -1157,30 +1157,21 @@ Due to an asynchronous implementation, in very rare cases, the split log manager
 For that reason, it periodically checks for remaining uncompleted task in its task map or ZooKeeper.
 If none are found, it throws an exception so that the log splitting can be retried right away instead of hanging there waiting for something that won't happen.
 
+[[wal.compression]]
+==== WAL Compression ====
 
-[[distributed.log.replay]]
-====== Distributed Log Replay
+The content of the WAL can be compressed using LRU Dictionary compression.
+This can be used to speed up WAL replication to different datanodes.
+The dictionary can store up to 2^15^ elements; eviction starts after this number is exceeded.
 
-After a RegionServer fails, its failed regions are assigned to another RegionServer, which are marked as "recovering" in ZooKeeper.
-A split log worker directly replays edits from the WAL of the failed RegionServer to the regions at its new location.
-When a region is in "recovering" state, it can accept writes but no reads (including Append and Increment), region splits or merges.
+To enable WAL compression, set the `hbase.regionserver.wal.enablecompression` property to `true`.
+The default value for this property is `false`.
+By default, WAL tag compression is turned on when WAL compression is enabled.
+You can turn off WAL tag compression by setting the `hbase.regionserver.wal.tags.enablecompression` property to 'false'.
 
-Distributed Log Replay extends the <<distributed.log.splitting>> framework.
-It works by directly replaying WAL edits to another RegionServer instead of creating _recovered.edits_ files.
-It provides the following advantages over distributed log splitting alone:
-
-* It eliminates the overhead of writing and reading a large number of _recovered.edits_ files.
-  It is not unusual for thousands of _recovered.edits_ files to be created and written concurrently during a RegionServer recovery.
-  Many small random writes can degrade overall system performance.
-* It allows writes even when a region is in recovering state.
-  It only takes seconds for a recovering region to accept writes again.
-
-.Enabling Distributed Log Replay
-To enable distributed log replay, set `hbase.master.distributed.log.replay` to `true`.
-This will be the default for HBase 0.99 (link:https://issues.apache.org/jira/browse/HBASE-10888[HBASE-10888]).
-
-You must also enable HFile version 3 (which is the default HFile format starting in HBase 0.99.
-See link:https://issues.apache.org/jira/browse/HBASE-10855[HBASE-10855]). Distributed log replay is unsafe for rolling upgrades.
+A possible downside to WAL compression is that we lose more data from the last block in the WAL if it ill-terminated
+mid-write. If entries in this last block were added with new dictionary entries but we failed persist the amended
+dictionary because of an abrupt termination, a read of this last block may not be able to resolve last-written entries.
 
 [[wal.disable]]
 ==== Disabling the WAL

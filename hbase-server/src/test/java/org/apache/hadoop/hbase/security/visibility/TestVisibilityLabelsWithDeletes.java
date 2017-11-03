@@ -98,7 +98,6 @@ public class TestVisibilityLabelsWithDeletes {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
@@ -3287,7 +3286,7 @@ public class TestVisibilityLabelsWithDeletes {
     };
     SUPERUSER.runAs(action);
   }
-  
+
   @SafeVarargs
   public static <T> List<T> createList(T... ts) {
     return new ArrayList<>(Arrays.asList(ts));

@@ -125,9 +125,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
@@ -1686,7 +1684,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       builder.setSplittable(region.isSplittable());
       builder.setMergeable(region.isMergeable());
-      builder.setIsRecovering(region.isRecovering());
       if (request.hasBestSplitRow() && request.getBestSplitRow() && bestSplitRow != null) {
         builder.setBestSplitRow(UnsafeByteOperations.unsafeWrap(bestSplitRow));
       }
@@ -1933,23 +1930,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         regionServer.removeFromMovedRegions(region.getEncodedName());
 
         if (previous == null || !previous.booleanValue()) {
-          // check if the region to be opened is marked in recovering state in ZK
-          if (ZKSplitLog.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
-              region.getEncodedName())) {
-            // Check if current region open is for distributedLogReplay. This check is to support
-            // rolling restart/upgrade where we want to Master/RS see same configuration
-            if (!regionOpenInfo.hasOpenForDistributedLogReplay()
-                  || regionOpenInfo.getOpenForDistributedLogReplay()) {
-              regionServer.recoveringRegions.put(region.getEncodedName(), null);
-            } else {
-              // Remove stale recovery region from ZK when we open region not for recovering which
-              // could happen when turn distributedLogReplay off from on.
-              List<String> tmpRegions = new ArrayList<>();
-              tmpRegions.add(region.getEncodedName());
-              ZKSplitLog.deleteRecoveringRegionZNodes(regionServer.getZooKeeper(),
-                tmpRegions);
-            }
-          }
           htd = htds.get(region.getTable());
           if (htd == null) {
             htd = regionServer.tableDescriptors.get(region.getTable());
@@ -1983,10 +1963,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
 
         builder.addOpeningState(RegionOpeningState.OPENED);
-
-      } catch (KeeperException zooKeeperEx) {
-        LOG.error("Can't retrieve recovering state from zookeeper", zooKeeperEx);
-        throw new ServiceException(zooKeeperEx);
       } catch (IOException ie) {
         LOG.warn("Failed opening region " + region.getRegionNameAsString(), ie);
         if (isBulkAssign) {

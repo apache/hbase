@@ -259,8 +259,7 @@ public enum EventType {
   RS_PARALLEL_SEEK          (80, ExecutorType.RS_PARALLEL_SEEK),
 
   /**
-   * RS wal recovery work items(either creating recover.edits or directly replay wals)
-   * to be executed on the RS.<br>
+   * RS wal recovery work items (splitting wals) to be executed on the RS.<br>
    *
    * RS_LOG_REPLAY
    */

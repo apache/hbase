@@ -866,15 +866,14 @@ public final class RequestConverter {
    * Create a protocol buffer OpenRegionRequest to open a list of regions
    * @param server the serverName for the RPC
    * @param regionOpenInfos info of a list of regions to open
-   * @param openForReplay whether open for replay
    * @return a protocol buffer OpenRegionRequest
    */
   public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
-      final List<Pair<RegionInfo, List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
+      final List<Pair<RegionInfo, List<ServerName>>> regionOpenInfos) {
     OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     for (Pair<RegionInfo, List<ServerName>> regionOpenInfo : regionOpenInfos) {
       builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
-        regionOpenInfo.getSecond(), openForReplay));
+        regionOpenInfo.getSecond()));
     }
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
@@ -889,13 +888,12 @@ public final class RequestConverter {
    * @param server the serverName for the RPC
    * @param region the region to open
    * @param favoredNodes a list of favored nodes
-   * @param openForReplay whether open for replay
    * @return a protocol buffer OpenRegionRequest
    */
   public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
-      final RegionInfo region, List<ServerName> favoredNodes, Boolean openForReplay) {
+      final RegionInfo region, List<ServerName> favoredNodes) {
     OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-    builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes, openForReplay));
+    builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes));
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
     }
@@ -1522,17 +1520,13 @@ public final class RequestConverter {
    * Create a RegionOpenInfo based on given region info and version of offline node
    */
   public static RegionOpenInfo buildRegionOpenInfo(
-      final RegionInfo region,
-      final List<ServerName> favoredNodes, Boolean openForReplay) {
+      final RegionInfo region, final List<ServerName> favoredNodes) {
     RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
     if (favoredNodes != null) {
       for (ServerName server : favoredNodes) {
         builder.addFavoredNodes(ProtobufUtil.toServerName(server));
       }
-    }
-    if(openForReplay != null) {
-      builder.setOpenForDistributedLogReplay(openForReplay);
     }
     return builder.build();
   }

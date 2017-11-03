@@ -376,23 +376,6 @@ The WAL file writer implementation.
 .Default
 `org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter`
 
-
-[[hbase.master.distributed.log.replay]]
-*`hbase.master.distributed.log.replay`*::
-+
-.Description
-Enable 'distributed log replay' as default engine splitting
-    WAL files on server crash.  This default is new in hbase 1.0.  To fall
-    back to the old mode 'distributed log splitter', set the value to
-    'false'.  'Disributed log replay' improves MTTR because it does not
-    write intermediate files.  'DLR' required that 'hfile.format.version'
-    be set to version 3 or higher.
-
-+
-.Default
-`true`
-
-
 [[hbase.regionserver.global.memstore.size]]
 *`hbase.regionserver.global.memstore.size`*::
 +
@@ -1264,9 +1247,8 @@ A comma-separated list of sizes for buckets for the bucketcache
 +
 .Description
 The HFile format version to use for new files.
-      Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
-      Distributed Log Replay requires that tags are enabled. Also see the configuration
-      'hbase.replication.rpc.codec'.
+      Version 3 adds support for tags in hfiles (See https://hbase.apache.org/book.html#hbase.tags).
+      Also see the configuration 'hbase.replication.rpc.codec'.
 
 +
 .Default

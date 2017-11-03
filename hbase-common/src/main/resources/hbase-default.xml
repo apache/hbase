@@ -930,8 +930,7 @@ possible configurations would overwhelm and obscure the important.
       <value>3</value>
       <description>The HFile format version to use for new files.
       Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
-      Distributed Log Replay requires that tags are enabled. Also see the configuration
-      'hbase.replication.rpc.codec'.
+      Also see the configuration 'hbase.replication.rpc.codec'.
       </description>
   </property>
   <property>
@@ -1653,9 +1652,8 @@ possible configurations would overwhelm and obscure the important.
       of written. This configure is to set how long (in ms) we will wait before next checking if a
       log can not push right now because there are some logs written before it have not been pushed.
       A larger waiting will decrease the number of queries on hbase:meta but will enlarge the delay
-      of replication. This feature relies on zk-less assignment, and conflicts with distributed log
-      replay. So users must set hbase.assignment.usezk and hbase.master.distributed.log.replay to
-      false to support it.
+      of replication. This feature relies on zk-less assignment, so users must set
+      hbase.assignment.usezk to false to support it.
     </description>
   </property>
   <!-- Static Web User Filter properties. -->

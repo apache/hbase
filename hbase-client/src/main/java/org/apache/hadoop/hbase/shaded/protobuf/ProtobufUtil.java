@@ -1806,7 +1806,7 @@ public final class ProtobufUtil {
       final AdminService.BlockingInterface admin, ServerName server, final org.apache.hadoop.hbase.client.RegionInfo region)
           throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, null, null);
+      RequestConverter.buildOpenRegionRequest(server, region, null);
     try {
       admin.openRegion(controller, request);
     } catch (ServiceException se) {

@@ -75,7 +75,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 * APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
 * New APIs introduced in a patch version will only be added in a source compatible way footnote:[See 'Source Compatibility' https://blogs.oracle.com/darcy/entry/kinds_of_compatibility]: i.e. code that implements public APIs will continue to compile.
 ** Example: A user using a newly deprecated API does not need to modify application code with HBase API calls until the next major version.
-* 
+*
 
 .Client Binary compatibility
 * Client code written to APIs available in a given patch release can run unchanged (no recompilation needed) against the new jars of later patch versions.
@@ -355,10 +355,6 @@ You may have made use of this configuration if you are using BucketCache. If NOT
 .If you have your own customer filters.
 See the release notes on the issue link:https://issues.apache.org/jira/browse/HBASE-12068[HBASE-12068 [Branch-1\] Avoid need to always do KeyValueUtil#ensureKeyValue for Filter transformCell]; be sure to follow the recommendations therein.
 
-[[dlr]]
-.Distributed Log Replay
-<<distributed.log.replay>> is off by default in HBase 1.0.0. Enabling it can make a big difference improving HBase MTTR. Enable this feature if you are doing a clean stop/start when you are upgrading. You cannot rolling upgrade to this feature (caveat if you are running on a version of HBase in excess of HBase 0.98.4 -- see link:https://issues.apache.org/jira/browse/HBASE-12577[HBASE-12577 Disable distributed log replay by default] for more).
-
 .Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
 If either the client or server version is lower than 0.98.11/1.0.0 and the server
 has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
@@ -380,9 +376,9 @@ There are no known issues running a <<hbase.rolling.upgrade,rolling upgrade>> fr
 In hbase-1.x, the default Scan caching 'number of rows' changed.
 Where in 0.98.x, it defaulted to 100, in later HBase versions, the
 default became Integer.MAX_VALUE. Not setting a cache size can make
-for Scans that run for a long time server-side, especially if 
+for Scans that run for a long time server-side, especially if
 they are running with stringent filtering.  See
-link:https://issues.apache.org/jira/browse/HBASE-16973[Revisiting default value for hbase.client.scanner.caching]; 
+link:https://issues.apache.org/jira/browse/HBASE-16973[Revisiting default value for hbase.client.scanner.caching];
 for further discussion.
 
 [[upgrade1.0.from.0.94]]

@@ -19,10 +19,7 @@
 
 package org.apache.hadoop.hbase.coordination;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -39,13 +36,9 @@ import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -78,7 +71,6 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
   private TaskExecutor splitTaskExecutor;
 
-  private final Object taskReadyLock = new Object();
   private AtomicInteger taskReadySeq = new AtomicInteger(0);
   private volatile String currentTask = null;
   private int currentVersion;
@@ -103,10 +95,12 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   @Override
   public void nodeChildrenChanged(String path) {
     if (path.equals(watcher.znodePaths.splitLogZNode)) {
-      if (LOG.isTraceEnabled()) LOG.trace("tasks arrived or departed on " + path);
-      synchronized (taskReadyLock) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("tasks arrived or departed on " + path);
+      }
+      synchronized (taskReadySeq) {
         this.taskReadySeq.incrementAndGet();
-        taskReadyLock.notify();
+        taskReadySeq.notify();
       }
     }
   }
@@ -240,8 +234,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       }
 
       currentVersion =
-          attemptToOwnTask(true, watcher, server.getServerName(), path,
-            slt.getMode(), stat.getVersion());
+          attemptToOwnTask(true, watcher, server.getServerName(), path, stat.getVersion());
       if (currentVersion < 0) {
         SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.increment();
         return;
@@ -253,7 +246,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         splitTaskDetails.setTaskNode(currentTask);
         splitTaskDetails.setCurTaskZKVersion(new MutableInt(currentVersion));
 
-        endTask(new SplitLogTask.Done(server.getServerName(), slt.getMode()),
+        endTask(new SplitLogTask.Done(server.getServerName()),
           SplitLogCounters.tot_wkr_task_acquired_rescan, splitTaskDetails);
         return;
       }
@@ -262,7 +255,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       SplitLogCounters.tot_wkr_task_acquired.increment();
       getDataSetWatchAsync();
 
-      submitTask(path, slt.getMode(), currentVersion, reportPeriod);
+      submitTask(path, currentVersion, reportPeriod);
 
       // after a successful submit, sleep a little bit to allow other RSs to grab the rest tasks
       try {
@@ -287,8 +280,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * @param curTask task to submit
    * @param curTaskZKVersion current version of task
    */
-  void submitTask(final String curTask, final RecoveryMode mode, final int curTaskZKVersion,
-      final int reportPeriod) {
+  void submitTask(final String curTask, final int curTaskZKVersion, final int reportPeriod) {
     final MutableInt zkVersion = new MutableInt(curTaskZKVersion);
 
     CancelableProgressable reporter = new CancelableProgressable() {
@@ -301,7 +293,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
           last_report_at = t;
           int latestZKVersion =
               attemptToOwnTask(false, watcher, server.getServerName(), curTask,
-                mode, zkVersion.intValue());
+                zkVersion.intValue());
           if (latestZKVersion < 0) {
             LOG.warn("Failed to heartbeat the task" + curTask);
             return false;
@@ -318,7 +310,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
     WALSplitterHandler hsh =
         new WALSplitterHandler(server, this, splitTaskDetails, reporter,
-            this.tasksInProgress, splitTaskExecutor, mode);
+            this.tasksInProgress, splitTaskExecutor);
     server.getExecutorService().submit(hsh);
   }
 
@@ -361,10 +353,10 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * @return non-negative integer value when task can be owned by current region server otherwise -1
    */
   protected static int attemptToOwnTask(boolean isFirstTime, ZooKeeperWatcher zkw,
-      ServerName server, String task, RecoveryMode mode, int taskZKVersion) {
+      ServerName server, String task, int taskZKVersion) {
     int latestZKVersion = FAILED_TO_OWN_TASK;
     try {
-      SplitLogTask slt = new SplitLogTask.Owned(server, mode);
+      SplitLogTask slt = new SplitLogTask.Owned(server);
       Stat stat = zkw.getRecoverableZooKeeper().setData(task, slt.toByteArray(), taskZKVersion);
       if (stat == null) {
         LOG.warn("zk.setData() returned null for path " + task);
@@ -398,7 +390,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * policy puts an upper-limit on the number of simultaneous log splitting that could be happening
    * in a cluster.
    * <p>
-   * Synchronization using <code>taskReadyLock</code> ensures that it will try to grab every task
+   * Synchronization using <code>taskReadySeq</code> ensures that it will try to grab every task
    * that has been put up
    * @throws InterruptedException
    */
@@ -406,7 +398,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   public void taskLoop() throws InterruptedException {
     while (!shouldStop) {
       int seq_start = taskReadySeq.get();
-      List<String> paths = null;
+      List<String> paths;
       paths = getTaskList();
       if (paths == null) {
         LOG.warn("Could not get tasks, did someone remove " + watcher.znodePaths.splitLogZNode
@@ -438,41 +430,9 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         }
       }
       SplitLogCounters.tot_wkr_task_grabing.increment();
-      synchronized (taskReadyLock) {
+      synchronized (taskReadySeq) {
         while (seq_start == taskReadySeq.get()) {
-          taskReadyLock.wait(checkInterval);
-          if (server != null) {
-            // check to see if we have stale recovering regions in our internal memory state
-            Map<String, HRegion> recoveringRegions = server.getRecoveringRegions();
-            if (!recoveringRegions.isEmpty()) {
-              // Make a local copy to prevent ConcurrentModificationException when other threads
-              // modify recoveringRegions
-              List<String> tmpCopy = new ArrayList<>(recoveringRegions.keySet());
-              int listSize = tmpCopy.size();
-              for (int i = 0; i < listSize; i++) {
-                String region = tmpCopy.get(i);
-                String nodePath = ZKUtil.joinZNode(watcher.znodePaths.recoveringRegionsZNode,
-                  region);
-                try {
-                  if (ZKUtil.checkExists(watcher, nodePath) == -1) {
-                    server.getExecutorService().submit(
-                      new FinishRegionRecoveringHandler(server, region, nodePath));
-                  } else {
-                    // current check is a defensive(or redundant) mechanism to prevent us from
-                    // having stale recovering regions in our internal RS memory state while
-                    // zookeeper(source of truth) says differently. We stop at the first good one
-                    // because we should not have a single instance such as this in normal case so
-                    // check the first one is good enough.
-                    break;
-                  }
-                } catch (KeeperException e) {
-                  // ignore zookeeper error
-                  LOG.debug("Got a zookeeper when trying to open a recovering region", e);
-                  break;
-                }
-              }
-            }
-          }
+          taskReadySeq.wait(checkInterval);
         }
       }
     }
@@ -548,12 +508,6 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   @Override
   public boolean isStop() {
     return shouldStop;
-  }
-
-  @Override
-  public RegionStoreSequenceIds getRegionFlushedSequenceId(String failedServerName, String key)
-      throws IOException {
-    return ZKSplitLog.getRegionFlushedSequenceId(watcher, failedServerName, key);
   }
 
   /**

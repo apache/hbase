@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -83,7 +82,7 @@ public class SplitLogWorker implements Runnable {
       final WALFactory factory) {
     this(hserver, conf, server, new TaskExecutor() {
       @Override
-      public Status exec(String filename, RecoveryMode mode, CancelableProgressable p) {
+      public Status exec(String filename, CancelableProgressable p) {
         Path walDir;
         FileSystem fs;
         try {
@@ -99,8 +98,7 @@ public class SplitLogWorker implements Runnable {
         try {
           if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
             fs, conf, p, sequenceIdChecker,
-              server.getCoordinatedStateManager().getSplitLogWorkerCoordination(),
-              server.getConnection(), mode, factory)) {
+              server.getCoordinatedStateManager().getSplitLogWorkerCoordination(), factory)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -194,7 +192,7 @@ public class SplitLogWorker implements Runnable {
       RESIGNED(),
       PREEMPTED()
     }
-    Status exec(String name, RecoveryMode mode, CancelableProgressable p);
+    Status exec(String name, CancelableProgressable p);
   }
 
   /**

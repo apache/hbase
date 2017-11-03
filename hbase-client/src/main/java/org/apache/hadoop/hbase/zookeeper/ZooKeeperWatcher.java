@@ -158,7 +158,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       ZKUtil.createAndFailSilent(this, znodePaths.splitLogZNode);
       ZKUtil.createAndFailSilent(this, znodePaths.backupMasterAddressesZNode);
       ZKUtil.createAndFailSilent(this, znodePaths.tableLockZNode);
-      ZKUtil.createAndFailSilent(this, znodePaths.recoveringRegionsZNode);
       ZKUtil.createAndFailSilent(this, znodePaths.masterMaintZNode);
     } catch (KeeperException e) {
       throw new ZooKeeperConnectionException(

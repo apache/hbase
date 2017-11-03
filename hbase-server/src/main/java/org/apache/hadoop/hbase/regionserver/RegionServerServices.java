@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.hbase.Abortable;
@@ -176,15 +175,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   ExecutorService getExecutorService();
 
   /**
-   * @return set of recovering regions on the hosting region server
-   */
-  Map<String, HRegion> getRecoveringRegions();
-
-  /**
    * Only required for "old" log replay; if it's removed, remove this.
    * @return The RegionServer's NonceManager
    */
-  public ServerNonceManager getNonceManager();
+  ServerNonceManager getNonceManager();
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to be

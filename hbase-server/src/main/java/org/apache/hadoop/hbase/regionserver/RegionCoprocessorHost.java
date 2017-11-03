@@ -546,25 +546,6 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked after log replay on region
-   */
-  public void postLogReplay() {
-    if (coprocEnvironments.isEmpty()) {
-      return;
-    }
-    try {
-      execOperation(new RegionObserverOperationWithoutResult() {
-        @Override
-        public void call(RegionObserver observer) throws IOException {
-          observer.postLogReplay(this);
-        }
-      });
-    } catch (IOException e) {
-      LOG.warn(e);
-    }
-  }
-
-  /**
    * Invoked before a region is closed
    * @param abortRequested true if the server is aborting
    */

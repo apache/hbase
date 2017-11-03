@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -33,7 +32,7 @@ import org.junit.experimental.categories.Category;
 public class TestZooKeeperWatcher {
 
   @Test
-  public void testIsClientReadable() throws ZooKeeperConnectionException, IOException {
+  public void testIsClientReadable() throws IOException {
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(HBaseConfiguration.create(),
         "testIsClientReadable", null, false);
 
@@ -50,7 +49,6 @@ public class TestZooKeeperWatcher {
     assertFalse(watcher.isClientReadable(watcher.znodePaths.regionNormalizerZNode));
     assertFalse(watcher.isClientReadable(watcher.znodePaths.clusterStateZNode));
     assertFalse(watcher.isClientReadable(watcher.znodePaths.drainingZNode));
-    assertFalse(watcher.isClientReadable(watcher.znodePaths.recoveringRegionsZNode));
     assertFalse(watcher.isClientReadable(watcher.znodePaths.splitLogZNode));
     assertFalse(watcher.isClientReadable(watcher.znodePaths.backupMasterAddressesZNode));
 

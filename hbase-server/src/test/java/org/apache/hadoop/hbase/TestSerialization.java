@@ -36,20 +36,16 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -119,15 +115,6 @@ public class TestSerialization {
       assertEquals("Failed read -1 bytes, stream corrupt?", e.getMessage());
     }
 
-  }
-
-  @Test
-  public void testSplitLogTask() throws DeserializationException {
-    SplitLogTask slt = new SplitLogTask.Unassigned(ServerName.valueOf("mgr,1,1"), 
-      RecoveryMode.LOG_REPLAY);
-    byte [] bytes = slt.toByteArray();
-    SplitLogTask sltDeserialized = SplitLogTask.parseFrom(bytes);
-    assertTrue(slt.equals(sltDeserialized));
   }
 
   @Test public void testCompareFilter() throws Exception {

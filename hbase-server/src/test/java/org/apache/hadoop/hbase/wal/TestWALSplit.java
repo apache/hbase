@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -139,7 +138,6 @@ public class TestWALSplit {
   private static String ROBBER;
   private static String ZOMBIE;
   private static String [] GROUP = new String [] {"supergroup"};
-  private RecoveryMode mode;
 
   static enum Corruptions {
     INSERT_GARBAGE_ON_FIRST_LINE,
@@ -188,8 +186,6 @@ public class TestWALSplit {
     REGIONS.clear();
     Collections.addAll(REGIONS, "bbb", "ccc");
     InstrumentedLogWriter.activateFailure = false;
-    this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
-        RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     wals = new WALFactory(conf, null, name.getMethodName());
     WALDIR = new Path(HBASELOGDIR,
         AbstractFSWALProvider.getWALDirectoryName(ServerName.valueOf(name.getMethodName(),
@@ -803,8 +799,7 @@ public class TestWALSplit {
     }
     assertTrue("There should be some log greater than size 0.", 0 < largestSize);
     // Set up a splitter that will throw an IOE on the output side
-    WALSplitter logSplitter = new WALSplitter(wals,
-        conf, HBASEDIR, fs, null, null, null, this.mode) {
+    WALSplitter logSplitter = new WALSplitter(wals, conf, HBASEDIR, fs, null, null) {
       @Override
       protected Writer createWriter(Path logfile) throws IOException {
         Writer mockWriter = Mockito.mock(Writer.class);
@@ -931,7 +926,7 @@ public class TestWALSplit {
     try {
       conf.setInt("hbase.splitlog.report.period", 1000);
       boolean ret = WALSplitter.splitLogFile(
-          HBASEDIR, logfile, spiedFs, conf, localReporter, null, null, null, this.mode, wals);
+          HBASEDIR, logfile, spiedFs, conf, localReporter, null, null, wals);
       assertFalse("Log splitting should failed", ret);
       assertTrue(count.get() > 0);
     } catch (IOException e) {
@@ -989,8 +984,7 @@ public class TestWALSplit {
     makeRegionDirs(regions);
 
     // Create a splitter that reads and writes the data without touching disk
-    WALSplitter logSplitter = new WALSplitter(wals,
-        localConf, HBASEDIR, fs, null, null, null, this.mode) {
+    WALSplitter logSplitter = new WALSplitter(wals, localConf, HBASEDIR, fs, null, null) {
 
       /* Produce a mock writer that doesn't write anywhere */
       @Override
@@ -1139,8 +1133,7 @@ public class TestWALSplit {
     assertTrue("There should be some log file",
         logfiles != null && logfiles.length > 0);
 
-    WALSplitter logSplitter = new WALSplitter(wals,
-        conf, HBASEDIR, fs, null, null, null, this.mode) {
+    WALSplitter logSplitter = new WALSplitter(wals, conf, HBASEDIR, fs, null, null) {
       @Override
       protected Writer createWriter(Path logfile)
           throws IOException {

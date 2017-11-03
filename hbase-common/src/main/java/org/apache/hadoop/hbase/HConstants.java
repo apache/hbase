@@ -1013,13 +1013,6 @@ public final class HConstants {
 
   public static final String LOCALHOST_IP = "127.0.0.1";
 
-  /** Conf key that enables unflushed WAL edits directly being replayed to region servers */
-  public static final String DISTRIBUTED_LOG_REPLAY_KEY = "hbase.master.distributed.log.replay";
-  public static final boolean DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG = false;
-  public static final String DISALLOW_WRITES_IN_RECOVERING =
-      "hbase.regionserver.disallow.writes.when.recovering";
-  public static final boolean DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG = false;
-
   public static final String REGION_SERVER_HANDLER_COUNT = "hbase.regionserver.handler.count";
   public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 30;
 

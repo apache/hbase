@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -101,7 +100,7 @@ public abstract class TestVisibilityLabels {
   public static Configuration conf;
 
   private volatile boolean killedRS = false;
-  @Rule 
+  @Rule
   public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER, USER1;
 
@@ -146,7 +145,7 @@ public abstract class TestVisibilityLabels {
           current.getRowLength(), row2, 0, row2.length));
     }
   }
-  
+
   @Test
   public void testSimpleVisibilityLabelsWithUniCodeCharacters() throws Exception {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
@@ -398,13 +397,6 @@ public abstract class TestVisibilityLabels {
       } catch (InterruptedException e) {
       }
     }
-    Region labelsTableRegion = regionServer.getRegions(LABELS_TABLE_NAME).get(0);
-    while (labelsTableRegion.isRecovering()) {
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-      }
-    }
   }
 
   @Test
@@ -583,7 +575,7 @@ public abstract class TestVisibilityLabels {
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.checkAndPut(row2, fam, qual, null, put);
-      
+
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(scan);
