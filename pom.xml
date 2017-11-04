@@ -1438,6 +1438,7 @@
         Default is the build start timestamp. Up on jenkins pass in the jenkins build id by setting
         this parameter by invoking mvn with -Dbuild.id=$BUILD_ID-->
     <build.id>${maven.build.timestamp}</build.id>
+    <shell-executable>bash</shell-executable>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
