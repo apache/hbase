@@ -78,7 +78,6 @@
     <module>hbase-endpoint</module>
     <module>hbase-it</module>
     <module>hbase-examples</module>
-    <module>hbase-prefix-tree</module>
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
@@ -1653,14 +1652,6 @@
         <artifactId>hbase-testing-util</artifactId>
         <version>${project.version}</version>
         <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-prefix-tree</artifactId>
-        <version>${project.version}</version>
-        <!-- unfortunately, runtime scope causes Eclipse to give compile time access which isn't
-          needed, however it is apparently needed to run things within Eclipse -->
-        <scope>runtime</scope>
       </dependency>
       <dependency>
         <artifactId>hbase-examples</artifactId>

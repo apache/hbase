@@ -792,11 +792,7 @@ public class HFileWriterImpl implements HFile.Writer {
     int avgValueLen =
         entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(FileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
-    if (hFileContext.getDataBlockEncoding() == DataBlockEncoding.PREFIX_TREE) {
-      // In case of Prefix Tree encoding, we always write tags information into HFiles even if all
-      // KVs are having no tags.
-      fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);
-    } else if (hFileContext.isIncludesTags()) {
+    if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
       fileInfo.append(FileInfo.MAX_TAGS_LEN, Bytes.toBytes(this.maxTagsLength), false);

@@ -316,12 +316,7 @@ public class TestSeekTo {
     assertEquals("i", toRowStr(scanner.getCell()));
 
     assertEquals(1, scanner.seekTo(toKV("l", tagUsage)));
-    if (encoding == DataBlockEncoding.PREFIX_TREE) {
-      // TODO : Fix this
-      assertEquals(null, scanner.getCell());
-    } else {
-      assertEquals("k", toRowStr(scanner.getCell()));
-    }
+    assertEquals("k", toRowStr(scanner.getCell()));
 
     reader.close();
     deleteTestDir(fs);

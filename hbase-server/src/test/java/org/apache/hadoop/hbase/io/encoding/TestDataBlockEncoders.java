@@ -42,9 +42,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeSeeker;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -194,9 +192,6 @@ public class TestDataBlockEncoders {
     List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       LOG.info("Encoding: " + encoding);
-      // Off heap block data support not added for PREFIX_TREE DBE yet.
-      // TODO remove this once support is added. HBASE-12298
-      if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
       DataBlockEncoder encoder = encoding.getEncoder();
       if (encoder == null) {
         continue;
@@ -271,9 +266,6 @@ public class TestDataBlockEncoders {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      // Off heap block data support not added for PREFIX_TREE DBE yet.
-      // TODO remove this once support is added. HBASE-12298
-      if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
       if (encoding.getEncoder() == null) {
         continue;
       }
@@ -317,9 +309,6 @@ public class TestDataBlockEncoders {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      // Off heap block data support not added for PREFIX_TREE DBE yet.
-      // TODO remove this once support is added. HBASE-12298
-      if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
       if (encoding.getEncoder() == null) {
         continue;
       }
@@ -346,12 +335,7 @@ public class TestDataBlockEncoders {
 
       Cell actualKeyValue = seeker.getCell();
       ByteBuffer actualKey = null;
-      if (seeker instanceof PrefixTreeSeeker) {
-        byte[] serializedKey = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(seeker.getKey());
-        actualKey = ByteBuffer.wrap(KeyValueUtil.createKeyValueFromKey(serializedKey).getKey());
-      } else {
-        actualKey = ByteBuffer.wrap(((KeyValue) seeker.getKey()).getKey());
-      }
+      actualKey = ByteBuffer.wrap(((KeyValue) seeker.getKey()).getKey());
       ByteBuffer actualValue = seeker.getValueShallowCopy();
 
       if (expectedKeyValue != null) {

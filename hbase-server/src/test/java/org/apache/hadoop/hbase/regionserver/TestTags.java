@@ -116,8 +116,7 @@ public class TestTags {
       HTableDescriptor desc = new HTableDescriptor(tableName);
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setBlockCacheEnabled(true);
-      // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
+      colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
       desc.addFamily(colDesc);
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);
@@ -183,7 +182,7 @@ public class TestTags {
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setBlockCacheEnabled(true);
       // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
-      colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
+      // colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       desc.addFamily(colDesc);
       Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);

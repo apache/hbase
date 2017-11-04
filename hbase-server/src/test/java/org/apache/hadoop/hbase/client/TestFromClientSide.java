@@ -85,7 +85,6 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -218,7 +217,6 @@ public class TestFromClientSide {
      final byte[] T3 = Bytes.toBytes("T3");
      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
          .setKeepDeletedCells(KeepDeletedCells.TRUE)
-         .setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE)
          .setMaxVersions(3);
 
      HTableDescriptor desc = new HTableDescriptor(tableName);
