@@ -163,6 +163,20 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
   }
 
   @Override
+  public void preMemStoreCompactionCompactScannerOpen(
+      ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+      throws IOException {
+    options.readAllVersions();
+  }
+
+  @Override
+  public InternalScanner preMemStoreCompactionCompact(
+      ObserverContext<RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
+      throws IOException {
+    return wrap(store.getColumnFamilyDescriptor().getName(), scanner);
+  }
+
+  @Override
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get, List<Cell> result)
       throws IOException {
     Scan scan =
