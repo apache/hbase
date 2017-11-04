@@ -151,12 +151,11 @@ diff --binary --recursive . "${unpack_dir}" >"${working_dir}/diff_output" || tru
 
 cd "${working_dir}"
 # expectation check largely based on HBASE-14952
-echo "Checking against things we don't expect to include in the source tarball (git related, hbase-native-client, etc.)"
+echo "Checking against things we don't expect to include in the source tarball (git related, etc.)"
 cat >known_excluded <<END
 Only in .: .git
 Only in .: .gitattributes
 Only in .: .gitignore
-Only in .: hbase-native-client
 END
 if ! diff known_excluded diff_output >"${working_dir}/unexpected.diff" ; then
   echo "Any output here are unexpected differences between the source artifact we'd make for an RC and the current branch."
