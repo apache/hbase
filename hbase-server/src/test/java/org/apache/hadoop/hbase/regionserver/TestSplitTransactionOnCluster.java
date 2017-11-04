@@ -1568,7 +1568,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void waitUntilRegionServerDead() throws InterruptedException, InterruptedIOException {
+  private void waitUntilRegionServerDead() throws InterruptedException, IOException {
     // Wait until the master processes the RS shutdown
     for (int i=0; cluster.getMaster().getClusterStatus().
         getServers().size() > NB_SERVERS && i<100; i++) {

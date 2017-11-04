@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase;
 
+import com.google.common.base.Objects;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -194,14 +195,14 @@ public class ClusterStatus extends VersionedWritable {
     if (!(o instanceof ClusterStatus)) {
       return false;
     }
-    return (getVersion() == ((ClusterStatus)o).getVersion()) &&
-      getHBaseVersion().equals(((ClusterStatus)o).getHBaseVersion()) &&
-      this.liveServers.equals(((ClusterStatus)o).liveServers) &&
-      this.deadServers.containsAll(((ClusterStatus)o).deadServers) &&
-      Arrays.equals(this.masterCoprocessors,
-                    ((ClusterStatus)o).masterCoprocessors) &&
-      this.master.equals(((ClusterStatus)o).master) &&
-      this.backupMasters.containsAll(((ClusterStatus)o).backupMasters);
+    ClusterStatus other = (ClusterStatus) o;
+    return Objects.equal(getHBaseVersion(), other.getHBaseVersion()) &&
+        Objects.equal(this.liveServers, other.liveServers) &&
+        getDeadServerNames().containsAll(other.getDeadServerNames()) &&
+        Arrays.equals(getMasterCoprocessors(), other.getMasterCoprocessors()) &&
+        Objects.equal(getMaster(), other.getMaster()) &&
+        getBackupMasters().containsAll(other.getBackupMasters()) &&
+        Objects.equal(getClusterId(), other.getClusterId());
   }
 
   /**
