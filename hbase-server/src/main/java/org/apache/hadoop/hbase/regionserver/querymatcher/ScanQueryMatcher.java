@@ -402,7 +402,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
       columnTracker = (NewVersionBehaviorTracker) deleteTracker;
     } else if (columns == null || columns.size() == 0) {
       columnTracker = new ScanWildcardColumnTracker(scanInfo.getMinVersions(), maxVersionToCheck,
-          oldestUnexpiredTS);
+          oldestUnexpiredTS, scanInfo.getComparator());
     } else {
       columnTracker = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(),
         maxVersionToCheck, oldestUnexpiredTS);

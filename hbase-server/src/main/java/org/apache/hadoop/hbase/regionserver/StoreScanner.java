@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.regionserver.querymatcher.CompactionScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -67,6 +68,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private static final Log LOG = LogFactory.getLog(StoreScanner.class);
   // In unit tests, the store could be null
   protected final HStore store;
+  private final CellComparator comparator;
   private ScanQueryMatcher matcher;
   protected KeyValueHeap heap;
   private boolean cacheBlocks;
@@ -164,6 +166,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.readPt = readPt;
     this.store = store;
     this.cacheBlocks = cacheBlocks;
+    this.comparator = Preconditions.checkNotNull(scanInfo.getComparator());
     get = scan.isGetScan();
     explicitColumnQuery = numColumns > 0;
     this.scan = scan;
@@ -252,7 +255,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.storeOffset = scan.getRowOffsetPerColumnFamily();
       addCurrentScanners(scanners);
       // Combine all seeked scanners with a heap
-      resetKVHeap(scanners, store.getComparator());
+      resetKVHeap(scanners, comparator);
     } catch (IOException e) {
       // remove us from the HStore#changedReaderObservers here or we'll have no chance to
       // and might cause memory leak
@@ -311,7 +314,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     seekScanners(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
     addCurrentScanners(scanners);
     // Combine all seeked scanners with a heap
-    resetKVHeap(scanners, store.getComparator());
+    resetKVHeap(scanners, comparator);
   }
 
   private void seekAllScanner(ScanInfo scanInfo, List<? extends KeyValueScanner> scanners)
@@ -319,7 +322,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Seek all scanners to the initial key
     seekScanners(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
     addCurrentScanners(scanners);
-    resetKVHeap(scanners, scanInfo.getComparator());
+    resetKVHeap(scanners, comparator);
   }
 
   // For mob compaction only as we do not have a Store instance when doing mob compaction.
@@ -542,9 +545,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     if (!scannerContext.getKeepProgress()) {
       scannerContext.clearProgress();
     }
-
-    // Only do a sanity-check if store and comparator are available.
-    CellComparator comparator = store != null ? store.getComparator() : null;
 
     int count = 0;
     long totalBytesRead = 0;
@@ -997,7 +997,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       newCurrentScanners = new ArrayList<>(fileScanners.size() + memstoreScanners.size());
       newCurrentScanners.addAll(fileScanners);
       newCurrentScanners.addAll(memstoreScanners);
-      newHeap = new KeyValueHeap(newCurrentScanners, store.getComparator());
+      newHeap = new KeyValueHeap(newCurrentScanners, comparator);
     } catch (Exception e) {
       LOG.warn("failed to switch to stream read", e);
       if (fileScanners != null) {

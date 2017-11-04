@@ -29,7 +29,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -64,7 +63,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   // Need to track it per ts.
   private List<Triple<List<Tag>, Byte, Long>> visibilityTagsDeleteFamilyVersion = new ArrayList<>();
   private List<Pair<List<Tag>, Byte>> visibilityTagsDeleteColumns;
-  // Tracking as List<List> is to handle same ts cell but different visibility tag. 
+  // Tracking as List<List> is to handle same ts cell but different visibility tag.
   // TODO : Need to handle puts with same ts but different vis tags.
   private List<Pair<List<Tag>, Byte>> visiblityTagsDeleteColumnVersion = new ArrayList<>();
 
@@ -247,7 +246,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         }
       }
       if (deleteCell != null) {
-        int ret = CellComparatorImpl.COMPARATOR.compareQualifiers(cell, deleteCell);
+        int ret = comparator.compareQualifiers(cell, deleteCell);
         if (ret == 0) {
           if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
             if (visibilityTagsDeleteColumns != null) {
