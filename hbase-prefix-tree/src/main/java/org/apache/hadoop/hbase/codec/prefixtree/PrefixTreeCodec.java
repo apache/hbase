@@ -57,7 +57,10 @@ import org.apache.hadoop.io.WritableUtils;
  * {@link PrefixTreeEncoder}, and decoding is delegated to instances of
  * {@link org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher}. Encoder and decoder instances are
  * created and recycled by static PtEncoderFactory and PtDecoderFactory.
+ * @deprecated Since 1.2.7. Will be removed in 2.0.0. Write the dev list if you would like to take on the
+ * maintainence of this facility.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class PrefixTreeCodec implements DataBlockEncoder{
 
