@@ -36,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -272,13 +273,13 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    public void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
         throws IOException {
     }
 
     @Override
-    public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
+    public void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        ClusterStatus status) throws IOException {
     }
 
     @Override

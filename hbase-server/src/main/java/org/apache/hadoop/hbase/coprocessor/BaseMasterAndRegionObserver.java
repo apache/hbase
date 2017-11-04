@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -67,12 +68,13 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  public void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
     throws IOException {
   }
 
   @Override
-  public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  public void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ClusterStatus status)
     throws IOException {
   }
 

@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -78,13 +79,14 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
-  public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-    throws IOException {
+  public void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
   }
 
   @Override
-  public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-    throws IOException {
+  public void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ClusterStatus status)
+      throws IOException {
   }
 
   @Override
@@ -474,7 +476,7 @@ public class BaseMasterObserver implements MasterObserver {
   public void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot) throws IOException {
   }
-  
+
   @Override
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
