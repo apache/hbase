@@ -777,6 +777,61 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * Invoked before in memory compaction.
+   */
+  public void preMemStoreCompaction(HStore store) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preMemStoreCompaction(this, store);
+      }
+    });
+  }
+
+  /**
+   * Invoked before create StoreScanner for in memory compaction.
+   */
+  public ScanInfo preMemStoreCompactionCompactScannerOpen(HStore store) throws IOException {
+    CustomizedScanInfoBuilder builder = new CustomizedScanInfoBuilder(store.getScanInfo());
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.preMemStoreCompactionCompactScannerOpen(this, store, builder);
+      }
+    });
+    return builder.build();
+  }
+
+  /**
+   * Invoked before compacting memstore.
+   */
+  public InternalScanner preMemStoreCompactionCompact(HStore store, InternalScanner scanner)
+      throws IOException {
+    if (coprocEnvironments.isEmpty()) {
+      return scanner;
+    }
+    return execOperationWithResult(new ObserverOperationWithResult<RegionObserver, InternalScanner>(
+        regionObserverGetter, scanner) {
+      @Override
+      public InternalScanner call(RegionObserver observer) throws IOException {
+        return observer.preMemStoreCompactionCompact(this, store, getResult());
+      }
+    });
+  }
+
+  /**
+   * Invoked after in memory compaction.
+   */
+  public void postMemStoreCompaction(HStore store) throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
+      @Override
+      public void call(RegionObserver observer) throws IOException {
+        observer.postMemStoreCompaction(this, store);
+      }
+    });
+  }
+
+  /**
    * Invoked after a memstore flush
    * @throws IOException
    */

@@ -96,8 +96,18 @@ public class MemStoreCompactor {
       LOG.debug("Starting the In-Memory Compaction for store "
           + compactingMemStore.getStore().getColumnFamilyName());
     }
-
-    doCompaction();
+    HStore store = compactingMemStore.getStore();
+    RegionCoprocessorHost cpHost = store.getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preMemStoreCompaction(store);
+    }
+    try {
+      doCompaction();
+    } finally {
+      if (cpHost != null) {
+        cpHost.postMemStoreCompaction(store);
+      }
+    }
     return true;
   }
 

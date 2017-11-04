@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,8 @@
  */
 
 package org.apache.hadoop.hbase.coprocessor;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import java.io.IOException;
 import java.util.List;
@@ -144,10 +146,10 @@ public interface RegionObserver {
    * Called before a Store's memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @param store the store where flush is being requested
-   * @param scanner the scanner over existing data used in the store file
+   * @param scanner the scanner over existing data used in the memstore
    * @param tracker tracker used to track the life cycle of a flush
-   * @return the scanner to use during compaction.  Should not be {@code null}
-   * unless the implementation is writing new store files on its own.
+   * @return the scanner to use during flush. Should not be {@code null} unless the implementation
+   *         is writing new store files on its own.
    */
   default InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
@@ -172,6 +174,51 @@ public interface RegionObserver {
    */
   default void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
       StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {}
+
+  /**
+   * Called before in memory compaction started.
+   * @param c the environment provided by the region server
+   * @param store the store where in memory compaction is being requested
+   */
+  default void preMemStoreCompaction(ObserverContext<RegionCoprocessorEnvironment> c, Store store)
+      throws IOException {}
+
+  /**
+   * Called before we open store scanner for in memory compaction. You can use the {@code options}
+   * to change max versions and TTL for the scanner being opened. Notice that this method will only
+   * be called when you use {@code eager} mode. For {@code basic} mode we will not drop any cells
+   * thus we do not open a store scanner.
+   * @param c the environment provided by the region server
+   * @param store the store where in memory compaction is being requested
+   * @param options used to change max versions and TTL for the scanner being opened
+   */
+  default void preMemStoreCompactionCompactScannerOpen(
+      ObserverContext<RegionCoprocessorEnvironment> c, Store store, ScanOptions options)
+      throws IOException {}
+
+  /**
+   * Called before we do in memory compaction. Notice that this method will only be called when you
+   * use {@code eager} mode. For {@code basic} mode we will not drop any cells thus there is no
+   * {@link InternalScanner}.
+   * @param c the environment provided by the region server
+   * @param store the store where in memory compaction is being executed
+   * @param scanner the scanner over existing data used in the memstore segments being compact
+   * @return the scanner to use during in memory compaction. Must be non-null.
+   */
+  @NonNull
+  default InternalScanner preMemStoreCompactionCompact(
+      ObserverContext<RegionCoprocessorEnvironment> c, Store store, InternalScanner scanner)
+      throws IOException {
+    return scanner;
+  }
+
+  /**
+   * Called after the in memory compaction is finished.
+   * @param c the environment provided by the region server
+   * @param store the store where in memory compaction is being executed
+   */
+  default void postMemStoreCompaction(ObserverContext<RegionCoprocessorEnvironment> c, Store store)
+      throws IOException {}
 
   /**
    * Called prior to selecting the {@link StoreFile StoreFiles} to compact from the list of

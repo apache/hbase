@@ -23,11 +23,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.io.Closeables;
 
 /**
  * The MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator
@@ -36,12 +42,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator {
 
-  private List<Cell> kvs = new ArrayList<>();
-  private boolean hasMore;
+  private static final Log LOG = LogFactory.getLog(MemStoreCompactorSegmentsIterator.class);
+
+  private final List<Cell> kvs = new ArrayList<>();
+  private boolean hasMore = true;
   private Iterator<Cell> kvsIterator;
 
   // scanner on top of pipeline scanner that uses ScanQueryMatcher
-  private StoreScanner compactingScanner;
+  private InternalScanner compactingScanner;
 
   // C-tor
   public MemStoreCompactorSegmentsIterator(List<ImmutableSegment> segments,
@@ -56,44 +64,34 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
     // build the scanner based on Query Matcher
     // reinitialize the compacting scanner for each instance of iterator
     compactingScanner = createScanner(store, scanners);
-
-    hasMore = compactingScanner.next(kvs, scannerContext);
-
-    if (!kvs.isEmpty()) {
-      kvsIterator = kvs.iterator();
-    }
-
+    refillKVS();
   }
 
   @Override
   public boolean hasNext() {
-    if (kvsIterator == null)  { // for the case when the result is empty
+    if (kvsIterator == null) { // for the case when the result is empty
       return false;
     }
-    if (!kvsIterator.hasNext()) {
-      // refillKVS() method should be invoked only if !kvsIterator.hasNext()
-      if (!refillKVS()) {
-        return false;
-      }
-    }
-    return kvsIterator.hasNext();
+    // return true either we have cells in buffer or we can get more.
+    return kvsIterator.hasNext() || refillKVS();
   }
 
   @Override
-  public Cell next()  {
-    if (kvsIterator == null)  { // for the case when the result is empty
-      return null;
+  public Cell next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
     }
-    if (!kvsIterator.hasNext()) {
-      // refillKVS() method should be invoked only if !kvsIterator.hasNext()
-      if (!refillKVS())  return null;
-    }
-    return (!hasMore) ? null : kvsIterator.next();
+    return kvsIterator.next();
   }
 
   public void close() {
-    compactingScanner.close();
+    try {
+      compactingScanner.close();
+    } catch (IOException e) {
+      LOG.warn("close store scanner failed", e);
+    }
     compactingScanner = null;
+    kvs.clear();
   }
 
   @Override
@@ -105,39 +103,64 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
    * Creates the scanner for compacting the pipeline.
    * @return the scanner
    */
-  private StoreScanner createScanner(HStore store, List<KeyValueScanner> scanners)
+  private InternalScanner createScanner(HStore store, List<KeyValueScanner> scanners)
       throws IOException {
-    // FIXME: This is the old comment 'Get all available versions'
-    // But actually if we really reset the ScanInfo to get all available versions then lots of UTs
-    // will fail
-    return new StoreScanner(store, store.getScanInfo(), scanners, ScanType.COMPACT_RETAIN_DELETES,
-        store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+    InternalScanner scanner = null;
+    boolean success = false;
+    try {
+      RegionCoprocessorHost cpHost = store.getCoprocessorHost();
+      ScanInfo scanInfo;
+      if (cpHost != null) {
+        scanInfo = cpHost.preMemStoreCompactionCompactScannerOpen(store);
+      } else {
+        scanInfo = store.getScanInfo();
+      }
+      scanner = new StoreScanner(store, scanInfo, scanners, ScanType.COMPACT_RETAIN_DELETES,
+          store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+      if (cpHost != null) {
+        InternalScanner scannerFromCp = cpHost.preMemStoreCompactionCompact(store, scanner);
+        if (scannerFromCp == null) {
+          throw new CoprocessorException("Got a null InternalScanner when calling" +
+              " preMemStoreCompactionCompact which is not acceptable");
+        }
+        success = true;
+        return scannerFromCp;
+      } else {
+        success = true;
+        return scanner;
+      }
+    } finally {
+      if (!success) {
+        Closeables.close(scanner, true);
+        scanners.forEach(KeyValueScanner::close);
+      }
+    }
   }
 
-  /* Refill kev-value set (should be invoked only when KVS is empty)
-   * Returns true if KVS is non-empty */
+  /*
+   * Refill kev-value set (should be invoked only when KVS is empty) Returns true if KVS is
+   * non-empty
+   */
   private boolean refillKVS() {
-    kvs.clear();          // clear previous KVS, first initiated in the constructor
-    if (!hasMore) {       // if there is nothing expected next in compactingScanner
+    // if there is nothing expected next in compactingScanner
+    if (!hasMore) {
       return false;
     }
-
-    try {                 // try to get next KVS
-      hasMore = compactingScanner.next(kvs, scannerContext);
-    } catch (IOException ie) {
-      throw new IllegalStateException(ie);
-    }
-
-    if (!kvs.isEmpty() ) {// is the new KVS empty ?
-      kvsIterator = kvs.iterator();
-      return true;
-    } else {
-      // KVS is empty, but hasMore still true?
-      if (hasMore) {      // try to move to next row
-        return refillKVS();
+    // clear previous KVS, first initiated in the constructor
+    kvs.clear();
+    for (;;) {
+      try {
+        hasMore = compactingScanner.next(kvs, scannerContext);
+      } catch (IOException e) {
+        // should not happen as all data are in memory
+        throw new IllegalStateException(e);
       }
-
+      if (!kvs.isEmpty()) {
+        kvsIterator = kvs.iterator();
+        return true;
+      } else if (!hasMore) {
+        return false;
+      }
     }
-    return hasMore;
   }
 }

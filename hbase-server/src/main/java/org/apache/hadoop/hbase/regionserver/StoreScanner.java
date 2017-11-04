@@ -268,9 +268,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private static final Scan SCAN_FOR_COMPACTION = new Scan();
 
   /**
-   * Used for compactions.
+   * Used for store file compaction and memstore compaction.
    * <p>
-   * Opens a scanner across specified StoreFiles.
+   * Opens a scanner across specified StoreFiles/MemStoreSegments.
    * @param store who we scan
    * @param scanners ancillary scanners
    * @param smallestReadPoint the readPoint that we should use for tracking versions
