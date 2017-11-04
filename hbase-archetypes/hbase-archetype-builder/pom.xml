@@ -242,24 +242,18 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>${exec.maven.version}</version>
+      <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <!-- exec-maven-plugin executes chmod to make scripts executable -->
           <execution>
             <id>make-scripts-executable</id>
             <phase>process-resources</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>run</goal>
             </goals>
             <configuration>
-              <executable>chmod</executable>
-              <arguments>
-                <argument>+x</argument>
-                <argument>/${project.basedir}/createArchetypes.sh</argument>
-                <argument>/${project.basedir}/installArchetypes.sh</argument>
-              </arguments>
+              <chmod file="${project.basedir}/createArchetypes.sh" perm="+x" />
+              <chmod file="${project.basedir}/installArchetypes.sh" perm="+x" />
             </configuration>
           </execution>
           <!-- exec-maven-plugin executes script which invokes 'archetype:create-from-project'
@@ -268,10 +262,12 @@
             <id>run-createArchetypes-script</id>
             <phase>compile</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>run</goal>
             </goals>
             <configuration>
-              <executable>/${project.basedir}/createArchetypes.sh</executable>
+              <exec executable="${shell-executable}" dir="${project.basedir}" failonerror="true">
+                 <arg line="./createArchetypes.sh"/>
+               </exec>
             </configuration>
           </execution>
           <!-- exec-maven-plugin executes script which invokes 'install' to install each
@@ -283,10 +279,12 @@
             <id>run-installArchetypes-script</id>
             <phase>install</phase>
             <goals>
-              <goal>exec</goal>
+              <goal>run</goal>
             </goals>
             <configuration>
-              <executable>/${project.basedir}/installArchetypes.sh</executable>
+              <exec executable="${shell-executable}" dir="${project.basedir}" failonerror="true">
+                 <arg line="./installArchetypes.sh"/>
+               </exec>
             </configuration>
           </execution>
         </executions>
