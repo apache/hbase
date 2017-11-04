@@ -557,21 +557,40 @@ module Hbase
       @test_table.put(2, "x:raw1", 11)
 
       args = {}
-      numRows = 0
-      count = @test_table._scan_internal(args) do |row, cells| # Normal Scan
-        numRows += 1
+      num_rows = 0
+      @test_table._scan_internal(args) do # Normal Scan
+        num_rows += 1
       end
-      assert_equal(numRows, 2, "Num rows scanned without RAW/VERSIONS are not 2") 
+      assert_equal(num_rows, 2,
+                   'Num rows scanned without RAW/VERSIONS are not 2')
 
-      args = {VERSIONS=>10,RAW=>true} # Since 4 versions of row with rowkey 2 is been added, we can use any number >= 4 for VERSIONS to scan all 4 versions.
-      numRows = 0
-      count = @test_table._scan_internal(args) do |row, cells| # Raw Scan
-        numRows += 1
+      args = { VERSIONS => 10, RAW => true } # Since 4 versions of row with rowkey 2 is been added, we can use any number >= 4 for VERSIONS to scan all 4 versions.
+      num_rows = 0
+      @test_table._scan_internal(args) do # Raw Scan
+        num_rows += 1
       end
-      assert_equal(numRows, 5, "Num rows scanned without RAW/VERSIONS are not 5") # 5 since , 1 from row key '1' and other 4 from row key '4'
+      # 5 since , 1 from row key '1' and other 4 from row key '4'
+      assert_equal(num_rows, 5,
+                   'Num rows scanned without RAW/VERSIONS are not 5')
+
+      @test_table.delete(1, 'x:a')
+      args = {}
+      num_rows = 0
+      @test_table._scan_internal(args) do # Normal Scan
+        num_rows += 1
+      end
+      assert_equal(num_rows, 1,
+                   'Num rows scanned without RAW/VERSIONS are not 1')
+
+      args = { VERSIONS => 10, RAW => true }
+      num_rows = 0
+      @test_table._scan_internal(args) do # Raw Scan
+        num_rows += 1
+      end
+      # 6 since , 2 from row key '1' and other 4 from row key '4'
+      assert_equal(num_rows, 6,
+                   'Num rows scanned without RAW/VERSIONS are not 5')
     end
-
-
 
     define_test "scan should fail on invalid COLUMNS parameter types" do
       assert_raise(ArgumentError) do
