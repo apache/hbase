@@ -29,7 +29,7 @@
 
   <artifactId>hbase-prefix-tree</artifactId>
   <name>Apache HBase - Prefix Tree</name>
-  <description>Prefix Tree Data Block Encoder</description>
+  <description>Prefix Tree Data Block Encoder; DEPRECATED! Removed in hbase-2.0.0</description>
 
   <build>
     <plugins>
