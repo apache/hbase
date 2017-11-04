@@ -1346,6 +1346,7 @@
     <extra.enforcer.version>1.0-beta-6</extra.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
+    <shell-executable>bash</shell-executable>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
