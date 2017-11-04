@@ -801,21 +801,6 @@ public class TableMapReduceUtil {
    * @see <a href="https://issues.apache.org/jira/browse/PIG-3285">PIG-3285</a>
    */
   public static void addHBaseDependencyJars(Configuration conf) throws IOException {
-
-    // PrefixTreeCodec is part of the hbase-prefix-tree module. If not included in MR jobs jar
-    // dependencies, MR jobs that write encoded hfiles will fail.
-    // We used reflection here so to prevent a circular module dependency.
-    // TODO - if we extract the MR into a module, make it depend on hbase-prefix-tree.
-    Class prefixTreeCodecClass = null;
-    try {
-      prefixTreeCodecClass =
-          Class.forName("org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec");
-    } catch (ClassNotFoundException e) {
-      // this will show up in unit tests but should not show in real deployments
-      LOG.warn("The hbase-prefix-tree module jar containing PrefixTreeCodec is not present." +
-          "  Continuing without it.");
-    }
-
     addDependencyJarsForClasses(conf,
       // explicitly pull a class from each module
       org.apache.hadoop.hbase.HConstants.class,                      // hbase-common
@@ -828,8 +813,6 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-mapreduce
       org.apache.hadoop.hbase.metrics.impl.FastLongHistogram.class,  // hbase-metrics
       org.apache.hadoop.hbase.metrics.Snapshot.class,                // hbase-metrics-api
-      prefixTreeCodecClass, //  hbase-prefix-tree (if null will be skipped)
-      // pull necessary dependencies
       org.apache.zookeeper.ZooKeeper.class,
       org.apache.hadoop.hbase.shaded.io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,

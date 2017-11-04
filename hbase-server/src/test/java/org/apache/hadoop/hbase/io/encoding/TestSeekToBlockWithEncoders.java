@@ -272,10 +272,9 @@ public class TestSeekToBlockWithEncoders {
     // create all seekers
     List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      if (encoding.getEncoder() == null || encoding == DataBlockEncoding.PREFIX_TREE) {
+      if (encoding.getEncoder() == null) {
         continue;
       }
-
       DataBlockEncoder encoder = encoding.getEncoder();
       HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
           .withIncludesMvcc(false).withIncludesTags(false)

@@ -115,12 +115,7 @@ The data format is nearly identical to Diff encoding, so there is not an image t
 Prefix Tree::
   Prefix tree encoding was introduced as an experimental feature in HBase 0.96.
   It provides similar memory savings to the Prefix, Diff, and Fast Diff encoder, but provides faster random access at a cost of slower encoding speed.
-+
-Prefix Tree may be appropriate for applications that have high block cache hit ratios. It introduces new 'tree' fields for the row and column.
-The row tree field contains a list of offsets/references corresponding to the cells in that row. This allows for a good deal of compression.
-For more details about Prefix Tree encoding, see link:https://issues.apache.org/jira/browse/HBASE-4676[HBASE-4676].
-+
-It is difficult to graphically illustrate a prefix tree, so no image is included. See the Wikipedia article for link:http://en.wikipedia.org/wiki/Trie[Trie] for more general information about this data structure.
+  It was removed in hbase-2.0.0. It was a good idea but little uptake. If interested in reviving this effort, write the hbase dev list.
 
 [[data.block.encoding.types]]
 === Which Compressor or Data Block Encoder To Use

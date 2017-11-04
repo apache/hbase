@@ -149,10 +149,6 @@ public class TestHFileDataBlockEncoder {
   @Test
   public void testEncodingWithOffheapKeyValue() throws IOException {
     // usually we have just block without headers, but don't complicate that
-    if(blockEncoder.getDataBlockEncoding() == DataBlockEncoding.PREFIX_TREE) {
-      // This is a TODO: Only after PrefixTree is fixed we can remove this check
-      return;
-    }
     try {
       List<Cell> kvs = generator.generateTestExtendedOffheapKeyValues(60, true);
       HFileContext meta = new HFileContextBuilder().withIncludesMvcc(includesMemstoreTS)
