@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase;
 
+import com.google.common.base.Objects;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -328,5 +329,36 @@ public class ServerLoad {
 
   public long getReportTime() {
     return reportTime;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(stores, storefiles, storeUncompressedSizeMB,
+        storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, readRequestsCount,
+        writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB,
+        totalStaticBloomSizeKB, totalCompactingKVs, currentCompactedKVs);
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == this) {
+      return true;
+    }
+    if (other instanceof ServerLoad) {
+      ServerLoad sl = ((ServerLoad) other);
+      return stores == sl.stores && storefiles == sl.storefiles
+          && storeUncompressedSizeMB == sl.storeUncompressedSizeMB
+          && storefileSizeMB == sl.storefileSizeMB
+          && memstoreSizeMB == sl.memstoreSizeMB
+          && storefileIndexSizeMB == sl.storefileIndexSizeMB
+          && readRequestsCount == sl.readRequestsCount
+          && writeRequestsCount == sl.writeRequestsCount
+          && rootIndexSizeKB == sl.rootIndexSizeKB
+          && totalStaticIndexSizeKB == sl.totalStaticIndexSizeKB
+          && totalStaticBloomSizeKB == sl.totalStaticBloomSizeKB
+          && totalCompactingKVs == sl.totalCompactingKVs
+          && currentCompactedKVs == sl.currentCompactedKVs;
+    }
+    return false;
   }
 }

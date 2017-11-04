@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -953,15 +954,13 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  public void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
-
   }
 
   @Override
-  public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {
-
+  public void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ClusterStatus status) throws IOException {
   }
 
   @Override

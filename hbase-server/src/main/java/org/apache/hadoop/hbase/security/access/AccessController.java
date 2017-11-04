@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -770,7 +771,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           }
         }
       } else if (entry.getValue() == null) {
-        get.addFamily(col);        
+        get.addFamily(col);
       } else {
         throw new RuntimeException("Unhandled collection type " +
           entry.getValue().getClass().getName());
@@ -1338,7 +1339,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       requirePermission("listSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
-  
+
   @Override
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
@@ -1412,7 +1413,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
-    // We require only global permission so that 
+    // We require only global permission so that
     // a user with NS admin cannot altering namespace configurations. i.e. namespace quota
     requireGlobalPermission("modifyNamespace", Action.ADMIN, ns.getName());
   }
@@ -2606,14 +2607,6 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException { }
-
-  @Override
-  public void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException { }
-
-  @Override
   public void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
     requirePermission("clearDeadServers", Action.ADMIN);
@@ -2676,7 +2669,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void postReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       List<WALEntry> entries, CellScanner cells) throws IOException {
   }
-  
+
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String userName, final Quotas quotas) throws IOException {
@@ -2741,5 +2734,11 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String groupName) throws IOException {
     requirePermission("balanceRSGroup", Action.ADMIN);
+  }
+
+  @Override
+  public void preGetClusterStatus(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission("getClusterStatus", Action.ADMIN);
   }
 }
