@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -41,7 +42,8 @@ public class TestScanWildcardColumnTracker {
 
   @Test
   public void testCheckColumnOk() throws IOException {
-    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
+    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(
+        0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
 
     // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<>(4);
@@ -73,7 +75,8 @@ public class TestScanWildcardColumnTracker {
 
   @Test
   public void testCheckColumnEnforceVersions() throws IOException {
-    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
+    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(
+        0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
 
     // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<>(4);
@@ -106,7 +109,8 @@ public class TestScanWildcardColumnTracker {
 
   @Test
   public void DisabledTestCheckColumnWrongOrder() {
-    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
+    ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(
+        0, VERSIONS, Long.MIN_VALUE, CellComparatorImpl.COMPARATOR);
 
     // Create list of qualifiers
     List<byte[]> qualifiers = new ArrayList<>(2);
