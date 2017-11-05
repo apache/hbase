@@ -39,6 +39,7 @@
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos"
   import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
 %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -173,7 +174,7 @@
             <%    ProcedureWALFile pwf = procedureWALFiles.get(i); %>
             <tr>
               <td> <%= pwf.getLogId() %></td>
-              <td> <%= StringUtils.humanSize(pwf.getSize()) %> </td>
+              <td> <%= TraditionalBinaryPrefix.long2String(pwf.getSize(), "B", 1) %> </td>
               <td> <%= new Date(pwf.getTimestamp()) %> </td>
               <td> <%= escapeXml(pwf.toString()) %> </td>
             </tr>
@@ -195,7 +196,7 @@
           <% for (ProcedureWALFile cwf:corruptedWALFiles) { %>
           <tr>
             <td> <%= cwf.getLogId() %></td>
-            <td> <%= StringUtils.humanSize(cwf.getSize()) %> </td>
+            <td> <%= TraditionalBinaryPrefix.long2String(cwf.getSize(), "B", 1) %> </td>
             <td> <%= new Date(cwf.getTimestamp()) %> </td>
             <td> <%= escapeXml(cwf.toString()) %> </td>
           </tr>
@@ -232,8 +233,8 @@
             <td> <%= new Date(syncMetrics.getTimestamp()) %></td>
             <td> <%= StringUtils.humanTimeDiff(syncMetrics.getSyncWaitMs()) %></td>
             <td> <%= syncMetrics.getSyncedEntries() %></td>
-            <td> <%= StringUtils.humanSize(syncMetrics.getTotalSyncedBytes()) %></td>
-            <td> <%= StringUtils.humanSize(syncMetrics.getSyncedPerSec()) %></td>
+            <td> <%= TraditionalBinaryPrefix.long2String(syncMetrics.getTotalSyncedBytes(), "B", 1) %></td>
+            <td> <%= TraditionalBinaryPrefix.long2String((long)syncMetrics.getSyncedPerSec(), "B", 1) %></td>
           </tr>
           <%} %>
         </table>

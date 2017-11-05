@@ -244,13 +244,13 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
         <td>Size</td>
         <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getCurrentSize(),
             "B", 1) %></td>
-        <td>Current size of block cache in use (bytes)</td>
+        <td>Current size of block cache in use</td>
     </tr>
     <tr>
         <td>Free</td>
         <td><% TraditionalBinaryPrefix.long2String(cacheConfig.getBlockCache().getFreeSize(),
             "B", 1) %></td>
-        <td>The total free memory currently available to store more cache entries (bytes)</td>
+        <td>The total free memory currently available to store more cache entries</td>
     </tr>
     <tr>
         <td>Count</td>

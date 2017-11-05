@@ -29,6 +29,7 @@
   import="java.lang.management.GarbageCollectorMXBean"
   import="org.apache.hadoop.hbase.util.JSONMetricUtil"
   import="org.apache.hadoop.hbase.procedure2.util.StringUtils"
+  import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix"
   import="com.fasterxml.jackson.databind.JsonNode"
 %>
 <%
@@ -209,10 +210,10 @@ if(mp.getName().contains("Cache")) continue;%>
     </tr>
     <tr>
       <tr>
-        <td><%= StringUtils.humanSize(mp.getUsage().getCommitted()) %></a></td>
-        <td><%= StringUtils.humanSize(mp.getUsage().getInit())%></a></td>
-        <td><%= StringUtils.humanSize(mp.getUsage().getMax())%></a></td>
-        <td><%= StringUtils.humanSize(mp.getUsage().getUsed())%></a></td>
+        <td><%= TraditionalBinaryPrefix.long2String(mp.getUsage().getCommitted(), "B", 1) %></a></td>
+        <td><%= TraditionalBinaryPrefix.long2String(mp.getUsage().getInit(), "B", 1) %></a></td>
+        <td><%= TraditionalBinaryPrefix.long2String(mp.getUsage().getMax(), "B", 1) %></a></td>
+        <td><%= TraditionalBinaryPrefix.long2String(mp.getUsage().getUsed(), "B", 1) %></a></td>
         <td><%= JSONMetricUtil.calcPercentage(mp.getUsage().getUsed(),
           mp.getUsage().getCommitted()) %></a></td>
       </tr>
