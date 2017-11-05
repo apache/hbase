@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
@@ -27,6 +31,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
@@ -54,6 +63,7 @@ public class TestClientClusterStatus {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
     UTIL = new HBaseTestingUtility(conf);
     UTIL.startMiniCluster(MASTERS, SLAVES);
     CLUSTER = UTIL.getHBaseCluster();
@@ -175,16 +185,45 @@ public class TestClientClusterStatus {
         EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
                    Option.CLUSTER_ID, Option.BALANCER_ON);
     ClusterStatus status = ADMIN.getClusterStatus(options);
-    Assert.assertTrue(status.getMasterCoprocessors().length == 0);
+    Assert.assertTrue(status.getMasterCoprocessors().length == 1);
     Assert.assertNotNull(status.getHBaseVersion());
     Assert.assertNotNull(status.getClusterId());
     Assert.assertTrue(status.getAverageLoad() == 0.0);
-    Assert.assertNotNull(status.getBalancerOn() && !status.getBalancerOn());
+    Assert.assertNotNull(status.getBalancerOn());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (ADMIN != null) ADMIN.close();
     UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testObserver() throws IOException {
+    int preCount = MyObserver.PRE_COUNT.get();
+    int postCount = MyObserver.POST_COUNT.get();
+    Assert.assertTrue(Stream.of(ADMIN.getClusterStatus().getMasterCoprocessors())
+        .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
+    Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
+    Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
+  }
+
+  public static class MyObserver implements MasterCoprocessor, MasterObserver {
+    private static final AtomicInteger PRE_COUNT = new AtomicInteger(0);
+    private static final AtomicInteger POST_COUNT = new AtomicInteger(0);
+
+    @Override public Optional<MasterObserver> getMasterObserver() {
+      return Optional.of(this);
+    }
+
+    @Override public void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
+        throws IOException {
+      PRE_COUNT.incrementAndGet();
+    }
+
+    @Override public void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        ClusterStatus status) throws IOException {
+      POST_COUNT.incrementAndGet();
+    }
   }
 }

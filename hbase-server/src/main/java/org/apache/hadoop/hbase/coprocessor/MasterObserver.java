@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -1242,16 +1243,16 @@ public interface MasterObserver {
       throws IOException {}
 
   /**
-   * Called before list dead region servers.
+   * Called before get cluster status.
    */
-  default void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  default void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {}
 
   /**
-   * Called after list dead region servers.
+   * Called after get cluster status.
    */
-  default void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {}
+  default void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ClusterStatus status) throws IOException {}
 
   /**
    * Called before clear dead region servers.

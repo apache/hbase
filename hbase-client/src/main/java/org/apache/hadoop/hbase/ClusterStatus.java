@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -74,9 +75,9 @@ public class ClusterStatus {
 
   private String hbaseVersion;
   private Map<ServerName, ServerLoad> liveServers;
-  private Collection<ServerName> deadServers;
+  private List<ServerName> deadServers;
   private ServerName master;
-  private Collection<ServerName> backupMasters;
+  private List<ServerName> backupMasters;
   private List<RegionState> intransition;
   private String clusterId;
   private String[] masterCoprocessors;
@@ -101,6 +102,27 @@ public class ClusterStatus {
     // TODO: make this constructor private
     this.hbaseVersion = hbaseVersion;
     this.liveServers = servers;
+    this.deadServers = new ArrayList<>(deadServers);
+    this.master = master;
+    this.backupMasters = new ArrayList<>(backupMasters);
+    this.intransition = rit;
+    this.clusterId = clusterid;
+    this.masterCoprocessors = masterCoprocessors;
+    this.balancerOn = balancerOn;
+    this.masterInfoPort = masterInfoPort;
+  }
+
+  private ClusterStatus(final String hbaseVersion, final String clusterid,
+      final Map<ServerName, ServerLoad> servers,
+      final List<ServerName> deadServers,
+      final ServerName master,
+      final List<ServerName> backupMasters,
+      final List<RegionState> rit,
+      final String[] masterCoprocessors,
+      final Boolean balancerOn,
+      final int masterInfoPort) {
+    this.hbaseVersion = hbaseVersion;
+    this.liveServers = servers;
     this.deadServers = deadServers;
     this.master = master;
     this.backupMasters = backupMasters;
@@ -114,11 +136,11 @@ public class ClusterStatus {
   /**
    * @return the names of region servers on the dead list
    */
-  public Collection<ServerName> getDeadServerNames() {
+  public List<ServerName> getDeadServerNames() {
     if (deadServers == null) {
-      return Collections.<ServerName>emptyList();
+      return Collections.EMPTY_LIST;
     }
-    return Collections.unmodifiableCollection(deadServers);
+    return Collections.unmodifiableList(deadServers);
   }
 
   /**
@@ -234,7 +256,7 @@ public class ClusterStatus {
 
   public Collection<ServerName> getServers() {
     if (liveServers == null) {
-      return Collections.<ServerName>emptyList();
+      return Collections.EMPTY_LIST;
     }
     return Collections.unmodifiableCollection(this.liveServers.keySet());
   }
@@ -257,11 +279,11 @@ public class ClusterStatus {
   /**
    * @return the names of backup masters
    */
-  public Collection<ServerName> getBackupMasters() {
+  public List<ServerName> getBackupMasters() {
     if (backupMasters == null) {
-      return Collections.<ServerName>emptyList();
+      return Collections.EMPTY_LIST;
     }
-    return Collections.unmodifiableCollection(this.backupMasters);
+    return Collections.unmodifiableList(this.backupMasters);
   }
 
   /**
@@ -363,6 +385,7 @@ public class ClusterStatus {
     return sb.toString();
   }
 
+  @InterfaceAudience.Private
   public static Builder newBuilder() {
     return new Builder();
   }
@@ -374,9 +397,9 @@ public class ClusterStatus {
   public static class Builder {
     private String hbaseVersion = null;
     private Map<ServerName, ServerLoad> liveServers = null;
-    private Collection<ServerName> deadServers = null;
+    private List<ServerName> deadServers = null;
     private ServerName master = null;
-    private Collection<ServerName> backupMasters = null;
+    private List<ServerName> backupMasters = null;
     private List<RegionState> intransition = null;
     private String clusterId = null;
     private String[] masterCoprocessors = null;
@@ -395,7 +418,7 @@ public class ClusterStatus {
       return this;
     }
 
-    public Builder setDeadServers(Collection<ServerName> deadServers) {
+    public Builder setDeadServers(List<ServerName> deadServers) {
       this.deadServers = deadServers;
       return this;
     }
@@ -405,7 +428,7 @@ public class ClusterStatus {
       return this;
     }
 
-    public Builder setBackupMasters(Collection<ServerName> backupMasters) {
+    public Builder setBackupMasters(List<ServerName> backupMasters) {
       this.backupMasters = backupMasters;
       return this;
     }

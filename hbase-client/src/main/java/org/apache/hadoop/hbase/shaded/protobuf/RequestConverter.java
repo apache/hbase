@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -1813,7 +1814,8 @@ public final class RequestConverter {
     return builder.build();
   }
 
-  public static ClearDeadServersRequest buildClearDeadServersRequest(List<ServerName> deadServers) {
+  public static ClearDeadServersRequest buildClearDeadServersRequest(
+      Collection<ServerName> deadServers) {
     ClearDeadServersRequest.Builder builder = ClearDeadServersRequest.newBuilder();
     for(ServerName server: deadServers) {
       builder.addServerName(ProtobufUtil.toServerName(server));

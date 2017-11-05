@@ -26,6 +26,7 @@ import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -1565,20 +1566,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preListDeadServers() throws IOException {
+  public void preGetClusterStatus() throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preListDeadServers(this);
+        observer.preGetClusterStatus(this);
       }
     });
   }
 
-  public void postListDeadServers() throws IOException {
+  public void postGetClusterStatus(ClusterStatus status) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postListDeadServers(this);
+        observer.postGetClusterStatus(this, status);
       }
     });
   }
