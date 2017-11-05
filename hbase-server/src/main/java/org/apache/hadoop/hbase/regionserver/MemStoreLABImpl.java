@@ -264,6 +264,26 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return c;
   }
 
+  /* Creating chunk to be used as data chunk in CellChunkMap.
+  ** This chunk is bigger than normal constant chunk size, and thus called JumboChunk.
+  ** JumboChunk is used for jumbo cell (which size is bigger than normal chunk). It is allocated
+  ** once per cell. So even if there is space this is not reused.
+  ** Jumbo Chunks are used only for CCM and thus are created only in
+  ** CompactingMemStore.IndexType.CHUNK_MAP type.
+  ** Returning a new chunk, without replacing current chunk,
+  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
+  ** The space on this chunk will be allocated externally.
+  ** The interface is only for external callers
+  */
+  @Override
+  public Chunk getNewExternalJumboChunk(int size) {
+    // the new chunk is going to hold the jumbo cell data and need to be referenced by a strong map
+    // thus giving the CCM index type
+    Chunk c = this.chunkCreator.getJumboChunk(CompactingMemStore.IndexType.CHUNK_MAP, size);
+    chunks.add(c.getId());
+    return c;
+  }
+
   @VisibleForTesting
   Chunk getCurrentChunk() {
     return this.curChunk.get();

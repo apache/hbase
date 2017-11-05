@@ -111,17 +111,27 @@ public class ChunkCreator {
    * @return the chunk that was initialized
    */
   Chunk getChunk() {
-    return getChunk(CompactingMemStore.IndexType.ARRAY_MAP);
+    return getChunk(CompactingMemStore.IndexType.ARRAY_MAP, chunkSize);
+  }
+
+  /**
+   * Creates and inits a chunk. The default implementation for specific index type.
+   * @return the chunk that was initialized
+   */
+  Chunk getChunk(CompactingMemStore.IndexType chunkIndexType) {
+    return getChunk(chunkIndexType, chunkSize);
   }
 
   /**
    * Creates and inits a chunk.
    * @return the chunk that was initialized
    * @param chunkIndexType whether the requested chunk is going to be used with CellChunkMap index
+   * @param size the size of the chunk to be allocated, in bytes
    */
-  Chunk getChunk(CompactingMemStore.IndexType chunkIndexType) {
+  Chunk getChunk(CompactingMemStore.IndexType chunkIndexType, int size) {
     Chunk chunk = null;
-    if (pool != null) {
+    // if we have pool and this is not jumbo chunk (when size != chunkSize this is jumbo chunk)
+    if ((pool != null) && (size == chunkSize)) {
       //  the pool creates the chunk internally. The chunk#init() call happens here
       chunk = this.pool.getChunk();
       // the pool has run out of maxCount
@@ -133,9 +143,9 @@ public class ChunkCreator {
       }
     }
     if (chunk == null) {
-      // the second boolean parameter means:
-      // if CellChunkMap index is requested, put allocated on demand chunk mapping into chunkIdMap
-      chunk = createChunk(false, chunkIndexType);
+      // the second parameter explains whether CellChunkMap index is requested,
+      // in that case, put allocated on demand chunk mapping into chunkIdMap
+      chunk = createChunk(false, chunkIndexType, size);
     }
 
     // now we need to actually do the expensive memory allocation step in case of a new chunk,
@@ -145,26 +155,49 @@ public class ChunkCreator {
   }
 
   /**
+   * Creates and inits a chunk of a special size, bigger than a regular chunk size.
+   * Such a chunk will never come from pool and will always be on demand allocated.
+   * @return the chunk that was initialized
+   * @param chunkIndexType whether the requested chunk is going to be used with CellChunkMap index
+   * @param jumboSize the special size to be used
+   */
+  Chunk getJumboChunk(CompactingMemStore.IndexType chunkIndexType, int jumboSize) {
+    if (jumboSize <= chunkSize) {
+      LOG.warn("Jumbo chunk size " + jumboSize + " must be more than regular chunk size "
+          + chunkSize + ". Converting to regular chunk.");
+      getChunk(chunkIndexType,chunkSize);
+    }
+    return getChunk(chunkIndexType, jumboSize);
+  }
+
+  /**
    * Creates the chunk either onheap or offheap
    * @param pool indicates if the chunks have to be created which will be used by the Pool
-   * @param chunkIndexType
+   * @param chunkIndexType whether the requested chunk is going to be used with CellChunkMap index
+   * @param size the size of the chunk to be allocated, in bytes
    * @return the chunk
    */
-  private Chunk createChunk(boolean pool, CompactingMemStore.IndexType chunkIndexType) {
+  private Chunk createChunk(boolean pool, CompactingMemStore.IndexType chunkIndexType, int size) {
     Chunk chunk = null;
     int id = chunkID.getAndIncrement();
     assert id > 0;
     // do not create offheap chunk on demand
     if (pool && this.offheap) {
-      chunk = new OffheapChunk(chunkSize, id, pool);
+      chunk = new OffheapChunk(size, id, pool);
     } else {
-      chunk = new OnheapChunk(chunkSize, id, pool);
+      chunk = new OnheapChunk(size, id, pool);
     }
     if (pool || (chunkIndexType == CompactingMemStore.IndexType.CHUNK_MAP)) {
       // put the pool chunk into the chunkIdMap so it is not GC-ed
       this.chunkIdMap.put(chunk.getId(), chunk);
     }
     return chunk;
+  }
+
+  // Chunks from pool are created covered with strong references anyway
+  // TODO: change to CHUNK_MAP if it is generally defined
+  private Chunk createChunkForPool() {
+    return createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP, chunkSize);
   }
 
   @VisibleForTesting
@@ -228,9 +261,7 @@ public class ChunkCreator {
       this.poolSizePercentage = poolSizePercentage;
       this.reclaimedChunks = new LinkedBlockingQueue<>();
       for (int i = 0; i < initialCount; i++) {
-        // Chunks from pool are covered with strong references anyway
-        // TODO: change to CHUNK_MAP if it is generally defined
-        Chunk chunk = createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP);
+        Chunk chunk = createChunkForPool();
         chunk.init();
         reclaimedChunks.add(chunk);
       }
@@ -262,8 +293,7 @@ public class ChunkCreator {
           long created = this.chunkCount.get();
           if (created < this.maxCount) {
             if (this.chunkCount.compareAndSet(created, created + 1)) {
-              // TODO: change to CHUNK_MAP if it is generally defined
-              chunk = createChunk(true, CompactingMemStore.IndexType.ARRAY_MAP);
+              chunk = createChunkForPool();
               break;
             }
           } else {
@@ -434,7 +464,14 @@ public class ChunkCreator {
       // this translation will (most likely) return null
       Chunk chunk = ChunkCreator.this.getChunk(chunkID);
       if (chunk != null) {
-        pool.putbackChunks(chunk);
+        // Jumbo chunks are covered with chunkIdMap, but are not from pool, so such a chunk should
+        // be released here without going to pool.
+        // Removing them from chunkIdMap will cause their removal by the GC.
+        if (chunk.isJumbo()) {
+          this.removeChunk(chunkID);
+        } else {
+          pool.putbackChunks(chunk);
+        }
       }
       // if chunk is null, it was never covered by the chunkIdMap (and so wasn't in pool also),
       // so we have nothing to do on its release
