@@ -828,7 +828,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     //initialize load balancer
     this.balancer.setMasterServices(this);
-    this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
+    this.balancer.setClusterStatus(getClusterStatus());
     this.balancer.initialize();
 
     // Check if master is shutting down because of some issue
@@ -860,7 +860,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.assignmentManager.joinCluster();
 
     // set cluster status again after user regions are assigned
-    this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
+    this.balancer.setClusterStatus(getClusterStatus());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1488,7 +1488,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       List<RegionPlan> plans = new ArrayList<RegionPlan>();
 
       //Give the balancer the current cluster state.
-      this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
+      this.balancer.setClusterStatus(getClusterStatus());
       for (Entry<TableName, Map<ServerName, List<HRegionInfo>>> e : assignmentsByTable.entrySet()) {
         List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
         if (partialPlans != null) plans.addAll(partialPlans);
@@ -2404,22 +2404,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  public ClusterStatus getClusterStatus() throws IOException {
-    if (cpHost != null) {
-      cpHost.preGetClusterStatus();
-    }
-    ClusterStatus status = getClusterStatusWithoutCoprocessor();
-    LOG.info(getClientIdAuditPrefix() + " get ClusterStatus, status=" + status);
-    if (cpHost != null) {
-      cpHost.postGetClusterStatus(status);
-    }
-    return status;
-  }
-
   /**
    * @return cluster status
    */
-  public ClusterStatus getClusterStatusWithoutCoprocessor() throws InterruptedIOException {
+  public ClusterStatus getClusterStatus() throws InterruptedIOException {
     // Build Set of backup masters from ZK nodes
     List<String> backupMasterStrings;
     try {
@@ -3166,12 +3154,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   @Override
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
-    return getClusterStatusWithoutCoprocessor().getLastMajorCompactionTsForTable(table);
+    return getClusterStatus().getLastMajorCompactionTsForTable(table);
   }
 
   @Override
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
-    return getClusterStatusWithoutCoprocessor().getLastMajorCompactionTsForRegion(regionName);
+    return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
   }
 
   /**

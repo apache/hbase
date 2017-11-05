@@ -1808,6 +1808,13 @@ class ConnectionManager {
         }
 
         @Override
+        public MasterProtos.ListDeadServersResponse listDeadServers(
+            RpcController controller,
+            MasterProtos.ListDeadServersRequest request) throws ServiceException {
+          return stub.listDeadServers(controller, request);
+        }
+
+        @Override
         public AddColumnResponse addColumn(RpcController controller, AddColumnRequest request)
         throws ServiceException {
           return stub.addColumn(controller, request);
@@ -2714,7 +2721,7 @@ class ConnectionManager {
     public boolean hasCellBlockSupport() {
       return this.rpcClient.hasCellBlockSupport();
     }
-
+    
     @Override
     public ConnectionConfiguration getConnectionConfiguration() {
       return this.connectionConfig;

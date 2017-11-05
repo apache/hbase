@@ -27,7 +27,6 @@ import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -920,7 +919,7 @@ public class MasterCoprocessorHost
       }
     });
   }
-
+  
   public void preCloneSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
@@ -1072,7 +1071,7 @@ public class MasterCoprocessorHost
       }
     });
   }
-
+  
   public void preSetUserQuota(final String user, final Quotas quotas) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -1167,7 +1166,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postSetNamespaceQuota(final String namespace, final Quotas quotas)
+  public void postSetNamespaceQuota(final String namespace, final Quotas quotas) 
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -1178,22 +1177,22 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preGetClusterStatus() throws IOException {
+  public void preListDeadServers() throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
               throws IOException {
-        oserver.preGetClusterStatus(ctx);
+        oserver.preListDeadServers(ctx);
       }
     });
   }
 
-  public void postGetClusterStatus(final ClusterStatus status) throws IOException {
+  public void postListDeadServers() throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
               throws IOException {
-        oserver.postGetClusterStatus(ctx, status);
+        oserver.postListDeadServers(ctx);
       }
     });
   }

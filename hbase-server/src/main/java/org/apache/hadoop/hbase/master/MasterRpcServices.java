@@ -125,6 +125,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListDeadServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListDeadServersResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
@@ -1136,6 +1138,33 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public ListDeadServersResponse listDeadServers(RpcController controller,
+      ListDeadServersRequest request) throws ServiceException {
+
+    LOG.debug(master.getClientIdAuditPrefix() + " list dead region servers.");
+    ListDeadServersResponse.Builder response = ListDeadServersResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      if (master.cpHost != null) {
+        master.cpHost.preListDeadServers();
+      }
+
+      Set<ServerName> servers = master.getServerManager().getDeadServers().copyServerNames();
+      for (ServerName server : servers) {
+        response.addServerName(ProtobufUtil.toServerName(server));
+      }
+
+      if (master.cpHost != null) {
+        master.cpHost.postListDeadServers();
+      }
+    } catch (IOException io) {
+      throw new ServiceException(io);
+    }
+
+    return response.build();
   }
 
   @Override

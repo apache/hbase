@@ -136,6 +136,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListDeadServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
@@ -4902,7 +4903,14 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public List<ServerName> listDeadServers() throws IOException {
-    return new ArrayList<>(getClusterStatus().getDeadServerNames());
+    return executeCallable(new MasterCallable<List<ServerName>>(getConnection()) {
+      @Override
+      public List<ServerName> call(int callTimeout) throws ServiceException {
+        ListDeadServersRequest req = ListDeadServersRequest.newBuilder().build();
+        return ProtobufUtil.toServerNameList(
+                master.listDeadServers(null, req).getServerNameList());
+      }
+    });
   }
 
   @Override

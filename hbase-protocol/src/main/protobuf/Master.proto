@@ -556,6 +556,13 @@ message SecurityCapabilitiesResponse {
   repeated Capability capabilities = 1;
 }
 
+message ListDeadServersRequest {
+}
+
+message ListDeadServersResponse {
+  repeated ServerName server_name = 1;
+}
+
 message ClearDeadServersRequest {
   repeated ServerName server_name = 1;
 }
@@ -860,4 +867,9 @@ service MasterService {
   /** clear dead servers from master*/
   rpc ClearDeadServers(ClearDeadServersRequest)
     returns(ClearDeadServersResponse);
+
+  /** Returns a list of Dead Servers. */
+  rpc ListDeadServers(ListDeadServersRequest)
+    returns(ListDeadServersResponse);
+
 }

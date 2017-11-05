@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -675,7 +674,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot) throws IOException;
-
+  
   /**
    * Called before a snapshot is cloned.
    * Called as part of restoreSnapshot RPC call.
@@ -922,7 +921,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void postTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException;
-
+  
   /**
    * Called before the quota for the user is stored.
    * @param ctx the environment to interact with the framework and master
@@ -1028,7 +1027,7 @@ public interface MasterObserver extends Coprocessor {
       final String namespace, final Quotas quotas) throws IOException;
 
   /**
-   * Called before dispatching region merge request.
+   * Called before dispatching region merge request. 
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx coprocessor environment
    * @param regionA first region to be merged
@@ -1037,7 +1036,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionA, HRegionInfo regionB) throws IOException;
-
+  
   /**
    * called after dispatching the region merge request.
    * @param c coprocessor environment
@@ -1049,15 +1048,14 @@ public interface MasterObserver extends Coprocessor {
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException;
 
   /**
-   * Called before get cluster status.
+   * Called before list dead region servers.
    */
-  void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+  void preListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
 
   /**
-   * Called after get cluster status.
+   * Called after list dead region servers.
    */
-  void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      ClusterStatus status) throws IOException;
+  void postListDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
 
   /**
    * Called before clear dead region servers.
