@@ -2760,6 +2760,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     checkLockPermissions(getActiveUser(ctx), null, tableName, null, description);
   }
 
+  @Override
+  public void preGetClusterStatus(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission(getActiveUser(ctx), "getClusterStatus", Action.ADMIN);
+  }
+
   private void checkLockPermissions(User user, String namespace,
       TableName tableName, RegionInfo[] regionInfos, String reason)
   throws IOException {

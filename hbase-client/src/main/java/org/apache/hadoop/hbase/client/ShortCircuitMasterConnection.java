@@ -92,8 +92,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDeadServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecommissionedRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
@@ -633,12 +631,6 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public ClearDeadServersResponse clearDeadServers(RpcController controller,
       ClearDeadServersRequest request) throws ServiceException {
     return stub.clearDeadServers(controller, request);
-  }
-
-  @Override
-  public ListDeadServersResponse listDeadServers(RpcController controller,
-      ListDeadServersRequest request) throws ServiceException {
-    return stub.listDeadServers(controller, request);
   }
 
   @Override

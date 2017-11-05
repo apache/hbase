@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import com.google.protobuf.RpcChannel;
@@ -1080,9 +1079,11 @@ public interface AsyncAdmin {
 
   /**
    * List all the dead region servers.
-   * @return - returns a list of dead region servers wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<List<ServerName>> listDeadServers();
+  default CompletableFuture<List<ServerName>> listDeadServers() {
+    return this.getClusterStatus(EnumSet.of(Option.DEAD_SERVERS))
+        .thenApply(ClusterStatus::getDeadServerNames);
+  }
 
   /**
    * Clear dead region servers from master.

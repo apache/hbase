@@ -625,13 +625,6 @@ message RecommissionRegionServerRequest {
 message RecommissionRegionServerResponse {
 }
 
-message ListDeadServersRequest {
-}
-
-message ListDeadServersResponse {
-  repeated ServerName server_name = 1;
-}
-
 message ClearDeadServersRequest {
   repeated ServerName server_name = 1;
 }
@@ -993,7 +986,4 @@ service MasterService {
   rpc ClearDeadServers(ClearDeadServersRequest)
     returns(ClearDeadServersResponse);
 
-  /** Returns a list of Dead Servers. */
-  rpc ListDeadServers(ListDeadServersRequest)
-    returns(ListDeadServersResponse);
 }

@@ -2486,7 +2486,9 @@ public interface Admin extends Abortable, Closeable {
    * List dead region servers.
    * @return List of dead region servers.
    */
-  List<ServerName> listDeadServers() throws IOException;
+  default List<ServerName> listDeadServers() throws IOException {
+    return getClusterStatus(EnumSet.of(Option.DEAD_SERVERS)).getDeadServerNames();
+  }
 
   /**
    * Clear dead region servers from master.

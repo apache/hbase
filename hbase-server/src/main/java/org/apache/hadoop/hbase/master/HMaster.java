@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.base.Enums;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -834,7 +835,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     //initialize load balancer
     this.balancer.setMasterServices(this);
-    this.balancer.setClusterStatus(getClusterStatus());
+    this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
     this.balancer.initialize();
 
     // Check if master is shutting down because of some issue
@@ -878,7 +879,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager.joinCluster();
 
     // set cluster status again after user regions are assigned
-    this.balancer.setClusterStatus(getClusterStatus());
+    this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1412,7 +1413,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       List<RegionPlan> plans = new ArrayList<>();
 
       //Give the balancer the current cluster state.
-      this.balancer.setClusterStatus(getClusterStatus());
+      this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
       this.balancer.setClusterLoad(assignmentsByTable);
 
       for (Map<ServerName, List<RegionInfo>> serverMap : assignmentsByTable.values()) {
@@ -2411,17 +2412,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  /**
-   * @return cluster status
-   */
-  public ClusterStatus getClusterStatus() throws InterruptedIOException {
-    return getClusterStatus(EnumSet.allOf(Option.class));
+  public ClusterStatus getClusterStatusWithoutCoprocessor() throws InterruptedIOException {
+    return getClusterStatusWithoutCoprocessor(EnumSet.allOf(Option.class));
   }
 
-  /**
-   * @return cluster status
-   */
-  public ClusterStatus getClusterStatus(EnumSet<Option> options) throws InterruptedIOException {
+  public ClusterStatus getClusterStatusWithoutCoprocessor(EnumSet<Option> options)
+      throws InterruptedIOException {
     ClusterStatus.Builder builder = ClusterStatus.newBuilder();
     // given that hbase1 can't submit the request with Option,
     // we return all information to client if the list of Option is empty.
@@ -2443,7 +2439,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
         case DEAD_SERVERS: {
           if (serverManager != null) {
-            builder.setDeadServers(serverManager.getDeadServers().copyServerNames());
+            builder.setDeadServers(new ArrayList<>(
+              serverManager.getDeadServers().copyServerNames()));
           }
           break;
         }
@@ -2474,6 +2471,26 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
     }
     return builder.build();
+  }
+
+  /**
+   * @return cluster status
+   */
+  public ClusterStatus getClusterStatus() throws IOException {
+    return getClusterStatus(EnumSet.allOf(Option.class));
+  }
+
+  public ClusterStatus getClusterStatus(EnumSet<Option> options) throws IOException {
+    if (cpHost != null) {
+      cpHost.preGetClusterStatus();
+    }
+    ClusterStatus status = getClusterStatusWithoutCoprocessor(options);
+    LOG.info(getClientIdAuditPrefix() + " get ClusterStatus, status=" + status
+        + ", options=" + options);
+    if (cpHost != null) {
+      cpHost.postGetClusterStatus(status);
+    }
+    return status;
   }
 
   private List<ServerName> getBackupMasters() throws InterruptedIOException {
@@ -3164,12 +3181,14 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
-    return getClusterStatus().getLastMajorCompactionTsForTable(table);
+    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+        .getLastMajorCompactionTsForTable(table);
   }
 
   @Override
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
-    return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
+    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+        .getLastMajorCompactionTsForRegion(regionName);
   }
 
   /**

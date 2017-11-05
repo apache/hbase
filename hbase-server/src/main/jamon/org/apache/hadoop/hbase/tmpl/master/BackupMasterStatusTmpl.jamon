@@ -54,7 +54,8 @@ MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
         <th>Start Time</th>
     </tr>
     <%java>
-    Collection<ServerName> backup_masters = master.getClusterStatus().getBackupMasters();
+    Collection<ServerName> backup_masters = master.getClusterStatusWithoutCoprocessor(
+        EnumSet.of(ClusterStatus.Option.BACKUP_MASTERS)).getBackupMasters();
     ServerName [] backupServerNames = backup_masters.toArray(new ServerName[backup_masters.size()]);
     Arrays.sort(backupServerNames);
     for (ServerName serverName : backupServerNames) {
