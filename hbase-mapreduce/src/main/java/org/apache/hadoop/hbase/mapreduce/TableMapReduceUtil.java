@@ -820,7 +820,10 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
       org.apache.htrace.Trace.class,
       com.codahale.metrics.MetricRegistry.class,
-      org.apache.commons.lang3.ArrayUtils.class);
+      org.apache.commons.lang3.ArrayUtils.class,
+      com.fasterxml.jackson.databind.ObjectMapper.class,
+      com.fasterxml.jackson.core.Versioned.class,
+      com.fasterxml.jackson.annotation.JsonView.class);
   }
 
   /**
