@@ -215,7 +215,7 @@
       <id>ashu</id>
       <name>Ashu Pachauri</name>
       <email>ashu@apache.org</email>
-      <timezone>-8</timezone>
+      <timezone>+5</timezone>
     </developer>
     <developer>
       <id>binlijin</id>
