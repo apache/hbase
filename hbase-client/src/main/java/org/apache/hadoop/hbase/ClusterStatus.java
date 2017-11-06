@@ -138,7 +138,7 @@ public class ClusterStatus {
    */
   public List<ServerName> getDeadServerNames() {
     if (deadServers == null) {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
     return Collections.unmodifiableList(deadServers);
   }
@@ -256,7 +256,7 @@ public class ClusterStatus {
 
   public Collection<ServerName> getServers() {
     if (liveServers == null) {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
     return Collections.unmodifiableCollection(this.liveServers.keySet());
   }
@@ -281,7 +281,7 @@ public class ClusterStatus {
    */
   public List<ServerName> getBackupMasters() {
     if (backupMasters == null) {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
     return Collections.unmodifiableList(this.backupMasters);
   }
