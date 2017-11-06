@@ -125,37 +125,31 @@ mvn --version --offline | tee "${working_dir}/maven_version"
 echo "Do a clean building of the source artifact using code in ${component_dir}"
 cd "${component_dir}"
 echo "Clean..."
-mvn --batch-mode -DskipTests clean >"${working_dir}/component_clean_before.log" 2>&1
-echo "Step 3 Build the source tarball"
-mvn -Prelease --batch-mode -Dmaven.repo.local="${m2_initial}" install -DskipTests assembly:single \
-    -Dassembly.file=hbase-assembly/src/main/assembly/src.xml \
+git clean -xdfff >"${working_dir}/component_git_clean.log" 2>&1
+echo "Follow the ref guide section on making a RC: Step 6 Build the source tarball"
+git archive --format=tar.gz --output="${working_dir}/hbase-src.tar.gz" \
+    --prefix="hbase-SOMEVERSION/" HEAD \
     >"${working_dir}/component_build_src_tarball.log" 2>&1
 
 cd "${unpack_dir}"
 echo "Unpack the source tarball"
-tar --strip-components=1 -xzf "${component_dir}"/hbase-assembly/target/hbase-*-src.tar.gz \
+tar --strip-components=1 -xzf "${working_dir}/hbase-src.tar.gz" \
     >"${working_dir}/srctarball_unpack.log" 2>&1
-echo "Building from source artifact."
-mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
-    assembly:single >"${working_dir}/srctarball_install.log" 2>&1
-
-echo "Clean up after checking ability to build."
-mvn -DskipTests --batch-mode clean >"${working_dir}/srctarball_clean.log" 2>&1
-
 
 cd "${component_dir}"
-echo "Clean up the source checkout"
-mvn --batch-mode -DskipTests clean >"${working_dir}/component_clean_after.log" 2>&1
 echo "Diff against source tree"
 diff --binary --recursive . "${unpack_dir}" >"${working_dir}/diff_output" || true
 
 cd "${working_dir}"
 # expectation check largely based on HBASE-14952
 echo "Checking against things we don't expect to include in the source tarball (git related, etc.)"
+# Add in lines to show differences between the source tarball and this branch, in the same format diff would give.
+# e.g. prior to HBASE-19152 we'd have the following lines (ignoring the bash comment marker):
+#Only in .: .gitattributes
+#Only in .: .gitignore
+#Only in .: hbase-native-client
 cat >known_excluded <<END
 Only in .: .git
-Only in .: .gitattributes
-Only in .: .gitignore
 END
 if ! diff known_excluded diff_output >"${working_dir}/unexpected.diff" ; then
   echo "Any output here are unexpected differences between the source artifact we'd make for an RC and the current branch."
@@ -165,3 +159,15 @@ if ! diff known_excluded diff_output >"${working_dir}/unexpected.diff" ; then
 else
   echo "Everything looks as expected."
 fi
+
+cd "${unpack_dir}"
+echo "Follow the ref guide section on making a RC: Step 8 Build the binary tarball."
+if mvn -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" clean install \
+    assembly:single >"${working_dir}/srctarball_install.log" 2>&1; then
+  echo "Building a binary tarball from the source tarball succeeded."
+else
+  echo "Building a binary tarball from the source tarball failed. see srtarball_install.log for details."
+  exit 1
+fi
+
+# TODO check the layout of the binary artifact we just made.
