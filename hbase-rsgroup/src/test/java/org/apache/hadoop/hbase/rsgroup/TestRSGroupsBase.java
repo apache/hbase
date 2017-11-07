@@ -414,7 +414,7 @@ public abstract class TestRSGroupsBase {
         getTableServerRegionMap().get(tableName);
     final ServerName first = assignMap.entrySet().iterator().next().getKey();
     for(HRegionInfo region: admin.getTableRegions(tableName)) {
-      if(!assignMap.get(first).contains(region)) {
+      if(!assignMap.get(first).contains(region.getRegionNameAsString())) {
         admin.move(region.getEncodedNameAsBytes(), Bytes.toBytes(first.getServerName()));
       }
     }
@@ -516,7 +516,11 @@ public abstract class TestRSGroupsBase {
     });
 
     //verify that targetServer didn't open it
-    assertFalse(ProtobufUtil.getOnlineRegions(targetRS).contains(targetRegion));
+    for (HRegionInfo region: ProtobufUtil.getOnlineRegions(targetRS)) {
+      if (targetRegion.equals(region.getRegionNameAsString())) {
+        fail("Target server opened region");
+      }
+    }
   }
 
   @Test
