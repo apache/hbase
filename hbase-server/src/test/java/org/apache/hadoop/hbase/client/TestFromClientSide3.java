@@ -83,13 +83,13 @@ public class TestFromClientSide3 {
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static Random random = new Random();
   private static int SLAVES = 3;
-  private static byte [] ROW = Bytes.toBytes("testRow");
+  private static final byte[] ROW = Bytes.toBytes("testRow");
   private static final byte[] ANOTHERROW = Bytes.toBytes("anotherrow");
-  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static byte [] VALUE = Bytes.toBytes("testValue");
-  private final static byte[] COL_QUAL = Bytes.toBytes("f1");
-  private final static byte[] VAL_BYTES = Bytes.toBytes("v1");
-  private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
+  private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static final byte[] VALUE = Bytes.toBytes("testValue");
+  private static final byte[] COL_QUAL = Bytes.toBytes("f1");
+  private static final byte[] VAL_BYTES = Bytes.toBytes("v1");
+  private static final byte[] ROW_BYTES = Bytes.toBytes("r1");
 
   @Rule
   public TestName name = new TestName();
@@ -361,7 +361,7 @@ public class TestFromClientSide3 {
             break;
           }
         } catch (Exception e) {
-          LOG.debug("Waiting for region to come online: " + regionName);
+          LOG.debug("Waiting for region to come online: " + Bytes.toString(regionName));
         }
         Thread.sleep(40);
       }
@@ -478,6 +478,7 @@ public class TestFromClientSide3 {
     assertEquals(exist, true);
   }
 
+  @Test
   public void testHTableExistsMethodSingleRegionMultipleGets() throws Exception {
     Table table = TEST_UTIL.createTable(TableName.valueOf(
         name.getMethodName()), new byte[][] { FAMILY });
@@ -488,13 +489,11 @@ public class TestFromClientSide3 {
 
     List<Get> gets = new ArrayList<>();
     gets.add(new Get(ROW));
-    gets.add(null);
     gets.add(new Get(ANOTHERROW));
 
-    boolean[] results = table.existsAll(gets);
-    assertEquals(results[0], true);
-    assertEquals(results[1], false);
-    assertEquals(results[2], false);
+    boolean[] results = table.exists(gets);
+    assertTrue(results[0]);
+    assertFalse(results[1]);
   }
 
   @Test
@@ -749,7 +748,7 @@ public class TestFromClientSide3 {
         try (Table table = con.getTable(tableName)) {
           table.append(append);
           fail("The APPEND should fail because the target lock is blocked by previous put");
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
         }
       });
       appendService.shutdown();
@@ -802,6 +801,7 @@ public class TestFromClientSide3 {
       });
       ExecutorService cpService = Executors.newSingleThreadExecutor();
       cpService.execute(() -> {
+        boolean threw;
         Put put1 = new Put(row);
         Put put2 = new Put(rowLocked);
         put1.addColumn(FAMILY, QUALIFIER, value1);
@@ -823,10 +823,13 @@ public class TestFromClientSide3 {
               exe.mutateRows(controller, request, rpcCallback);
               return rpcCallback.get();
             });
-          fail("This cp should fail because the target lock is blocked by previous put");
+          threw = false;
         } catch (Throwable ex) {
-          // TODO!!!! Is this right? It catches everything including the above fail
-          // if it happens (which it seems too....)
+          threw = true;
+        }
+        if (!threw) {
+          // Can't call fail() earlier because the catch would eat it.
+          fail("This cp should fail because the target lock is blocked by previous put");
         }
       });
       cpService.shutdown();

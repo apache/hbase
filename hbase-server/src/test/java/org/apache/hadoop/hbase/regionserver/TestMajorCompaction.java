@@ -450,6 +450,7 @@ public class TestMajorCompaction {
    * basically works.
    * @throws IOException
    */
+  @Test
   public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {

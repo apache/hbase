@@ -268,8 +268,9 @@ public abstract class TableInputFormatBase
       }
 
       //The default value of "hbase.mapreduce.input.autobalance" is false.
-      if (context.getConfiguration().getBoolean(MAPREDUCE_INPUT_AUTOBALANCE, false) != false) {
-        long maxAveRegionSize = context.getConfiguration().getInt(MAX_AVERAGE_REGION_SIZE, 8*1073741824);
+      if (context.getConfiguration().getBoolean(MAPREDUCE_INPUT_AUTOBALANCE, false)) {
+        long maxAveRegionSize = context.getConfiguration()
+            .getLong(MAX_AVERAGE_REGION_SIZE, 8L*1073741824); //8GB
         return calculateAutoBalancedSplits(splits, maxAveRegionSize);
       }
 

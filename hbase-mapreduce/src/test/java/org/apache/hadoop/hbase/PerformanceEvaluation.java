@@ -1068,9 +1068,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     int getValueLength(final Random r) {
-      if (this.opts.isValueRandom()) return Math.abs(r.nextInt() % opts.valueSize);
-      else if (this.opts.isValueZipf()) return Math.abs(this.zipf.nextInt());
-      else return opts.valueSize;
+      if (this.opts.isValueRandom()) {
+        return r.nextInt(opts.valueSize);
+      } else if (this.opts.isValueZipf()) {
+        return Math.abs(this.zipf.nextInt());
+      } else {
+        return opts.valueSize;
+      }
     }
 
     void updateValueSize(final Result [] rs) throws IOException {
