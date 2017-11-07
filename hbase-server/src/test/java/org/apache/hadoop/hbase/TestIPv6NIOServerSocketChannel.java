@@ -48,7 +48,6 @@ import org.junit.rules.TestRule;
  */
 @Category(SmallTests.class)
 public class TestIPv6NIOServerSocketChannel {
-
   private static final Log LOG = LogFactory.getLog(TestIPv6NIOServerSocketChannel.class);
 
   @Rule
@@ -68,6 +67,7 @@ public class TestIPv6NIOServerSocketChannel {
         break;
       } catch (BindException ex) {
         //continue
+        LOG.info("Failed on " + addr + ", inedAddr=" + inetAddr, ex);
       } finally {
         if (serverSocket != null) {
           serverSocket.close();
@@ -150,9 +150,9 @@ public class TestIPv6NIOServerSocketChannel {
    */
   @Test
   public void testServerSocketFromLocalhostResolution() throws IOException {
-    InetAddress[] addrs = InetAddress.getAllByName("localhost");
+    InetAddress[] addrs = {InetAddress.getLocalHost()};
     for (InetAddress addr : addrs) {
-      LOG.info("resolved localhost as:" + addr);
+      LOG.info("Resolved localhost as: " + addr);
       bindServerSocket(addr);
       bindNIOServerSocket(addr);
     }
