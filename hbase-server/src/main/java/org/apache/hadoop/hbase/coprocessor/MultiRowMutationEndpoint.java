@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
@@ -47,14 +48,14 @@ import com.google.protobuf.Service;
 
 /**
  * This class demonstrates how to implement atomic multi row transactions using
- * {@link HRegion#mutateRowsWithLocks(java.util.Collection, java.util.Collection)}
+ * {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)}
  * and Coprocessor endpoints.
  *
  * Defines a protocol to perform multi row transactions.
  * See {@link MultiRowMutationEndpoint} for the implementation.
  * <br>
  * See
- * {@link HRegion#mutateRowsWithLocks(java.util.Collection, java.util.Collection)}
+ * {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)}
  * for details and limitations.
  * <br>
  * Example:

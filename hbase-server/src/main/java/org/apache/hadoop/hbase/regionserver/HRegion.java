@@ -3279,6 +3279,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
         WALEdit walEdit) {
       for (List<Cell> edits : familyMap.values()) {
+        // Optimization: 'foreach' loop is not used. See:
+        // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
         assert edits instanceof RandomAccess;
         int listSize = edits.size();
         for (int i=0; i < listSize; i++) {
@@ -4109,6 +4111,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throws IOException {
     for (List<Cell> cells: cellItr) {
       if (cells == null) continue;
+      // Optimization: 'foreach' loop is not used. See:
+      // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
@@ -4259,6 +4263,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     long maxTs = now + timestampSlop;
     for (List<Cell> kvs : familyMap.values()) {
+      // Optimization: 'foreach' loop is not used. See:
+      // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
       assert kvs instanceof RandomAccess;
       int listSize  = kvs.size();
       for (int i=0; i < listSize; i++) {
@@ -7135,20 +7141,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void mutateRow(RowMutations rm) throws IOException {
     // Don't need nonces here - RowMutations only supports puts and deletes
-    mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
+    final List<Mutation> m = rm.getMutations();
+    batchMutate(m.toArray(new Mutation[m.size()]), true, HConstants.NO_NONCE,
+        HConstants.NO_NONCE);
   }
 
   /**
-   * Perform atomic mutations within the region w/o nonces.
-   * See {@link #mutateRowsWithLocks(Collection, Collection, long, long)}
-   */
-  public void mutateRowsWithLocks(Collection<Mutation> mutations,
-      Collection<byte[]> rowsToLock) throws IOException {
-    mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
-  }
-
-  /**
-   * Perform atomic mutations within the region.
+   * Perform atomic (all or none) mutations within the region.
    * @param mutations The list of mutations to perform.
    * <code>mutations</code> can contain operations for multiple rows.
    * Caller has to ensure that all rows are contained in this region.
@@ -7162,8 +7161,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void mutateRowsWithLocks(Collection<Mutation> mutations,
       Collection<byte[]> rowsToLock, long nonceGroup, long nonce) throws IOException {
-    MultiRowMutationProcessor proc = new MultiRowMutationProcessor(mutations, rowsToLock);
-    processRowsWithLocks(proc, -1, nonceGroup, nonce);
+    batchMutate(new MutationBatchOperation(this, mutations.toArray(new Mutation[mutations.size()]),
+        true, nonceGroup, nonce) {
+      @Override
+      public MiniBatchOperationInProgress<Mutation> lockRowsAndBuildMiniBatch(
+          List<RowLock> acquiredRowLocks) throws IOException {
+        for (byte[] row : rowsToLock) {
+          try {
+            RowLock rowLock = region.getRowLockInternal(row, false); // write lock
+            acquiredRowLocks.add(rowLock);
+          } catch (IOException ioe) {
+            LOG.warn("Failed getting lock, row=" + Bytes.toStringBinary(row), ioe);
+            throw ioe;
+          }
+        }
+        return createMiniBatch(size(), size());
+      }
+    });
   }
 
   /**
@@ -7193,8 +7207,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public void processRowsWithLocks(RowProcessor<?,?> processor) throws IOException {
-    processRowsWithLocks(processor, rowProcessorTimeout, HConstants.NO_NONCE,
-      HConstants.NO_NONCE);
+    processRowsWithLocks(processor, rowProcessorTimeout, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   @Override
@@ -8094,6 +8107,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     long mutationSize = 0;
     for (List<Cell> cells: familyMap.values()) {
+      // Optimization: 'foreach' loop is not used. See:
+      // HBASE-12023 HRegion.applyFamilyMapToMemstore creates too many iterator objects
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
       for (int i=0; i < listSize; i++) {

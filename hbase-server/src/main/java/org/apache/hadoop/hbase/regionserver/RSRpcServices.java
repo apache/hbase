@@ -551,51 +551,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   /**
    * Mutate a list of rows atomically.
-   *
-   * @param region
-   * @param actions
    * @param cellScanner if non-null, the mutation data -- the Cell content.
-   * @throws IOException
    */
-  private void mutateRows(final HRegion region,
-      final List<ClientProtos.Action> actions,
-      final CellScanner cellScanner, RegionActionResult.Builder builder) throws IOException {
-    if (!region.getRegionInfo().isMetaRegion()) {
-      regionServer.cacheFlusher.reclaimMemStoreMemory();
-    }
-    RowMutations rm = null;
-    int i = 0;
-    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
-        ClientProtos.ResultOrException.newBuilder();
+  private void mutateRows(final HRegion region, final OperationQuota quota,
+      final List<ClientProtos.Action> actions, final CellScanner cellScanner,
+      RegionActionResult.Builder builder, final ActivePolicyEnforcement spaceQuotaEnforcement)
+      throws IOException {
     for (ClientProtos.Action action: actions) {
       if (action.hasGet()) {
         throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
           action.getGet());
       }
-      MutationType type = action.getMutation().getMutateType();
-      if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray(), actions.size());
-      }
-      switch (type) {
-        case PUT:
-          Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
-          checkCellSizeLimit(region, put);
-          rm.add(put);
-          break;
-        case DELETE:
-          rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
-          break;
-        default:
-          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
-      }
-      // To unify the response format with doNonAtomicRegionMutation and read through client's
-      // AsyncProcess we have to add an empty result instance per operation
-      resultOrExceptionOrBuilder.clear();
-      resultOrExceptionOrBuilder.setIndex(i++);
-      builder.addResultOrException(
-          resultOrExceptionOrBuilder.build());
     }
-    region.mutateRow(rm);
+    doBatchOp(builder, region, quota, actions, cellScanner, spaceQuotaEnforcement, true);
   }
 
   /**
@@ -991,15 +959,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
 
       // HBASE-17924
-      // sort to improve lock efficiency
-      Arrays.sort(mArray);
+      // Sort to improve lock efficiency for non-atomic batch of operations. If atomic (mostly
+      // called from mutateRows()), order is preserved as its expected from the client
+      if (!atomic) {
+        Arrays.sort(mArray);
+      }
 
       OperationStatus[] codes = region.batchMutate(mArray, atomic, HConstants.NO_NONCE,
         HConstants.NO_NONCE);
       for (i = 0; i < codes.length; i++) {
         Mutation currentMutation = mArray[i];
         ClientProtos.Action currentAction = mutationActionMap.get(currentMutation);
-        int index = currentAction.getIndex();
+        int index = currentAction.hasIndex() || !atomic ? currentAction.getIndex() : i;
         Exception e = null;
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
@@ -1027,8 +998,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (atomic) {
         throw ie;
       }
-      for (int i = 0; i < mutations.size(); i++) {
-        builder.addResultOrException(getResultOrException(ie, mutations.get(i).getIndex()));
+      for (Action mutation : mutations) {
+        builder.addResultOrException(getResultOrException(ie, mutation.getIndex()));
       }
     }
     if (regionServer.metricsRegionServer != null) {
@@ -1165,9 +1136,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
           SimpleRpcSchedulerFactory.class);
       rpcSchedulerFactory = ((RpcSchedulerFactory) rpcSchedulerFactoryClass.newInstance());
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(e);
-    } catch (IllegalAccessException e) {
+    } catch (InstantiationException | IllegalAccessException e) {
       throw new IllegalArgumentException(e);
     }
     // Server to handle client requests.
@@ -2580,8 +2549,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                   cellScanner, row, family, qualifier, op,
                   comparator, regionActionResultBuilder, spaceQuotaEnforcement);
           } else {
-            mutateRows(region, regionAction.getActionList(), cellScanner,
-                regionActionResultBuilder);
+            mutateRows(region, quota, regionAction.getActionList(), cellScanner,
+                regionActionResultBuilder, spaceQuotaEnforcement);
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
@@ -2604,7 +2573,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
       quota.close();
-      ClientProtos.RegionLoadStats regionLoadStats = ((HRegion)region).getLoadStatistics();
+      ClientProtos.RegionLoadStats regionLoadStats = region.getLoadStatistics();
       if(regionLoadStats != null) {
         regionStats.put(regionSpecifier, regionLoadStats);
       }
@@ -2656,7 +2625,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    *
    * @param rpcc the RPC controller
    * @param request the mutate request
-   * @throws ServiceException
    */
   @Override
   public MutateResponse mutate(final RpcController rpcc,
