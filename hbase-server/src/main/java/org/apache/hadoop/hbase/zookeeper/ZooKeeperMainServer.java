@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -48,6 +49,15 @@ public class ZooKeeperMainServer {
     public HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain(String[] args)
     throws IOException, InterruptedException {
       super(args);
+      // Make sure we are connected before we proceed. Can take a while on some systems. If we
+      // run the command without being connected, we get ConnectionLoss KeeperErrorConnection...
+      long startTime = System.currentTimeMillis();
+      while (!this.zk.getState().isConnected()) {
+        Thread.sleep(1);
+        if ((System.currentTimeMillis() - startTime) > 10000) {
+          throw new InterruptedException("Failed connect " + this.zk);
+        }
+      }
     }
 
     /**
@@ -100,6 +110,8 @@ public class ZooKeeperMainServer {
       }
     }
     // If command-line arguments, run our hack so they are executed.
+    // ZOOKEEPER-1897 was committed to zookeeper-3.4.6 but elsewhere in this class we say
+    // 3.4.6 breaks command-processing; TODO.
     if (hasCommandLineArguments(args)) {
       HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain zkm =
         new HACK_UNTIL_ZOOKEEPER_1897_ZooKeeperMain(newArgs);
