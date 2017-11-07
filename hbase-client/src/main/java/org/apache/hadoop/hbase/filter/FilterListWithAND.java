@@ -90,57 +90,59 @@ public class FilterListWithAND extends FilterListBase {
    *         code of current sub-filter.
    */
   private ReturnCode mergeReturnCode(ReturnCode rc, ReturnCode localRC) {
-    if (rc == ReturnCode.SEEK_NEXT_USING_HINT || localRC == ReturnCode.SEEK_NEXT_USING_HINT) {
+    if (rc == ReturnCode.SEEK_NEXT_USING_HINT) {
       return ReturnCode.SEEK_NEXT_USING_HINT;
     }
     switch (localRC) {
-    case INCLUDE:
-      return rc;
-    case INCLUDE_AND_NEXT_COL:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL)) {
-        return ReturnCode.INCLUDE_AND_NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL)) {
-        return ReturnCode.NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.NEXT_ROW)) {
+      case SEEK_NEXT_USING_HINT:
+        return ReturnCode.SEEK_NEXT_USING_HINT;
+      case INCLUDE:
+        return rc;
+      case INCLUDE_AND_NEXT_COL:
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL)) {
+          return ReturnCode.INCLUDE_AND_NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
+          return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        }
+        if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL)) {
+          return ReturnCode.NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.NEXT_ROW;
+        }
+        break;
+      case INCLUDE_AND_SEEK_NEXT_ROW:
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
+          ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
+          return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        }
+        if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.NEXT_ROW;
+        }
+        break;
+      case SKIP:
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.SKIP)) {
+          return ReturnCode.SKIP;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.NEXT_COL)) {
+          return ReturnCode.NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.NEXT_ROW;
+        }
+        break;
+      case NEXT_COL:
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.SKIP,
+          ReturnCode.NEXT_COL)) {
+          return ReturnCode.NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.NEXT_ROW;
+        }
+        break;
+      case NEXT_ROW:
         return ReturnCode.NEXT_ROW;
-      }
-      break;
-    case INCLUDE_AND_SEEK_NEXT_ROW:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
-        ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.NEXT_ROW;
-      }
-      break;
-    case SKIP:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.SKIP)) {
-        return ReturnCode.SKIP;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.NEXT_COL)) {
-        return ReturnCode.NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.NEXT_ROW;
-      }
-      break;
-    case NEXT_COL:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.SKIP,
-        ReturnCode.NEXT_COL)) {
-        return ReturnCode.NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.NEXT_ROW;
-      }
-      break;
-    case NEXT_ROW:
-      return ReturnCode.NEXT_ROW;
     }
     throw new IllegalStateException(
         "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
