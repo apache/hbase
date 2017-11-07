@@ -38,7 +38,7 @@ public class TestSplitTable {
   public TestName name = new TestName();
 
   @Test
-  @SuppressWarnings("deprecation")
+  @SuppressWarnings({"deprecation", "SelfComparison"})
   public void testSplitTableCompareTo() {
     TableSplit aTableSplit = new TableSplit(Bytes.toBytes("tableA"),
         Bytes.toBytes("aaa"), Bytes.toBytes("ddd"), "locationA");
@@ -49,9 +49,9 @@ public class TestSplitTable {
     TableSplit cTableSplit = new TableSplit(Bytes.toBytes("tableA"),
         Bytes.toBytes("lll"), Bytes.toBytes("zzz"), "locationA");
 
-    assertTrue(aTableSplit.compareTo(aTableSplit) == 0);
-    assertTrue(bTableSplit.compareTo(bTableSplit) == 0);
-    assertTrue(cTableSplit.compareTo(cTableSplit) == 0);
+    assertEquals(0, aTableSplit.compareTo(aTableSplit));
+    assertEquals(0, bTableSplit.compareTo(bTableSplit));
+    assertEquals(0, cTableSplit.compareTo(cTableSplit));
 
     assertTrue(aTableSplit.compareTo(bTableSplit) < 0);
     assertTrue(bTableSplit.compareTo(aTableSplit) > 0);

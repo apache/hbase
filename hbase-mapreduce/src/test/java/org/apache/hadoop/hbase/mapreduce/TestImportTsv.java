@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -430,7 +431,7 @@ public class TestImportTsv implements Configurable {
 
     // run the import
     Tool tool = new ImportTsv();
-    LOG.debug("Running ImportTsv with arguments: " + argsArray);
+    LOG.debug("Running ImportTsv with arguments: " + Arrays.toString(argsArray));
     assertEquals(0, ToolRunner.run(conf, tool, argsArray));
 
     // Perform basic validation. If the input args did not include

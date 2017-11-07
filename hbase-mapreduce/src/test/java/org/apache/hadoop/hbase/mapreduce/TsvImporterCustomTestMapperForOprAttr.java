@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,15 +44,19 @@ public class TsvImporterCustomTestMapperForOprAttr extends TsvImporterMapper {
       for (String attr : attributes) {
         String[] split = attr.split(ImportTsv.DEFAULT_ATTRIBUTES_SEPERATOR);
         if (split == null || split.length <= 1) {
-          throw new BadTsvLineException("Invalid attributes seperator specified" + attributes);
+          throw new BadTsvLineException(msg(attributes));
         } else {
           if (split[0].length() <= 0 || split[1].length() <= 0) {
-            throw new BadTsvLineException("Invalid attributes seperator specified" + attributes);
+            throw new BadTsvLineException(msg(attributes));
           }
           put.setAttribute(split[0], Bytes.toBytes(split[1]));
         }
       }
     }
     put.add(kv);
+  }
+
+  private String msg(Object[] attributes) {
+    return "Invalid attributes separator specified: " + Arrays.toString(attributes);
   }
 }
