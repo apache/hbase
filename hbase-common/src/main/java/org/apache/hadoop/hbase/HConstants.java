@@ -456,19 +456,12 @@ public final class HConstants {
   public static final byte [] REPLICATION_BARRIER_FAMILY =
       Bytes.toBytes(REPLICATION_BARRIER_FAMILY_STR);
 
-  /** The replication position family as a string*/
+  /** The replication barrier family as a string*/
   public static final String REPLICATION_POSITION_FAMILY_STR = "rep_position";
 
-  /** The replication position family */
+  /** The replication barrier family */
   public static final byte [] REPLICATION_POSITION_FAMILY =
       Bytes.toBytes(REPLICATION_POSITION_FAMILY_STR);
-
-  /** The replication meta family as a string*/
-  public static final String REPLICATION_META_FAMILY_STR = "rep_meta";
-
-  /** The replication meta family */
-  public static final byte [] REPLICATION_META_FAMILY =
-      Bytes.toBytes(REPLICATION_META_FAMILY_STR);
 
   /** The RegionInfo qualifier as a string */
   public static final String REGIONINFO_QUALIFIER_STR = "regioninfo";
