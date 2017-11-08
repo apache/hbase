@@ -552,6 +552,20 @@ under the License.
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty-sslengine</artifactId>
+
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 
 
   <!-- Used by Hadoop 2.6 -->
