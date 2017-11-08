@@ -102,7 +102,8 @@ public interface BackupRestoreConstants {
       +"org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager\n"
       + "hbase.procedure.regionserver.classes=YOUR_CLASSES,"
       + "org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager\n"
-      + "hbase.coprocessor.region.classes=YOUR_CLASSES,org.apache.hadoop.hbase.backup.BackupObserver\n"
+      + "hbase.coprocessor.region.classes=YOUR_CLASSES,"
+      + "org.apache.hadoop.hbase.backup.BackupObserver\n"
       + "and restart the cluster\n";
   public static final String ENABLE_BACKUP = "Backup is not enabled. To enable backup, "+
       "in hbase-site.xml, set:\n "
