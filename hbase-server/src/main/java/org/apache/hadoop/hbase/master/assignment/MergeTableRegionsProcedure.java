@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -222,10 +223,6 @@ public class MergeTableRegionsProcedure
         break;
       case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
         preMergeRegions(env);
-        setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE);
-        break;
-      case MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE:
-        setRegionStateToMerging(env);
         setNextState(MergeTableRegionsState.MERGE_TABLE_REGIONS_CLOSE_REGIONS);
         break;
       case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
@@ -295,14 +292,9 @@ public class MergeTableRegionsProcedure
       case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
         rollbackCloseRegionsForMerge(env);
         break;
-      case MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE:
-        setRegionStateToRevertMerging(env);
-        break;
       case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
         postRollBackMergeRegions(env);
         break;
-      case MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_RS:
-        break; // nothing to rollback
       case MERGE_TABLE_REGIONS_PREPARE:
         break;
       default:
@@ -513,6 +505,8 @@ public class MergeTableRegionsProcedure
       return false;
     }
 
+    // Update region states to Merging
+    setRegionStateToMerging(env);
     return true;
   }
 
@@ -560,16 +554,23 @@ public class MergeTableRegionsProcedure
    * @throws IOException
    */
   public void setRegionStateToMerging(final MasterProcedureEnv env) throws IOException {
-    //transition.setTransitionCode(TransitionCode.READY_TO_MERGE);
+    // Set State.MERGING to regions to be merged
+    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
+    regionStates.getRegionNode(regionsToMerge[0]).setState(State.MERGING);
+    regionStates.getRegionNode(regionsToMerge[1]).setState(State.MERGING);
   }
 
   /**
    * Rollback the region state change
+   * Not used for now, since rollbackCloseRegionsForMerge() will mark regions as OPEN
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private void setRegionStateToRevertMerging(final MasterProcedureEnv env) throws IOException {
-    //transition.setTransitionCode(TransitionCode.MERGE_REVERTED);
+  private void setRegionStateBackToOpen(final MasterProcedureEnv env) throws IOException {
+    // revert region state to Open
+    RegionStates regionStates = env.getAssignmentManager().getRegionStates();
+    regionStates.getRegionNode(regionsToMerge[0]).setState(State.OPEN);
+    regionStates.getRegionNode(regionsToMerge[1]).setState(State.OPEN);
   }
 
   /**
@@ -591,6 +592,10 @@ public class MergeTableRegionsProcedure
     mergeStoreFiles(env, regionFs2, regionFs.getMergesDir());
 
     regionFs.commitMergedRegion(mergedRegion);
+
+    //Prepare to create merged regions
+    env.getAssignmentManager().getRegionStates().
+        getOrCreateRegionNode(mergedRegion).setState(State.MERGING_NEW);
   }
 
   /**

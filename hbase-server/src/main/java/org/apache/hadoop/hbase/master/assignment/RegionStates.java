@@ -67,7 +67,7 @@ public class RegionStates {
   };
 
   protected static final State[] STATES_EXPECTED_ON_CLOSE = new State[] {
-    State.SPLITTING, State.SPLIT, // ServerCrashProcedure
+    State.SPLITTING, State.SPLIT, State.MERGING, // ServerCrashProcedure
     State.OPEN,                   // enabled/open
     State.CLOSING                 // already in-progress (retrying)
   };
