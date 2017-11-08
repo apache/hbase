@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -269,18 +268,6 @@ public interface WAL extends Closeable {
     public void setCompressionContext(CompressionContext compressionContext) {
       edit.setCompressionContext(compressionContext);
       key.setCompressionContext(compressionContext);
-    }
-
-    public boolean hasSerialReplicationScope () {
-      if (getKey().getScopes() == null || getKey().getScopes().isEmpty()) {
-        return false;
-      }
-      for (Map.Entry<byte[], Integer> e:getKey().getScopes().entrySet()) {
-        if (e.getValue() == HConstants.REPLICATION_SCOPE_SERIAL){
-          return true;
-        }
-      }
-      return false;
     }
 
     @Override

@@ -17,15 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import com.google.common.base.Preconditions;
-
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -49,6 +45,8 @@ import org.apache.hadoop.hbase.util.MultiHConnection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.base.Preconditions;
+
 /**
  * A helper to persist region state in meta. We may change this class
  * to StateStore later if we also use it to store other states in meta
@@ -65,7 +63,7 @@ public class RegionStateStore {
   private volatile boolean initialized;
 
   private final boolean noPersistence;
-  private final MasterServices server;
+  private final Server server;
 
   /**
    * Returns the {@link ServerName} from catalog table {@link Result}
@@ -135,7 +133,7 @@ public class RegionStateStore {
           State.SPLITTING_NEW, State.MERGED));
   }
 
-  RegionStateStore(final MasterServices server) {
+  RegionStateStore(final Server server) {
     Configuration conf = server.getConfiguration();
     // No need to persist if using ZK but not migrating
     noPersistence = ConfigUtil.useZKForAssignment(conf)
@@ -200,41 +198,31 @@ public class RegionStateStore {
     State state = newState.getState();
 
       int replicaId = hri.getReplicaId();
-      Put metaPut = new Put(MetaTableAccessor.getMetaKeyForRegion(hri));
+      Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(hri));
       StringBuilder info = new StringBuilder("Updating hbase:meta row ");
       info.append(hri.getRegionNameAsString()).append(" with state=").append(state);
       if (serverName != null && !serverName.equals(oldServer)) {
-        metaPut.addImmutable(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId),
+        put.addImmutable(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId),
           Bytes.toBytes(serverName.getServerName()));
         info.append(", sn=").append(serverName);
       }
       if (openSeqNum >= 0) {
         Preconditions.checkArgument(state == State.OPEN
           && serverName != null, "Open region should be on a server");
-        MetaTableAccessor.addLocation(metaPut, serverName, openSeqNum, -1, replicaId);
+        MetaTableAccessor.addLocation(put, serverName, openSeqNum, -1, replicaId);
         info.append(", openSeqNum=").append(openSeqNum);
         info.append(", server=").append(serverName);
       }
-      metaPut.addImmutable(HConstants.CATALOG_FAMILY, getStateColumn(replicaId),
+      put.addImmutable(HConstants.CATALOG_FAMILY, getStateColumn(replicaId),
         Bytes.toBytes(state.name()));
       LOG.info(info);
-      HTableDescriptor descriptor = server.getTableDescriptors().get(hri.getTable());
-      boolean serial = false;
-      if (descriptor != null) {
-        serial = server.getTableDescriptors().get(hri.getTable()).hasSerialReplicationScope();
-      }
-      boolean shouldPutBarrier = serial && state == State.OPEN;
+
       // Persist the state change to meta
       if (metaRegion != null) {
         try {
           // Assume meta is pinned to master.
           // At least, that's what we want.
-          metaRegion.put(metaPut);
-          if (shouldPutBarrier) {
-            Put barrierPut = MetaTableAccessor.makeBarrierPut(hri.getEncodedNameAsBytes(),
-                openSeqNum, hri.getTable().getName());
-            metaRegion.put(barrierPut);
-          }
+          metaRegion.put(put);
           return; // Done here
         } catch (Throwable t) {
           // In unit tests, meta could be moved away by intention
@@ -253,10 +241,7 @@ public class RegionStateStore {
         }
       }
       // Called when meta is not on master
-      List<Put> list = shouldPutBarrier ?
-          Arrays.asList(metaPut, MetaTableAccessor.makeBarrierPut(hri.getEncodedNameAsBytes(),
-              openSeqNum, hri.getTable().getName())) : Arrays.asList(metaPut);
-      multiHConnection.processBatchCallback(list, TableName.META_TABLE_NAME, null, null);
+      multiHConnection.processBatchCallback(Arrays.asList(put), TableName.META_TABLE_NAME, null, null);
 
     } catch (IOException ioe) {
       LOG.error("Failed to persist region state " + newState, ioe);
@@ -266,14 +251,12 @@ public class RegionStateStore {
 
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
-    MetaTableAccessor.splitRegion(server.getConnection(), p, a, b, sn, regionReplication,
-        server.getTableDescriptors().get(p.getTable()).hasSerialReplicationScope());
+    MetaTableAccessor.splitRegion(server.getConnection(), p, a, b, sn, regionReplication);
   }
 
   void mergeRegions(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
     MetaTableAccessor.mergeRegions(server.getConnection(), p, a, b, sn, regionReplication,
-        EnvironmentEdgeManager.currentTime(),
-        server.getTableDescriptors().get(p.getTable()).hasSerialReplicationScope());
+    		EnvironmentEdgeManager.currentTime());
   }
 }

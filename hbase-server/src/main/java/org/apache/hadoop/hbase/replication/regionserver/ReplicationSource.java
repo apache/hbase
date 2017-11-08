@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Service;
@@ -49,7 +46,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -75,6 +71,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Service;
 
 /**
  * Class that handles the source of a replication stream.
@@ -105,8 +105,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   private ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
   private String peerId;
-
-  String actualPeerId;
   // The manager of all sources to which we ping back our progress
   private ReplicationSourceManager manager;
   // Should we stop everything?
@@ -191,8 +189,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
-    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
-    this.actualPeerId = replicationQueueInfo.getPeerId();
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
     this.replicationEndpoint = replicationEndpoint;
 
@@ -523,16 +519,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     // Current state of the worker thread
     private WorkerState state;
     ReplicationSourceWALReaderThread entryReader;
-    // Use guava cache to set ttl for each key
-    private LoadingCache<String, Boolean> canSkipWaitingSet = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.DAYS).build(
-            new CacheLoader<String, Boolean>() {
-              @Override
-              public Boolean load(String key) throws Exception {
-                return false;
-              }
-            }
-        );
 
     public ReplicationSourceShipperThread(String walGroupId,
         PriorityBlockingQueue<Path> queue, ReplicationQueueInfo replicationQueueInfo,
@@ -568,9 +554,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
         try {
           WALEntryBatch entryBatch = entryReader.take();
-          for (Map.Entry<String, Long> entry : entryBatch.getLastSeqIds().entrySet()) {
-            waitingUntilCanPush(entry);
-          }
           shipEdits(entryBatch);
           releaseBufferQuota((int) entryBatch.getHeapSize());
           if (replicationQueueInfo.isQueueRecovered() && entryBatch.getWalEntries().isEmpty()
@@ -608,33 +591,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       // If the worker exits run loop without finishing it's task, mark it as stopped.
       if (state != WorkerState.FINISHED) {
         setWorkerState(WorkerState.STOPPED);
-      }
-    }
-
-    private void waitingUntilCanPush(Map.Entry<String, Long> entry) {
-      String key = entry.getKey();
-      long seq = entry.getValue();
-      boolean deleteKey = false;
-      if (seq <= 0) {
-        // There is a REGION_CLOSE marker, we can not continue skipping after this entry.
-        deleteKey = true;
-        seq = -seq;
-      }
-
-      if (!canSkipWaitingSet.getUnchecked(key)) {
-        try {
-          manager.waitUntilCanBePushed(Bytes.toBytes(key), seq, actualPeerId);
-        } catch (IOException e) {
-          LOG.error("waitUntilCanBePushed fail", e);
-          stopper.stop("waitUntilCanBePushed fail");
-        } catch (InterruptedException e) {
-          LOG.warn("waitUntilCanBePushed interrupted", e);
-          Thread.currentThread().interrupt();
-        }
-        canSkipWaitingSet.put(key, true);
-      }
-      if (deleteKey) {
-        canSkipWaitingSet.invalidate(key);
       }
     }
 
@@ -682,8 +638,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       int sleepMultiplier = 0;
       if (entries.isEmpty()) {
         if (lastLoggedPosition != lastReadPosition) {
-          // Save positions to meta table before zk.
-          updateSerialRepPositions(entryBatch.getLastSeqIds());
           updateLogPosition(lastReadPosition);
           // if there was nothing to ship and it's not an error
           // set "ageOfLastShippedOp" to <now> to indicate that we're current
@@ -738,10 +692,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
             for (int i = 0; i < size; i++) {
               cleanUpHFileRefs(entries.get(i).getEdit());
             }
-
-            // Save positions to meta table before zk.
-            updateSerialRepPositions(entryBatch.getLastSeqIds());
-
             //Log and clean up WAL logs
             updateLogPosition(lastReadPosition);
           }
@@ -767,16 +717,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
             sleepMultiplier++;
           }
         }
-      }
-    }
-
-    private void updateSerialRepPositions(Map<String, Long> lastPositionsForSerialScope) {
-      try {
-        MetaTableAccessor.updateReplicationPositions(manager.getConnection(), actualPeerId,
-          lastPositionsForSerialScope);
-      } catch (IOException e) {
-        LOG.error("updateReplicationPositions fail", e);
-        stopper.stop("updateReplicationPositions fail");
       }
     }
 
