@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -406,31 +407,32 @@ public class SplitTableRegionProcedure
   public boolean prepareSplitRegion(final MasterProcedureEnv env) throws IOException {
     // Check whether the region is splittable
     RegionStateNode node =
-      env.getAssignmentManager().getRegionStates().getRegionNode(getParentRegion());
-    RegionInfo parentHRI = null;
-    if (node != null) {
-      parentHRI = node.getRegionInfo();
+        env.getAssignmentManager().getRegionStates().getRegionNode(getParentRegion());
 
-      // Lookup the parent HRI state from the AM, which has the latest updated info.
-      // Protect against the case where concurrent SPLIT requests came in and succeeded
-      // just before us.
-      if (node.isInState(State.SPLIT)) {
-        LOG.info("Split of " + parentHRI + " skipped; state is already SPLIT");
-        return false;
-      }
-      if (parentHRI.isSplit() || parentHRI.isOffline()) {
-        LOG.info("Split of " + parentHRI + " skipped because offline/split.");
-        return false;
-      }
+    if (node == null) {
+      throw new UnknownRegionException(getParentRegion().getRegionNameAsString());
+    }
 
-      // expected parent to be online or closed
-      if (!node.isInState(EXPECTED_SPLIT_STATES)) {
-        // We may have SPLIT already?
-        setFailure(new IOException("Split " + parentHRI.getRegionNameAsString() +
-            " FAILED because state=" + node.getState() + "; expected " +
-            Arrays.toString(EXPECTED_SPLIT_STATES)));
-        return false;
-      }
+    RegionInfo parentHRI = node.getRegionInfo();
+    // Lookup the parent HRI state from the AM, which has the latest updated info.
+    // Protect against the case where concurrent SPLIT requests came in and succeeded
+    // just before us.
+    if (node.isInState(State.SPLIT)) {
+      LOG.info("Split of " + parentHRI + " skipped; state is already SPLIT");
+      return false;
+    }
+    if (parentHRI.isSplit() || parentHRI.isOffline()) {
+      LOG.info("Split of " + parentHRI + " skipped because offline/split.");
+      return false;
+    }
+
+    // expected parent to be online or closed
+    if (!node.isInState(EXPECTED_SPLIT_STATES)) {
+      // We may have SPLIT already?
+      setFailure(new IOException("Split " + parentHRI.getRegionNameAsString() +
+          " FAILED because state=" + node.getState() + "; expected " +
+          Arrays.toString(EXPECTED_SPLIT_STATES)));
+      return false;
     }
 
     // Since we have the lock and the master is coordinating the operation
@@ -442,6 +444,10 @@ public class SplitTableRegionProcedure
           " failed due to split switch off"));
       return false;
     }
+
+    // set node state as SPLITTING
+    node.setState(State.SPLITTING);
+
     return true;
   }
 

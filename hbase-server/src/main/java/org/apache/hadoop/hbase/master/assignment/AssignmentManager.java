@@ -1532,6 +1532,11 @@ public class AssignmentManager implements ServerListener {
     // regionStates#getRegionsOfTable
     final RegionStateNode node = regionStates.getOrCreateRegionNode(parent);
     node.setState(State.SPLIT);
+    final RegionStateNode nodeA = regionStates.getOrCreateRegionNode(daughterA);
+    nodeA.setState(State.SPLITTING_NEW);
+    final RegionStateNode nodeB = regionStates.getOrCreateRegionNode(daughterB);
+    nodeB.setState(State.SPLITTING_NEW);
+
     regionStateStore.splitRegion(parent, daughterA, daughterB, serverName);
     if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.master.getServerManager().getOnlineServersList();
