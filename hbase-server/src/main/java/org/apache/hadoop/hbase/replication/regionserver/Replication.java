@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
@@ -296,19 +295,8 @@ public class Replication extends WALActionsListener.Base implements
         if (replicationForBulkLoadEnabled && CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
           scopeBulkLoadEdits(htd, replicationManager, scopes, logKey.getTablename(), cell);
         } else {
-          WALProtos.RegionEventDescriptor maybeEvent = WALEdit.getRegionEventDescriptor(cell);
-          if (maybeEvent != null && (maybeEvent.getEventType() ==
-              WALProtos.RegionEventDescriptor.EventType.REGION_CLOSE)) {
-            // In serially replication, we use scopes when reading close marker.
-            for (HColumnDescriptor cf : families) {
-              if (cf.getScope() != REPLICATION_SCOPE_LOCAL) {
-                scopes.put(cf.getName(), cf.getScope());
-              }
-            }
-          }
-          // Skip the flush/compaction
+          // Skip the flush/compaction/region events
           continue;
-
         }
       } else if (hasReplication) {
         byte[] family = CellUtil.cloneFamily(cell);

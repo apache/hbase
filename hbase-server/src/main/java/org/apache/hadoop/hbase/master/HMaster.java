@@ -98,7 +98,6 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.cleaner.ReplicationMetaCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKLockCleanerChore;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleanerChore;
@@ -330,7 +329,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   CatalogJanitor catalogJanitorChore;
   private ReplicationZKLockCleanerChore replicationZKLockCleanerChore;
   private ReplicationZKNodeCleanerChore replicationZKNodeCleanerChore;
-  private ReplicationMetaCleaner replicationMetaCleaner;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
 
@@ -1249,12 +1247,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     } catch (Exception e) {
       LOG.error("start replicationZKNodeCleanerChore failed", e);
     }
-    try {
-      replicationMetaCleaner = new ReplicationMetaCleaner(this, this, cleanerInterval);
-      getChoreService().scheduleChore(replicationMetaCleaner);
-    } catch (Exception e) {
-      LOG.error("start ReplicationMetaCleaner failed", e);
-    }
   }
 
   @Override
@@ -1290,7 +1282,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
     if (this.replicationZKLockCleanerChore != null) this.replicationZKLockCleanerChore.cancel(true);
     if (this.replicationZKNodeCleanerChore != null) this.replicationZKNodeCleanerChore.cancel(true);
-    if (this.replicationMetaCleaner != null) this.replicationMetaCleaner.cancel(true);
     if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();

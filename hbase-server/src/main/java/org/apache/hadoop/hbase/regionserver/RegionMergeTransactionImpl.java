@@ -434,8 +434,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       if (metaEntries.isEmpty()) {
         MetaTableAccessor.mergeRegions(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
-          server.getServerName(), region_a.getTableDesc().getRegionReplication(), masterSystemTime,
-            false);
+          server.getServerName(), region_a.getTableDesc().getRegionReplication(), masterSystemTime);
       } else {
         mergeRegionsAndPutMetaEntries(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),

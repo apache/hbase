@@ -141,10 +141,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
               batch = new WALEntryBatch(replicationBatchCountCapacity, entryStream.getCurrentPath());
             }
             Entry entry = entryStream.next();
-            if (updateSerialReplPos(batch, entry)) {
-              batch.lastWalPosition = entryStream.getPosition();
-              break;
-            }
             entry = filterEntry(entry);
             if (entry != null) {
               WALEdit edit = entry.getEdit();
@@ -243,33 +239,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
       metrics.incrLogEditsFiltered();
     }
     return filtered;
-  }
-
-  /**
-   * @return true if we should stop reading because we're at REGION_CLOSE
-   */
-  private boolean updateSerialReplPos(WALEntryBatch batch, Entry entry) throws IOException {
-    if (entry.hasSerialReplicationScope()) {
-      String key = Bytes.toString(entry.getKey().getEncodedRegionName());
-      batch.setLastPosition(key, entry.getKey().getSequenceId());
-      if (!entry.getEdit().getCells().isEmpty()) {
-        WALProtos.RegionEventDescriptor maybeEvent =
-            WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
-        if (maybeEvent != null && maybeEvent
-            .getEventType() == WALProtos.RegionEventDescriptor.EventType.REGION_CLOSE) {
-          // In serially replication, if we move a region to another RS and move it back, we may
-          // read logs crossing two sections. We should break at REGION_CLOSE and push the first
-          // section first in case of missing the middle section belonging to the other RS.
-          // In a worker thread, if we can push the first log of a region, we can push all logs
-          // in the same region without waiting until we read a close marker because next time
-          // we read logs in this region, it must be a new section and not adjacent with this
-          // region. Mark it negative.
-          batch.setLastPosition(key, -entry.getKey().getSequenceId());
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   /**

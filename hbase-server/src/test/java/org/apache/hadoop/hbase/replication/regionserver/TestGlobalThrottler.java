@@ -115,7 +115,7 @@ public class TestGlobalThrottler {
     TableName tableName = TableName.valueOf("testQuota");
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
+    fam.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
     table.addFamily(fam);
     utility1.getHBaseAdmin().createTable(table);
     utility2.getHBaseAdmin().createTable(table);
