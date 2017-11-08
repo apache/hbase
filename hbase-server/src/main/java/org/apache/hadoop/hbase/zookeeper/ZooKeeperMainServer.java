@@ -54,8 +54,9 @@ public class ZooKeeperMainServer {
       long startTime = System.currentTimeMillis();
       while (!this.zk.getState().isConnected()) {
         Thread.sleep(1);
-        if ((System.currentTimeMillis() - startTime) > 10000) {
-          throw new InterruptedException("Failed connect " + this.zk);
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed > 30000) {
+          throw new InterruptedException("Failed connect after " + elapsed + "ms; " + this.zk);
         }
       }
     }
