@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
@@ -34,6 +35,7 @@ import org.apache.zookeeper.data.Id;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 /**
  *
@@ -77,5 +79,26 @@ public class TestZKUtil {
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user1"))));
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user2"))));
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user3"))));
+  }
+
+  @Test
+  public void testInterruptedDuringAction()
+      throws ZooKeeperConnectionException, IOException, KeeperException, InterruptedException {
+    final RecoverableZooKeeper recoverableZk = Mockito.mock(RecoverableZooKeeper.class);
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(HBaseConfiguration.create(), "unittest", null) {
+      @Override
+      public RecoverableZooKeeper getRecoverableZooKeeper() {
+        return recoverableZk;
+      }
+    };
+    Mockito.doThrow(new InterruptedException()).when(recoverableZk)
+        .getChildren(zkw.baseZNode, null);
+    try {
+      ZKUtil.listChildrenNoWatch(zkw, zkw.baseZNode);
+    } catch (KeeperException.SystemErrorException e) {
+      // expected
+      return;
+    }
+    Assert.fail("Should have thrown KeeperException but not");
   }
 }
