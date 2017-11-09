@@ -325,16 +325,16 @@ Quitting...
 == Upgrade Paths
 
 [[upgrade1.0]]
-=== Upgrading from 0.98.x to 1.0.x
+=== Upgrading from 0.98.x to 1.x
 
-In this section we first note the significant changes that come in with 1.0.0 HBase and then we go over the upgrade process. Be sure to read the significant changes section with care so you avoid surprises.
+In this section we first note the significant changes that come in with 1.0.0+ HBase and then we go over the upgrade process. Be sure to read the significant changes section with care so you avoid surprises.
 
 ==== Changes of Note!
 
-In here we list important changes that are in 1.0.0 since 0.98.x., changes you should be aware that will go into effect once you upgrade.
+In here we list important changes that are in 1.0.0+ since 0.98.x., changes you should be aware that will go into effect once you upgrade.
 
 [[zookeeper.3.4]]
-.ZooKeeper 3.4 is required in HBase 1.0.0
+.ZooKeeper 3.4 is required in HBase 1.0.0+
 See <<zookeeper.requirements>>.
 
 [[default.ports.changed]]
@@ -362,6 +362,9 @@ requests that reach the server's `hbase.client.scanner.max.result.size` are like
 to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
 to 2 MB but other versions default to larger values. For this reason, be very careful
 using 0.98.11 servers with any other client version.
+
+.Availability of Date Tiered Compaction.
+The Date Tiered Compaction feature available as of 0.98.19 is available in the 1.y release line starting in release 1.3.0. If you have enabled this feature for any tables you must upgrade to version 1.3.0 or later. If you attempt to use an earlier 1.y release, any tables configured to use date tiered compaction will fail to have their regions open.
 
 [[upgrade1.0.rolling.upgrade]]
 ==== Rolling upgrade from 0.98.x to HBase 1.0.0
