@@ -393,7 +393,7 @@ public class TestMetaWithReplicas {
     fail("Expected TableNotFoundException");
   }
 
-  @Ignore @Test // Disabled. Currently can't move hbase:meta in AMv2.
+  @Test
   public void testMetaAddressChange() throws Exception {
     // checks that even when the meta's location changes, the various
     // caches update themselves. Uses the master operations to test
