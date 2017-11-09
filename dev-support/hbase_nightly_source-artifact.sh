@@ -28,6 +28,10 @@ function usage {
   echo "                                          component-dir."
   echo "    --maven-m2-src-build /path/to/use     Path for maven artifacts while building from the"
   echo "                                          unpacked source tarball."
+  echo "    --clean-source-checkout               Destructively clean component checkout before"
+  echo "                                          comparing to source tarball. N.B. will delete"
+  echo "                                          anything in the checkout dir that isn't from"
+  echo "                                          a git checkout, including ignored files."
   exit 1
 }
 # if no args specified, show usage
@@ -41,6 +45,7 @@ declare unpack_dir
 declare m2_initial
 declare m2_tarbuild
 declare working_dir
+declare source_clean
 while [ $# -gt 0 ]
 do
   case "$1" in
@@ -48,6 +53,7 @@ do
     --maven-m2-initial) shift; m2_initial=$1; shift;;
     --maven-m2-src-build) shift; m2_tarbuild=$1; shift;;
     --intermediate-file-dir) shift; working_dir=$1; shift;;
+    --clean-source-checkout) shift; source_clean="true";;
     --) shift; break;;
     -*) usage ;;
     *)  break;;  # terminate while loop
@@ -123,8 +129,10 @@ mvn --version --offline | tee "${working_dir}/maven_version"
 
 echo "Do a clean building of the source artifact using code in ${component_dir}"
 cd "${component_dir}"
-echo "Clean..."
-git clean -xdfff >"${working_dir}/component_git_clean.log" 2>&1
+if [ -n "${source_clean}" ]; then
+  echo "Clean..."
+  git clean -xdfff >"${working_dir}/component_git_clean.log" 2>&1
+fi
 echo "Follow the ref guide section on making a RC: Step 6 Build the source tarball"
 git archive --format=tar.gz --output="${working_dir}/hbase-src.tar.gz" \
     --prefix="hbase-SOMEVERSION/" HEAD \
@@ -152,6 +160,9 @@ Only in .: .git
 END
 if ! diff known_excluded diff_output >"${working_dir}/unexpected.diff" ; then
   echo "Any output here are unexpected differences between the source artifact we'd make for an RC and the current branch."
+  echo "One potential source of differences is if you have an unclean working directory; you should expect to see"
+  echo "such extraneous files below."
+  echo ""
   echo "The expected differences are on the < side and the current differences are on the > side."
   echo "In a given set of differences, '.' refers to the branch in the repo and 'unpacked_src_tarball' refers to what we pulled out of the tarball."
   diff known_excluded diff_output
