@@ -127,6 +127,11 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       steps {
         unstash 'yetus'
+        sh '''#!/usr/bin/env bash
+          rm -rf "${OUTPUTDIR}" && mkdir "${OUTPUTDIR}"
+          rm -rf "${OUTPUTDIR}/machine" && mkdir "${OUTPUTDIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_RELATIVE}/machine"
+'''
         // TODO should this be a download from master, similar to how the personality is?
         sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
       }
@@ -159,6 +164,11 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       steps {
         unstash 'yetus'
+        sh '''#!/usr/bin/env bash
+          rm -rf "${OUTPUTDIR}" && mkdir "${OUTPUTDIR}"
+          rm -rf "${OUTPUTDIR}/machine" && mkdir "${OUTPUTDIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_RELATIVE}/machine"
+'''
         sh """#!/usr/bin/env bash
           # for branch-1.1 we don't do jdk8 findbugs, so do it here
           if [ "${env.BRANCH_NAME}" == "branch-1.1" ]; then
@@ -215,6 +225,11 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       steps {
         unstash 'yetus'
+        sh '''#!/usr/bin/env bash
+          rm -rf "${OUTPUTDIR}" && mkdir "${OUTPUTDIR}"
+          rm -rf "${OUTPUTDIR}/machine" && mkdir "${OUTPUTDIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_RELATIVE}/machine"
+'''
         sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
       }
       post {
@@ -264,6 +279,10 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
           rm -rf "unpacked_src_tarball" && mkdir "unpacked_src_tarball"
           rm -rf ".m2-for-repo" && mkdir ".m2-for-repo"
           rm -rf ".m2-for-src" && mkdir ".m2-for-src"
+'''
+        sh '''#!/usr/bin/env bash
+          rm -rf "output-srctarball/machine" && mkdir "output-srctarball/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "output-srctarball/machine"
 '''
         sh """#!/bin/bash -e
           ${env.BASEDIR}/dev-support/hbase_nightly_source-artifact.sh \
