@@ -1479,6 +1479,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-backup</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -1667,6 +1672,16 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-rest</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-resource-bundle</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
       </dependency>
       <!-- General dependencies -->
       <dependency>
