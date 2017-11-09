@@ -48,30 +48,15 @@ $LOAD_PATH.unshift Pathname.new(sources)
 cmdline_help = <<HERE # HERE document output as shell usage
 Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
 
- --format=OPTION                Formatter for outputting results.
-                                Valid options are: console, html.
-                                (Default: console)
-
  -d | --debug                   Set DEBUG log levels.
  -h | --help                    This help.
 HERE
 found = []
-format = 'console'
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
 for arg in ARGV
-  if arg =~ /^--format=(.+)/i
-    format = $1
-    if format =~ /^html$/i
-      raise NoMethodError.new("Not yet implemented")
-    elsif format =~ /^console$/i
-      # This is default
-    else
-      raise ArgumentError.new("Unsupported format " + arg)
-    end
-    found.push(arg)
-  elsif arg == '-h' || arg == '--help'
+  if arg == '-h' || arg == '--help'
     puts cmdline_help
     exit
   elsif arg == '-d' || arg == '--debug'
