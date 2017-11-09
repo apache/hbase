@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
 
 import java.io.ByteArrayOutputStream;
@@ -74,6 +75,17 @@ public class TableSnapshotInputFormatImpl {
   private static final String LOCALITY_CUTOFF_MULTIPLIER =
     "hbase.tablesnapshotinputformat.locality.cutoff.multiplier";
   private static final float DEFAULT_LOCALITY_CUTOFF_MULTIPLIER = 0.8f;
+
+  /**
+   * For MapReduce jobs running multiple mappers per region, determines
+   * what split algorithm we should be using to find split points for scanners.
+   */
+  public static final String SPLIT_ALGO = "hbase.mapreduce.split.algorithm";
+  /**
+   * For MapReduce jobs running multiple mappers per region, determines
+   * number of splits to generate per region.
+   */
+  public static final String NUM_SPLITS_PER_REGION = "hbase.mapreduce.splits.per.region";
 
   /**
    * Implementation class for InputSplit logic common between mapred and mapreduce.
@@ -262,7 +274,30 @@ public class TableSnapshotInputFormatImpl {
     // the temp dir where the snapshot is restored
     Path restoreDir = new Path(conf.get(RESTORE_DIR_KEY));
 
-    return getSplits(scan, manifest, regionInfos, restoreDir, conf);
+    RegionSplitter.SplitAlgorithm splitAlgo = getSplitAlgo(conf);
+
+    int numSplits = conf.getInt(NUM_SPLITS_PER_REGION, 1);
+
+    return getSplits(scan, manifest, regionInfos, restoreDir, conf, splitAlgo, numSplits);
+  }
+
+  public static RegionSplitter.SplitAlgorithm getSplitAlgo(Configuration conf) throws IOException{
+    String splitAlgoClassName = conf.get(SPLIT_ALGO);
+    if (splitAlgoClassName == null)
+      return null;
+    try {
+      return ((Class<? extends RegionSplitter.SplitAlgorithm>)
+              Class.forName(splitAlgoClassName)).newInstance();
+    } catch (ClassNotFoundException e) {
+      throw new IOException("SplitAlgo class " + splitAlgoClassName +
+              " is not found", e);
+    } catch (InstantiationException e) {
+      throw new IOException("SplitAlgo class " + splitAlgoClassName +
+              " is not instantiable", e);
+    } catch (IllegalAccessException e) {
+      throw new IOException("SplitAlgo class " + splitAlgoClassName +
+              " is not instantiable", e);
+    }
   }
 
   public static List<HRegionInfo> getRegionInfosFromManifest(SnapshotManifest manifest) {
@@ -305,6 +340,12 @@ public class TableSnapshotInputFormatImpl {
 
   public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
       List<HRegionInfo> regionManifests, Path restoreDir, Configuration conf) throws IOException {
+    return getSplits(scan, manifest, regionManifests, restoreDir, conf, null, 1);
+  }
+
+  public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
+                                           List<HRegionInfo> regionManifests, Path restoreDir,
+                                           Configuration conf, RegionSplitter.SplitAlgorithm sa, int numSplits) throws IOException {
     // load table descriptor
     HTableDescriptor htd = manifest.getTableDescriptor();
 
@@ -317,16 +358,36 @@ public class TableSnapshotInputFormatImpl {
         continue;
       }
 
-      if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
-          hri.getEndKey())) {
-        // compute HDFS locations from snapshot files (which will get the locations for
-        // referred hfiles)
-        List<String> hosts = getBestLocations(conf,
-            HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
+      if (numSplits > 1) {
+        byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
+        for (int i = 0; i < sp.length - 1; i++) {
+          if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
+                  sp[i + 1])) {
+            // compute HDFS locations from snapshot files (which will get the locations for
+            // referred hfiles)
+            List<String> hosts = getBestLocations(conf,
+                    HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
 
-        int len = Math.min(3, hosts.size());
-        hosts = hosts.subList(0, len);
-        splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
+            int len = Math.min(3, hosts.size());
+            hosts = hosts.subList(0, len);
+            Scan boundedScan = new Scan(scan);
+            boundedScan.setStartRow(sp[i]);
+            boundedScan.setStopRow(sp[i + 1]);
+            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
+          }
+        }
+      } else {
+        if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
+            hri.getEndKey())) {
+          // compute HDFS locations from snapshot files (which will get the locations for
+          // referred hfiles)
+          List<String> hosts = getBestLocations(conf,
+              HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
+
+          int len = Math.min(3, hosts.size());
+          hosts = hosts.subList(0, len);
+          splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
+        }
       }
     }
 
@@ -395,6 +456,35 @@ public class TableSnapshotInputFormatImpl {
    */
   public static void setInput(Configuration conf, String snapshotName, Path restoreDir)
       throws IOException {
+    setInput(conf, snapshotName, restoreDir, null, 1);
+  }
+
+  /**
+   * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
+   * @param conf the job to configure
+   * @param snapshotName the name of the snapshot to read from
+   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
+   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
+   * After the job is finished, restoreDir can be deleted.
+   * @param numSplitsPerRegion how many input splits to generate per one region
+   * @param splitAlgo SplitAlgorithm to be used when generating InputSplits
+   * @throws IOException if an error occurs
+   */
+  public static void setInput(Configuration conf, String snapshotName, Path restoreDir,
+                              RegionSplitter.SplitAlgorithm splitAlgo, int numSplitsPerRegion)
+          throws IOException {
+    conf.set(SNAPSHOT_NAME_KEY, snapshotName);
+    if (numSplitsPerRegion < 1) {
+      throw new IllegalArgumentException("numSplits must be >= 1, " +
+              "illegal numSplits : " + numSplitsPerRegion);
+    }
+    if (splitAlgo == null && numSplitsPerRegion > 1) {
+      throw new IllegalArgumentException("Split algo can't be null when numSplits > 1");
+    }
+    if (splitAlgo != null) {
+      conf.set(SPLIT_ALGO, splitAlgo.getClass().getName());
+    }
+    conf.setInt(NUM_SPLITS_PER_REGION, numSplitsPerRegion);
     conf.set(SNAPSHOT_NAME_KEY, snapshotName);
 
     Path rootDir = FSUtils.getRootDir(conf);
