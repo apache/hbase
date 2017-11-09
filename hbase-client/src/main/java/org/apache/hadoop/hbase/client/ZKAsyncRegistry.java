@@ -68,7 +68,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
   ZKAsyncRegistry(Configuration conf) {
     this.znodePaths = new ZNodePaths(conf);
     int zkSessionTimeout = conf.getInt(ZK_SESSION_TIMEOUT, DEFAULT_ZK_SESSION_TIMEOUT);
-    int zkRetry = conf.getInt("zookeeper.recovery.retry", 3);
+    int zkRetry = conf.getInt("zookeeper.recovery.retry", 30);
     int zkRetryIntervalMs = conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
     this.zk = CuratorFrameworkFactory.builder()
         .connectString(ZKConfig.getZKQuorumServersString(conf)).sessionTimeoutMs(zkSessionTimeout)
