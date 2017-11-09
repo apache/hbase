@@ -290,6 +290,7 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
               --unpack-temp-dir unpacked_src_tarball \
               --maven-m2-initial .m2-for-repo \
               --maven-m2-src-build .m2-for-src \
+              --clean-source-checkout \
               ${env.BASEDIR}
 """
       }
