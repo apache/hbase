@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -60,7 +60,7 @@ public class TestMemStoreChunkPool {
     MemStoreChunkPool.chunkPoolDisabled = chunkPoolDisabledBeforeTest;
   }
 
-  @Before
+  @After
   public void tearDown() throws Exception {
     chunkPool.clearChunks();
   }

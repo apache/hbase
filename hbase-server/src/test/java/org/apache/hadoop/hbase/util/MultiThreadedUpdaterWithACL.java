@@ -126,8 +126,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
               res = localTable.get(get);
             }
           } catch (IOException ie) {
-            LOG.warn("Failed to get the row for key = [" + get.getRow() + "], column family = ["
-                + Bytes.toString(cf) + "]", ie);
+            LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow()) +
+                "], column family = [" + Bytes.toString(cf) + "]", ie);
           }
           return res;
         }
@@ -152,8 +152,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           Result result = (Result) user.runAs(action);
           return result;
         } catch (Exception ie) {
-          LOG.warn("Failed to get the row for key = [" + get.getRow() + "], column family = ["
-              + Bytes.toString(cf) + "]", ie);
+          LOG.warn("Failed to get the row for key = [" + Bytes.toString(get.getRow()) +
+              "], column family = [" + Bytes.toString(cf) + "]", ie);
         }
       }
       // This means that no users were present

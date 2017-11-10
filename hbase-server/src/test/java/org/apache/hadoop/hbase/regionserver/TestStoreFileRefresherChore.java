@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +50,6 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -126,6 +126,19 @@ public class TestStoreFileRefresherChore {
     }
   }
 
+  private void verifyDataExpectFail(Region newReg, int startRow, int numRows, byte[] qf,
+      byte[]... families) throws IOException {
+    boolean threw = false;
+    try {
+      verifyData(newReg, startRow, numRows, qf, families);
+    } catch (AssertionError e) {
+      threw = true;
+    }
+    if (!threw) {
+      fail("Expected data verification to fail");
+    }
+  }
+
   private void verifyData(Region newReg, int startRow, int numRows, byte[] qf, byte[]... families)
       throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
@@ -183,12 +196,7 @@ public class TestStoreFileRefresherChore {
     primary.flush(true);
     verifyData(primary, 0, 100, qf, families);
 
-    try {
-      verifyData(replica1, 0, 100, qf, families);
-      Assert.fail("should have failed");
-    } catch(AssertionError ex) {
-      // expected
-    }
+    verifyDataExpectFail(replica1, 0, 100, qf, families);
     chore.chore();
     verifyData(replica1, 0, 100, qf, families);
 
@@ -203,18 +211,13 @@ public class TestStoreFileRefresherChore {
     chore.chore(); // should not throw ex, but we cannot refresh the store files
 
     verifyData(replica1, 0, 100, qf, families);
-    try {
-      verifyData(replica1, 100, 100, qf, families);
-      Assert.fail("should have failed");
-    } catch(AssertionError ex) {
-      // expected
-    }
+    verifyDataExpectFail(replica1, 100, 100, qf, families);
 
     chore.isStale = true;
     chore.chore(); //now after this, we cannot read back any value
     try {
       verifyData(replica1, 0, 100, qf, families);
-      Assert.fail("should have failed with IOException");
+      fail("should have failed with IOException");
     } catch(IOException ex) {
       // expected
     }
