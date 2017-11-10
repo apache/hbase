@@ -490,7 +490,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
 
       super.replicate(replicateContext);
-      LOG.info("Replicated " + row + ", count=" + replicateCount.get());
+      LOG.info("Replicated " + Bytes.toString(row) + ", count=" + replicateCount.get());
 
       replicated.set(replicateCount.get() > COUNT); // first 10 times, we return false
       return replicated.get();

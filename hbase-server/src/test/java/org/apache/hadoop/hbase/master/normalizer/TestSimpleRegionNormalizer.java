@@ -343,6 +343,7 @@ public class TestSimpleRegionNormalizer {
     assertEquals(hri4, ((SplitNormalizationPlan) plan).getRegionInfo());
   }
 
+  @SuppressWarnings("MockitoCast")
   protected void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
                                          List<RegionInfo> RegionInfo) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
@@ -360,7 +361,10 @@ public class TestSimpleRegionNormalizer {
       when(regionLoad.getName()).thenReturn(region.getKey());
       when(regionLoad.getStorefileSizeMB()).thenReturn(region.getValue());
 
-      when(masterServices.getServerManager().getLoad(sn).
+      // this is possibly broken with jdk9, unclear if false positive or not
+      // suppress it for now, fix it when we get to running tests on 9
+      // see: http://errorprone.info/bugpattern/MockitoCast
+      when((Object) masterServices.getServerManager().getLoad(sn).
         getRegionsLoad().get(region.getKey())).thenReturn(regionLoad);
     }
     try {

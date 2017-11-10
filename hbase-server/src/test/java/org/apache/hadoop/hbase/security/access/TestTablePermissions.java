@@ -189,9 +189,9 @@ public class TestTablePermissions {
     permission = userPerms.get(0);
     assertEquals("Permission should be for " + TEST_TABLE,
         TEST_TABLE, permission.getTableName());
-    assertTrue("Permission should be for family " + TEST_FAMILY,
+    assertTrue("Permission should be for family " + Bytes.toString(TEST_FAMILY),
         Bytes.equals(TEST_FAMILY, permission.getFamily()));
-    assertTrue("Permission should be for qualifier " + TEST_QUALIFIER,
+    assertTrue("Permission should be for qualifier " + Bytes.toString(TEST_QUALIFIER),
         Bytes.equals(TEST_QUALIFIER, permission.getQualifier()));
 
     // check actions

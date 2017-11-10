@@ -162,6 +162,7 @@ public class TestHRegionInfo {
     assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaRegion());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testComparator() {
     final TableName tableName = TableName.valueOf(name.getMethodName());

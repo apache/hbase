@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -622,7 +623,7 @@ public class TestFilter {
    * @throws Exception
    */
   @Test
-  public void tes94FilterRowCompatibility() throws Exception {
+  public void test94FilterRowCompatibility() throws Exception {
     Scan s = new Scan();
     OldTestFilter filter = new OldTestFilter();
     s.setFilter(filter);
@@ -2051,7 +2052,8 @@ public class TestFilter {
     }
   }
 
-  // TODO: intentionally disabled?
+  @Test
+  @Ignore("TODO: intentionally disabled?")
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));

@@ -421,7 +421,8 @@ public class TestRegionPlacement {
       for (Region region: rs.getRegions(TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
-        List<ServerName> favoredServerList = plan.getAssignmentMap().get(region.getRegionInfo());
+        String regionName = region.getRegionInfo().getRegionNameAsString();
+        List<ServerName> favoredServerList = plan.getAssignmentMap().get(regionName);
 
         // All regions are supposed to have favored nodes,
         // except for hbase:meta and ROOT

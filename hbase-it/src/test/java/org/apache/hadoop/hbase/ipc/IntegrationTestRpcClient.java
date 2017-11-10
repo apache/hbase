@@ -198,24 +198,22 @@ public class IntegrationTestRpcClient {
     @Override
     public void run() {
       while (running.get()) {
-        switch (random.nextInt() % 2) {
-        case 0: //start a server
+        if (random.nextBoolean()) {
+          //start a server
           try {
             cluster.startServer();
           } catch (Exception e) {
             LOG.warn(e);
             exception.compareAndSet(null, e);
           }
-          break;
-
-        case 1: // stop a server
+        } else {
+          // stop a server
           try {
             cluster.stopRandomServer();
           } catch (Exception e) {
             LOG.warn(e);
             exception.compareAndSet(null, e);
           }
-        default:
         }
 
         Threads.sleep(100);

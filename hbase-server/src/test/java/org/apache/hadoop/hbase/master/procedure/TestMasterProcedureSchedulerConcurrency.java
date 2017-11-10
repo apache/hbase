@@ -207,6 +207,8 @@ public class TestMasterProcedureSchedulerConcurrency {
         case READ:
           queue.wakeTableSharedLock(proc, getTableName(proc));
           break;
+        default:
+          throw new UnsupportedOperationException();
       }
     }
 

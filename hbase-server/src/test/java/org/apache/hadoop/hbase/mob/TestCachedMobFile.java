@@ -72,6 +72,7 @@ public class TestCachedMobFile extends TestCase{
     Assert.assertEquals(EXPECTED_REFERENCE_ZERO, cachedMobFile.getReferenceCount());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompare() throws Exception {
     String caseName = getName();

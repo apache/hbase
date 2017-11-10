@@ -101,7 +101,7 @@ public class TestServerNonceManager {
     ServerNonceManager nm = createManager();
     try {
       nm.endOperation(NO_NONCE, 1, true);
-      fail("Should have thrown");
+      throw new Error("Should have thrown");
     } catch (AssertionError err) {}
   }
 
