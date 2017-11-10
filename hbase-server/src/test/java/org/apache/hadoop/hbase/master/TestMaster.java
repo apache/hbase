@@ -107,15 +107,13 @@ public class TestMaster {
     // Now trigger a split and stop when the split is in progress
     LOG.info("Splitting table");
     TEST_UTIL.getAdmin().split(TABLENAME);
-    LOG.info("Waiting for split result to be about to open");
-    RegionStates regionStates = m.getAssignmentManager().getRegionStates();
-    while (regionStates.getRegionsOfTable(TABLENAME).size() <= 1) {
+
+    LOG.info("Making sure we can call getTableRegions while opening");
+    while (tableRegions.size() < 3) {
+      tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(),
+          TABLENAME, false);
       Thread.sleep(100);
     }
-    LOG.info("Making sure we can call getTableRegions while opening");
-    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(),
-      TABLENAME, false);
-
     LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
     // We have three regions because one is split-in-progress
     assertEquals(3, tableRegions.size());
