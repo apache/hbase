@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class CacheEvictionStatsBuilder {
