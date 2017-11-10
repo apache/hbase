@@ -152,6 +152,7 @@ public class TestHRegionInfo {
     assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaTable());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testComparator() {
     TableName tablename = TableName.valueOf("comparatorTablename");
