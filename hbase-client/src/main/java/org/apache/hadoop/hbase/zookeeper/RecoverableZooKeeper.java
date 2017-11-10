@@ -18,20 +18,24 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.appendMetaData;
+import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
+
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -45,8 +49,6 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
 
 /**
  * A zookeeper that can handle 'recoverable' errors.
@@ -83,21 +85,7 @@ public class RecoverableZooKeeper {
   private Watcher watcher;
   private int sessionTimeout;
   private String quorumServers;
-  private final Random salter;
   private final ZooKeeperMetricsListener metrics;
-
-  // The metadata attached to each piece of data has the
-  // format:
-  //   <magic> 1-byte constant
-  //   <id length> 4-byte big-endian integer (length of next field)
-  //   <id> identifier corresponding uniquely to this process
-  // It is prepended to the data supplied by the user.
-
-  // the magic number is to be backward compatible
-  private static final byte MAGIC =(byte) 0XFF;
-  private static final int MAGIC_SIZE = Bytes.SIZEOF_BYTE;
-  private static final int ID_LENGTH_OFFSET = MAGIC_SIZE;
-  private static final int ID_LENGTH_SIZE =  Bytes.SIZEOF_INT;
 
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, int maxSleepTime)
@@ -129,7 +117,6 @@ public class RecoverableZooKeeper {
     this.quorumServers = quorumServers;
     this.metrics = new MetricsZooKeeper();
     try {checkZk();} catch (Exception x) {/* ignore */}
-    salter = new Random();
   }
 
   /**
@@ -472,7 +459,7 @@ public class RecoverableZooKeeper {
     try {
       traceScope = Trace.startSpan("RecoverableZookeeper.setData");
       RetryCounter retryCounter = retryCounterFactory.create();
-      byte[] newData = appendMetaData(data);
+      byte[] newData = appendMetaData(id, data);
       boolean isRetry = false;
       long startTime;
       while (true) {
@@ -622,7 +609,7 @@ public class RecoverableZooKeeper {
     TraceScope traceScope = null;
     try {
       traceScope = Trace.startSpan("RecoverableZookeeper.create");
-      byte[] newData = appendMetaData(data);
+      byte[] newData = appendMetaData(id, data);
       switch (createMode) {
         case EPHEMERAL:
         case PERSISTENT:
@@ -745,14 +732,14 @@ public class RecoverableZooKeeper {
     for (Op op : ops) {
       if (op.getType() == ZooDefs.OpCode.create) {
         CreateRequest create = (CreateRequest)op.toRequestRecord();
-        preparedOps.add(Op.create(create.getPath(), appendMetaData(create.getData()),
+        preparedOps.add(Op.create(create.getPath(), appendMetaData(id, create.getData()),
           create.getAcl(), create.getFlags()));
       } else if (op.getType() == ZooDefs.OpCode.delete) {
         // no need to appendMetaData for delete
         preparedOps.add(op);
       } else if (op.getType() == ZooDefs.OpCode.setData) {
         SetDataRequest setData = (SetDataRequest)op.toRequestRecord();
-        preparedOps.add(Op.setData(setData.getPath(), appendMetaData(setData.getData()),
+        preparedOps.add(Op.setData(setData.getPath(), appendMetaData(id, setData.getData()),
           setData.getVersion()));
       } else {
         throw new UnsupportedOperationException("Unexpected ZKOp type: " + op.getClass().getName());
@@ -820,41 +807,6 @@ public class RecoverableZooKeeper {
       }
     }
     return null;
-  }
-
-  public static byte[] removeMetaData(byte[] data) {
-    if(data == null || data.length == 0) {
-      return data;
-    }
-    // check the magic data; to be backward compatible
-    byte magic = data[0];
-    if(magic != MAGIC) {
-      return data;
-    }
-
-    int idLength = Bytes.toInt(data, ID_LENGTH_OFFSET);
-    int dataLength = data.length-MAGIC_SIZE-ID_LENGTH_SIZE-idLength;
-    int dataOffset = MAGIC_SIZE+ID_LENGTH_SIZE+idLength;
-
-    byte[] newData = new byte[dataLength];
-    System.arraycopy(data, dataOffset, newData, 0, dataLength);
-    return newData;
-  }
-
-  private byte[] appendMetaData(byte[] data) {
-    if(data == null || data.length == 0){
-      return data;
-    }
-    byte[] salt = Bytes.toBytes(salter.nextLong());
-    int idLength = id.length + salt.length;
-    byte[] newData = new byte[MAGIC_SIZE+ID_LENGTH_SIZE+idLength+data.length];
-    int pos = 0;
-    pos = Bytes.putByte(newData, pos, MAGIC);
-    pos = Bytes.putInt(newData, pos, idLength);
-    pos = Bytes.putBytes(newData, pos, id, 0, id.length);
-    pos = Bytes.putBytes(newData, pos, salt, 0, salt.length);
-    pos = Bytes.putBytes(newData, pos, data, 0, data.length);
-    return newData;
   }
 
   public synchronized long getSessionId() {

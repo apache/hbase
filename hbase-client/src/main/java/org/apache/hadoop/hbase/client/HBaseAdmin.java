@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -97,14 +101,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.zookeeper.KeeperException;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
@@ -205,10 +205,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
-
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
 
 /**
  * HBaseAdmin is no longer a client API. It is marked InterfaceAudience.Private indicating that
@@ -399,18 +395,11 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<RegionInfo> getRegions(final TableName tableName) throws IOException {
-    ZooKeeperWatcher zookeeper =
-        new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-            new ThrowableAbortable());
-    try {
-      if (TableName.META_TABLE_NAME.equals(tableName)) {
-        return new MetaTableLocator().getMetaRegions(zookeeper);
-      } else {
-        return MetaTableAccessor.getTableRegions(connection, tableName, true);
-      }
-    } finally {
-      zookeeper.close();
+  public List<RegionInfo> getRegions(TableName tableName) throws IOException {
+    if (TableName.isMetaTableName(tableName)) {
+      return Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    } else {
+      return MetaTableAccessor.getTableRegions(connection, tableName, true);
     }
   }
 
@@ -1248,9 +1237,9 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public void compactRegionServer(final ServerName sn, boolean major)
-  throws IOException, InterruptedException {
-    for (HRegionInfo region : getOnlineRegions(sn)) {
-      compact(sn, region, major, null);
+      throws IOException, InterruptedException {
+    for (RegionInfo region : getRegions(sn)) {
+      compact(this.connection.getAdmin(sn), region, major, null);
     }
   }
 
@@ -1295,41 +1284,28 @@ public class HBaseAdmin implements Admin {
                        CompactType compactType) throws IOException {
     switch (compactType) {
       case MOB:
-        ServerName master = getMasterAddress();
-        compact(master, getMobRegionInfo(tableName), major, columnFamily);
+        compact(this.connection.getAdminForMaster(), getMobRegionInfo(tableName), major,
+          columnFamily);
         break;
       case NORMAL:
-      default:
-        ZooKeeperWatcher zookeeper = null;
-        try {
-          checkTableExists(tableName);
-          zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-                  new ThrowableAbortable());
-          List<Pair<RegionInfo, ServerName>> pairs;
-          if (TableName.META_TABLE_NAME.equals(tableName)) {
-            pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
-          } else {
-            pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+        checkTableExists(tableName);
+        for (HRegionLocation loc :connection.locateRegions(tableName, false, false)) {
+          ServerName sn = loc.getServerName();
+          if (sn == null) {
+            continue;
           }
-          for (Pair<RegionInfo, ServerName> pair: pairs) {
-            if (pair.getFirst().isOffline()) continue;
-            if (pair.getSecond() == null) continue;
-            try {
-              compact(pair.getSecond(), pair.getFirst(), major, columnFamily);
-            } catch (NotServingRegionException e) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Trying to" + (major ? " major" : "") + " compact " +
-                        pair.getFirst() + ": " +
-                        StringUtils.stringifyException(e));
-              }
+          try {
+            compact(this.connection.getAdmin(sn), loc.getRegion(), major, columnFamily);
+          } catch (NotServingRegionException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Trying to" + (major ? " major" : "") + " compact " + loc.getRegion() +
+                  ": " + StringUtils.stringifyException(e));
             }
-          }
-        } finally {
-          if (zookeeper != null) {
-            zookeeper.close();
           }
         }
         break;
+      default:
+        throw new IllegalArgumentException("Unknown compactType: " + compactType);
     }
   }
 
@@ -1343,8 +1319,8 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  private void compactRegion(final byte[] regionName, final byte[] columnFamily,final boolean major)
-  throws IOException {
+  private void compactRegion(final byte[] regionName, final byte[] columnFamily,
+      final boolean major) throws IOException {
     Pair<RegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
@@ -1352,13 +1328,12 @@ public class HBaseAdmin implements Admin {
     if (regionServerPair.getSecond() == null) {
       throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
     }
-    compact(regionServerPair.getSecond(), regionServerPair.getFirst(), major, columnFamily);
+    compact(this.connection.getAdmin(regionServerPair.getSecond()), regionServerPair.getFirst(),
+      major, columnFamily);
   }
 
-  private void compact(final ServerName sn, final RegionInfo hri,
-      final boolean major, final byte [] family)
-  throws IOException {
-    final AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+  private void compact(AdminService.BlockingInterface admin, RegionInfo hri, boolean major,
+      byte[] family) throws IOException {
     Callable<Void> callable = new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -1863,37 +1838,25 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void split(final TableName tableName, final byte [] splitPoint) throws IOException {
-    ZooKeeperWatcher zookeeper = null;
-    try {
-      checkTableExists(tableName);
-      zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-        new ThrowableAbortable());
-      List<Pair<RegionInfo, ServerName>> pairs;
-      if (TableName.META_TABLE_NAME.equals(tableName)) {
-        pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
-      } else {
-        pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+  public void split(final TableName tableName, final byte[] splitPoint) throws IOException {
+    checkTableExists(tableName);
+    for (HRegionLocation loc : connection.locateRegions(tableName, false, false)) {
+      ServerName sn = loc.getServerName();
+      if (sn == null) {
+        continue;
       }
-      if (splitPoint == null) {
-        LOG.info("SplitPoint is null, will find bestSplitPoint from Region");
+      RegionInfo r = loc.getRegion();
+      // check for parents
+      if (r.isSplitParent()) {
+        continue;
       }
-      for (Pair<RegionInfo, ServerName> pair: pairs) {
-        // May not be a server for a particular row
-        if (pair.getSecond() == null) continue;
-        RegionInfo r = pair.getFirst();
-        // check for parents
-        if (r.isSplitParent()) continue;
-        // if a split point given, only split that particular region
-        if (r.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
-           (splitPoint != null && !r.containsRow(splitPoint))) continue;
-        // call out to master to do split now
-        splitRegionAsync(pair.getFirst(), splitPoint);
+      // if a split point given, only split that particular region
+      if (r.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID ||
+          (splitPoint != null && !r.containsRow(splitPoint))) {
+        continue;
       }
-    } finally {
-      if (zookeeper != null) {
-        zookeeper.close();
-      }
+      // call out to master to do split now
+      splitRegionAsync(r, splitPoint);
     }
   }
 
@@ -2346,32 +2309,14 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Check to see if HBase is running. Throw an exception if not.
-   * @param conf system configuration
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
-   * @deprecated since hbase-2.0.0 because throws a ServiceException. We don't want to have
-   * protobuf as part of our public API. Use {@link #available(Configuration)}
-   */
-  // Used by tests and by the Merge tool. Merge tool uses it to figure if HBase is up or not.
-  // MOB uses it too.
-  // NOTE: hbase-2.0.0 removes ServiceException from the throw.
-  @Deprecated
-  public static void checkHBaseAvailable(Configuration conf)
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException,
-  com.google.protobuf.ServiceException {
-    available(conf);
-  }
-
-  /**
    * Is HBase available? Throw an exception if not.
    * @param conf system configuration
    * @throws MasterNotRunningException if the master is not running.
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper.
-   * // TODO do not expose ZKConnectionException.
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper. // TODO do not expose
+   *           ZKConnectionException.
    */
   public static void available(final Configuration conf)
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+      throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     // We set it to make it fail as soon as possible if HBase is not available
     copyOfConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
@@ -2381,26 +2326,6 @@ public class HBaseAdmin implements Admin {
     // If the connection exists, we may have a connection to ZK that does not work anymore
     try (ClusterConnection connection =
         (ClusterConnection) ConnectionFactory.createConnection(copyOfConf)) {
-      // Check ZK first.
-      // If the connection exists, we may have a connection to ZK that does not work anymore
-      ZooKeeperKeepAliveConnection zkw = null;
-      try {
-        // This is NASTY. FIX!!!! Dependent on internal implementation! TODO
-        zkw = ((ConnectionImplementation) connection)
-            .getKeepAliveZooKeeperWatcher();
-          zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.znodePaths.baseZNode, false);
-      } catch (IOException e) {
-        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)
-            new InterruptedIOException("Can't connect to ZooKeeper").initCause(e);
-      } catch (KeeperException e){
-        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
-      } finally {
-        if (zkw != null) {
-          zkw.close();
-        }
-      }
       // can throw MasterNotRunningException
       connection.isMasterRunning();
     }
@@ -3232,17 +3157,6 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  private ServerName getMasterAddress() throws IOException {
-    // TODO: Fix!  Reaching into internal implementation!!!!
-    ConnectionImplementation connection = (ConnectionImplementation)this.connection;
-    ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
-    try {
-      return MasterAddressTracker.getMasterAddress(zkw);
-    } catch (KeeperException e) {
-      throw new IOException("Failed to get master server name from MasterAddressTracker", e);
-    }
-  }
-
   @Override
   public long getLastMajorCompactionTimestamp(final TableName tableName) throws IOException {
     return executeCallable(new MasterCallable<Long>(getConnection(), getRpcControllerFactory()) {
@@ -3311,102 +3225,88 @@ public class HBaseAdmin implements Admin {
    * {@inheritDoc}
    */
   @Override
-  public CompactionState getCompactionState(final TableName tableName,
-    CompactType compactType) throws IOException {
+  public CompactionState getCompactionState(final TableName tableName, CompactType compactType)
+      throws IOException {
     AdminProtos.GetRegionInfoResponse.CompactionState state =
-        AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
+      AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
     checkTableExists(tableName);
     // TODO: There is no timeout on this controller. Set one!
-    final HBaseRpcController rpcController = rpcControllerFactory.newController();
+    HBaseRpcController rpcController = rpcControllerFactory.newController();
     switch (compactType) {
       case MOB:
         final AdminProtos.AdminService.BlockingInterface masterAdmin =
-          this.connection.getAdmin(getMasterAddress());
+          this.connection.getAdminForMaster();
         Callable<AdminProtos.GetRegionInfoResponse.CompactionState> callable =
-            new Callable<AdminProtos.GetRegionInfoResponse.CompactionState>() {
-          @Override
-          public AdminProtos.GetRegionInfoResponse.CompactionState call() throws Exception {
-            HRegionInfo info = getMobRegionInfo(tableName);
-            GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
-                info.getRegionName(), true);
-            GetRegionInfoResponse response = masterAdmin.getRegionInfo(rpcController, request);
-            return response.getCompactionState();
-          }
-        };
+          new Callable<AdminProtos.GetRegionInfoResponse.CompactionState>() {
+            @Override
+            public AdminProtos.GetRegionInfoResponse.CompactionState call() throws Exception {
+              RegionInfo info = getMobRegionInfo(tableName);
+              GetRegionInfoRequest request =
+                RequestConverter.buildGetRegionInfoRequest(info.getRegionName(), true);
+              GetRegionInfoResponse response = masterAdmin.getRegionInfo(rpcController, request);
+              return response.getCompactionState();
+            }
+          };
         state = ProtobufUtil.call(callable);
         break;
       case NORMAL:
-      default:
-        ZooKeeperWatcher zookeeper = null;
-        try {
-          List<Pair<RegionInfo, ServerName>> pairs;
-          if (TableName.META_TABLE_NAME.equals(tableName)) {
-            zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-              new ThrowableAbortable());
-            pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
-          } else {
-            pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+        for (HRegionLocation loc : connection.locateRegions(tableName, false, false)) {
+          ServerName sn = loc.getServerName();
+          if (sn == null) {
+            continue;
           }
-          for (Pair<RegionInfo, ServerName> pair: pairs) {
-            if (pair.getFirst().isOffline()) continue;
-            if (pair.getSecond() == null) continue;
-            final ServerName sn = pair.getSecond();
-            final byte [] regionName = pair.getFirst().getRegionName();
-            final AdminService.BlockingInterface snAdmin = this.connection.getAdmin(sn);
-            try {
-              Callable<GetRegionInfoResponse> regionInfoCallable =
-                  new Callable<GetRegionInfoResponse>() {
+          byte[] regionName = loc.getRegion().getRegionName();
+          AdminService.BlockingInterface snAdmin = this.connection.getAdmin(sn);
+          try {
+            Callable<GetRegionInfoResponse> regionInfoCallable =
+              new Callable<GetRegionInfoResponse>() {
                 @Override
                 public GetRegionInfoResponse call() throws Exception {
-                  GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
-                      regionName, true);
+                  GetRegionInfoRequest request =
+                    RequestConverter.buildGetRegionInfoRequest(regionName, true);
                   return snAdmin.getRegionInfo(rpcController, request);
                 }
               };
-              GetRegionInfoResponse response = ProtobufUtil.call(regionInfoCallable);
-              switch (response.getCompactionState()) {
-                case MAJOR_AND_MINOR:
+            GetRegionInfoResponse response = ProtobufUtil.call(regionInfoCallable);
+            switch (response.getCompactionState()) {
+              case MAJOR_AND_MINOR:
+                return CompactionState.MAJOR_AND_MINOR;
+              case MAJOR:
+                if (state == AdminProtos.GetRegionInfoResponse.CompactionState.MINOR) {
                   return CompactionState.MAJOR_AND_MINOR;
-                case MAJOR:
-                  if (state == AdminProtos.GetRegionInfoResponse.CompactionState.MINOR) {
-                    return CompactionState.MAJOR_AND_MINOR;
-                  }
-                  state = AdminProtos.GetRegionInfoResponse.CompactionState.MAJOR;
-                  break;
-                case MINOR:
-                  if (state == AdminProtos.GetRegionInfoResponse.CompactionState.MAJOR) {
-                    return CompactionState.MAJOR_AND_MINOR;
-                  }
-                  state = AdminProtos.GetRegionInfoResponse.CompactionState.MINOR;
-                  break;
-                case NONE:
-                default: // nothing, continue
-              }
-            } catch (NotServingRegionException e) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Trying to get compaction state of " +
-                        pair.getFirst() + ": " +
-                        StringUtils.stringifyException(e));
-              }
-            } catch (RemoteException e) {
-              if (e.getMessage().indexOf(NotServingRegionException.class.getName()) >= 0) {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Trying to get compaction state of " + pair.getFirst() + ": "
-                          + StringUtils.stringifyException(e));
                 }
-              } else {
-                throw e;
-              }
+                state = AdminProtos.GetRegionInfoResponse.CompactionState.MAJOR;
+                break;
+              case MINOR:
+                if (state == AdminProtos.GetRegionInfoResponse.CompactionState.MAJOR) {
+                  return CompactionState.MAJOR_AND_MINOR;
+                }
+                state = AdminProtos.GetRegionInfoResponse.CompactionState.MINOR;
+                break;
+              case NONE:
+              default: // nothing, continue
             }
-          }
-        } finally {
-          if (zookeeper != null) {
-            zookeeper.close();
+          } catch (NotServingRegionException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Trying to get compaction state of " + loc.getRegion() + ": " +
+                StringUtils.stringifyException(e));
+            }
+          } catch (RemoteException e) {
+            if (e.getMessage().indexOf(NotServingRegionException.class.getName()) >= 0) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Trying to get compaction state of " + loc.getRegion() + ": " +
+                  StringUtils.stringifyException(e));
+              }
+            } else {
+              throw e;
+            }
           }
         }
         break;
+      default:
+        throw new IllegalArgumentException("Unknowne compactType: " + compactType);
     }
-    if(state != null) {
+    if (state != null) {
       return ProtobufUtil.createCompactionState(state);
     }
     return null;
@@ -3927,9 +3827,9 @@ public class HBaseAdmin implements Admin {
     });
   }
 
-  private HRegionInfo getMobRegionInfo(TableName tableName) {
-    return new HRegionInfo(tableName, Bytes.toBytes(".mob"),
-            HConstants.EMPTY_END_ROW, false, 0);
+  private RegionInfo getMobRegionInfo(TableName tableName) {
+    return RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(".mob")).setRegionId(0)
+        .build();
   }
 
   private RpcControllerFactory getRpcControllerFactory() {

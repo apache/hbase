@@ -100,7 +100,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return info port or 0 if timed out or exceptions
    */
   public int getBackupMasterInfoPort(final ServerName sn) {
-    String backupZNode = ZKUtil.joinZNode(watcher.znodePaths.backupMasterAddressesZNode,
+    String backupZNode = ZNodePaths.joinZNode(watcher.znodePaths.backupMasterAddressesZNode,
       sn.toString());
     try {
       byte[] data = ZKUtil.getData(watcher, backupZNode);

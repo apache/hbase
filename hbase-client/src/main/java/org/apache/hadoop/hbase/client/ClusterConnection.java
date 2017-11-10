@@ -226,6 +226,10 @@ public interface ClusterConnection extends Connection {
    */
   MasterService.BlockingInterface getMaster() throws IOException;
 
+  /**
+   * Get the admin service for master.
+   */
+  AdminService.BlockingInterface getAdminForMaster() throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.

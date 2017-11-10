@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -69,7 +70,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
-    replicationZNode = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, replicationZNodeName);
+    replicationZNode = ZNodePaths.joinZNode(zkw.znodePaths.baseZNode, replicationZNodeName);
     KEY_ONE = initPeerClusterState("/hbase1");
     KEY_TWO = initPeerClusterState("/hbase2");
   }
@@ -80,7 +81,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     Configuration testConf = new Configuration(conf);
     testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
     ZooKeeperWatcher zkw1 = new ZooKeeperWatcher(testConf, "test1", null);
-    String fakeRs = ZKUtil.joinZNode(zkw1.znodePaths.rsZNode, "hostname1.example.org:1234");
+    String fakeRs = ZNodePaths.joinZNode(zkw1.znodePaths.rsZNode, "hostname1.example.org:1234");
     ZKUtil.createWithParents(zkw1, fakeRs);
     ZKClusterId.setClusterId(zkw1, new ClusterId());
     return ZKConfig.getZooKeeperClusterKey(testConf);
@@ -126,13 +127,13 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
 
   @Test
   public void testIsPeerPath_PathToChildOfPeerNode() {
-    String peerChild = ZKUtil.joinZNode(ZKUtil.joinZNode(rqZK.peersZNode, "1"), "child");
+    String peerChild = ZNodePaths.joinZNode(ZNodePaths.joinZNode(rqZK.peersZNode, "1"), "child");
     assertFalse(rqZK.isPeerPath(peerChild));
   }
 
   @Test
   public void testIsPeerPath_ActualPeerPath() {
-    String peerPath = ZKUtil.joinZNode(rqZK.peersZNode, "1");
+    String peerPath = ZNodePaths.joinZNode(rqZK.peersZNode, "1");
     assertTrue(rqZK.isPeerPath(peerPath));
   }
 

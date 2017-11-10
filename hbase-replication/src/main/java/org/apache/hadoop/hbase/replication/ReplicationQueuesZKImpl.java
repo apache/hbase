@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -81,7 +82,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void init(String serverName) throws ReplicationException {
-    this.myQueuesZnode = ZKUtil.joinZNode(this.queuesZNode, serverName);
+    this.myQueuesZnode = ZNodePaths.joinZNode(this.queuesZNode, serverName);
     try {
       if (ZKUtil.checkExists(this.zookeeper, this.myQueuesZnode) < 0) {
         ZKUtil.createWithParents(this.zookeeper, this.myQueuesZnode);
@@ -105,7 +106,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   @Override
   public void removeQueue(String queueId) {
     try {
-      ZKUtil.deleteNodeRecursively(this.zookeeper, ZKUtil.joinZNode(this.myQueuesZnode, queueId));
+      ZKUtil.deleteNodeRecursively(this.zookeeper,
+        ZNodePaths.joinZNode(this.myQueuesZnode, queueId));
     } catch (KeeperException e) {
       this.abortable.abort("Failed to delete queue (queueId=" + queueId + ")", e);
     }
@@ -113,8 +115,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void addLog(String queueId, String filename) throws ReplicationException {
-    String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
-    znode = ZKUtil.joinZNode(znode, filename);
+    String znode = ZNodePaths.joinZNode(this.myQueuesZnode, queueId);
+    znode = ZNodePaths.joinZNode(znode, filename);
     try {
       ZKUtil.createWithParents(this.zookeeper, znode);
     } catch (KeeperException e) {
@@ -127,8 +129,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   @Override
   public void removeLog(String queueId, String filename) {
     try {
-      String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
-      znode = ZKUtil.joinZNode(znode, filename);
+      String znode = ZNodePaths.joinZNode(this.myQueuesZnode, queueId);
+      znode = ZNodePaths.joinZNode(znode, filename);
       ZKUtil.deleteNode(this.zookeeper, znode);
     } catch (KeeperException e) {
       this.abortable.abort("Failed to remove wal from queue (queueId=" + queueId + ", filename="
@@ -139,8 +141,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   @Override
   public void setLogPosition(String queueId, String filename, long position) {
     try {
-      String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
-      znode = ZKUtil.joinZNode(znode, filename);
+      String znode = ZNodePaths.joinZNode(this.myQueuesZnode, queueId);
+      znode = ZNodePaths.joinZNode(znode, filename);
       // Why serialize String of Long and not Long as bytes?
       ZKUtil.setData(this.zookeeper, znode, ZKUtil.positionToByteArray(position));
     } catch (KeeperException e) {
@@ -151,8 +153,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public long getLogPosition(String queueId, String filename) throws ReplicationException {
-    String clusterZnode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
-    String znode = ZKUtil.joinZNode(clusterZnode, filename);
+    String clusterZnode = ZNodePaths.joinZNode(this.myQueuesZnode, queueId);
+    String znode = ZNodePaths.joinZNode(clusterZnode, filename);
     byte[] bytes = null;
     try {
       bytes = ZKUtil.getData(this.zookeeper, znode);
@@ -176,7 +178,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public boolean isThisOurRegionServer(String regionserver) {
-    return ZKUtil.joinZNode(this.queuesZNode, regionserver).equals(this.myQueuesZnode);
+    return ZNodePaths.joinZNode(this.queuesZNode, regionserver).equals(this.myQueuesZnode);
   }
 
   @Override
@@ -184,7 +186,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     if (isThisOurRegionServer(regionserver)) {
       return null;
     }
-    String rsZnodePath = ZKUtil.joinZNode(this.queuesZNode, regionserver);
+    String rsZnodePath = ZNodePaths.joinZNode(this.queuesZNode, regionserver);
     List<String> queues = null;
     try {
       queues = ZKUtil.listChildrenNoWatch(this.zookeeper, rsZnodePath);
@@ -202,7 +204,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void removeReplicatorIfQueueIsEmpty(String regionserver) {
-    String rsPath = ZKUtil.joinZNode(this.queuesZNode, regionserver);
+    String rsPath = ZNodePaths.joinZNode(this.queuesZNode, regionserver);
     try {
       List<String> list = ZKUtil.listChildrenNoWatch(this.zookeeper, rsPath);
       if (list != null && list.isEmpty()){
@@ -229,7 +231,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public List<String> getLogsInQueue(String queueId) {
-    String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
+    String znode = ZNodePaths.joinZNode(this.myQueuesZnode, queueId);
     List<String> result = null;
     try {
       result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
@@ -260,21 +262,21 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   private Pair<String, SortedSet<String>> moveQueueUsingMulti(String znode, String peerId) {
     try {
       // hbase/replication/rs/deadrs
-      String deadRSZnodePath = ZKUtil.joinZNode(this.queuesZNode, znode);
+      String deadRSZnodePath = ZNodePaths.joinZNode(this.queuesZNode, znode);
       List<ZKUtilOp> listOfOps = new ArrayList<>();
       ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
 
       String newPeerId = peerId + "-" + znode;
-      String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
+      String newPeerZnode = ZNodePaths.joinZNode(this.myQueuesZnode, newPeerId);
       // check the logs queue for the old peer cluster
-      String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
+      String oldClusterZnode = ZNodePaths.joinZNode(deadRSZnodePath, peerId);
       List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
 
       if (!peerExists(replicationQueueInfo.getPeerId())) {
         LOG.warn("Peer " + replicationQueueInfo.getPeerId() +
                 " didn't exist, will move its queue to avoid the failure of multi op");
         for (String wal : wals) {
-          String oldWalZnode = ZKUtil.joinZNode(oldClusterZnode, wal);
+          String oldWalZnode = ZNodePaths.joinZNode(oldClusterZnode, wal);
           listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldWalZnode));
         }
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
@@ -291,10 +293,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         listOfOps.add(op);
         // get the offset of the logs and set it to new znodes
         for (String wal : wals) {
-          String oldWalZnode = ZKUtil.joinZNode(oldClusterZnode, wal);
+          String oldWalZnode = ZNodePaths.joinZNode(oldClusterZnode, wal);
           byte[] logOffset = ZKUtil.getData(this.zookeeper, oldWalZnode);
           LOG.debug("Creating " + wal + " with data " + Bytes.toString(logOffset));
-          String newLogZnode = ZKUtil.joinZNode(newPeerZnode, wal);
+          String newLogZnode = ZNodePaths.joinZNode(newPeerZnode, wal);
           listOfOps.add(ZKUtilOp.createAndFailSilent(newLogZnode, logOffset));
           listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldWalZnode));
           logQueue.add(wal);
@@ -322,7 +324,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   @Override
   public void addHFileRefs(String peerId, List<Pair<Path, Path>> pairs)
       throws ReplicationException {
-    String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    String peerZnode = ZNodePaths.joinZNode(this.hfileRefsZNode, peerId);
     boolean debugEnabled = LOG.isDebugEnabled();
     if (debugEnabled) {
       LOG.debug("Adding hfile references " + pairs + " in queue " + peerZnode);
@@ -333,7 +335,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
     for (int i = 0; i < size; i++) {
       listOfOps.add(ZKUtilOp.createAndFailSilent(
-        ZKUtil.joinZNode(peerZnode, pairs.get(i).getSecond().getName()),
+        ZNodePaths.joinZNode(peerZnode, pairs.get(i).getSecond().getName()),
         HConstants.EMPTY_BYTE_ARRAY));
     }
     if (debugEnabled) {
@@ -349,7 +351,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void removeHFileRefs(String peerId, List<String> files) {
-    String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    String peerZnode = ZNodePaths.joinZNode(this.hfileRefsZNode, peerId);
     boolean debugEnabled = LOG.isDebugEnabled();
     if (debugEnabled) {
       LOG.debug("Removing hfile references " + files + " from queue " + peerZnode);
@@ -359,7 +361,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     List<ZKUtilOp> listOfOps = new ArrayList<>(size);
 
     for (int i = 0; i < size; i++) {
-      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(ZKUtil.joinZNode(peerZnode, files.get(i))));
+      listOfOps.add(ZKUtilOp.deleteNodeFailSilent(ZNodePaths.joinZNode(peerZnode, files.get(i))));
     }
     if (debugEnabled) {
       LOG.debug(" The multi list size for removing hfile references in zk for node " + peerZnode
@@ -374,7 +376,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void addPeerToHFileRefs(String peerId) throws ReplicationException {
-    String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    String peerZnode = ZNodePaths.joinZNode(this.hfileRefsZNode, peerId);
     try {
       if (ZKUtil.checkExists(this.zookeeper, peerZnode) == -1) {
         LOG.info("Adding peer " + peerId + " to hfile reference queue.");
@@ -388,7 +390,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   @Override
   public void removePeerFromHFileRefs(String peerId) {
-    final String peerZnode = ZKUtil.joinZNode(this.hfileRefsZNode, peerId);
+    final String peerZnode = ZNodePaths.joinZNode(this.hfileRefsZNode, peerId);
     try {
       if (ZKUtil.checkExists(this.zookeeper, peerZnode) == -1) {
         if (LOG.isDebugEnabled()) {

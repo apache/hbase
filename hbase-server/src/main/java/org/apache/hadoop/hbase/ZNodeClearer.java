@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -181,11 +182,12 @@ public class ZNodeClearer {
     String znodeFileContent;
     try {
       znodeFileContent = ZNodeClearer.readMyEphemeralNodeOnDisk();
-      if(ZNodeClearer.tablesOnMaster(conf)) {
-      //In case of master crash also remove rsZnode since master is also regionserver 
-        ZKUtil.deleteNodeFailSilent(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode,znodeFileContent));
-        return MasterAddressTracker.deleteIfEquals(zkw, 
-                                    ZNodeClearer.parseMasterServerName(znodeFileContent));
+      if (ZNodeClearer.tablesOnMaster(conf)) {
+        // In case of master crash also remove rsZnode since master is also regionserver
+        ZKUtil.deleteNodeFailSilent(zkw,
+          ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, znodeFileContent));
+        return MasterAddressTracker.deleteIfEquals(zkw,
+          ZNodeClearer.parseMasterServerName(znodeFileContent));
       } else {
         return MasterAddressTracker.deleteIfEquals(zkw, znodeFileContent);
       }

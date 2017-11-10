@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -88,7 +89,7 @@ public class TestReplicationTrackerZKImpl {
   @Before
   public void setUp() throws Exception {
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
-    String fakeRs1 = ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234");
+    String fakeRs1 = ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234");
     try {
       ZKClusterId.setClusterId(zkw, new ClusterId());
       rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
@@ -117,31 +118,34 @@ public class TestReplicationTrackerZKImpl {
 
     // 1 region server
     ZKUtil.createWithParents(zkw,
-      ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234"));
+      ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234"));
     assertEquals(1, rt.getListOfRegionServers().size());
 
     // 2 region servers
     ZKUtil.createWithParents(zkw,
-      ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
+      ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
     assertEquals(2, rt.getListOfRegionServers().size());
 
     // 1 region server
-    ZKUtil.deleteNode(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
+    ZKUtil.deleteNode(zkw,
+      ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
     assertEquals(1, rt.getListOfRegionServers().size());
 
     // 0 region server
-    ZKUtil.deleteNode(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234"));
+    ZKUtil.deleteNode(zkw,
+      ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234"));
     assertEquals(0, rt.getListOfRegionServers().size());
   }
 
   @Test(timeout = 30000)
   public void testRegionServerRemovedEvent() throws Exception {
     ZKUtil.createAndWatch(zkw,
-      ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"),
+      ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"),
       HConstants.EMPTY_BYTE_ARRAY);
     rt.registerListener(new DummyReplicationListener());
     // delete one
-    ZKUtil.deleteNode(zkw, ZKUtil.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
+    ZKUtil.deleteNode(zkw,
+      ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"));
     // wait for event
     while (rsRemovedCount.get() < 1) {
       Thread.sleep(5);

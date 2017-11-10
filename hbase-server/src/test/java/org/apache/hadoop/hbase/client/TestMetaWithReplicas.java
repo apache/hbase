@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -135,13 +136,13 @@ public class TestMetaWithReplicas {
     Configuration conf = TEST_UTIL.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZKUtil.joinZNode(baseZNode,
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ProtobufUtil.toServerName(data);
     for (int i = 1; i < 3; i++) {
-      String secZnode = ZKUtil.joinZNode(baseZNode,
+      String secZnode = ZNodePaths.joinZNode(baseZNode,
           conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + i);
       String str = zkw.znodePaths.getZNodeForReplica(i);
       assertTrue(str.equals(secZnode));
@@ -171,7 +172,7 @@ public class TestMetaWithReplicas {
 
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZKUtil.joinZNode(baseZNode,
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName primary = ProtobufUtil.toServerName(data);
@@ -402,7 +403,7 @@ public class TestMetaWithReplicas {
     ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZKUtil.joinZNode(baseZNode,
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);

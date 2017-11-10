@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 /**
  * Test provides some very generic helpers which might be used across the tests
+ * *** for running UTs in hbase-server
  */
 public abstract class GenericTestUtils {
 

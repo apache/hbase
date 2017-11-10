@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Assert;
@@ -124,9 +125,9 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
         Sets.newHashSet(wrapped.listRSGroups()));
     try {
-      String groupBasePath = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "rsgroup");
+      String groupBasePath = ZNodePaths.joinZNode(zkw.znodePaths.baseZNode, "rsgroup");
       for(String znode: ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
-        byte[] data = ZKUtil.getData(zkw, ZKUtil.joinZNode(groupBasePath, znode));
+        byte[] data = ZKUtil.getData(zkw, ZNodePaths.joinZNode(groupBasePath, znode));
         if(data.length > 0) {
           ProtobufUtil.expectPBMagicPrefix(data);
           ByteArrayInputStream bis = new ByteArrayInputStream(

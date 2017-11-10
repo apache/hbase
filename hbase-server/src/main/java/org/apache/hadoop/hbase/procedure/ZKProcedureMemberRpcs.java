@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -136,7 +137,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       // this is the list of the currently aborted procedues
       for (String node : ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(),
         zkController.getAbortZnode())) {
-        String abortNode = ZKUtil.joinZNode(zkController.getAbortZnode(), node);
+        String abortNode = ZNodePaths.joinZNode(zkController.getAbortZnode(), node);
         abort(abortNode);
       }
     } catch (KeeperException e) {
@@ -166,7 +167,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     }
     for (String procName : runningProcedures) {
       // then read in the procedure information
-      String path = ZKUtil.joinZNode(zkController.getAcquiredBarrier(), procName);
+      String path = ZNodePaths.joinZNode(zkController.getAcquiredBarrier(), procName);
       startNewSubprocedure(path);
     }
   }
@@ -238,7 +239,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     try {
       LOG.debug("Member: '" + memberName + "' joining acquired barrier for procedure (" + procName
           + ") in zk");
-      String acquiredZNode = ZKUtil.joinZNode(ZKProcedureUtil.getAcquireBarrierNode(
+      String acquiredZNode = ZNodePaths.joinZNode(ZKProcedureUtil.getAcquireBarrierNode(
         zkController, procName), memberName);
       ZKUtil.createAndFailSilent(zkController.getWatcher(), acquiredZNode);
 
@@ -262,7 +263,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     String procName = sub.getName();
     LOG.debug("Marking procedure  '" + procName + "' completed for member '" + memberName
         + "' in zk");
-    String joinPath = ZKUtil.joinZNode(zkController.getReachedBarrierNode(procName), memberName);
+    String joinPath =
+      ZNodePaths.joinZNode(zkController.getReachedBarrierNode(procName), memberName);
     // ProtobufUtil.prependPBMagic does not take care of null
     if (data == null) {
       data = new byte[0];

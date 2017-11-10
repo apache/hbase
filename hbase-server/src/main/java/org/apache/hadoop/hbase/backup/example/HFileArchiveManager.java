@@ -27,6 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -164,6 +165,6 @@ class HFileArchiveManager {
    * @return znode for the table's archive status
    */
   private String getTableNode(byte[] table) {
-    return ZKUtil.joinZNode(archiveZnode, Bytes.toString(table));
+    return ZNodePaths.joinZNode(archiveZnode, Bytes.toString(table));
   }
 }
