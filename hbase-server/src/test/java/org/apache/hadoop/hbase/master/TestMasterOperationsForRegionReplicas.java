@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -239,7 +240,7 @@ public class TestMasterOperationsForRegionReplicas {
     }
   }
 
-  //@Test (TODO: enable when we have support for alter_table- HBASE-10361).
+  @Test @Ignore("Enable when we have support for alter_table- HBASE-10361")
   public void testIncompleteMetaTableReplicaInformation() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final int numRegions = 3;

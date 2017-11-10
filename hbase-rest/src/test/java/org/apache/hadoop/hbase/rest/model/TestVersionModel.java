@@ -21,7 +21,12 @@ package org.apache.hadoop.hbase.rest.model;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 
+import org.junit.Assume;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+
+import javax.servlet.ServletContext;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestVersionModel extends TestModelBase<VersionModel> {

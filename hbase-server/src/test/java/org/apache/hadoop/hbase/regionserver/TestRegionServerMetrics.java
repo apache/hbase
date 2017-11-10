@@ -237,8 +237,8 @@ public class TestRegionServerMetrics {
     ResultScanner scanner = table.getScanner(scan);
     for (int i = 0; i < n; i++) {
       Result res = scanner.next();
-      LOG.debug(
-        "Result row: " + Bytes.toString(res.getRow()) + ", value: " + res.getValue(cf, qualifier));
+      LOG.debug("Result row: " + Bytes.toString(res.getRow()) + ", value: " +
+          Bytes.toString(res.getValue(cf, qualifier)));
     }
   }
 

@@ -764,6 +764,7 @@ public class TestKeepDeletes {
   /**
    * Verify scenarios with multiple CFs and columns
    */
+  @Test
   public void testWithMixedCFs() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, KeepDeletedCells.TRUE);

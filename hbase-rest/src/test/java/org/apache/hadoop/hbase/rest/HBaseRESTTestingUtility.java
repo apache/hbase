@@ -38,6 +38,7 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
 import javax.servlet.DispatcherType;
+import java.util.Arrays;
 import java.util.EnumSet;
 
 public class HBaseRESTTestingUtility {
@@ -87,7 +88,7 @@ public class HBaseRESTTestingUtility {
       filter = filter.trim();
       ctxHandler.addFilter(filter, "/*", EnumSet.of(DispatcherType.REQUEST));
     }
-    LOG.info("Loaded filter classes :" + filterClasses);
+    LOG.info("Loaded filter classes :" + Arrays.toString(filterClasses));
 
     conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
     RESTServer.addCSRFFilter(ctxHandler, conf);

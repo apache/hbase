@@ -4688,8 +4688,8 @@ public class TestFromClientSide {
       NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
           .get(QUALIFIER);
 
-      assertEquals("The number of versions of '" + FAMILY + ":" + QUALIFIER
-          + " did not match " + versions, versions, navigableMap.size());
+      assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
+          + Bytes.toString(QUALIFIER) + " did not match", versions, navigableMap.size());
       for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
         assertTrue("The value at time " + entry.getKey()
             + " did not match what was put",
@@ -4724,8 +4724,8 @@ public class TestFromClientSide {
       NavigableMap<Long, byte[]> navigableMap = result.getMap().get(FAMILY)
           .get(QUALIFIER);
 
-      assertEquals("The number of versions of '" + FAMILY + ":" + QUALIFIER + " did not match " +
-        versions + "; " + put.toString() + ", " + get.toString(), versions, navigableMap.size());
+      assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
+          + Bytes.toString(QUALIFIER) + " did not match", versions, navigableMap.size());
       for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
         assertTrue("The value at time " + entry.getKey()
             + " did not match what was put",

@@ -272,9 +272,7 @@ public class TestCoprocessorInterface {
         @Override
         public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
             final Get get, final List<Cell> results) throws IOException {
-          if (1/0 == 1) {
-            e.complete();
-          }
+          throw new RuntimeException();
         }
       });
     }

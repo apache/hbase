@@ -212,7 +212,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
           new Put(row2).addColumn(test, dummy, cells.get(0).getTimestamp(), dummy),
           new Put(row3).addColumn(test, dummy, cells.get(0).getTimestamp(), dummy),
       };
-      LOG.info("Putting:" + puts);
+      LOG.info("Putting:" + Arrays.toString(puts));
       miniBatchOp.addOperationsFromCP(0, puts);
     }
   }

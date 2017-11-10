@@ -366,8 +366,8 @@ public class TestEndToEndSplitTransaction {
       }
       if (daughterA == null || daughterB == null) {
         throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB=" +
-          daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName=" + regionName +
-          ", region=" + region);
+          daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName=" +
+          Bytes.toString(regionName) + ", region=" + region);
       }
 
       //if we are here, this means the region split is complete or timed out
