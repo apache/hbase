@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -78,10 +79,10 @@ public abstract class ZKProcedureUtil
     // make sure we are listening for events
     watcher.registerListener(this);
     // setup paths for the zknodes used in procedures
-    this.baseZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, procDescription);
-    acquiredZnode = ZKUtil.joinZNode(baseZNode, ACQUIRED_BARRIER_ZNODE_DEFAULT);
-    reachedZnode = ZKUtil.joinZNode(baseZNode, REACHED_BARRIER_ZNODE_DEFAULT);
-    abortZnode = ZKUtil.joinZNode(baseZNode, ABORT_ZNODE_DEFAULT);
+    this.baseZNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, procDescription);
+    acquiredZnode = ZNodePaths.joinZNode(baseZNode, ACQUIRED_BARRIER_ZNODE_DEFAULT);
+    reachedZnode = ZNodePaths.joinZNode(baseZNode, REACHED_BARRIER_ZNODE_DEFAULT);
+    abortZnode = ZNodePaths.joinZNode(baseZNode, ABORT_ZNODE_DEFAULT);
 
     // first make sure all the ZK nodes exist
     // make sure all the parents exist (sometimes not the case in tests)
@@ -130,7 +131,7 @@ public abstract class ZKProcedureUtil
    */
   public static String getAcquireBarrierNode(ZKProcedureUtil controller,
       String opInstanceName) {
-    return ZKUtil.joinZNode(controller.acquiredZnode, opInstanceName);
+    return ZNodePaths.joinZNode(controller.acquiredZnode, opInstanceName);
   }
 
   /**
@@ -142,7 +143,7 @@ public abstract class ZKProcedureUtil
    */
   public static String getReachedBarrierNode(ZKProcedureUtil controller,
       String opInstanceName) {
-    return ZKUtil.joinZNode(controller.reachedZnode, opInstanceName);
+    return ZNodePaths.joinZNode(controller.reachedZnode, opInstanceName);
   }
 
   /**
@@ -153,7 +154,7 @@ public abstract class ZKProcedureUtil
    * @return full znode path to the abort znode
    */
   public static String getAbortNode(ZKProcedureUtil controller, String opInstanceName) {
-    return ZKUtil.joinZNode(controller.abortZnode, opInstanceName);
+    return ZNodePaths.joinZNode(controller.abortZnode, opInstanceName);
   }
 
   public ZooKeeperWatcher getWatcher() {
@@ -212,7 +213,7 @@ public abstract class ZKProcedureUtil
   private boolean isMemberNode(final String path, final String statePath) {
     int count = 0;
     for (int i = statePath.length(); i < path.length(); ++i) {
-      count += (path.charAt(i) == ZKUtil.ZNODE_PATH_SEPARATOR) ? 1 : 0;
+      count += (path.charAt(i) == ZNodePaths.ZNODE_PATH_SEPARATOR) ? 1 : 0;
     }
     return count == 2;
   }
@@ -261,7 +262,7 @@ public abstract class ZKProcedureUtil
     if (children == null) return;
     for (String child : children) {
       LOG.debug(prefix + child);
-      String node = ZKUtil.joinZNode(root.equals("/") ? "" : root, child);
+      String node = ZNodePaths.joinZNode(root.equals("/") ? "" : root, child);
       logZKTree(node, prefix + "---");
     }
   }

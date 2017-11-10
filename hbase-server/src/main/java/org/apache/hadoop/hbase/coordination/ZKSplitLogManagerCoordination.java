@@ -41,12 +41,12 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
+import org.apache.hadoop.hbase.zookeeper.ZKMetadata;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
@@ -57,6 +57,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * ZooKeeper based implementation of
@@ -355,7 +357,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       setDone(path, FAILURE);
       return;
     }
-    data = RecoverableZooKeeper.removeMetaData(data);
+    data = ZKMetadata.removeMetaData(data);
     SplitLogTask slt = SplitLogTask.parseFrom(data);
     if (slt.isUnassigned()) {
       LOG.debug("task not yet acquired " + path + " ver = " + version);
@@ -478,7 +480,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     int listSize = orphans.size();
     for (int i = 0; i < listSize; i++) {
       String path = orphans.get(i);
-      String nodepath = ZKUtil.joinZNode(watcher.znodePaths.splitLogZNode, path);
+      String nodepath = ZNodePaths.joinZNode(watcher.znodePaths.splitLogZNode, path);
       if (ZKSplitLog.isRescanNode(watcher, nodepath)) {
         rescan_nodes++;
         LOG.debug("found orphan rescan node " + path);

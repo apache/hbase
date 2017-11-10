@@ -51,7 +51,7 @@ public class ZkAclReset extends Configured implements Tool {
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, znode);
     if (children != null) {
       for (String child: children) {
-        resetAcls(zkw, ZKUtil.joinZNode(znode, child), eraseAcls);
+        resetAcls(zkw, ZNodePaths.joinZNode(znode, child), eraseAcls);
       }
     }
 

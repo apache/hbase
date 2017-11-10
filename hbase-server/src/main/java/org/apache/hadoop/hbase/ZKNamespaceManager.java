@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -165,7 +166,7 @@ public class ZKNamespaceManager extends ZooKeeperListener {
   }
 
   private void deleteNamespace(String name) throws IOException {
-    String zNode = ZKUtil.joinZNode(nsZNode, name);
+    String zNode = ZNodePaths.joinZNode(nsZNode, name);
     try {
       ZKUtil.deleteNode(watcher, zNode);
     } catch (KeeperException e) {
@@ -180,7 +181,7 @@ public class ZKNamespaceManager extends ZooKeeperListener {
   }
 
   private void writeNamespace(NamespaceDescriptor ns) throws IOException {
-    String zNode = ZKUtil.joinZNode(nsZNode, ns.getName());
+    String zNode = ZNodePaths.joinZNode(nsZNode, ns.getName());
     try {
       ZKUtil.createWithParents(watcher, zNode);
       ZKUtil.updateExistingNodeData(watcher, zNode,

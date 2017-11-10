@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
@@ -43,12 +42,14 @@ import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
+import org.apache.hadoop.hbase.zookeeper.ZKMetadata;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
@@ -419,7 +420,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         // don't call ZKSplitLog.getNodeName() because that will lead to
         // double encoding of the path name
         if (this.calculateAvailableSplitters(numTasks) > 0) {
-          grabTask(ZKUtil.joinZNode(watcher.znodePaths.splitLogZNode, paths.get(idx)));
+          grabTask(ZNodePaths.joinZNode(watcher.znodePaths.splitLogZNode, paths.get(idx)));
         } else {
           LOG.debug("Current region server " + server.getServerName() + " has "
               + this.tasksInProgress.get() + " tasks in progress and can't take more.");
@@ -524,7 +525,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         getDataSetWatchFailure(path);
         return;
       }
-      data = RecoverableZooKeeper.removeMetaData(data);
+      data = ZKMetadata.removeMetaData(data);
       getDataSetWatchSuccess(path, data);
     }
   }

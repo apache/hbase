@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -67,7 +68,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
     super(watcher);
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
-    this.aclZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, aclZnodeParent);
+    this.aclZNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, aclZnodeParent);
     executor = Executors.newSingleThreadExecutor(
       new DaemonThreadFactory("zk-permission-watcher"));
   }
@@ -260,8 +261,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    */
   public void writeToZookeeper(byte[] entry, byte[] permsData) {
     String entryName = Bytes.toString(entry);
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, entryName);
+    String zkNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, entryName);
 
     try {
       ZKUtil.createWithParents(watcher, zkNode);
@@ -278,8 +279,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    * @param tableName
    */
   public void deleteTableACLNode(final TableName tableName) {
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, tableName.getNameAsString());
+    String zkNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, tableName.getNameAsString());
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);
@@ -295,8 +296,8 @@ public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable 
    * Delete the acl notify node of namespace
    */
   public void deleteNamespaceACLNode(final String namespace) {
-    String zkNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
+    String zkNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, ACL_NODE);
+    zkNode = ZNodePaths.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
 
     try {
       ZKUtil.deleteNode(watcher, zkNode);

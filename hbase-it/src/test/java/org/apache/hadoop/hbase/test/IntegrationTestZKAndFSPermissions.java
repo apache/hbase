@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
@@ -165,7 +166,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
       List<String> children = zk.getChildren(znode, false);
 
       for (String child : children) {
-        checkZnodePermsRecursive(watcher, zk, ZKUtil.joinZNode(znode, child));
+        checkZnodePermsRecursive(watcher, zk, ZNodePaths.joinZNode(znode, child));
       }
     } catch (KeeperException ke) {
       // if we are not authenticated for listChildren, it is fine.

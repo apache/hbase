@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -155,7 +156,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    */
   boolean blockUntilBecomingActiveMaster(
       int checkInterval, MonitoredTask startupStatus) {
-    String backupZNode = ZKUtil.joinZNode(
+    String backupZNode = ZNodePaths.joinZNode(
       this.watcher.znodePaths.backupMasterAddressesZNode, this.sn.toString());
     while (!(master.isAborted() || master.isStopped())) {
       startupStatus.setStatus("Trying to register in ZK as active master");

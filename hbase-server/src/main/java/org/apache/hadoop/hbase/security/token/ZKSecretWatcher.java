@@ -29,6 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -52,8 +53,8 @@ public class ZKSecretWatcher extends ZooKeeperListener {
     super(watcher);
     this.secretManager = secretManager;
     String keyZNodeParent = conf.get("zookeeper.znode.tokenauth.parent", DEFAULT_ROOT_NODE);
-    this.baseKeyZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, keyZNodeParent);
-    this.keysParentZNode = ZKUtil.joinZNode(baseKeyZNode, DEFAULT_KEYS_PARENT);
+    this.baseKeyZNode = ZNodePaths.joinZNode(watcher.znodePaths.baseZNode, keyZNodeParent);
+    this.keysParentZNode = ZNodePaths.joinZNode(baseKeyZNode, DEFAULT_KEYS_PARENT);
   }
 
   public void start() throws KeeperException {
@@ -159,7 +160,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
   }
 
   private String getKeyNode(int keyId) {
-    return ZKUtil.joinZNode(keysParentZNode, Integer.toString(keyId));
+    return ZNodePaths.joinZNode(keysParentZNode, Integer.toString(keyId));
   }
 
   public void removeKeyFromZK(AuthenticationKey key) {

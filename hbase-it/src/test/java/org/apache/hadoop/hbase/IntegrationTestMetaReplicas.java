@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -63,7 +64,7 @@ public class IntegrationTestMetaReplicas {
     Configuration conf = util.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZKUtil.joinZNode(baseZNode,
+    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);

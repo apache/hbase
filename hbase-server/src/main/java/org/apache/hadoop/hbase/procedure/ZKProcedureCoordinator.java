@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -96,7 +97,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       ZKUtil.createWithParents(zkProc.getWatcher(), acquire, data);
       // loop through all the children of the acquire phase and watch for them
       for (String node : nodeNames) {
-        String znode = ZKUtil.joinZNode(acquire, node);
+        String znode = ZNodePaths.joinZNode(acquire, node);
         LOG.debug("Watching for acquire node:" + znode);
         if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), znode)) {
           coordinator.memberAcquiredBarrier(procName, node);
@@ -119,7 +120,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       ZKUtil.createWithParents(zkProc.getWatcher(), reachedNode);
       // loop through all the children of the acquire phase and watch for them
       for (String node : nodeNames) {
-        String znode = ZKUtil.joinZNode(reachedNode, node);
+        String znode = ZNodePaths.joinZNode(reachedNode, node);
         if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), znode)) {
           byte[] dataFromMember = ZKUtil.getData(zkProc.getWatcher(), znode);
           // ProtobufUtil.isPBMagicPrefix will check null

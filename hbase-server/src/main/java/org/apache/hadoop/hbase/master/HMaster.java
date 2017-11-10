@@ -183,6 +183,7 @@ import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.SplitOrMergeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
@@ -1980,7 +1981,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {
-    String backupZNode = ZKUtil.joinZNode(
+    String backupZNode = ZNodePaths.joinZNode(
       zooKeeper.znodePaths.backupMasterAddressesZNode, serverName.toString());
     /*
     * Add a ZNode for ourselves in the backup master directory since we
@@ -2511,7 +2512,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         try {
           byte [] bytes;
           try {
-            bytes = ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(
+            bytes = ZKUtil.getData(this.zooKeeper, ZNodePaths.joinZNode(
                 this.zooKeeper.znodePaths.backupMasterAddressesZNode, s));
           } catch (InterruptedException e) {
             throw new InterruptedIOException();
@@ -3429,7 +3430,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
     for (ServerName server : servers) {
       try {
-        String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
+        String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
         ZKUtil.createAndFailSilent(getZooKeeper(), node);
       } catch (KeeperException ke) {
         throw new HBaseIOException(
@@ -3476,7 +3477,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       final List<byte[]> encodedRegionNames) throws HBaseIOException {
     // Remove the server from decommissioned (draining) server list.
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
-    String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
+    String node = ZNodePaths.joinZNode(parentZnode, server.getServerName());
     try {
       ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);
     } catch (KeeperException ke) {

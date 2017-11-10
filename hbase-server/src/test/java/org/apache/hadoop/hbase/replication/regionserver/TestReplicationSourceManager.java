@@ -438,8 +438,8 @@ public abstract class TestReplicationSourceManager {
   public void testPeerRemovalCleanup() throws Exception{
     String replicationSourceImplName = conf.get("replication.replicationsource.implementation");
     final String peerId = "FakePeer";
-    final ReplicationPeerConfig peerConfig =
-        new ReplicationPeerConfig().setClusterKey("localhost:1:/hbase");
+    final ReplicationPeerConfig peerConfig = new ReplicationPeerConfig()
+        .setClusterKey("localhost:" + utility.getZkCluster().getClientPort() + ":/hbase");
     try {
       DummyServer server = new DummyServer();
       final ReplicationQueues rq =
@@ -473,8 +473,8 @@ public abstract class TestReplicationSourceManager {
   @Test
   public void testRemovePeerMetricsCleanup() throws Exception {
     final String peerId = "DummyPeer";
-    final ReplicationPeerConfig peerConfig =
-        new ReplicationPeerConfig().setClusterKey("localhost:1:/hbase");
+    final ReplicationPeerConfig peerConfig = new ReplicationPeerConfig()
+        .setClusterKey("localhost:" + utility.getZkCluster().getClientPort() + ":/hbase");
     try {
       addPeerAndWait(peerId, peerConfig, true);
 

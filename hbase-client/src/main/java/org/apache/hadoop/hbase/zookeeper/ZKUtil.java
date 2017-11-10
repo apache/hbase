@@ -87,8 +87,6 @@ import org.apache.zookeeper.server.ZooKeeperSaslServer;
 public class ZKUtil {
   private static final Log LOG = LogFactory.getLog(ZKUtil.class);
 
-  // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
-  public static final char ZNODE_PATH_SEPARATOR = '/';
   private static int zkDumpConnectionTimeOut;
 
   /**
@@ -302,28 +300,13 @@ public class ZKUtil {
   //
   // Helper methods
   //
-
-  /**
-   * Join the prefix znode name with the suffix znode name to generate a proper
-   * full znode name.
-   *
-   * Assumes prefix does not end with slash and suffix does not begin with it.
-   *
-   * @param prefix beginning of znode name
-   * @param suffix ending of znode name
-   * @return result of properly joining prefix with suffix
-   */
-  public static String joinZNode(String prefix, String suffix) {
-    return prefix + ZNODE_PATH_SEPARATOR + suffix;
-  }
-
   /**
    * Returns the full path of the immediate parent of the specified node.
    * @param node path to get parent of
    * @return parent of path, null if passed the root node or an invalid node
    */
   public static String getParent(String node) {
-    int idx = node.lastIndexOf(ZNODE_PATH_SEPARATOR);
+    int idx = node.lastIndexOf(ZNodePaths.ZNODE_PATH_SEPARATOR);
     return idx <= 0 ? null : node.substring(0, idx);
   }
 
@@ -477,7 +460,7 @@ public class ZKUtil {
       return null;
     }
     for (String child : children) {
-      watchAndCheckExists(zkw, joinZNode(znode, child));
+      watchAndCheckExists(zkw, ZNodePaths.joinZNode(znode, child));
     }
     return children;
   }
@@ -744,7 +727,7 @@ public class ZKUtil {
     if (nodes != null) {
       List<NodeAndData> newNodes = new ArrayList<>();
       for (String node : nodes) {
-        String nodePath = ZKUtil.joinZNode(baseNode, node);
+        String nodePath = ZNodePaths.joinZNode(baseNode, node);
         byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
         newNodes.add(new NodeAndData(nodePath, data));
       }
@@ -1774,7 +1757,7 @@ public class ZKUtil {
     sb.append("\n").append(replicationZnode).append(": ");
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, replicationZnode);
     for (String child : children) {
-      String znode = joinZNode(replicationZnode, child);
+      String znode = ZNodePaths.joinZNode(replicationZnode, child);
       if (znode.equals(zkw.znodePaths.peersZNode)) {
         appendPeersZnodes(zkw, znode, sb);
       } else if (znode.equals(zkw.znodePaths.queuesZNode)) {
@@ -1789,7 +1772,7 @@ public class ZKUtil {
       StringBuilder sb) throws KeeperException {
     sb.append("\n").append(hfileRefsZnode).append(": ");
     for (String peerIdZnode : ZKUtil.listChildrenNoWatch(zkw, hfileRefsZnode)) {
-      String znodeToProcess = ZKUtil.joinZNode(hfileRefsZnode, peerIdZnode);
+      String znodeToProcess = ZNodePaths.joinZNode(hfileRefsZnode, peerIdZnode);
       sb.append("\n").append(znodeToProcess).append(": ");
       List<String> peerHFileRefsZnodes = ZKUtil.listChildrenNoWatch(zkw, znodeToProcess);
       int size = peerHFileRefsZnodes.size();
@@ -1839,7 +1822,7 @@ public class ZKUtil {
         }
       }
       for (String zNodeChild : ZKUtil.listChildrenNoWatch(zkw, znodeToProcess)) {
-        stack.add(ZKUtil.joinZNode(znodeToProcess, zNodeChild));
+        stack.add(ZNodePaths.joinZNode(znodeToProcess, zNodeChild));
       }
     } while (stack.size() > 0);
   }
@@ -1849,7 +1832,7 @@ public class ZKUtil {
     int pblen = ProtobufUtil.lengthOfPBMagic();
     sb.append("\n").append(peersZnode).append(": ");
     for (String peerIdZnode : ZKUtil.listChildrenNoWatch(zkw, peersZnode)) {
-      String znodeToProcess = ZKUtil.joinZNode(peersZnode, peerIdZnode);
+      String znodeToProcess = ZNodePaths.joinZNode(peersZnode, peerIdZnode);
       byte[] data;
       try {
         data = ZKUtil.getData(zkw, znodeToProcess);
@@ -1879,7 +1862,7 @@ public class ZKUtil {
     int pblen = ProtobufUtil.lengthOfPBMagic();
     for (String child : ZKUtil.listChildrenNoWatch(zkw, znodeToProcess)) {
       if (!child.equals(peerState)) continue;
-      String peerStateZnode = ZKUtil.joinZNode(znodeToProcess, child);
+      String peerStateZnode = ZNodePaths.joinZNode(znodeToProcess, child);
       sb.append("\n").append(peerStateZnode).append(": ");
       byte[] peerStateData;
       try {
@@ -2042,7 +2025,7 @@ public class ZKUtil {
     if (children == null) return;
     for (String child : children) {
       LOG.debug(prefix + child);
-      String node = ZKUtil.joinZNode(root.equals("/") ? "" : root, child);
+      String node = ZNodePaths.joinZNode(root.equals("/") ? "" : root, child);
       logZKTree(zkw, node, prefix + "---");
     }
   }

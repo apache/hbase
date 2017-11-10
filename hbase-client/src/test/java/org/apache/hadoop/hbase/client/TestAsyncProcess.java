@@ -37,6 +37,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -456,23 +457,20 @@ public class TestAsyncProcess {
    * Returns our async process.
    */
   static class MyConnectionImpl extends ConnectionImplementation {
-    public static class TestRegistry implements Registry {
-      @Override
-      public void init(Connection connection) {}
+    public static class TestRegistry extends DoNothingAsyncRegistry {
 
-      @Override
-      public RegionLocations getMetaRegionLocation() throws IOException {
-        return null;
+      public TestRegistry(Configuration conf) {
+        super(conf);
       }
 
       @Override
-      public String getClusterId() {
-        return "testClusterId";
+      public CompletableFuture<String> getClusterId() {
+        return CompletableFuture.completedFuture("testClusterId");
       }
 
       @Override
-      public int getCurrentNrHRS() throws IOException {
-        return 1;
+      public CompletableFuture<Integer> getCurrentNrHRS() {
+        return CompletableFuture.completedFuture(1);
       }
     }
 
@@ -483,7 +481,8 @@ public class TestAsyncProcess {
     }
 
     private static Configuration setupConf(Configuration conf) {
-      conf.setClass(RegistryFactory.REGISTRY_IMPL_CONF_KEY, TestRegistry.class, Registry.class);
+      conf.setClass(AsyncRegistryFactory.REGISTRY_IMPL_CONF_KEY, TestRegistry.class,
+        AsyncRegistry.class);
       return conf;
     }
 

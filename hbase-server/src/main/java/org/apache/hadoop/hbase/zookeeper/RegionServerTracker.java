@@ -82,7 +82,7 @@ public class RegionServerTracker extends ZooKeeperListener {
         if (regionServers.get(sn) == null) {
           RegionServerInfo.Builder rsInfoBuilder = RegionServerInfo.newBuilder();
           try {
-            String nodePath = ZKUtil.joinZNode(watcher.znodePaths.rsZNode, n);
+            String nodePath = ZNodePaths.joinZNode(watcher.znodePaths.rsZNode, n);
             byte[] data = ZKUtil.getData(watcher, nodePath);
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();

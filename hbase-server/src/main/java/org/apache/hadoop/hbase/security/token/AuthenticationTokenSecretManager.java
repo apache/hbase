@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKLeaderManager;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
@@ -301,7 +301,7 @@ public class AuthenticationTokenSecretManager
       setDaemon(true);
       setName("ZKSecretWatcher-leaderElector");
       zkLeader = new ZKLeaderManager(watcher,
-          ZKUtil.joinZNode(zkWatcher.getRootKeyZNode(), "keymaster"),
+          ZNodePaths.joinZNode(zkWatcher.getRootKeyZNode(), "keymaster"),
           Bytes.toBytes(serverName), this);
     }
 

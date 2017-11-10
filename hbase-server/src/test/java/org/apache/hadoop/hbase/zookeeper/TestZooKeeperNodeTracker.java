@@ -100,7 +100,7 @@ public class TestZooKeeperNodeTracker {
     ZKUtil.createAndFailSilent(zk, zk.znodePaths.baseZNode);
 
     final String node =
-      ZKUtil.joinZNode(zk.znodePaths.baseZNode, new Long(rand.nextLong()).toString());
+      ZNodePaths.joinZNode(zk.znodePaths.baseZNode, new Long(rand.nextLong()).toString());
 
     final byte [] dataOne = Bytes.toBytes("dataOne");
     final byte [] dataTwo = Bytes.toBytes("dataTwo");

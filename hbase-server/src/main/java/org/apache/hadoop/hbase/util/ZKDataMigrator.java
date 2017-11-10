@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -94,7 +95,7 @@ public class ZKDataMigrator {
   private static  ZooKeeperProtos.DeprecatedTableState.State getTableState(
       final ZooKeeperWatcher zkw, final TableName tableName)
       throws KeeperException, InterruptedException {
-    String znode = ZKUtil.joinZNode(zkw.znodePaths.tableZNode, tableName.getNameAsString());
+    String znode = ZNodePaths.joinZNode(zkw.znodePaths.tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(zkw, znode);
     if (data == null || data.length <= 0) return null;
     try {

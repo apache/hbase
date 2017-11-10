@@ -27,18 +27,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -49,6 +51,26 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -73,26 +95,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrEx
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Test client behavior w/o setting up a cluster.
@@ -117,27 +119,27 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Simple cluster registry inserted in place of our usual zookeeper based one.
    */
-  static class SimpleRegistry implements Registry {
+  static class SimpleRegistry extends DoNothingAsyncRegistry {
     final ServerName META_HOST = META_SERVERNAME;
 
-    @Override
-    public void init(Connection connection) {
+    public SimpleRegistry(Configuration conf) {
+      super(conf);
     }
 
     @Override
-    public RegionLocations getMetaRegionLocation() throws IOException {
-      return new RegionLocations(
-        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, META_HOST));
+    public CompletableFuture<RegionLocations> getMetaRegionLocation() {
+      return CompletableFuture.completedFuture(new RegionLocations(
+          new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, META_HOST)));
     }
 
     @Override
-    public String getClusterId() {
-      return HConstants.CLUSTER_ID_DEFAULT;
+    public CompletableFuture<String> getClusterId() {
+      return CompletableFuture.completedFuture(HConstants.CLUSTER_ID_DEFAULT);
     }
 
     @Override
-    public int getCurrentNrHRS() throws IOException {
-      return 1;
+    public CompletableFuture<Integer> getCurrentNrHRS() {
+      return CompletableFuture.completedFuture(1);
     }
   }
 

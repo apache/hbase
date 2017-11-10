@@ -221,7 +221,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     List<String> children = recoverableZooKeeper.getChildren(znode, false);
 
     for (String child : children) {
-      setZnodeAclsRecursive(ZKUtil.joinZNode(znode, child));
+      setZnodeAclsRecursive(ZNodePaths.joinZNode(znode, child));
     }
     List<ACL> acls = ZKUtil.createACL(this, znode, true);
     LOG.info("Setting ACLs for znode:" + znode + " , acl:" + acls);

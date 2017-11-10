@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertFalse;
@@ -33,15 +32,16 @@ public class TestZooKeeperWatcher {
 
   @Test
   public void testIsClientReadable() throws IOException {
-    ZooKeeperWatcher watcher = new ZooKeeperWatcher(HBaseConfiguration.create(),
-        "testIsClientReadable", null, false);
+    ZooKeeperWatcher watcher =
+      new ZooKeeperWatcher(HBaseConfiguration.create(), "testIsClientReadable", null, false);
 
     assertTrue(watcher.isClientReadable(watcher.znodePaths.baseZNode));
     assertTrue(watcher.isClientReadable(watcher.znodePaths.getZNodeForReplica(0)));
     assertTrue(watcher.isClientReadable(watcher.znodePaths.masterAddressZNode));
     assertTrue(watcher.isClientReadable(watcher.znodePaths.clusterIdZNode));
     assertTrue(watcher.isClientReadable(watcher.znodePaths.tableZNode));
-    assertTrue(watcher.isClientReadable(ZKUtil.joinZNode(watcher.znodePaths.tableZNode, "foo")));
+    assertTrue(
+      watcher.isClientReadable(ZNodePaths.joinZNode(watcher.znodePaths.tableZNode, "foo")));
     assertTrue(watcher.isClientReadable(watcher.znodePaths.rsZNode));
 
     assertFalse(watcher.isClientReadable(watcher.znodePaths.tableLockZNode));
@@ -54,5 +54,4 @@ public class TestZooKeeperWatcher {
 
     watcher.close();
   }
-
 }
