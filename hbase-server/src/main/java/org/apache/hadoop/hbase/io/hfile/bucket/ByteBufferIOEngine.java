@@ -68,36 +68,28 @@ So said all these, when we read a block it may be possible that the bytes of tha
 public class ByteBufferIOEngine implements IOEngine {
   private ByteBufferArray bufferArray;
   private final long capacity;
-  private final boolean direct;
 
   /**
    * Construct the ByteBufferIOEngine with the given capacity
    * @param capacity
-   * @param direct true if allocate direct buffer
    * @throws IOException ideally here no exception to be thrown from the allocator
    */
-  public ByteBufferIOEngine(long capacity, boolean direct)
+  public ByteBufferIOEngine(long capacity)
       throws IOException {
     this.capacity = capacity;
-    this.direct = direct;
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       @Override
-      public ByteBuffer allocate(long size, boolean directByteBuffer)
-          throws IOException {
-        if (directByteBuffer) {
-          return ByteBuffer.allocateDirect((int) size);
-        } else {
-          return ByteBuffer.allocate((int) size);
-        }
+      public ByteBuffer allocate(long size) throws IOException {
+        return ByteBuffer.allocateDirect((int) size);
       }
     };
-    bufferArray = new ByteBufferArray(capacity, direct, allocator);
+    bufferArray = new ByteBufferArray(capacity, allocator);
   }
 
   @Override
   public String toString() {
     return "ioengine=" + this.getClass().getSimpleName() + ", capacity=" +
-      String.format("%,d", this.capacity) + ", direct=" + this.direct;
+      String.format("%,d", this.capacity);
   }
 
   /**

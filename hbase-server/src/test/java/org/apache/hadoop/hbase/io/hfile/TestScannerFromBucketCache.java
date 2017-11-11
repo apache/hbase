@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -71,16 +72,12 @@ public class TestScannerFromBucketCache {
   // Test names
   private TableName tableName;
 
-  private void setUp(boolean offheap, boolean useBucketCache) throws IOException {
+  private void setUp(boolean useBucketCache) throws IOException {
     test_util = HBaseTestingUtility.createLocalHTU();
     conf = test_util.getConfiguration();
     if (useBucketCache) {
       conf.setInt("hbase.bucketcache.size", 400);
-      if (offheap) {
-        conf.setStrings("hbase.bucketcache.ioengine", "offheap");
-      } else {
-        conf.setStrings("hbase.bucketcache.ioengine", "heap");
-      }
+      conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
       conf.setInt("hbase.bucketcache.writer.threads", 10);
       conf.setFloat("hfile.block.cache.size", 0.2f);
       conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
@@ -102,7 +99,7 @@ public class TestScannerFromBucketCache {
 
   @Test
   public void testBasicScanWithLRUCache() throws IOException {
-    setUp(false, false);
+    setUp(false);
     byte[] row1 = Bytes.toBytes("row1");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -140,7 +137,7 @@ public class TestScannerFromBucketCache {
 
   @Test
   public void testBasicScanWithOffheapBucketCache() throws IOException {
-    setUp(true, true);
+    setUp(true);
     byte[] row1 = Bytes.toBytes("row1offheap");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -181,7 +178,7 @@ public class TestScannerFromBucketCache {
 
   @Test
   public void testBasicScanWithOffheapBucketCacheWithMBB() throws IOException {
-    setUp(true, true);
+    setUp(true);
     byte[] row1 = Bytes.toBytes("row1offheap");
     byte[] qf1 = Bytes.toBytes("qualifier1");
     byte[] qf2 = Bytes.toBytes("qualifier2");
@@ -225,44 +222,6 @@ public class TestScannerFromBucketCache {
       }
 
     } catch (InterruptedException e) {
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
-  @Test
-  public void testBasicScanWithOnheapBucketCache() throws IOException {
-    setUp(false, true);
-    byte[] row1 = Bytes.toBytes("row1onheap");
-    byte[] qf1 = Bytes.toBytes("qualifier1");
-    byte[] qf2 = Bytes.toBytes("qualifier2");
-    byte[] fam1 = Bytes.toBytes("famonheap");
-
-    long ts1 = 1; // System.currentTimeMillis();
-    long ts2 = ts1 + 1;
-    long ts3 = ts1 + 2;
-
-    // Setting up region
-    String method = this.getName();
-    this.region = initHRegion(tableName, method, conf, test_util, fam1);
-    try {
-      List<Cell> expected = insertData(row1, qf1, qf2, fam1, ts1, ts2, ts3, false);
-
-      List<Cell> actual = performScan(row1, fam1);
-      // Verify result
-      for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
-      }
-      // do the scan again and verify. This time it should be from the bucket cache in onheap mode
-      actual = performScan(row1, fam1);
-      // Verify result
-      for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
-        assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
-      }
-
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;

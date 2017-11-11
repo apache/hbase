@@ -381,14 +381,12 @@ public class BucketCache implements BlockCache, HeapSize {
           .split(FileIOEngine.FILE_DELIMITER);
       return new FileIOEngine(capacity, persistencePath != null, filePaths);
     } else if (ioEngineName.startsWith("offheap")) {
-      return new ByteBufferIOEngine(capacity, true);
-    } else if (ioEngineName.startsWith("heap")) {
-      return new ByteBufferIOEngine(capacity, false);
+      return new ByteBufferIOEngine(capacity);
     } else if (ioEngineName.startsWith("mmap:")) {
       return new FileMmapEngine(ioEngineName.substring(5), capacity);
     } else {
       throw new IllegalArgumentException(
-          "Don't understand io engine name for cache - prefix with file:, heap or offheap");
+          "Don't understand io engine name for cache- prefix with file:, files:, mmap: or offheap");
     }
   }
 

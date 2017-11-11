@@ -43,7 +43,7 @@ public class TestByteBufferIOEngine {
     int capacity = 32 * 1024 * 1024; // 32 MB
     int testNum = 100;
     int maxBlockSize = 64 * 1024;
-    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(capacity, false);
+    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(capacity);
     int testOffsetAtStartNum = testNum / 10;
     int testOffsetAtEndNum = testNum / 10;
     for (int i = 0; i < testNum; i++) {
@@ -113,7 +113,7 @@ public class TestByteBufferIOEngine {
     int capacity = 32 * 1024 * 1024; // 32 MB
     int testNum = 100;
     int maxBlockSize = 64 * 1024;
-    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(capacity, false);
+    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(capacity);
     int testOffsetAtStartNum = testNum / 10;
     int testOffsetAtEndNum = testNum / 10;
     for (int i = 0; i < testNum; i++) {

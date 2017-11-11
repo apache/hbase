@@ -300,12 +300,6 @@ public class TestCacheConfig {
   }
 
   @Test
-  public void testOnHeapBucketCacheConfig() {
-    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "heap");
-    doBucketCacheConfigTest();
-  }
-
-  @Test
   public void testFileBucketCacheConfig() throws IOException {
     HBaseTestingUtility htu = new HBaseTestingUtility(this.conf);
     try {
