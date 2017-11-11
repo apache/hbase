@@ -59,11 +59,10 @@ public class ByteBufferArray {
    * of the array bounds for the last byte(see {@link ByteBufferArray#multiple}),
    * we will allocate one additional buffer with capacity 0;
    * @param capacity total size of the byte buffer array
-   * @param directByteBuffer true if we allocate direct buffer
    * @param allocator the ByteBufferAllocator that will create the buffers
    * @throws IOException throws IOException if there is an exception thrown by the allocator
    */
-  public ByteBufferArray(long capacity, boolean directByteBuffer, ByteBufferAllocator allocator)
+  public ByteBufferArray(long capacity, ByteBufferAllocator allocator)
       throws IOException {
     this.bufferSize = DEFAULT_BUFFER_SIZE;
     if (this.bufferSize > (capacity / 16))
@@ -71,13 +70,13 @@ public class ByteBufferArray {
     this.bufferCount = (int) (roundUp(capacity, bufferSize) / bufferSize);
     LOG.info("Allocating buffers total=" + StringUtils.byteDesc(capacity)
         + ", sizePerBuffer=" + StringUtils.byteDesc(bufferSize) + ", count="
-        + bufferCount + ", direct=" + directByteBuffer);
+        + bufferCount);
     buffers = new ByteBuffer[bufferCount + 1];
-    createBuffers(directByteBuffer, allocator);
+    createBuffers(allocator);
   }
 
   @VisibleForTesting
-  void createBuffers(boolean directByteBuffer, ByteBufferAllocator allocator)
+  void createBuffers(ByteBufferAllocator allocator)
       throws IOException {
     int threadCount = getThreadCount();
     ExecutorService service = new ThreadPoolExecutor(threadCount, threadCount, 0L,
@@ -90,7 +89,7 @@ public class ByteBufferArray {
         // Last thread will have to deal with a different number of buffers
         int buffersToCreate = (i == threadCount - 1) ? lastThreadCount : perThreadCount;
         futures[i] = service.submit(
-          new BufferCreatorCallable(bufferSize, directByteBuffer, buffersToCreate, allocator));
+          new BufferCreatorCallable(bufferSize, buffersToCreate, allocator));
       }
       int bufferIndex = 0;
       for (Future<ByteBuffer[]> future : futures) {
@@ -122,14 +121,11 @@ public class ByteBufferArray {
    */
   private static class BufferCreatorCallable implements Callable<ByteBuffer[]> {
     private final int bufferCapacity;
-    private final boolean directByteBuffer;
     private final int bufferCount;
     private final ByteBufferAllocator allocator;
 
-    BufferCreatorCallable(int bufferCapacity, boolean directByteBuffer, int bufferCount,
-        ByteBufferAllocator allocator) {
+    BufferCreatorCallable(int bufferCapacity, int bufferCount, ByteBufferAllocator allocator) {
       this.bufferCapacity = bufferCapacity;
-      this.directByteBuffer = directByteBuffer;
       this.bufferCount = bufferCount;
       this.allocator = allocator;
     }
@@ -138,7 +134,7 @@ public class ByteBufferArray {
     public ByteBuffer[] call() throws Exception {
       ByteBuffer[] buffers = new ByteBuffer[this.bufferCount];
       for (int i = 0; i < this.bufferCount; i++) {
-        buffers[i] = allocator.allocate(this.bufferCapacity, this.directByteBuffer);
+        buffers[i] = allocator.allocate(this.bufferCapacity);
       }
       return buffers;
     }

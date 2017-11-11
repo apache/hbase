@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -80,7 +79,7 @@ public class TestBucketWriterThread {
     // Run with one writer thread only. Means there will be one writer queue only too.  We depend
     // on this in below.
     final int writerThreadsCount = 1;
-    this.bc = new MockBucketCache("heap", capacity, 1, new int [] {1}, writerThreadsCount,
+    this.bc = new MockBucketCache("offheap", capacity, 1, new int [] {1}, writerThreadsCount,
       capacity, null, 100/*Tolerate ioerrors for 100ms*/);
     assertEquals(writerThreadsCount, bc.writerThreads.length);
     assertEquals(writerThreadsCount, bc.writerQueues.size());

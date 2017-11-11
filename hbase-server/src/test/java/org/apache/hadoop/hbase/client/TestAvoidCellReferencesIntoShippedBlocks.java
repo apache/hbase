@@ -101,7 +101,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
                                                         // tests
     conf.setInt("hbase.regionserver.handler.count", 20);
     conf.setInt("hbase.bucketcache.size", 400);
-    conf.setStrings("hbase.bucketcache.ioengine", "offheap");
+    conf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     conf.setInt("hbase.hstore.compactionThreshold", 7);
     conf.setFloat("hfile.block.cache.size", 0.2f);
     conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);

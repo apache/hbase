@@ -894,9 +894,10 @@ possible configurations would overwhelm and obscure the important.
     <property>
     <name>hbase.bucketcache.ioengine</name>
     <value></value>
-    <description>Where to store the contents of the bucketcache. One of: heap,
-    offheap, or file. If a file, set it to file:PATH_TO_FILE. See
-    http://hbase.apache.org/book.html#offheap.blockcache for more information.
+    <description>Where to store the contents of the bucketcache. One of: offheap,
+    file, files or mmap. If a file or files, set it to file(s):PATH_TO_FILE.
+    mmap means the content will be in an mmaped file. Use mmap:PATH_TO_FILE.
+    See http://hbase.apache.org/book.html#offheap.blockcache for more information.
     </description>
   </property>
   <property>

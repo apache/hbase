@@ -38,16 +38,11 @@ public class TestByteBufferArray {
     int capacity = 4 * 1024 * 1024;
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       @Override
-      public ByteBuffer allocate(long size, boolean directByteBuffer)
-          throws IOException {
-        if (directByteBuffer) {
-          return ByteBuffer.allocateDirect((int) size);
-        } else {
-          return ByteBuffer.allocate((int) size);
-        }
+      public ByteBuffer allocate(long size) throws IOException {
+        return ByteBuffer.allocateDirect((int) size);
       }
     };
-    ByteBufferArray array = new ByteBufferArray(capacity, false, allocator);
+    ByteBufferArray array = new ByteBufferArray(capacity, allocator);
     ByteBuff subBuf = array.asSubByteBuff(0, capacity);
     subBuf.position(capacity - 1);// Position to the last byte
     assertTrue(subBuf.hasRemaining());
@@ -61,15 +56,11 @@ public class TestByteBufferArray {
     int capacity = 470 * 1021 * 1023;
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       @Override
-      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
-        if (directByteBuffer) {
-          return ByteBuffer.allocateDirect((int) size);
-        } else {
-          return ByteBuffer.allocate((int) size);
-        }
+      public ByteBuffer allocate(long size) throws IOException {
+        return ByteBuffer.allocateDirect((int) size);
       }
     };
-    ByteBufferArray array = new ByteBufferArray(capacity, false, allocator);
+    ByteBufferArray array = new ByteBufferArray(capacity, allocator);
     assertEquals(119, array.buffers.length);
     for (int i = 0; i < array.buffers.length; i++) {
       if (i == array.buffers.length - 1) {
@@ -84,19 +75,15 @@ public class TestByteBufferArray {
   public void testByteBufferCreation1() throws Exception {
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       @Override
-      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
-        if (directByteBuffer) {
-          return ByteBuffer.allocateDirect((int) size);
-        } else {
-          return ByteBuffer.allocate((int) size);
-        }
+      public ByteBuffer allocate(long size) throws IOException {
+        return ByteBuffer.allocateDirect((int) size);
       }
     };
-    ByteBufferArray array = new DummyByteBufferArray(7 * 1024 * 1024, false, allocator);
+    ByteBufferArray array = new DummyByteBufferArray(7 * 1024 * 1024, allocator);
     // overwrite
     array.bufferCount = 25;
     array.buffers = new ByteBuffer[array.bufferCount + 1];
-    array.createBuffers(true, allocator);
+    array.createBuffers(allocator);
     for (int i = 0; i < array.buffers.length; i++) {
       if (i == array.buffers.length - 1) {
         assertEquals(array.buffers[i].capacity(), 0);
@@ -108,9 +95,8 @@ public class TestByteBufferArray {
 
   private static class DummyByteBufferArray extends ByteBufferArray {
 
-    public DummyByteBufferArray(long capacity, boolean directByteBuffer,
-        ByteBufferAllocator allocator) throws IOException {
-      super(capacity, directByteBuffer, allocator);
+    public DummyByteBufferArray(long capacity, ByteBufferAllocator allocator) throws IOException {
+      super(capacity, allocator);
     }
 
     @Override

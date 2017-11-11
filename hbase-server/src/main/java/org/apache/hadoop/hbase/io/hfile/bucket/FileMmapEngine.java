@@ -71,20 +71,14 @@ public class FileMmapEngine implements IOEngine {
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
       int pos = 0;
       @Override
-      public ByteBuffer allocate(long size, boolean directByteBuffer) throws IOException {
-        ByteBuffer buffer = null;
-        if (directByteBuffer) {
-          buffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_WRITE, pos * size,
-              size);
-        } else {
-          throw new IllegalArgumentException(
-              "Only Direct Bytebuffers allowed with FileMMap engine");
-        }
+      public ByteBuffer allocate(long size) throws IOException {
+        ByteBuffer buffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_WRITE,
+            pos * size, size);
         pos++;
         return buffer;
       }
     };
-    bufferArray = new ByteBufferArray(fileSize, true, allocator);
+    bufferArray = new ByteBufferArray(fileSize, allocator);
   }
 
   private long roundUp(long n, long to) {

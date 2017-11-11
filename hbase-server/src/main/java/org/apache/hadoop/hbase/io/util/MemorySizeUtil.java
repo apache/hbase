@@ -205,29 +205,7 @@ public class MemorySizeUtil {
     // L1 block cache is always on heap
     float l1CachePercent = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    float l2CachePercent = getL2BlockCacheHeapPercent(conf);
-    return l1CachePercent + l2CachePercent;
-  }
-
-  /**
-   * @param conf
-   * @return The on heap size for L2 block cache.
-   */
-  public static float getL2BlockCacheHeapPercent(Configuration conf) {
-    float l2CachePercent = 0.0F;
-    String bucketCacheIOEngineName = conf.get(HConstants.BUCKET_CACHE_IOENGINE_KEY, null);
-    // L2 block cache can be on heap when IOEngine is "heap"
-    if (bucketCacheIOEngineName != null && bucketCacheIOEngineName.startsWith("heap")) {
-      float bucketCachePercentage = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
-      long max = -1L;
-      final MemoryUsage usage = safeGetHeapMemoryUsage();
-      if (usage != null) {
-        max = usage.getMax();
-      }
-      l2CachePercent = bucketCachePercentage < 1 ? bucketCachePercentage
-          : (bucketCachePercentage * 1024 * 1024) / max;
-    }
-    return l2CachePercent;
+    return l1CachePercent;
   }
 
   /**
@@ -260,21 +238,13 @@ public class MemorySizeUtil {
    * @return the number of bytes to use for bucket cache, negative if disabled.
    */
   public static long getBucketCacheSize(final Configuration conf) {
-    final float bucketCachePercentage = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
-    long bucketCacheSize;
-    // Values < 1 are treated as % of heap
-    if (bucketCachePercentage < 1) {
-      long max = -1L;
-      final MemoryUsage usage = safeGetHeapMemoryUsage();
-      if (usage != null) {
-        max = usage.getMax();
-      }
-      bucketCacheSize = (long)(max * bucketCachePercentage);
-    // values >= 1 are treated as # of MiB
-    } else {
-      bucketCacheSize = (long)(bucketCachePercentage * 1024 * 1024);
+    // Size configured in MBs
+    float bucketCacheSize = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
+    if (bucketCacheSize < 1) {
+      throw new IllegalArgumentException("Bucket Cache should be minimum 1 MB in size."
+          + "Configure 'hbase.bucketcache.size' with > 1 value");
     }
-    return bucketCacheSize;
+    return (long) (bucketCacheSize * 1024 * 1024);
   }
 
 }

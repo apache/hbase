@@ -73,7 +73,6 @@ public class HeapMemoryManager {
   private float blockCachePercent;
   private float blockCachePercentMinRange;
   private float blockCachePercentMaxRange;
-  private float l2BlockCachePercent;
 
   private float heapOccupancyPercent;
 
@@ -183,8 +182,7 @@ public class HeapMemoryManager {
     }
 
     int gml = (int) (globalMemStorePercentMaxRange * CONVERT_TO_PERCENTAGE);
-    this.l2BlockCachePercent = MemorySizeUtil.getL2BlockCacheHeapPercent(conf);
-    int bcul = (int) ((blockCachePercentMinRange + l2BlockCachePercent) * CONVERT_TO_PERCENTAGE);
+    int bcul = (int) ((blockCachePercentMinRange) * CONVERT_TO_PERCENTAGE);
     if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
           + "the threshold required for successful cluster operation. "
@@ -195,7 +193,7 @@ public class HeapMemoryManager {
           + blockCachePercentMinRange);
     }
     gml = (int) (globalMemStorePercentMinRange * CONVERT_TO_PERCENTAGE);
-    bcul = (int) ((blockCachePercentMaxRange + l2BlockCachePercent) * CONVERT_TO_PERCENTAGE);
+    bcul = (int) ((blockCachePercentMaxRange) * CONVERT_TO_PERCENTAGE);
     if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
           + "the threshold required for successful cluster operation. "
@@ -361,7 +359,7 @@ public class HeapMemoryManager {
           blockCacheSize = blockCachePercentMaxRange;
         }
         int gml = (int) (memstoreSize * CONVERT_TO_PERCENTAGE);
-        int bcul = (int) ((blockCacheSize + l2BlockCachePercent) * CONVERT_TO_PERCENTAGE);
+        int bcul = (int) ((blockCacheSize) * CONVERT_TO_PERCENTAGE);
         if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
           LOG.info("Current heap configuration from HeapMemoryTuner exceeds "
               + "the threshold required for successful cluster operation. "
