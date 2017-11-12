@@ -297,8 +297,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final Counter checkAndMutateChecksPassed = new Counter();
   final Counter checkAndMutateChecksFailed = new Counter();
 
-  //Number of requests
+  // Number of requests
+  // Count rows for scan
   final Counter readRequestsCount = new Counter();
+  // Count rows for multi row mutations
   final Counter writeRequestsCount = new Counter();
 
   // Number of requests blocked by memstore size.
@@ -2728,7 +2730,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // closest key is across all column families, since the data may be sparse
     checkRow(row, "getClosestRowBefore");
     startRegionOperation(Operation.GET);
-    this.readRequestsCount.increment();
     try {
       Result result = null;
       Get get = new Get(row);
@@ -6094,7 +6095,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             "or a lengthy garbage collection");
       }
       startRegionOperation(Operation.SCAN);
-      readRequestsCount.increment();
       try {
         return nextRaw(outResults, scannerContext);
       } finally {
@@ -6124,6 +6124,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         List<Cell> tmpList = new ArrayList<Cell>();
         moreValues = nextInternal(tmpList, scannerContext);
         outResults.addAll(tmpList);
+      }
+
+      if (!outResults.isEmpty()) {
+        readRequestsCount.increment();
       }
 
       // If the size limit was reached it means a partial Result is being returned. Returning a
@@ -7349,7 +7353,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void mutateRowsWithLocks(Collection<Mutation> mutations,
       Collection<byte[]> rowsToLock, long nonceGroup, long nonce) throws IOException {
-    writeRequestsCount.add(mutations.size());
     MultiRowMutationProcessor proc = new MultiRowMutationProcessor(mutations, rowsToLock);
     processRowsWithLocks(proc, -1, nonceGroup, nonce);
   }
@@ -7455,7 +7458,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             processor, now, this, mutations, walEdit, timeout);
 
         if (!mutations.isEmpty()) {
-
+          writeRequestsCount.add(mutations.size());
           // 5. Call the preBatchMutate hook
           processor.preBatchMutate(this, walEdit);
 

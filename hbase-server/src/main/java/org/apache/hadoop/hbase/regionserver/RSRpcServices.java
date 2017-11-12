@@ -238,10 +238,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   // Count only once for requests with multiple actions like multi/caching-scan/replayBatch
   final Counter requestCount = new Counter();
 
-  // Request counter. (Excludes requests that are not serviced by regions.)
-  // Count rows for requests with multiple actions like multi/caching-scan/replayBatch
-  final Counter requestRowActionCount = new Counter();
-
   // Request counter for rpc get
   final Counter rpcGetRequestCount = new Counter();
 
@@ -998,7 +994,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
       requestCount.increment();
-      requestRowActionCount.add(mutations.size());
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
@@ -2207,7 +2202,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
-      requestRowActionCount.increment();
       rpcGetRequestCount.increment();
       region = getRegion(request.getRegion());
 
@@ -2330,7 +2324,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     Map<RegionSpecifier, ClientProtos.RegionLoadStats> regionStats = new HashMap<>(request
       .getRegionActionCount());
     for (RegionAction regionAction : request.getRegionActionList()) {
-      this.requestRowActionCount.add(regionAction.getActionCount());
       OperationQuota quota;
       Region region;
       regionActionResultBuilder.clear();
@@ -2456,7 +2449,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
-      requestRowActionCount.increment();
       rpcMutateRequestCount.increment();
       region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
@@ -2895,8 +2887,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           builder.setScanMetrics(metricBuilder.build());
         }
       }
-      region.updateReadRequestsCount(numOfResults);
-      requestRowActionCount.add(numOfResults);
       long end = EnvironmentEdgeManager.currentTime();
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
