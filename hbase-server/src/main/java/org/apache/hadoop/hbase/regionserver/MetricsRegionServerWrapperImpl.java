@@ -181,7 +181,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getTotalRowActionRequestCount() {
-    return regionServer.rpcServices.requestRowActionCount.get();
+    return readRequestsCount + writeRequestsCount;
   }
 
   @Override
