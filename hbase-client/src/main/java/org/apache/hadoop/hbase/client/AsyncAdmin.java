@@ -141,6 +141,12 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys);
 
+  /*
+   * Modify an existing table, more IRB friendly version.
+   * @param desc modified description of the table
+   */
+  CompletableFuture<Void> modifyTable(TableDescriptor desc);
+
   /**
    * Deletes a table.
    * @param tableName name of table to delete
@@ -551,6 +557,18 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   CompletableFuture<List<TableCFs>> listReplicatedTableCFs();
+
+  /**
+   * Enable a table's replication switch.
+   * @param tableName name of the table
+   */
+  CompletableFuture<Void> enableTableReplication(TableName tableName);
+
+  /**
+   * Disable a table's replication switch.
+   * @param tableName name of the table
+   */
+  CompletableFuture<Void> disableTableReplication(TableName tableName);
 
   /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be

@@ -123,4 +123,24 @@ public class ReplicationPeerConfig {
     builder.append("bandwidth=").append(bandwidth);
     return builder.toString();
   }
+
+  /**
+   * Decide whether the table need replicate to the peer cluster
+   * @param table name of the table
+   * @return true if the table need replicate to the peer cluster
+   */
+  public boolean needToReplicate(TableName table) {
+    // If null means user has explicitly not configured any namespaces and table CFs
+    // so all the tables data are applicable for replication
+    if (namespaces == null && tableCFsMap == null) {
+      return true;
+    }
+    if (namespaces != null && namespaces.contains(table.getNamespaceAsString())) {
+      return true;
+    }
+    if (tableCFsMap != null && tableCFsMap.containsKey(table)) {
+      return true;
+    }
+    return false;
+  }
 }

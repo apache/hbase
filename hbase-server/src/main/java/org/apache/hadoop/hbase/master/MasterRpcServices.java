@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
-import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -1809,7 +1809,7 @@ public class MasterRpcServices extends RSRpcServices
       AddReplicationPeerRequest request) throws ServiceException {
     try {
       master.addReplicationPeer(request.getPeerId(),
-        ReplicationSerDeHelper.convert(request.getPeerConfig()));
+        ReplicationPeerConfigUtil.convert(request.getPeerConfig()));
       return AddReplicationPeerResponse.newBuilder().build();
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
@@ -1858,7 +1858,7 @@ public class MasterRpcServices extends RSRpcServices
       String peerId = request.getPeerId();
       ReplicationPeerConfig peerConfig = master.getReplicationPeerConfig(peerId);
       response.setPeerId(peerId);
-      response.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
+      response.setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
     }
@@ -1870,7 +1870,7 @@ public class MasterRpcServices extends RSRpcServices
       UpdateReplicationPeerConfigRequest request) throws ServiceException {
     try {
       master.updateReplicationPeerConfig(request.getPeerId(),
-        ReplicationSerDeHelper.convert(request.getPeerConfig()));
+        ReplicationPeerConfigUtil.convert(request.getPeerConfig()));
       return UpdateReplicationPeerConfigResponse.newBuilder().build();
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
@@ -1885,7 +1885,7 @@ public class MasterRpcServices extends RSRpcServices
       List<ReplicationPeerDescription> peers = master
           .listReplicationPeers(request.hasRegex() ? request.getRegex() : null);
       for (ReplicationPeerDescription peer : peers) {
-        response.addPeerDesc(ReplicationSerDeHelper.toProtoReplicationPeerDescription(peer));
+        response.addPeerDesc(ReplicationPeerConfigUtil.toProtoReplicationPeerDescription(peer));
       }
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);

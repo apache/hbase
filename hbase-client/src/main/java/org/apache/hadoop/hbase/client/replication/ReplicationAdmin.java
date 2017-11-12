@@ -141,7 +141,7 @@ public class ReplicationAdmin implements Closeable {
    * */
   @Deprecated
   public static Map<TableName, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
-    return ReplicationSerDeHelper.parseTableCFsFromConfig(tableCFsConfig);
+    return ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCFsConfig);
   }
 
   /**
@@ -228,7 +228,7 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public String getPeerTableCFs(String id) throws IOException {
     ReplicationPeerConfig peerConfig = admin.getReplicationPeerConfig(id);
-    return ReplicationSerDeHelper.convertToString(peerConfig.getTableCFsMap());
+    return ReplicationPeerConfigUtil.convertToString(peerConfig.getTableCFsMap());
   }
 
   /**
@@ -243,7 +243,7 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException,
       IOException {
-    appendPeerTableCFs(id, ReplicationSerDeHelper.parseTableCFsFromConfig(tableCfs));
+    appendPeerTableCFs(id, ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs));
   }
 
   /**
@@ -300,7 +300,7 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public void removePeerTableCFs(String id, String tableCf) throws ReplicationException,
       IOException {
-    removePeerTableCFs(id, ReplicationSerDeHelper.parseTableCFsFromConfig(tableCf));
+    removePeerTableCFs(id, ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCf));
   }
 
   /**

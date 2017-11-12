@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -52,6 +54,31 @@ public interface ColumnFamilyDescriptor {
       return result;
     }
     return lhs.getConfiguration().hashCode() - rhs.getConfiguration().hashCode();
+  };
+
+  static final Bytes REPLICATION_SCOPE_BYTES = new Bytes(
+      Bytes.toBytes(ColumnFamilyDescriptorBuilder.REPLICATION_SCOPE));
+
+  @InterfaceAudience.Private
+  static final Comparator<ColumnFamilyDescriptor> COMPARATOR_IGNORE_REPLICATION = (
+      ColumnFamilyDescriptor lcf, ColumnFamilyDescriptor rcf) -> {
+    int result = Bytes.compareTo(lcf.getName(), rcf.getName());
+    if (result != 0) {
+      return result;
+    }
+    // ColumnFamilyDescriptor.getValues is a immutable map, so copy it and remove
+    // REPLICATION_SCOPE_BYTES
+    Map<Bytes, Bytes> lValues = new HashMap<>();
+    lValues.putAll(lcf.getValues());
+    lValues.remove(REPLICATION_SCOPE_BYTES);
+    Map<Bytes, Bytes> rValues = new HashMap<>();
+    rValues.putAll(rcf.getValues());
+    rValues.remove(REPLICATION_SCOPE_BYTES);
+    result = lValues.hashCode() - rValues.hashCode();
+    if (result != 0) {
+      return result;
+    }
+    return lcf.getConfiguration().hashCode() - rcf.getConfiguration().hashCode();
   };
 
   /**

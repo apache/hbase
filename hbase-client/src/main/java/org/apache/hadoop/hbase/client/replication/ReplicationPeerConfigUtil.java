@@ -19,13 +19,14 @@
 package org.apache.hadoop.hbase.client.replication;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -35,8 +36,9 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -52,11 +54,11 @@ import java.util.Set;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public final class ReplicationSerDeHelper {
+public final class ReplicationPeerConfigUtil {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationSerDeHelper.class);
+  private static final Log LOG = LogFactory.getLog(ReplicationPeerConfigUtil.class);
 
-  private ReplicationSerDeHelper() {}
+  private ReplicationPeerConfigUtil() {}
 
   public static String convertToString(Set<String> namespaces) {
     if (namespaces == null) {
@@ -200,7 +202,7 @@ public final class ReplicationSerDeHelper {
     if (bytes == null) {
       return null;
     }
-    return ReplicationSerDeHelper.convert(Bytes.toString(bytes));
+    return ReplicationPeerConfigUtil.convert(Bytes.toString(bytes));
   }
 
   /**
@@ -299,7 +301,8 @@ public final class ReplicationSerDeHelper {
   }
 
   public static ReplicationProtos.ReplicationPeer convert(ReplicationPeerConfig peerConfig) {
-    ReplicationProtos.ReplicationPeer.Builder builder = ReplicationProtos.ReplicationPeer.newBuilder();
+    ReplicationProtos.ReplicationPeer.Builder builder =
+        ReplicationProtos.ReplicationPeer.newBuilder();
     if (peerConfig.getClusterKey() != null) {
       builder.setClusterkey(peerConfig.getClusterKey());
     }
@@ -359,8 +362,8 @@ public final class ReplicationSerDeHelper {
 
   public static ReplicationProtos.ReplicationPeerDescription toProtoReplicationPeerDescription(
       ReplicationPeerDescription desc) {
-    ReplicationProtos.ReplicationPeerDescription.Builder builder = ReplicationProtos.ReplicationPeerDescription
-        .newBuilder();
+    ReplicationProtos.ReplicationPeerDescription.Builder builder =
+        ReplicationProtos.ReplicationPeerDescription.newBuilder();
     builder.setId(desc.getPeerId());
     ReplicationProtos.ReplicationState.Builder stateBuilder = ReplicationProtos.ReplicationState
         .newBuilder();
@@ -430,8 +433,36 @@ public final class ReplicationSerDeHelper {
               + " which has specified cfs from table-cfs config in peer: " + id);
         }
       } else {
-        throw new ReplicationException("No table: " + table + " in table-cfs config of peer: " + id);
+        throw new ReplicationException("No table: "
+            + table + " in table-cfs config of peer: " + id);
       }
     }
+  }
+
+  /**
+   * Returns the configuration needed to talk to the remote slave cluster.
+   * @param conf the base configuration
+   * @param peer the description of replication peer
+   * @return the configuration for the peer cluster, null if it was unable to get the configuration
+   * @throws IOException when create peer cluster configuration failed
+   */
+  public static Configuration getPeerClusterConfiguration(Configuration conf,
+      ReplicationPeerDescription peer) throws IOException {
+    ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+    Configuration otherConf;
+    try {
+      otherConf = HBaseConfiguration.createClusterConf(conf, peerConfig.getClusterKey());
+    } catch (IOException e) {
+      throw new IOException("Can't get peer configuration for peerId=" + peer.getPeerId(), e);
+    }
+
+    if (!peerConfig.getConfiguration().isEmpty()) {
+      CompoundConfiguration compound = new CompoundConfiguration();
+      compound.add(otherConf);
+      compound.addStringMap(peerConfig.getConfiguration());
+      return compound;
+    }
+
+    return otherConf;
   }
 }

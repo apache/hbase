@@ -24,10 +24,11 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * TableDescriptor contains the details about an HBase table such as the descriptors of
@@ -39,8 +40,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 public interface TableDescriptor {
 
   @InterfaceAudience.Private
-  static final Comparator<TableDescriptor> COMPARATOR
-    = (TableDescriptor lhs, TableDescriptor rhs) -> {
+  Comparator<TableDescriptor> COMPARATOR = getComparator(ColumnFamilyDescriptor.COMPARATOR);
+
+  @InterfaceAudience.Private
+  Comparator<TableDescriptor> COMPARATOR_IGNORE_REPLICATION =
+      getComparator(ColumnFamilyDescriptor.COMPARATOR_IGNORE_REPLICATION);
+
+  static Comparator<TableDescriptor>
+      getComparator(Comparator<ColumnFamilyDescriptor> cfComparator) {
+    return (TableDescriptor lhs, TableDescriptor rhs) -> {
       int result = lhs.getTableName().compareTo(rhs.getTableName());
       if (result != 0) {
         return result;
@@ -52,16 +60,17 @@ public interface TableDescriptor {
         return result;
       }
 
-      for (Iterator<ColumnFamilyDescriptor> it = lhsFamilies.iterator(),
-              it2 = rhsFamilies.iterator(); it.hasNext();) {
-        result = ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next());
+      for (Iterator<ColumnFamilyDescriptor> it = lhsFamilies.iterator(), it2 =
+          rhsFamilies.iterator(); it.hasNext();) {
+        result = cfComparator.compare(it.next(), it2.next());
         if (result != 0) {
           return result;
         }
       }
       // punt on comparison for ordering, just calculate difference
       return Integer.compare(lhs.getValues().hashCode(), rhs.getValues().hashCode());
-  };
+    };
+  }
 
   /**
    * Returns the count of the column families of the table.
@@ -266,4 +275,30 @@ public interface TableDescriptor {
    */
   boolean isReadOnly();
 
+  /**
+   * Check if the table's cfs' replication scope matched with the replication state
+   * @param enabled replication state
+   * @return true if matched, otherwise false
+   */
+  default boolean matchReplicationScope(boolean enabled) {
+    boolean hasEnabled = false;
+    boolean hasDisabled = false;
+
+    for (ColumnFamilyDescriptor cf : getColumnFamilies()) {
+      if (cf.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
+          && cf.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
+        hasDisabled = true;
+      } else {
+        hasEnabled = true;
+      }
+    }
+
+    if (hasEnabled && hasDisabled) {
+      return false;
+    }
+    if (hasEnabled) {
+      return enabled;
+    }
+    return !enabled;
+  }
 }

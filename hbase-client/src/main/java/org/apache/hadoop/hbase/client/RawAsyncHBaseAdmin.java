@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
@@ -64,7 +65,7 @@ import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterReques
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.ServerRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
-import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -188,6 +189,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
@@ -503,6 +506,14 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     return this.<CreateTableRequest, CreateTableResponse> procedureCall(request,
       (s, c, req, done) -> s.createTable(c, req, done), (resp) -> resp.getProcId(),
       new CreateTableProcedureBiConsumer(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return this.<ModifyTableRequest, ModifyTableResponse> procedureCall(
+      RequestConverter.buildModifyTableRequest(desc.getTableName(), desc, ng.getNonceGroup(),
+        ng.newNonce()), (s, c, req, done) -> s.modifyTable(c, req, done),
+      (resp) -> resp.getProcId(), new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
   }
 
   @Override
@@ -1515,7 +1526,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
               .<GetReplicationPeerConfigRequest, GetReplicationPeerConfigResponse, ReplicationPeerConfig> call(
                 controller, stub, RequestConverter.buildGetReplicationPeerConfigRequest(peerId), (
                     s, c, req, done) -> s.getReplicationPeerConfig(c, req, done),
-                (resp) -> ReplicationSerDeHelper.convert(resp.getPeerConfig()))).call();
+                (resp) -> ReplicationPeerConfigUtil.convert(resp.getPeerConfig()))).call();
   }
 
   @Override
@@ -1541,7 +1552,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> future = new CompletableFuture<Void>();
     getReplicationPeerConfig(id).whenComplete((peerConfig, error) -> {
       if (!completeExceptionally(future, error)) {
-        ReplicationSerDeHelper.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
+        ReplicationPeerConfigUtil.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
         updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
           if (!completeExceptionally(future, error)) {
             future.complete(result);
@@ -1560,21 +1571,23 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
 
     CompletableFuture<Void> future = new CompletableFuture<Void>();
-    getReplicationPeerConfig(id).whenComplete((peerConfig, error) -> {
-      if (!completeExceptionally(future, error)) {
-        try {
-          ReplicationSerDeHelper.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig, id);
-        } catch (ReplicationException e) {
-          future.completeExceptionally(e);
-          return;
-        }
-        updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
-          if (!completeExceptionally(future, error)) {
-            future.complete(result);
+    getReplicationPeerConfig(id).whenComplete(
+      (peerConfig, error) -> {
+        if (!completeExceptionally(future, error)) {
+          try {
+            ReplicationPeerConfigUtil.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig,
+              id);
+          } catch (ReplicationException e) {
+            future.completeExceptionally(e);
+            return;
           }
-        });
-      }
-    });
+          updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
+            if (!completeExceptionally(future, error)) {
+              future.complete(result);
+            }
+          });
+        }
+      });
     return future;
   }
 
@@ -1602,7 +1615,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
                 request,
                 (s, c, req, done) -> s.listReplicationPeers(c, req, done),
                 (resp) -> resp.getPeerDescList().stream()
-                    .map(ReplicationSerDeHelper::toReplicationPeerDescription)
+                    .map(ReplicationPeerConfigUtil::toReplicationPeerDescription)
                     .collect(Collectors.toList()))).call();
   }
 
@@ -2168,9 +2181,7 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
           returnedFuture.completeExceptionally(err);
           return;
         }
-        LOG.info("location is " + location);
         if (!location.isPresent() || location.get().getRegion() == null) {
-          LOG.info("unknown location is " + location);
           returnedFuture.completeExceptionally(new UnknownRegionException(
               "Invalid region name or encoded region name: "
                   + Bytes.toStringBinary(regionNameOrEncodedRegionName)));
@@ -2320,6 +2331,18 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "CREATE";
+    }
+  }
+
+  private class ModifyTableProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    ModifyTableProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "ENABLE";
     }
   }
 
@@ -3030,5 +3053,255 @@ public class RawAsyncHBaseAdmin implements AsyncAdmin {
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
         .pause(pauseNs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
         .startLogErrorsCnt(startLogErrorsCnt);
+  }
+
+  @Override
+  public CompletableFuture<Void> enableTableReplication(TableName tableName) {
+    if (tableName == null) {
+      return failedFuture(new IllegalArgumentException("Table name is null"));
+    }
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    tableExists(tableName).whenComplete(
+      (exist, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (!exist) {
+          future.completeExceptionally(new TableNotFoundException("Table '"
+              + tableName.getNameAsString() + "' does not exists."));
+          return;
+        }
+        getTableSplits(tableName).whenComplete((splits, err1) -> {
+          if (err1 != null) {
+            future.completeExceptionally(err1);
+          } else {
+            checkAndSyncTableToPeerClusters(tableName, splits).whenComplete((result, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                setTableReplication(tableName, true).whenComplete((result3, err3) -> {
+                  if (err3 != null) {
+                    future.completeExceptionally(err3);
+                  } else {
+                    future.complete(result3);
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> disableTableReplication(TableName tableName) {
+    if (tableName == null) {
+      return failedFuture(new IllegalArgumentException("Table name is null"));
+    }
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    tableExists(tableName).whenComplete(
+      (exist, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (!exist) {
+          future.completeExceptionally(new TableNotFoundException("Table '"
+              + tableName.getNameAsString() + "' does not exists."));
+          return;
+        }
+        setTableReplication(tableName, false).whenComplete((result, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(result);
+          }
+        });
+      });
+    return future;
+  }
+
+  private CompletableFuture<byte[][]> getTableSplits(TableName tableName) {
+    CompletableFuture<byte[][]> future = new CompletableFuture<>();
+    getTableRegions(tableName).whenComplete((regions, err2) -> {
+      if (err2 != null) {
+        future.completeExceptionally(err2);
+        return;
+      }
+      if (regions.size() == 1) {
+        future.complete(null);
+      } else {
+        byte[][] splits = new byte[regions.size() - 1][];
+        for (int i = 1; i < regions.size(); i++) {
+          splits[i - 1] = regions.get(i).getStartKey();
+        }
+        future.complete(splits);
+      }
+    });
+    return future;
+  }
+
+  /**
+   * Connect to peer and check the table descriptor on peer:
+   * <ol>
+   * <li>Create the same table on peer when not exist.</li>
+   * <li>Throw an exception if the table already has replication enabled on any of the column
+   * families.</li>
+   * <li>Throw an exception if the table exists on peer cluster but descriptors are not same.</li>
+   * </ol>
+   * @param tableName name of the table to sync to the peer
+   * @param splits table split keys
+   */
+  private CompletableFuture<Void> checkAndSyncTableToPeerClusters(TableName tableName,
+      byte[][] splits) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    listReplicationPeers().whenComplete(
+      (peers, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (peers == null || peers.size() <= 0) {
+          future.completeExceptionally(new IllegalArgumentException(
+              "Found no peer cluster for replication."));
+          return;
+        }
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        peers.stream().filter(peer -> peer.getPeerConfig().needToReplicate(tableName))
+            .forEach(peer -> {
+              futures.add(trySyncTableToPeerCluster(tableName, splits, peer));
+            });
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+            .whenComplete((result, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                future.complete(result);
+              }
+            });
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> trySyncTableToPeerCluster(TableName tableName, byte[][] splits,
+      ReplicationPeerDescription peer) {
+    Configuration peerConf = null;
+    try {
+      peerConf =
+          ReplicationPeerConfigUtil
+              .getPeerClusterConfiguration(connection.getConfiguration(), peer);
+    } catch (IOException e) {
+      return failedFuture(e);
+    }
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    ConnectionFactory.createAsyncConnection(peerConf).whenComplete(
+      (conn, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        getTableDescriptor(tableName).whenComplete(
+          (tableDesc, err1) -> {
+            if (err1 != null) {
+              future.completeExceptionally(err1);
+              return;
+            }
+            AsyncAdmin peerAdmin = conn.getAdmin();
+            peerAdmin.tableExists(tableName).whenComplete(
+              (exist, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                  return;
+                }
+                if (!exist) {
+                  CompletableFuture<Void> createTableFuture = null;
+                  if (splits == null) {
+                    createTableFuture = peerAdmin.createTable(tableDesc);
+                  } else {
+                    createTableFuture = peerAdmin.createTable(tableDesc, splits);
+                  }
+                  createTableFuture.whenComplete(
+                    (result, err3) -> {
+                      if (err3 != null) {
+                        future.completeExceptionally(err3);
+                      } else {
+                        future.complete(result);
+                      }
+                    });
+                } else {
+                  compareTableWithPeerCluster(tableName, tableDesc, peer, peerAdmin).whenComplete(
+                    (result, err4) -> {
+                      if (err4 != null) {
+                        future.completeExceptionally(err4);
+                      } else {
+                        future.complete(result);
+                      }
+                    });
+                }
+              });
+          });
+      });
+    return future;
+  }
+
+  private CompletableFuture<Void> compareTableWithPeerCluster(TableName tableName,
+      TableDescriptor tableDesc, ReplicationPeerDescription peer, AsyncAdmin peerAdmin) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    peerAdmin.getTableDescriptor(tableName).whenComplete(
+      (peerTableDesc, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (peerTableDesc == null) {
+          future.completeExceptionally(new IllegalArgumentException(
+              "Failed to get table descriptor for table " + tableName.getNameAsString()
+                  + " from peer cluster " + peer.getPeerId()));
+          return;
+        }
+        if (TableDescriptor.COMPARATOR_IGNORE_REPLICATION.compare(peerTableDesc, tableDesc) != 0) {
+          future.completeExceptionally(new IllegalArgumentException("Table "
+              + tableName.getNameAsString() + " exists in peer cluster " + peer.getPeerId()
+              + ", but the table descriptors are not same when compared with source cluster."
+              + " Thus can not enable the table's replication switch."));
+          return;
+        }
+        future.complete(null);
+      });
+    return future;
+  }
+
+  /**
+   * Set the table's replication switch if the table's replication switch is already not set.
+   * @param tableName name of the table
+   * @param enableRep is replication switch enable or disable
+   */
+  private CompletableFuture<Void> setTableReplication(TableName tableName, boolean enableRep) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getTableDescriptor(tableName).whenComplete(
+      (tableDesc, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+          return;
+        }
+        if (!tableDesc.matchReplicationScope(enableRep)) {
+          int scope =
+              enableRep ? HConstants.REPLICATION_SCOPE_GLOBAL : HConstants.REPLICATION_SCOPE_LOCAL;
+          TableDescriptor newTableDesc =
+              TableDescriptorBuilder.newBuilder(tableDesc).setReplicationScope(scope).build();
+          modifyTable(newTableDesc).whenComplete((result, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              future.complete(result);
+            }
+          });
+        } else {
+          future.complete(null);
+        }
+      });
+    return future;
   }
 }

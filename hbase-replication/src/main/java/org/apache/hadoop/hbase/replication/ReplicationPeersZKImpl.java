@@ -35,8 +35,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -131,7 +131,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       List<ZKUtilOp> listOfOps = new ArrayList<>(2);
       ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(getPeerNode(id),
-        ReplicationSerDeHelper.toByteArray(peerConfig));
+        ReplicationPeerConfigUtil.toByteArray(peerConfig));
       // b/w PeerWatcher and ReplicationZookeeper#add method to create the
       // peer-state znode. This happens while adding a peer
       // The peer state data is set as "ENABLED" by default.
@@ -206,9 +206,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       }
       rpc.setTableCFsMap(tableCFs);
       ZKUtil.setData(this.zookeeper, getPeerNode(id),
-          ReplicationSerDeHelper.toByteArray(rpc));
+          ReplicationPeerConfigUtil.toByteArray(rpc));
       LOG.info("Peer tableCFs with id= " + id + " is now " +
-        ReplicationSerDeHelper.convertToString(tableCFs));
+        ReplicationPeerConfigUtil.convertToString(tableCFs));
     } catch (KeeperException e) {
       throw new ReplicationException("Unable to change tableCFs of the peer with id=" + id, e);
     }
@@ -303,7 +303,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
 
     try {
-      return ReplicationSerDeHelper.parsePeerFrom(data);
+      return ReplicationPeerConfigUtil.parsePeerFrom(data);
     } catch (DeserializationException e) {
       LOG.warn("Failed to parse cluster key from peerId=" + peerId
           + ", specifically the content from the following znode: " + znode);
@@ -372,7 +372,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),
-          ReplicationSerDeHelper.toByteArray(existingConfig));
+          ReplicationPeerConfigUtil.toByteArray(existingConfig));
     }
     catch(KeeperException ke){
       throw new ReplicationException("There was a problem trying to save changes to the " +

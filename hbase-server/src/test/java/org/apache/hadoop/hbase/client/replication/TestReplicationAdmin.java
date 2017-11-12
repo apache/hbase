@@ -241,7 +241,7 @@ public class TestReplicationAdmin {
     tableCFs.put(tableName1, null);
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     Map<TableName, List<String>> result =
-      ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+      ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(1, result.size());
     assertEquals(true, result.containsKey(tableName1));
     assertNull(result.get(tableName1));
@@ -250,7 +250,7 @@ public class TestReplicationAdmin {
     tableCFs.clear();
     tableCFs.put(tableName2, null);
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
-    result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+    result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(2, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));
@@ -262,7 +262,7 @@ public class TestReplicationAdmin {
     tableCFs.put(tableName3, new ArrayList<>());
     tableCFs.get(tableName3).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
-    result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+    result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(3, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));
@@ -277,7 +277,7 @@ public class TestReplicationAdmin {
     tableCFs.get(tableName4).add("f1");
     tableCFs.get(tableName4).add("f2");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
-    result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+    result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(4, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));
@@ -299,7 +299,7 @@ public class TestReplicationAdmin {
     tableCFs.put(tableName5, new ArrayList<>());
     tableCFs.get(tableName5).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
-    result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+    result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(5, result.size());
     assertTrue("Should contain t5", result.containsKey(tableName5));
     // null means replication all cfs of tab5
@@ -313,7 +313,7 @@ public class TestReplicationAdmin {
     tableCFs.clear();
     tableCFs.put(tableName6, new ArrayList<>());
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
-    result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+    result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(6, result.size());
     assertTrue("Should contain t6", result.containsKey(tableName6));
     // null means replication all cfs of tab6
@@ -354,7 +354,7 @@ public class TestReplicationAdmin {
     } catch (ReplicationException e) {
     }
     Map<TableName, List<String>> result =
-      ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+      ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(2, result.size());
     assertTrue("Should contain t1", result.containsKey(tableName1));
     assertTrue("Should contain t2", result.containsKey(tableName2));
@@ -373,7 +373,7 @@ public class TestReplicationAdmin {
     tableCFs.clear();
     tableCFs.put(tableName1, null);
     admin.removePeerTableCFs(ID_ONE, tableCFs);
-    result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
+    result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(1, result.size());
     assertEquals(1, result.get(tableName2).size());
     assertEquals("cf1", result.get(tableName2).get(0));
