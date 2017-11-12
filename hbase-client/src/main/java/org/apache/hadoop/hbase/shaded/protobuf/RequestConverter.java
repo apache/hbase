@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -1621,7 +1621,7 @@ public final class RequestConverter {
       String peerId, ReplicationPeerConfig peerConfig) {
     AddReplicationPeerRequest.Builder builder = AddReplicationPeerRequest.newBuilder();
     builder.setPeerId(peerId);
-    builder.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
+    builder.setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
     return builder.build();
   }
 
@@ -1658,7 +1658,7 @@ public final class RequestConverter {
     UpdateReplicationPeerConfigRequest.Builder builder = UpdateReplicationPeerConfigRequest
         .newBuilder();
     builder.setPeerId(peerId);
-    builder.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
+    builder.setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
     return builder.build();
   }
 

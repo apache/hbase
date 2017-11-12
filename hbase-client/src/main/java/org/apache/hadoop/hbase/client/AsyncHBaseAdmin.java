@@ -128,6 +128,11 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> modifyTable(TableDescriptor desc) {
+    return wrap(rawAdmin.modifyTable(desc));
+  }
+
+  @Override
   public CompletableFuture<Void> deleteTable(TableName tableName) {
     return wrap(rawAdmin.deleteTable(tableName));
   }
@@ -417,6 +422,16 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<TableCFs>> listReplicatedTableCFs() {
     return wrap(rawAdmin.listReplicatedTableCFs());
+  }
+
+  @Override
+  public CompletableFuture<Void> enableTableReplication(TableName tableName) {
+    return wrap(rawAdmin.enableTableReplication(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> disableTableReplication(TableName tableName) {
+    return wrap(rawAdmin.disableTableReplication(tableName));
   }
 
   @Override

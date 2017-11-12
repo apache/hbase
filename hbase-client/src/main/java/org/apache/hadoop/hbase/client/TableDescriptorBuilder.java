@@ -33,18 +33,19 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * @since 2.0.0
@@ -406,6 +407,24 @@ public class TableDescriptorBuilder {
 
   public TableDescriptorBuilder setValue(final byte[] key, final byte[] value) {
     desc.setValue(key, value);
+    return this;
+  }
+
+  /**
+   * Sets replication scope all & only the columns already in the builder. Columns added later won't
+   * be backfilled with replication scope.
+   * @param scope replication scope
+   * @return a TableDescriptorBuilder
+   */
+  public TableDescriptorBuilder setReplicationScope(int scope) {
+    Map<byte[], ColumnFamilyDescriptor> newFamilies = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+    newFamilies.putAll(desc.families);
+    newFamilies
+        .forEach((cf, cfDesc) -> {
+          desc.removeColumnFamily(cf);
+          desc.addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfDesc).setScope(scope)
+              .build());
+        });
     return this;
   }
 
