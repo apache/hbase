@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.TimeoutException;
 import org.apache.hadoop.hbase.procedure.Subprocedure.SubprocedureImpl;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -85,8 +85,8 @@ public class TestZKProcedure {
     UTIL.shutdownMiniZKCluster();
   }
 
-  private static ZooKeeperWatcher newZooKeeperWatcher() throws IOException {
-    return new ZooKeeperWatcher(UTIL.getConfiguration(), "testing utility", new Abortable() {
+  private static ZKWatcher newZooKeeperWatcher() throws IOException {
+    return new ZKWatcher(UTIL.getConfiguration(), "testing utility", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException(
@@ -123,7 +123,7 @@ public class TestZKProcedure {
     List<String> expected = Arrays.asList(members);
 
     // setup the constants
-    ZooKeeperWatcher coordZkw = newZooKeeperWatcher();
+    ZKWatcher coordZkw = newZooKeeperWatcher();
     String opDescription = "coordination test - " + members.length + " cohort members";
 
     // start running the controller
@@ -144,7 +144,7 @@ public class TestZKProcedure {
     List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> procMembers = new ArrayList<>(members.length);
     // start each member
     for (String member : members) {
-      ZooKeeperWatcher watcher = newZooKeeperWatcher();
+      ZKWatcher watcher = newZooKeeperWatcher();
       ZKProcedureMemberRpcs comms = new ZKProcedureMemberRpcs(watcher, opDescription);
       ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember procMember = new ProcedureMember(comms, pool2, subprocFactory);
@@ -207,7 +207,7 @@ public class TestZKProcedure {
     final CountDownLatch coordinatorReceivedErrorLatch = new CountDownLatch(1);
 
     // start running the coordinator and its controller
-    ZooKeeperWatcher coordinatorWatcher = newZooKeeperWatcher();
+    ZKWatcher coordinatorWatcher = newZooKeeperWatcher();
     ZKProcedureCoordinator coordinatorController = new ZKProcedureCoordinator(
         coordinatorWatcher, opDescription, COORDINATOR_NODE_NAME);
     ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
@@ -217,7 +217,7 @@ public class TestZKProcedure {
     SubprocedureFactory subprocFactory = Mockito.mock(SubprocedureFactory.class);
     List<Pair<ProcedureMember, ZKProcedureMemberRpcs>> members = new ArrayList<>(expected.size());
     for (String member : expected) {
-      ZooKeeperWatcher watcher = newZooKeeperWatcher();
+      ZKWatcher watcher = newZooKeeperWatcher();
       ZKProcedureMemberRpcs controller = new ZKProcedureMemberRpcs(watcher, opDescription);
       ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember mem = new ProcedureMember(controller, pool2, subprocFactory);

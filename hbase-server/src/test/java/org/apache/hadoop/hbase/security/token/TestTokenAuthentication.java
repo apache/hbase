@@ -76,7 +76,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
@@ -127,7 +127,7 @@ public class TestTokenAuthentication {
     private HBaseTestingUtility TEST_UTIL;
     private RpcServerInterface rpcServer;
     private InetSocketAddress isa;
-    private ZooKeeperWatcher zookeeper;
+    private ZKWatcher zookeeper;
     private Sleeper sleeper;
     private boolean started = false;
     private boolean aborted = false;
@@ -220,7 +220,7 @@ public class TestTokenAuthentication {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zookeeper;
     }
 
@@ -261,7 +261,7 @@ public class TestTokenAuthentication {
       // ZK configuration must _not_ have hbase.security.authentication or it will require SASL auth
       Configuration zkConf = new Configuration(conf);
       zkConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
-      this.zookeeper = new ZooKeeperWatcher(zkConf, TokenServer.class.getSimpleName(),
+      this.zookeeper = new ZKWatcher(zkConf, TokenServer.class.getSimpleName(),
           this, true);
       this.rpcServer.start();
 

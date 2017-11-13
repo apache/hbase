@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -133,7 +134,6 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -2752,7 +2752,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-  public void expireSession(ZooKeeperWatcher nodeZK) throws Exception {
+  public void expireSession(ZKWatcher nodeZK) throws Exception {
    expireSession(nodeZK, false);
   }
 
@@ -2767,7 +2767,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param checkStatus - true to check if we can create a Table with the
    *                    current configuration.
    */
-  public void expireSession(ZooKeeperWatcher nodeZK, boolean checkStatus)
+  public void expireSession(ZKWatcher nodeZK, boolean checkStatus)
     throws Exception {
     Configuration c = new Configuration(this.conf);
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
@@ -2882,18 +2882,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private HBaseAdmin hbaseAdmin = null;
 
   /**
-   * Returns a ZooKeeperWatcher instance.
+   * Returns a ZKWatcher instance.
    * This instance is shared between HBaseTestingUtility instance users.
    * Don't close it, it will be closed automatically when the
    * cluster shutdowns
    *
-   * @return The ZooKeeperWatcher instance.
+   * @return The ZKWatcher instance.
    * @throws IOException
    */
-  public synchronized ZooKeeperWatcher getZooKeeperWatcher()
+  public synchronized ZKWatcher getZooKeeperWatcher()
     throws IOException {
     if (zooKeeperWatcher == null) {
-      zooKeeperWatcher = new ZooKeeperWatcher(conf, "testing utility",
+      zooKeeperWatcher = new ZKWatcher(conf, "testing utility",
         new Abortable() {
         @Override public void abort(String why, Throwable e) {
           throw new RuntimeException("Unexpected abort in HBaseTestingUtility:"+why, e);
@@ -2903,7 +2903,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     return zooKeeperWatcher;
   }
-  private ZooKeeperWatcher zooKeeperWatcher;
+  private ZKWatcher zooKeeperWatcher;
 
 
 
@@ -3508,13 +3508,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Gets a ZooKeeperWatcher.
+   * Gets a ZKWatcher.
    * @param TEST_UTIL
    */
-  public static ZooKeeperWatcher getZooKeeperWatcher(
+  public static ZKWatcher getZooKeeperWatcher(
       HBaseTestingUtility TEST_UTIL) throws ZooKeeperConnectionException,
       IOException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zkw = new ZKWatcher(TEST_UTIL.getConfiguration(),
         "unittest", new Abortable() {
           boolean aborted = false;
 

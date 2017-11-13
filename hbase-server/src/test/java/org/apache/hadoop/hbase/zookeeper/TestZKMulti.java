@@ -53,7 +53,7 @@ import org.junit.experimental.categories.Category;
 public class TestZKMulti {
   private static final Log LOG = LogFactory.getLog(TestZKMulti.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static ZooKeeperWatcher zkw = null;
+  private static ZKWatcher zkw = null;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -70,7 +70,7 @@ public class TestZKMulti {
         return false;
       }
     };
-    zkw = new ZooKeeperWatcher(conf,
+    zkw = new ZKWatcher(conf,
       "TestZKMulti", abortable, true);
   }
 

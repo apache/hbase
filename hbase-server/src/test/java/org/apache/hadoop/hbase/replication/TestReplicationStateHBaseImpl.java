@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -54,7 +54,7 @@ public class TestReplicationStateHBaseImpl {
 
   private static Configuration conf;
   private static HBaseTestingUtility utility;
-  private static ZooKeeperWatcher zkw;
+  private static ZKWatcher zkw;
   private static String replicationZNode;
 
   private static ReplicationQueues rq1;
@@ -413,7 +413,7 @@ public class TestReplicationStateHBaseImpl {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return null;
     }
 

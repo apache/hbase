@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -124,7 +124,7 @@ public class TestMetaTableAccessorNoCluster {
   public void testRideOverServerNotRunning()
       throws IOException, InterruptedException, ServiceException {
     // Need a zk watcher.
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(UTIL.getConfiguration(),
+    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), ABORTABLE, true);
     // This is a servername we use in a few places below.
     ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());

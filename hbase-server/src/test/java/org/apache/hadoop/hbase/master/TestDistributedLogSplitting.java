@@ -41,7 +41,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.logging.Log;
@@ -93,8 +92,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -210,7 +208,7 @@ public class TestDistributedLogSplitting {
     Path rootdir = FSUtils.getRootDir(conf);
 
     int numRegions = 50;
-    Table t = installTable(new ZooKeeperWatcher(conf, "table-creation", null),
+    Table t = installTable(new ZKWatcher(conf, "table-creation", null),
         "table", "family", numRegions);
     try {
       TableName table = t.getName();
@@ -283,7 +281,7 @@ public class TestDistributedLogSplitting {
     // they will consume recovered.edits
     master.balanceSwitch(false);
 
-    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    final ZKWatcher zkw = new ZKWatcher(conf, "table-creation", null);
     Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
     try {
       HRegionServer hrs = findRSToKill(false, "table");
@@ -352,7 +350,7 @@ public class TestDistributedLogSplitting {
     final Path logDir = new Path(rootdir,
       AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
 
-    Table t = installTable(new ZooKeeperWatcher(conf, "table-creation", null),
+    Table t = installTable(new ZKWatcher(conf, "table-creation", null),
         "table", "family", 40);
     try {
       makeWAL(hrs, ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()),
@@ -407,7 +405,7 @@ public class TestDistributedLogSplitting {
 
     startCluster(NUM_RS); // NUM_RS=6.
 
-    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+    final ZKWatcher zkw = new ZKWatcher(conf,
         "distributed log splitting test", null);
 
     Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
@@ -520,7 +518,7 @@ public class TestDistributedLogSplitting {
   public void testReadWriteSeqIdFiles() throws Exception {
     LOG.info("testReadWriteSeqIdFiles");
     startCluster(2);
-    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    final ZKWatcher zkw = new ZKWatcher(conf, "table-creation", null);
     Table ht = installTable(zkw, name.getMethodName(), "family", 10);
     try {
       FileSystem fs = master.getMasterFileSystem().getFileSystem();
@@ -551,12 +549,12 @@ public class TestDistributedLogSplitting {
     }
   }
 
-  Table installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
+  Table installTable(ZKWatcher zkw, String tname, String fname, int nrs) throws Exception {
     return installTable(zkw, tname, fname, nrs, 0);
   }
 
-  Table installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs,
-      int existingRegions) throws Exception {
+  Table installTable(ZKWatcher zkw, String tname, String fname, int nrs,
+                     int existingRegions) throws Exception {
     // Create a table with regions
     TableName table = TableName.valueOf(tname);
     byte [] family = Bytes.toBytes(fname);
@@ -737,7 +735,7 @@ public class TestDistributedLogSplitting {
     return count;
   }
 
-  private void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master) throws Exception {
+  private void blockUntilNoRIT(ZKWatcher zkw, HMaster master) throws Exception {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
   }
 

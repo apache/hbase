@@ -24,13 +24,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -50,7 +50,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
   private final ArrayList<String> otherRegionServers = new ArrayList<>();
   private final ReplicationPeers replicationPeers;
 
-  public ReplicationTrackerZKImpl(ZooKeeperWatcher zookeeper,
+  public ReplicationTrackerZKImpl(ZKWatcher zookeeper,
       final ReplicationPeers replicationPeers, Configuration conf, Abortable abortable,
       Stoppable stopper) {
     super(zookeeper, conf, abortable);
@@ -88,12 +88,12 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
    * Watcher used to be notified of the other region server's death in the local cluster. It
    * initiates the process to transfer the queues if it is able to grab the lock.
    */
-  public class OtherRegionServerWatcher extends ZooKeeperListener {
+  public class OtherRegionServerWatcher extends ZKListener {
 
     /**
      * Construct a ZooKeeper event listener.
      */
-    public OtherRegionServerWatcher(ZooKeeperWatcher watcher) {
+    public OtherRegionServerWatcher(ZKWatcher watcher) {
       super(watcher);
     }
 
@@ -145,12 +145,12 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
   /**
    * Watcher used to follow the creation and deletion of peer clusters.
    */
-  public class PeersWatcher extends ZooKeeperListener {
+  public class PeersWatcher extends ZKListener {
 
     /**
      * Construct a ZooKeeper event listener.
      */
-    public PeersWatcher(ZooKeeperWatcher watcher) {
+    public PeersWatcher(ZKWatcher watcher) {
       super(watcher);
     }
 

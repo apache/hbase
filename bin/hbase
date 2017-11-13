@@ -17,7 +17,7 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 # The hbase command script.  Based on the hadoop command script putting
 # in hbase classes, libs and configurations ahead of hadoop's.
 #
@@ -91,10 +91,10 @@ if [ $# = 0 ]; then
   echo "  hfile           Store file analyzer"
   echo "  zkcli           Run the ZooKeeper shell"
   echo "  master          Run an HBase HMaster node"
-  echo "  regionserver    Run an HBase HRegionServer node" 
+  echo "  regionserver    Run an HBase HRegionServer node"
   echo "  zookeeper       Run a ZooKeeper server"
-  echo "  rest            Run an HBase REST server" 
-  echo "  thrift          Run the HBase Thrift server" 
+  echo "  rest            Run an HBase REST server"
+  echo "  thrift          Run the HBase Thrift server"
   echo "  thrift2         Run the HBase Thrift2 server"
   echo "  clean           Run the HBase clean up script"
   echo "  classpath       Dump hbase CLASSPATH"
@@ -274,7 +274,7 @@ fi
 if $cygwin; then
   JAVA_LIBRARY_PATH=`cygpath -p "$JAVA_LIBRARY_PATH"`
 fi
- 
+
 # restore ordinary behaviour
 unset IFS
 
@@ -362,7 +362,7 @@ elif [ "$COMMAND" = "wal" ] ; then
 elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then
-  CLASS="org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer"
+  CLASS="org.apache.hadoop.hbase.zookeeper.ZKMainServer"
 elif [ "$COMMAND" = "backup" ] ; then
   CLASS='org.apache.hadoop.hbase.backup.BackupDriver'
 elif [ "$COMMAND" = "restore" ] ; then
@@ -422,7 +422,7 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   fi
 elif [ "$COMMAND" = "clean" ] ; then
   case $1 in
-    --cleanZk|--cleanHdfs|--cleanAll) 
+    --cleanZk|--cleanHdfs|--cleanAll)
       matches="yes" ;;
     *) ;;
   esac

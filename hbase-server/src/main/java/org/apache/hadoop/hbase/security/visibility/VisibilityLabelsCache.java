@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUs
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -64,7 +64,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
    */
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-  private VisibilityLabelsCache(ZooKeeperWatcher watcher, Configuration conf) throws IOException {
+  private VisibilityLabelsCache(ZKWatcher watcher, Configuration conf) throws IOException {
     zkVisibilityWatcher = new ZKVisibilityLabelWatcher(watcher, this, conf);
     try {
       zkVisibilityWatcher.start();
@@ -81,7 +81,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
    * @return Singleton instance of VisibilityLabelsCache
    * @throws IOException
    */
-  public synchronized static VisibilityLabelsCache createAndGet(ZooKeeperWatcher watcher,
+  public synchronized static VisibilityLabelsCache createAndGet(ZKWatcher watcher,
       Configuration conf) throws IOException {
     // VisibilityLabelService#init() for different regions (in same RS) passes same instance of
     // watcher as all get the instance from RS.
@@ -99,7 +99,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
    * @return Singleton instance of VisibilityLabelsCache
    * @throws IllegalStateException
    *           when this is called before calling
-   *           {@link #createAndGet(ZooKeeperWatcher, Configuration)}
+   *           {@link #createAndGet(ZKWatcher, Configuration)}
    */
   public static VisibilityLabelsCache get() {
     // By the time this method is called, the singleton instance of VisibilityLabelsCache should

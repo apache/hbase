@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -55,7 +55,7 @@ public class TestTableCFsUpdater extends TableCFsUpdater {
   private static final Log LOG = LogFactory.getLog(TestTableCFsUpdater.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static ZooKeeperWatcher zkw = null;
+  private static ZKWatcher zkw = null;
   private static Abortable abortable = null;
 
   @Rule
@@ -80,7 +80,7 @@ public class TestTableCFsUpdater extends TableCFsUpdater {
         return false;
       }
     };
-    zkw = new ZooKeeperWatcher(conf, "TableCFs", abortable, true);
+    zkw = new ZKWatcher(conf, "TableCFs", abortable, true);
   }
 
   @AfterClass

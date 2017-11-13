@@ -328,7 +328,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns ZooKeeper status dump
     def zk_dump
-      @zk_wrapper = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(
+      @zk_wrapper = org.apache.hadoop.hbase.zookeeper.ZKWatcher.new(
         @admin.getConfiguration,
         'admin',
         nil

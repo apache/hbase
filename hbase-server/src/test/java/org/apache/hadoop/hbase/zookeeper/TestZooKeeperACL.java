@@ -49,9 +49,9 @@ public class TestZooKeeperACL {
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
-  private static ZooKeeperWatcher zkw;
+  private static ZKWatcher zkw;
   private static boolean secureZKAvailable;
-  
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     File saslConfFile = File.createTempFile("tmp", "jaas.conf");
@@ -76,7 +76,7 @@ public class TestZooKeeperACL {
     TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.maxClientCnxns", 1000);
 
     // If Hadoop is missing HADOOP-7070 the cluster will fail to start due to
-    // the JAAS configuration required by ZK being clobbered by Hadoop 
+    // the JAAS configuration required by ZK being clobbered by Hadoop
     try {
       TEST_UTIL.startMiniCluster();
     } catch (IOException e) {
@@ -84,7 +84,7 @@ public class TestZooKeeperACL {
       secureZKAvailable = false;
       return;
     }
-    zkw = new ZooKeeperWatcher(
+    zkw = new ZKWatcher(
       new Configuration(TEST_UTIL.getConfiguration()),
         TestZooKeeper.class.getName(), null);
   }
@@ -112,7 +112,7 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * Create a node and check its ACL. When authentication is enabled on 
+   * Create a node and check its ACL. When authentication is enabled on
    * ZooKeeper, all nodes (except /hbase/root-region-server, /hbase/master
    * and /hbase/hbaseid) should be created so that only the hbase server user
    * (master or region server user) that created them can access them, and
@@ -285,7 +285,7 @@ public class TestZooKeeperACL {
     assertEquals(testJaasConfig, false);
     saslConfFile.delete();
   }
-  
+
   /**
    * Check if Programmatic way of setting zookeeper security settings is valid.
    */

@@ -74,7 +74,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -109,8 +109,8 @@ public class TestVisibilityLabelsReplication {
   public final static byte[] fam = Bytes.toBytes("info");
   public final static byte[] qual = Bytes.toBytes("qual");
   public final static byte[] value = Bytes.toBytes("value");
-  protected static ZooKeeperWatcher zkw1;
-  protected static ZooKeeperWatcher zkw2;
+  protected static ZKWatcher zkw1;
+  protected static ZKWatcher zkw2;
   protected static int expected[] = { 4, 6, 4, 0, 3 };
   private static final String NON_VISIBILITY = "non-visibility";
   protected static String[] expectedVisString = {
@@ -160,7 +160,7 @@ public class TestVisibilityLabelsReplication {
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
-    zkw1 = new ZooKeeperWatcher(conf, "cluster1", null, true);
+    zkw1 = new ZKWatcher(conf, "cluster1", null, true);
     admin = TEST_UTIL.getAdmin();
 
     // Base conf2 on conf1 so it gets the right zk cluster.
@@ -176,7 +176,7 @@ public class TestVisibilityLabelsReplication {
     USER1 = User.createUserForTesting(conf1, "user1", new String[] {});
     TEST_UTIL1 = new HBaseTestingUtility(conf1);
     TEST_UTIL1.setZkCluster(miniZK);
-    zkw2 = new ZooKeeperWatcher(conf1, "cluster2", null, true);
+    zkw2 = new ZKWatcher(conf1, "cluster2", null, true);
 
     TEST_UTIL.startMiniCluster(1);
     // Wait for the labels table to become available

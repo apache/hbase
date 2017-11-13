@@ -26,13 +26,13 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.AuthFailedException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
@@ -50,7 +50,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
 
   private static final Log LOG = LogFactory.getLog(HBaseReplicationEndpoint.class);
 
-  private ZooKeeperWatcher zkw = null; // FindBugs: MT_CORRECTNESS
+  private ZKWatcher zkw = null; // FindBugs: MT_CORRECTNESS
 
   private List<ServerName> regionServers = new ArrayList<>(0);
   private long lastRegionServerUpdate;
@@ -123,7 +123,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Get the ZK connection to this peer
    * @return zk connection
    */
-  protected ZooKeeperWatcher getZkw() {
+  protected ZKWatcher getZkw() {
     return zkw;
   }
 
@@ -133,7 +133,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    */
   void reloadZkWatcher() throws IOException {
     if (zkw != null) zkw.close();
-    zkw = new ZooKeeperWatcher(ctx.getConfiguration(),
+    zkw = new ZKWatcher(ctx.getConfiguration(),
         "connection to cluster: " + ctx.getPeerId(), this);
     getZkw().registerListener(new PeerRegionServerListener(this));
   }
@@ -155,7 +155,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * @param zkw zk connection to use
    * @return list of region server addresses or an empty list if the slave is unavailable
    */
-  protected static List<ServerName> fetchSlavesAddresses(ZooKeeperWatcher zkw)
+  protected static List<ServerName> fetchSlavesAddresses(ZKWatcher zkw)
       throws KeeperException {
     List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.znodePaths.rsZNode);
     if (children == null) {
@@ -210,7 +210,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   /**
    * Tracks changes to the list of region servers in a peer's cluster.
    */
-  public static class PeerRegionServerListener extends ZooKeeperListener {
+  public static class PeerRegionServerListener extends ZKListener {
 
     private final HBaseReplicationEndpoint replicationEndpoint;
     private final String regionServerListNode;

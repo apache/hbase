@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
@@ -47,7 +47,7 @@ public class TableCFsUpdater extends ReplicationStateZKBase {
 
   private static final Log LOG = LogFactory.getLog(TableCFsUpdater.class);
 
-  public TableCFsUpdater(ZooKeeperWatcher zookeeper,
+  public TableCFsUpdater(ZKWatcher zookeeper,
                          Configuration conf, Abortable abortable) {
     super(zookeeper, conf, abortable);
   }
@@ -137,7 +137,7 @@ public class TableCFsUpdater extends ReplicationStateZKBase {
       printUsageAndExit();
     } else if (args[0].equals("update")) {
       Configuration conf = HBaseConfiguration.create();
-      ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "TableCFsUpdater", null);
+      ZKWatcher zkw = new ZKWatcher(conf, "TableCFsUpdater", null);
       try {
         TableCFsUpdater tableCFsUpdater = new TableCFsUpdater(zkw, conf, null);
         tableCFsUpdater.update();

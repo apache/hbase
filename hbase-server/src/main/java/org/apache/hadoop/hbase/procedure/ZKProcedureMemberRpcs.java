@@ -23,13 +23,13 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -61,12 +61,12 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
 
   /**
    * Must call {@link #start(String, ProcedureMember)} before this can be used.
-   * @param watcher {@link ZooKeeperWatcher} to be owned by <tt>this</tt>. Closed via
+   * @param watcher {@link ZKWatcher} to be owned by <tt>this</tt>. Closed via
    *          {@link #close()}.
    * @param procType name of the znode describing the procedure type
    * @throws KeeperException if we can't reach zookeeper
    */
-  public ZKProcedureMemberRpcs(final ZooKeeperWatcher watcher, final String procType)
+  public ZKProcedureMemberRpcs(final ZKWatcher watcher, final String procType)
       throws KeeperException {
     this.zkController = new ZKProcedureUtil(watcher, procType) {
       @Override

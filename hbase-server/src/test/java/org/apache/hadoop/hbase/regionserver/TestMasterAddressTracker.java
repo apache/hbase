@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -80,7 +80,7 @@ public class TestMasterAddressTracker {
    */
   private MasterAddressTracker setupMasterTracker(final ServerName sn, final int infoPort)
       throws Exception {
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
         name.getMethodName(), null);
     ZKUtil.createAndFailSilent(zk, zk.znodePaths.baseZNode);
 
@@ -156,13 +156,13 @@ public class TestMasterAddressTracker {
     assertEquals("Should receive 0 for backup not found.", 0, addressTracker.getMasterInfoPort());
   }
 
-  public static class NodeCreationListener extends ZooKeeperListener {
+  public static class NodeCreationListener extends ZKListener {
     private static final Log LOG = LogFactory.getLog(NodeCreationListener.class);
 
     private Semaphore lock;
     private String node;
 
-    public NodeCreationListener(ZooKeeperWatcher watcher, String node) {
+    public NodeCreationListener(ZKWatcher watcher, String node) {
       super(watcher);
       lock = new Semaphore(0);
       this.node = node;

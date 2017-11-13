@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
@@ -211,7 +211,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     ClusterConnection connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
 
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "DumpReplicationQueues" + System.currentTimeMillis(),
+    ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" + System.currentTimeMillis(),
         new WarnOnlyAbortable(), true);
 
     try {
@@ -302,8 +302,8 @@ public class DumpReplicationQueues extends Configured implements Tool {
     return sb.toString();
   }
 
-  public String dumpQueues(ClusterConnection connection, ZooKeeperWatcher zkw, Set<String> peerIds,
-      boolean hdfs) throws Exception {
+  public String dumpQueues(ClusterConnection connection, ZKWatcher zkw, Set<String> peerIds,
+                           boolean hdfs) throws Exception {
     ReplicationQueuesClient queuesClient;
     ReplicationPeers replicationPeers;
     ReplicationQueues replicationQueues;

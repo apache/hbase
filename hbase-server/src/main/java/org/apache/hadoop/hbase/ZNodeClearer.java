@@ -32,8 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -132,7 +132,7 @@ public class ZNodeClearer {
    * @param rsZnodePath from HBASE_ZNODE_FILE
    * @return String representation of ServerName or null if fails
    */
-  
+
   public static String parseMasterServerName(String rsZnodePath) {
     String masterServerName = null;
     try {
@@ -141,12 +141,12 @@ public class ZNodeClearer {
     } catch (IndexOutOfBoundsException e) {
       LOG.warn("String " + rsZnodePath + " has wrong format", e);
     }
-    return masterServerName; 
+    return masterServerName;
   }
-  
+
   /**
-   * 
-   * @return true if cluster is configured with master-rs collocation 
+   *
+   * @return true if cluster is configured with master-rs collocation
    */
   private static boolean tablesOnMaster(Configuration conf) {
     boolean tablesOnMaster = true;
@@ -167,9 +167,9 @@ public class ZNodeClearer {
     Configuration tempConf = new Configuration(conf);
     tempConf.setInt("zookeeper.recovery.retry", 0);
 
-    ZooKeeperWatcher zkw;
+    ZKWatcher zkw;
     try {
-      zkw = new ZooKeeperWatcher(tempConf, "clean znode for master",
+      zkw = new ZKWatcher(tempConf, "clean znode for master",
           new Abortable() {
             @Override public void abort(String why, Throwable e) {}
             @Override public boolean isAborted() { return false; }

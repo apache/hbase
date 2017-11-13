@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runners.Parameterized.Parameter;
@@ -64,8 +64,8 @@ public class TestReplicationBase {
   protected static Configuration conf2;
   protected static Configuration CONF_WITH_LOCALFS;
 
-  protected static ZooKeeperWatcher zkw1;
-  protected static ZooKeeperWatcher zkw2;
+  protected static ZKWatcher zkw1;
+  protected static ZKWatcher zkw2;
 
   protected static ReplicationAdmin admin;
   protected static Admin hbaseAdmin;
@@ -127,8 +127,8 @@ public class TestReplicationBase {
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     // Have to reget conf1 in case zk cluster location different
     // than default
-    conf1 = utility1.getConfiguration();  
-    zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null, true);
+    conf1 = utility1.getConfiguration();
+    zkw1 = new ZKWatcher(conf1, "cluster1", null, true);
     admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
@@ -140,7 +140,7 @@ public class TestReplicationBase {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null, true);
+    zkw2 = new ZKWatcher(conf2, "cluster2", null, true);
     LOG.info("Setup second Zk");
 
     CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);

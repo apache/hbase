@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -70,7 +70,7 @@ public class TestActiveMasterManager {
   }
 
   @Test public void testRestartMaster() throws IOException, KeeperException {
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
       ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
@@ -112,7 +112,7 @@ public class TestActiveMasterManager {
    */
   @Test
   public void testActiveMasterManagerFromZK() throws Exception {
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
       ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
@@ -135,7 +135,7 @@ public class TestActiveMasterManager {
     ClusterStatusTracker clusterStatusTracker =
       ms1.getClusterStatusTracker();
     clusterStatusTracker.setClusterUp();
-    activeMasterManager.blockUntilBecomingActiveMaster(100, 
+    activeMasterManager.blockUntilBecomingActiveMaster(100,
         Mockito.mock(MonitoredTask.class));
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, firstMasterAddress);
@@ -193,9 +193,9 @@ public class TestActiveMasterManager {
    * @param zk
    * @param thisMasterAddress
    * @throws KeeperException
-   * @throws IOException 
+   * @throws IOException
    */
-  private void assertMaster(ZooKeeperWatcher zk,
+  private void assertMaster(ZKWatcher zk,
       ServerName expectedAddress)
   throws KeeperException, IOException {
     ServerName readAddress = MasterAddressTracker.getMasterAddress(zk);
@@ -209,7 +209,7 @@ public class TestActiveMasterManager {
     DummyMaster dummyMaster;
     boolean isActiveMaster;
 
-    public WaitToBeMasterThread(ZooKeeperWatcher zk, ServerName address) {
+    public WaitToBeMasterThread(ZKWatcher zk, ServerName address) {
       this.dummyMaster = new DummyMaster(zk,address);
       this.manager = this.dummyMaster.getActiveMasterManager();
       isActiveMaster = false;
@@ -224,13 +224,13 @@ public class TestActiveMasterManager {
     }
   }
 
-  public static class NodeDeletionListener extends ZooKeeperListener {
+  public static class NodeDeletionListener extends ZKListener {
     private static final Log LOG = LogFactory.getLog(NodeDeletionListener.class);
 
     private Semaphore lock;
     private String node;
 
-    public NodeDeletionListener(ZooKeeperWatcher watcher, String node) {
+    public NodeDeletionListener(ZKWatcher watcher, String node) {
       super(watcher);
       lock = new Semaphore(0);
       this.node = node;
@@ -257,7 +257,7 @@ public class TestActiveMasterManager {
     private ClusterStatusTracker clusterStatusTracker;
     private ActiveMasterManager activeMasterManager;
 
-    public DummyMaster(ZooKeeperWatcher zk, ServerName master) {
+    public DummyMaster(ZKWatcher zk, ServerName master) {
       this.clusterStatusTracker =
         new ClusterStatusTracker(zk, this);
       clusterStatusTracker.start();
@@ -269,7 +269,7 @@ public class TestActiveMasterManager {
 
     @Override
     public void abort(final String msg, final Throwable t) {}
-    
+
     @Override
     public boolean isAborted() {
       return false;
@@ -281,7 +281,7 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return null;
     }
 

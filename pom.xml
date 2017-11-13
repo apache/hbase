@@ -90,6 +90,7 @@
     <module>hbase-metrics-api</module>
     <module>hbase-metrics</module>
     <module>hbase-backup</module>
+    <module>hbase-zookeeper</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
@@ -1681,6 +1682,11 @@
       </dependency>
       <dependency>
         <artifactId>hbase-resource-bundle</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-zookeeper</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
       </dependency>

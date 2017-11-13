@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -67,7 +68,6 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 @InterfaceAudience.Private
 public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService {
@@ -120,7 +120,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     // This is a CoreCoprocessor. On creation, we should have gotten an environment that
     // implements HasRegionServerServices so we can get at RSS. FIX!!!! Integrate this CP as
     // native service.
-    ZooKeeperWatcher zk = ((HasRegionServerServices)e).getRegionServerServices().getZooKeeper();
+    ZKWatcher zk = ((HasRegionServerServices)e).getRegionServerServices().getZooKeeper();
     try {
       labelsCache = VisibilityLabelsCache.createAndGet(zk, this.conf);
     } catch (IOException ioe) {

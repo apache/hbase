@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -66,7 +66,7 @@ public class TestHMasterRPCException {
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 2000);
     testUtil.startMiniZKCluster();
 
-    ZooKeeperWatcher watcher = testUtil.getZooKeeperWatcher();
+    ZKWatcher watcher = testUtil.getZooKeeperWatcher();
     ZKUtil.createWithParents(watcher, watcher.znodePaths.masterAddressZNode, Bytes.toBytes("fake:123"));
     master = new HMaster(conf);
     rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);

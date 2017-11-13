@@ -16,7 +16,7 @@
 @rem * See the License for the specific language governing permissions and
 @rem * limitations under the License.
 @rem */
-@rem 
+@rem
 @rem The hbase command script.  Based on the hadoop command script putting
 @rem in hbase classes, libs and configurations ahead of hadoop's.
 @rem
@@ -197,7 +197,7 @@ if exist "%HBASE_HOME%\build\native" (
 rem This loop would set %hbase-command-arguments%
 set _hbasearguments=
 :MakeCmdArgsLoop
-  if [%1]==[] goto :EndLoop 
+  if [%1]==[] goto :EndLoop
 
   if not defined _hbasearguments (
     set _hbasearguments=%1
@@ -205,8 +205,8 @@ set _hbasearguments=
     set _hbasearguments=!_hbasearguments! %1
   )
   shift
-goto :MakeCmdArgsLoop 
-:EndLoop 
+goto :MakeCmdArgsLoop
+:EndLoop
 
 set hbase-command-arguments=%_hbasearguments%
 
@@ -424,7 +424,7 @@ goto :eof
   goto :eof
 
 :zkcli
-  set CLASS=org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer
+  set CLASS=org.apache.hadoop.hbase.zookeeper.ZKMainServer
   goto :eof
 
 :mapredcp

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,7 +99,7 @@ public class TestRegionServerHostname {
         TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, hostName);
         TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
         try {
-          ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+          ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
           List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
           // there would be NUM_RS+1 children - one for the master
           assertTrue(servers.size() ==
@@ -160,7 +160,7 @@ public class TestRegionServerHostname {
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     int expectedRS = NUM_RS + (tablesOnMaster? 1: 0);
-    try (ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {
+    try (ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {
       List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
       assertEquals(expectedRS, servers.size());
     }

@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -43,7 +43,7 @@ public class TestReplicationTableBase {
   private static long TIME_OUT_MILLIS = 3000;
   private static Configuration conf;
   private static HBaseTestingUtility utility;
-  private static ZooKeeperWatcher zkw;
+  private static ZKWatcher zkw;
   private static ReplicationTableBase rb;
   private static ReplicationQueues rq;
   private static ReplicationQueuesClient rqc;

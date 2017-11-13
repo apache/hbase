@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -64,7 +65,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MapReduceCell;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -608,10 +608,10 @@ public class Import extends Configured implements Tool {
         LOG.info("setting WAL durability to default.");
       }
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
-      ZooKeeperWatcher zkw = null;
+      ZKWatcher zkw = null;
       Exception ex = null;
       try {
-        zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
+        zkw = new ZKWatcher(conf, context.getTaskAttemptID().toString(), null);
         clusterIds = Collections.singletonList(ZKClusterId.getUUIDForCluster(zkw));
       } catch (ZooKeeperConnectionException e) {
         ex = e;

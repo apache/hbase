@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -67,7 +67,7 @@ public class TestReplicationTrackerZKImpl {
   private static HBaseTestingUtility utility;
 
   // Each one of the below variables are reinitialized before every test case
-  private ZooKeeperWatcher zkw;
+  private ZKWatcher zkw;
   private ReplicationPeers rp;
   private ReplicationTracker rt;
   private AtomicInteger rsRemovedCount;
@@ -82,7 +82,7 @@ public class TestReplicationTrackerZKImpl {
     utility = new HBaseTestingUtility();
     utility.startMiniZKCluster();
     conf = utility.getConfiguration();
-    ZooKeeperWatcher zk = HBaseTestingUtility.getZooKeeperWatcher(utility);
+    ZKWatcher zk = HBaseTestingUtility.getZooKeeperWatcher(utility);
     ZKUtil.createWithParents(zk, zk.znodePaths.rsZNode);
   }
 
@@ -193,7 +193,7 @@ public class TestReplicationTrackerZKImpl {
     int exists = 0;
     int hyphen = 0;
     rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    
+
     try{
       rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     }catch(IllegalArgumentException e){
@@ -207,11 +207,11 @@ public class TestReplicationTrackerZKImpl {
     }
     assertEquals(1, exists);
     assertEquals(1, hyphen);
-    
+
     // clean up
     rp.unregisterPeer("6");
   }
-  
+
   private class DummyReplicationListener implements ReplicationListener {
 
     @Override
@@ -252,7 +252,7 @@ public class TestReplicationTrackerZKImpl {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zkw;
     }
 

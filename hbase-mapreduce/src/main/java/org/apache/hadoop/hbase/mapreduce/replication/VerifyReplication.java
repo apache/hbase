@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -330,10 +330,10 @@ public class VerifyReplication extends Configured implements Tool {
 
   private static Pair<ReplicationPeerConfig, Configuration> getPeerQuorumConfig(
       final Configuration conf, String peerId) throws IOException {
-    ZooKeeperWatcher localZKW = null;
+    ZKWatcher localZKW = null;
     ReplicationPeerZKImpl peer = null;
     try {
-      localZKW = new ZooKeeperWatcher(conf, "VerifyReplication",
+      localZKW = new ZKWatcher(conf, "VerifyReplication",
           new Abortable() {
             @Override public void abort(String why, Throwable e) {}
             @Override public boolean isAborted() {return false;}

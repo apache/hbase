@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -132,7 +132,7 @@ public class TestMetaWithReplicas {
   @Test
   public void testZookeeperNodesForReplicas() throws Exception {
     // Checks all the znodes exist when meta's replicas are enabled
-    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     Configuration conf = TEST_UTIL.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
@@ -166,7 +166,7 @@ public class TestMetaWithReplicas {
     // server holding the primary meta replica. Then it does a put/get into/from
     // the test table. The put/get operations would use the replicas to locate the
     // location of the test table's region
-    ZooKeeperWatcher zkw = util.getZooKeeperWatcher();
+    ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
     conf.setBoolean(HConstants.USE_META_REPLICAS, true);
 
@@ -368,7 +368,7 @@ public class TestMetaWithReplicas {
         false, false);
     HBaseFsckRepair.closeRegionSilentlyAndWait(c,
         rl.getRegionLocation(2).getServerName(), rl.getRegionLocation(2).getRegionInfo());
-    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     ZKUtil.deleteNode(zkw, zkw.znodePaths.getZNodeForReplica(2));
     // check that problem exists
     HBaseFsck hbck = doFsck(TEST_UTIL.getConfiguration(), false);
@@ -400,7 +400,7 @@ public class TestMetaWithReplicas {
     // caches update themselves. Uses the master operations to test
     // this
     Configuration conf = TEST_UTIL.getConfiguration();
-    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
+    ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,

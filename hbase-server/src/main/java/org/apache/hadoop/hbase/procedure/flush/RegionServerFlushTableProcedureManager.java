@@ -48,9 +48,8 @@ import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.procedure.ZKProcedureMemberRpcs;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -320,7 +319,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
   @Override
   public void initialize(RegionServerServices rss) throws KeeperException {
     this.rss = rss;
-    ZooKeeperWatcher zkw = rss.getZooKeeper();
+    ZKWatcher zkw = rss.getZooKeeper();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw,
       MasterFlushTableProcedureManager.FLUSH_TABLE_PROCEDURE_SIGNATURE);
 

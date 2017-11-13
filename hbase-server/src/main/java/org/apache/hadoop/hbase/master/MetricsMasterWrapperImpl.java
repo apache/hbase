@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 /**
  * Impl for exposing HMaster Information through JMX
@@ -70,7 +70,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   @Override
   public String getZookeeperQuorum() {
-    ZooKeeperWatcher zk = master.getZooKeeper();
+    ZKWatcher zk = master.getZooKeeper();
     if (zk == null) {
       return "";
     }
@@ -100,7 +100,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     }
     return StringUtils.join(serverManager.getOnlineServers().keySet(), ";");
   }
-  
+
   @Override
   public int getNumRegionServers() {
     ServerManager serverManager = this.master.getServerManager();
@@ -119,7 +119,7 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return StringUtils.join(serverManager.getDeadServers().copyServerNames(), ";");
   }
 
-  
+
   @Override
   public int getNumDeadRegionServers() {
     ServerManager serverManager = this.master.getServerManager();

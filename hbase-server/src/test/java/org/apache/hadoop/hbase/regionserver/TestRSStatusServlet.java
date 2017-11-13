@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -92,7 +92,7 @@ public class TestRSStatusServlet {
     Mockito.doReturn(fakeResponse).when(rpcServices).getServerInfo(
       (RpcController)Mockito.any(), (GetServerInfoRequest)Mockito.any());
     // Fake ZKW
-    ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
+    ZKWatcher zkw = Mockito.mock(ZKWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(rs).getZooKeeper();
 

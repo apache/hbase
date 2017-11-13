@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -187,7 +187,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public String getZookeeperQuorum() {
-    ZooKeeperWatcher zk = regionServer.getZooKeeper();
+    ZKWatcher zk = regionServer.getZooKeeper();
     if (zk == null) {
       return "";
     }

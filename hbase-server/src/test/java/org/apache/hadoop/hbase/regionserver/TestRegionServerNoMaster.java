@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -106,7 +106,7 @@ public class TestRegionServerNoMaster {
     // so that regions can be assigned during the mocking phase.
     HRegionServer hrs = HTU.getHBaseCluster()
       .getLiveRegionServerThreads().get(0).getRegionServer();
-    ZooKeeperWatcher zkw = hrs.getZooKeeper();
+    ZKWatcher zkw = hrs.getZooKeeper();
     MetaTableLocator mtl = new MetaTableLocator();
     ServerName sn = mtl.getMetaRegionLocation(zkw);
     if (sn != null && !masterAddr.equals(sn)) {

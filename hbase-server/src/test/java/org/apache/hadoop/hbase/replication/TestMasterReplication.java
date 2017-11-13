@@ -75,8 +75,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -203,7 +203,7 @@ public class TestMasterReplication {
     Table[] htables = getHTablesOnClusters(tableName);
     putAndWait(row, famName, htables[0], htables[0]);
     rollWALAndWait(utilities[0], table.getTableName(), row);
-    ZooKeeperWatcher zkw = utilities[0].getZooKeeperWatcher();
+    ZKWatcher zkw = utilities[0].getZooKeeperWatcher();
     String queuesZnode = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode,
       ZNodePaths.joinZNode("replication", "rs"));
     List<String> listChildrenNoWatch =
@@ -493,7 +493,7 @@ public class TestMasterReplication {
       utility.startMiniCluster();
       utilities[i] = utility;
       configurations[i] = conf;
-      new ZooKeeperWatcher(conf, "cluster" + i, null, true);
+      new ZKWatcher(conf, "cluster" + i, null, true);
     }
   }
 

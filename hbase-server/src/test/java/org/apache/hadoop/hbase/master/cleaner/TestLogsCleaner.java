@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
@@ -234,7 +234,7 @@ public class TestLogsCleaner {
 
     // when zk is working both files should be returned
     cleaner = new ReplicationLogCleaner();
-    try (ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testZooKeeperAbort-normal", null)) {
+    try (ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null)) {
       cleaner.setConf(conf, zkw);
       cleaner.preClean();
       Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
@@ -255,9 +255,9 @@ public class TestLogsCleaner {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       try {
-        return new ZooKeeperWatcher(getConfiguration(), "dummy server", this);
+        return new ZKWatcher(getConfiguration(), "dummy server", this);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -321,7 +321,7 @@ public class TestLogsCleaner {
     }
   }
 
-  static class FaultyZooKeeperWatcher extends ZooKeeperWatcher {
+  static class FaultyZooKeeperWatcher extends ZKWatcher {
     private RecoverableZooKeeper zk;
 
     public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)

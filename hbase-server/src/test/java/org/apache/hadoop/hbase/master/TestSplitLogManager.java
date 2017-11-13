@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -84,7 +84,7 @@ public class TestSplitLogManager {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
 
-  private ZooKeeperWatcher zkw;
+  private ZKWatcher zkw;
   private DummyMasterServices master;
   private SplitLogManager slm;
   private Configuration conf;
@@ -93,17 +93,17 @@ public class TestSplitLogManager {
   private static HBaseTestingUtility TEST_UTIL;
 
   class DummyMasterServices extends MockNoopMasterServices {
-    private ZooKeeperWatcher zkw;
+    private ZKWatcher zkw;
     private CoordinatedStateManager cm;
 
-    public DummyMasterServices(ZooKeeperWatcher zkw, Configuration conf) {
+    public DummyMasterServices(ZKWatcher zkw, Configuration conf) {
       super(conf);
       this.zkw = zkw;
       cm = new ZkCoordinatedStateManager(this);
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zkw;
     }
 
@@ -125,7 +125,7 @@ public class TestSplitLogManager {
     conf = TEST_UTIL.getConfiguration();
     // Use a different ZK wrapper instance for each tests.
     zkw =
-        new ZooKeeperWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
+        new ZKWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
     master = new DummyMasterServices(zkw, conf);
 
     ZKUtil.deleteChildrenRecursively(zkw, zkw.znodePaths.baseZNode);

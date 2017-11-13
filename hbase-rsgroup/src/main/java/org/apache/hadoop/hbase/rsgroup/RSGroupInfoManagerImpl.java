@@ -77,8 +77,8 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
@@ -141,7 +141,7 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private final MasterServices masterServices;
   private Table rsGroupTable;
   private final ClusterConnection conn;
-  private final ZooKeeperWatcher watcher;
+  private final ZKWatcher watcher;
   private final RSGroupStartupWorker rsGroupStartupWorker = new RSGroupStartupWorker();
   // contains list of groups that were last flushed to persistent store
   private Set<String> prevRSGroups = new HashSet<>();

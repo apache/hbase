@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -66,7 +66,7 @@ public class TestMetaTableLocator {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final ServerName SN =
       ServerName.valueOf("example.org", 1234, System.currentTimeMillis());
-  private ZooKeeperWatcher watcher;
+  private ZKWatcher watcher;
   private Abortable abortable;
 
   @BeforeClass public static void beforeClass() throws Exception {
@@ -91,7 +91,7 @@ public class TestMetaTableLocator {
         return false;
       }
     };
-    this.watcher = new ZooKeeperWatcher(UTIL.getConfiguration(),
+    this.watcher = new ZKWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), this.abortable, true);
   }
 

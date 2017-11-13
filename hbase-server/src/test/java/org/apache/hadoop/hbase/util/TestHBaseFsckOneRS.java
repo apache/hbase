@@ -86,7 +86,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1493,7 +1493,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     Assert.assertEquals(1, replicationAdmin.getPeersCount());
 
     // create replicator
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "Test Hbase Fsck", connection);
+    ZKWatcher zkw = new ZKWatcher(conf, "Test Hbase Fsck", connection);
     ReplicationQueues repQueues =
         ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, connection,
           zkw));

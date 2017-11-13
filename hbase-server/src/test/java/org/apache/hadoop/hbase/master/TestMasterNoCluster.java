@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -105,7 +105,7 @@ public class TestMasterNoCluster {
   public void tearDown()
   throws KeeperException, ZooKeeperConnectionException, IOException {
     // Make sure zk is clean before we run the next test.
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TESTUTIL.getConfiguration(),
+    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(),
         "@Before", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {

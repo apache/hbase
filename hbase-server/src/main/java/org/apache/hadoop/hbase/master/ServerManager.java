@@ -42,7 +42,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLoad;
@@ -59,7 +58,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
@@ -507,7 +506,7 @@ public class ServerManager {
   void letRegionServersShutdown() {
     long previousLogTime = 0;
     ServerName sn = master.getServerName();
-    ZooKeeperWatcher zkw = master.getZooKeeper();
+    ZKWatcher zkw = master.getZooKeeper();
     int onlineServersCt;
     while ((onlineServersCt = onlineServers.size()) > 0){
 
@@ -554,7 +553,7 @@ public class ServerManager {
     }
   }
 
-  private List<String> getRegionServersInZK(final ZooKeeperWatcher zkw)
+  private List<String> getRegionServersInZK(final ZKWatcher zkw)
   throws KeeperException {
     return ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
   }
