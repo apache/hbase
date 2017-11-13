@@ -431,15 +431,15 @@ function hbaseanti_patchfile
 
   start_clock
 
-  warnings=$(${GREP} 'new TreeMap<byte.*()' "${patchfile}")
+  warnings=$(${GREP} -c 'new TreeMap<byte.*()' "${patchfile}")
   if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted: ${warnings}."
+    add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted."
     ((result=result+1))
   fi
 
-  warnings=$(${GREP} 'import org.apache.hadoop.classification' "${patchfile}")
+  warnings=$(${GREP} -c 'import org.apache.hadoop.classification' "${patchfile}")
   if [[ ${warnings} -gt 0 ]]; then
-    add_vote_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase: ${warnings}."
+    add_vote_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase."
     ((result=result+1))
   fi
 
