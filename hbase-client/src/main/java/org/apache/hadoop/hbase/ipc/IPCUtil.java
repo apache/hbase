@@ -315,4 +315,12 @@ public class IPCUtil {
     Preconditions.checkArgument(totalSize < Integer.MAX_VALUE);
     return totalSize;
   }
+
+  static IOException toIOE(Throwable t) {
+    if (t instanceof IOException) {
+      return (IOException) t;
+    } else {
+      return new IOException(t);
+    }
+  }
 }
