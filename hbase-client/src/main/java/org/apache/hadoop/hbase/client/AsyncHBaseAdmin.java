@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.RpcChannel;
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -28,8 +30,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -45,16 +45,18 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.protobuf.RpcChannel;
-
 /**
- * The implementation of AsyncAdmin.
+ * Just a wrapper of {@link RawAsyncHBaseAdmin}. The difference is that users need to provide a
+ * thread pool when constructing this class, and the callback methods registered to the returned
+ * {@link CompletableFuture} will be executed in this thread pool. So usually it is safe for users
+ * to do anything they want in the callbacks without breaking the rpc framework.
  * @since 2.0.0
+ * @see RawAsyncHBaseAdmin
+ * @see AsyncConnection#getAdmin(ExecutorService)
+ * @see AsyncConnection#getAdminBuilder(ExecutorService)
  */
 @InterfaceAudience.Private
 public class AsyncHBaseAdmin implements AsyncAdmin {
-
-  private static final Log LOG = LogFactory.getLog(AsyncHBaseAdmin.class);
 
   private final RawAsyncHBaseAdmin rawAdmin;
 

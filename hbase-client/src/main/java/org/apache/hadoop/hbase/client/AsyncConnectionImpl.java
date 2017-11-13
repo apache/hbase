@@ -282,7 +282,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     return new AsyncAdminBuilderBase(connConf) {
       @Override
       public AsyncAdmin build() {
-        return new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, this);
+        return new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
       }
     };
   }
@@ -292,7 +292,8 @@ class AsyncConnectionImpl implements AsyncConnection {
     return new AsyncAdminBuilderBase(connConf) {
       @Override
       public AsyncAdmin build() {
-        RawAsyncHBaseAdmin rawAdmin = new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, this);
+        RawAsyncHBaseAdmin rawAdmin =
+            new RawAsyncHBaseAdmin(AsyncConnectionImpl.this, RETRY_TIMER, this);
         return new AsyncHBaseAdmin(rawAdmin, pool);
       }
     };
