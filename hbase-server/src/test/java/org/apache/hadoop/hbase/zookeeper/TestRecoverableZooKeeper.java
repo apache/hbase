@@ -71,7 +71,7 @@ public class TestRecoverableZooKeeper {
   public void testSetDataVersionMismatchInLoop() throws Exception {
     String znode = "/hbase/splitWAL/9af7cfc9b15910a0b3d714bf40a3248f";
     Configuration conf = TEST_UTIL.getConfiguration();
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testSetDataVersionMismatchInLoop",
+    ZKWatcher zkw = new ZKWatcher(conf, "testSetDataVersionMismatchInLoop",
         abortable, true);
     String ensemble = ZKConfig.getZKQuorumServersString(conf);
     RecoverableZooKeeper rzk = ZKUtil.connect(conf, ensemble, zkw);

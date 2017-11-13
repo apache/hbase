@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.TestTableName;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -509,7 +509,7 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Namespace needs this, as they follow the lazy creation of ACL znode.
     grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
-    ZooKeeperWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
+    ZKWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
     assertTrue("The acl znode for table should exist",  ZKUtil.checkExists(zkw, baseAclZNode +
         table.getNameAsString()) != -1);
     assertTrue("The acl znode for namespace should exist", ZKUtil.checkExists(zkw, baseAclZNode +

@@ -42,12 +42,12 @@ import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKMetadata;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
@@ -60,7 +60,7 @@ import org.apache.zookeeper.data.Stat;
  *
  */
 @InterfaceAudience.Private
-public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
+public class ZkSplitLogWorkerCoordination extends ZKListener implements
     SplitLogWorkerCoordination {
 
   private static final Log LOG = LogFactory.getLog(ZkSplitLogWorkerCoordination.class);
@@ -85,13 +85,13 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
   private final ServerName serverName;
 
-  public ZkSplitLogWorkerCoordination(ServerName serverName, ZooKeeperWatcher watcher) {
+  public ZkSplitLogWorkerCoordination(ServerName serverName, ZKWatcher watcher) {
     super(watcher);
     this.serverName = serverName;
   }
 
   /**
-   * Override handler from {@link ZooKeeperListener}
+   * Override handler from {@link ZKListener}
    */
   @Override
   public void nodeChildrenChanged(String path) {
@@ -107,7 +107,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   }
 
   /**
-   * Override handler from {@link ZooKeeperListener}
+   * Override handler from {@link ZKListener}
    */
   @Override
   public void nodeDataChanged(String path) {
@@ -353,7 +353,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * @param taskZKVersion version of the task in zk
    * @return non-negative integer value when task can be owned by current region server otherwise -1
    */
-  protected static int attemptToOwnTask(boolean isFirstTime, ZooKeeperWatcher zkw,
+  protected static int attemptToOwnTask(boolean isFirstTime, ZKWatcher zkw,
       ServerName server, String task, int taskZKVersion) {
     int latestZKVersion = FAILED_TO_OWN_TASK;
     try {

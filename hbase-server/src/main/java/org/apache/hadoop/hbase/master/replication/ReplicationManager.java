@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Manages and performs all replication admin operations.
@@ -49,11 +49,11 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 public class ReplicationManager {
 
   private final Configuration conf;
-  private final ZooKeeperWatcher zkw;
+  private final ZKWatcher zkw;
   private final ReplicationQueuesClient replicationQueuesClient;
   private final ReplicationPeers replicationPeers;
 
-  public ReplicationManager(Configuration conf, ZooKeeperWatcher zkw, Abortable abortable)
+  public ReplicationManager(Configuration conf, ZKWatcher zkw, Abortable abortable)
       throws IOException {
     this.conf = conf;
     this.zkw = zkw;

@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -116,7 +116,7 @@ public abstract class TestReplicationSourceManager {
 
   protected static ReplicationSourceManager manager;
 
-  protected static ZooKeeperWatcher zkw;
+  protected static ZKWatcher zkw;
 
   protected static HTableDescriptor htd;
 
@@ -149,7 +149,7 @@ public abstract class TestReplicationSourceManager {
   protected static void setupZkAndReplication() throws Exception {
     // The implementing class should set up the conf
     assertNotNull(conf);
-    zkw = new ZooKeeperWatcher(conf, "test", null);
+    zkw = new ZKWatcher(conf, "test", null);
     ZKUtil.createWithParents(zkw, "/hbase/replication");
     ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1");
     ZKUtil.setData(zkw, "/hbase/replication/peers/1",
@@ -668,7 +668,7 @@ public abstract class TestReplicationSourceManager {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zkw;
     }
 

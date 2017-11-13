@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -65,7 +64,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
@@ -138,7 +137,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   private final ServerName sn;
-  private final ZooKeeperWatcher zkw;
+  private final ZKWatcher zkw;
   private final Configuration conf;
   private final Random random = new Random();
 
@@ -191,7 +190,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   throws ZooKeeperConnectionException, IOException {
     this.sn = sn;
     this.conf = conf;
-    this.zkw = new ZooKeeperWatcher(conf, sn.toString(), this, true);
+    this.zkw = new ZKWatcher(conf, sn.toString(), this, true);
   }
 
   /**
@@ -284,7 +283,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public ZooKeeperWatcher getZooKeeper() {
+  public ZKWatcher getZooKeeper() {
     return this.zkw;
   }
 

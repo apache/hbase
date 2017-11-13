@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,10 +60,10 @@ import static org.junit.Assert.fail;
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestMasterCoprocessorExceptionWithAbort {
 
-  public static class MasterTracker extends ZooKeeperNodeTracker {
+  public static class MasterTracker extends ZKNodeTracker {
     public boolean masterZKNodeWasDeleted = false;
 
-    public MasterTracker(ZooKeeperWatcher zkw, String masterNode, Abortable abortable) {
+    public MasterTracker(ZKWatcher zkw, String masterNode, Abortable abortable) {
       super(zkw, masterNode, abortable);
     }
 
@@ -174,7 +174,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
     // set a watch on the zookeeper /hbase/master node. If the master dies,
     // the node will be deleted.
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(UTIL.getConfiguration(),
+    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(),
       "unittest", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {

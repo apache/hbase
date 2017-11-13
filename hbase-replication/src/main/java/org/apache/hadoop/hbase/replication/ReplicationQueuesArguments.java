@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Wrapper around common arguments used to construct ReplicationQueues. Used to construct various
@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 @InterfaceAudience.Private
 public class ReplicationQueuesArguments {
 
-  private ZooKeeperWatcher zk;
+  private ZKWatcher zk;
   private Configuration conf;
   private Abortable abort;
 
@@ -39,16 +39,16 @@ public class ReplicationQueuesArguments {
     this.abort = abort;
   }
 
-  public ReplicationQueuesArguments(Configuration conf, Abortable abort, ZooKeeperWatcher zk) {
+  public ReplicationQueuesArguments(Configuration conf, Abortable abort, ZKWatcher zk) {
     this(conf, abort);
     setZk(zk);
   }
 
-  public ZooKeeperWatcher getZk() {
+  public ZKWatcher getZk() {
     return zk;
   }
 
-  public void setZk(ZooKeeperWatcher zk) {
+  public void setZk(ZKWatcher zk) {
     this.zk = zk;
   }
 

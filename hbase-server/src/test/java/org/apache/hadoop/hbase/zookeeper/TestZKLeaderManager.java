@@ -61,12 +61,12 @@ public class TestZKLeaderManager {
 
   private static class MockLeader extends Thread implements Stoppable {
     private boolean stopped;
-    private ZooKeeperWatcher watcher;
+    private ZKWatcher watcher;
     private ZKLeaderManager zkLeader;
     private AtomicBoolean master = new AtomicBoolean(false);
     private int index;
 
-    public MockLeader(ZooKeeperWatcher watcher, int index) {
+    public MockLeader(ZKWatcher watcher, int index) {
       setDaemon(true);
       setName("TestZKLeaderManager-leader-" + index);
       this.index = index;
@@ -83,7 +83,7 @@ public class TestZKLeaderManager {
       return index;
     }
 
-    public ZooKeeperWatcher getWatcher() {
+    public ZKWatcher getWatcher() {
       return watcher;
     }
 
@@ -132,7 +132,7 @@ public class TestZKLeaderManager {
     MockAbortable abortable = new MockAbortable();
     CANDIDATES = new MockLeader[3];
     for (int i = 0; i < 3; i++) {
-      ZooKeeperWatcher watcher = newZK(conf, "server"+i, abortable);
+      ZKWatcher watcher = newZK(conf, "server"+i, abortable);
       CANDIDATES[i] = new MockLeader(watcher, i);
       CANDIDATES[i].start();
     }
@@ -225,10 +225,10 @@ public class TestZKLeaderManager {
     return currentLeader;
   }
 
-  private static ZooKeeperWatcher newZK(Configuration conf, String name,
-      Abortable abort) throws Exception {
+  private static ZKWatcher newZK(Configuration conf, String name,
+                                 Abortable abort) throws Exception {
     Configuration copy = HBaseConfiguration.create(conf);
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(copy, name, abort);
+    ZKWatcher zk = new ZKWatcher(copy, name, abort);
     return zk;
   }
 

@@ -28,14 +28,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -45,7 +44,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(ReplicationHFileCleaner.class);
-  private ZooKeeperWatcher zkw;
+  private ZKWatcher zkw;
   private ReplicationQueuesClient rqc;
   private boolean stopped = false;
 
@@ -130,14 +129,14 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
     // I can close myself when time comes.
     Configuration conf = new Configuration(config);
     try {
-      setConf(conf, new ZooKeeperWatcher(conf, "replicationHFileCleaner", null));
+      setConf(conf, new ZKWatcher(conf, "replicationHFileCleaner", null));
     } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
 
   @VisibleForTesting
-  public void setConf(Configuration conf, ZooKeeperWatcher zk) {
+  public void setConf(Configuration conf, ZKWatcher zk) {
     super.setConf(conf);
     try {
       initReplicationQueuesClient(conf, zk);
@@ -146,7 +145,7 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
     }
   }
 
-  private void initReplicationQueuesClient(Configuration conf, ZooKeeperWatcher zk)
+  private void initReplicationQueuesClient(Configuration conf, ZKWatcher zk)
       throws Exception {
     this.zkw = zk;
     this.rqc = ReplicationFactory.getReplicationQueuesClient(new ReplicationQueuesClientArguments(

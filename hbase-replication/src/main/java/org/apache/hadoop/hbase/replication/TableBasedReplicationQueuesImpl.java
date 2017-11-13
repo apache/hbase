@@ -37,11 +37,10 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
@@ -77,7 +76,7 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     this(args.getConf(), args.getAbortable(), args.getZk());
   }
 
-  public TableBasedReplicationQueuesImpl(Configuration conf, Abortable abort, ZooKeeperWatcher zkw)
+  public TableBasedReplicationQueuesImpl(Configuration conf, Abortable abort, ZKWatcher zkw)
     throws IOException {
     super(conf, abort);
     replicationState = new ReplicationStateZKBase(zkw, conf, abort) {};

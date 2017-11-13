@@ -23,6 +23,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -30,11 +34,7 @@ import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -51,7 +51,7 @@ import org.apache.zookeeper.KeeperException;
  * the active master of the cluster.
  */
 @InterfaceAudience.Private
-public class ActiveMasterManager extends ZooKeeperListener {
+public class ActiveMasterManager extends ZKListener {
   private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
@@ -66,7 +66,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
+  ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master) {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;

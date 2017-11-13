@@ -22,20 +22,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-
 
 /**
  * This is a base class for maintaining replication state in zookeeper.
@@ -61,7 +59,7 @@ public abstract class ReplicationStateZKBase {
   /** The name of the znode that contains tableCFs */
   protected final String tableCFsNodeName;
 
-  protected final ZooKeeperWatcher zookeeper;
+  protected final ZKWatcher zookeeper;
   protected final Configuration conf;
   protected final Abortable abortable;
 
@@ -74,8 +72,8 @@ public abstract class ReplicationStateZKBase {
       "zookeeper.znode.replication.hfile.refs";
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT = "hfile-refs";
 
-  public ReplicationStateZKBase(ZooKeeperWatcher zookeeper, Configuration conf,
-      Abortable abortable) {
+  public ReplicationStateZKBase(ZKWatcher zookeeper, Configuration conf,
+                                Abortable abortable) {
     this.zookeeper = zookeeper;
     this.conf = conf;
     this.abortable = abortable;

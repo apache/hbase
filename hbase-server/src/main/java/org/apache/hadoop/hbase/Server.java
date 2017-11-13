@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ public interface Server extends Abortable, Stoppable {
   /**
    * Gets the ZooKeeper instance for this server.
    */
-  ZooKeeperWatcher getZooKeeper();
+  ZKWatcher getZooKeeper();
 
   /**
    * Returns a reference to the servers' connection.

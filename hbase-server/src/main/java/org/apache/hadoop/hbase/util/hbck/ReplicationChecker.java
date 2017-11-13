@@ -27,13 +27,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /*
  * Check and fix undeleted replication queues for removed peerId.
@@ -47,8 +47,8 @@ public class ReplicationChecker {
   private Set<String> undeletedHFileRefsQueueIds = new HashSet<>();
   private final ReplicationZKNodeCleaner cleaner;
 
-  public ReplicationChecker(Configuration conf, ZooKeeperWatcher zkw, ClusterConnection connection,
-      ErrorReporter errorReporter) throws IOException {
+  public ReplicationChecker(Configuration conf, ZKWatcher zkw, ClusterConnection connection,
+                            ErrorReporter errorReporter) throws IOException {
     this.cleaner = new ReplicationZKNodeCleaner(conf, zkw, connection);
     this.errorReporter = errorReporter;
   }

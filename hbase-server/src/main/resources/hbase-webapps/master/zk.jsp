@@ -20,11 +20,11 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.hbase.zookeeper.ZKUtil"
-  import="org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher"
+  import="org.apache.hadoop.hbase.zookeeper.ZKWatcher"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  ZooKeeperWatcher watcher = master.getZooKeeper();
+  ZKWatcher watcher = master.getZooKeeper();
 %>
 <!DOCTYPE html>
 <?xml version="1.0" encoding="UTF-8" ?>

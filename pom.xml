@@ -92,6 +92,7 @@
     <module>hbase-metrics</module>
     <module>hbase-spark-it</module>
     <module>hbase-backup</module>
+    <module>hbase-zookeeper</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
       e.g. surefire 2.18-SNAPSHOT-->
@@ -1788,6 +1789,11 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-zookeeper</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
       </dependency>
       <!-- General dependencies -->
       <dependency>

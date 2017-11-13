@@ -39,13 +39,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -112,7 +112,7 @@ public class TableAuthManager implements Closeable {
   private ZKPermissionWatcher zkperms;
   private final AtomicLong mtime = new AtomicLong(0L);
 
-  private TableAuthManager(ZooKeeperWatcher watcher, Configuration conf)
+  private TableAuthManager(ZKWatcher watcher, Configuration conf)
       throws IOException {
     this.conf = conf;
 
@@ -734,14 +734,14 @@ public class TableAuthManager implements Closeable {
     return mtime.get();
   }
 
-  private static Map<ZooKeeperWatcher,TableAuthManager> managerMap = new HashMap<>();
+  private static Map<ZKWatcher,TableAuthManager> managerMap = new HashMap<>();
 
   private static Map<TableAuthManager, Integer> refCount = new HashMap<>();
 
   /** Returns a TableAuthManager from the cache. If not cached, constructs a new one. Returned
    * instance should be released back by calling {@link #release(TableAuthManager)}. */
   public synchronized static TableAuthManager getOrCreate(
-      ZooKeeperWatcher watcher, Configuration conf) throws IOException {
+          ZKWatcher watcher, Configuration conf) throws IOException {
     TableAuthManager instance = managerMap.get(watcher);
     if (instance == null) {
       instance = new TableAuthManager(watcher, conf);

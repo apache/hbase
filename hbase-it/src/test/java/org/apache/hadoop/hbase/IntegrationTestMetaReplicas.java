@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,7 +37,7 @@ import org.junit.experimental.categories.Category;
 /**
  * An integration test that starts the cluster with three replicas for the meta
  * It then creates a table, flushes the meta, kills the server holding the primary.
- * After that a client issues put/get requests on the created table - the other 
+ * After that a client issues put/get requests on the created table - the other
  * replicas of the meta would be used to get the location of the region of the created
  * table.
  */
@@ -60,7 +60,7 @@ public class IntegrationTestMetaReplicas {
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
-    ZooKeeperWatcher zkw = util.getZooKeeperWatcher();
+    ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
     String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);

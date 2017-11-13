@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
@@ -48,12 +48,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
  *
  */
 @InterfaceAudience.Private
-public class ZKNamespaceManager extends ZooKeeperListener {
+public class ZKNamespaceManager extends ZKListener {
   private static final Log LOG = LogFactory.getLog(ZKNamespaceManager.class);
   private final String nsZNode;
   private volatile NavigableMap<String,NamespaceDescriptor> cache;
 
-  public ZKNamespaceManager(ZooKeeperWatcher zkw) throws IOException {
+  public ZKNamespaceManager(ZKWatcher zkw) throws IOException {
     super(zkw);
     nsZNode = zkw.znodePaths.namespaceZNode;
     cache = new ConcurrentSkipListMap<>();

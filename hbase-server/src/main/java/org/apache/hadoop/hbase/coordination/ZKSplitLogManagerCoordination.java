@@ -43,12 +43,12 @@ import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKMetadata;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * {@link SplitLogManagerCoordination}
  */
 @InterfaceAudience.Private
-public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
+public class ZKSplitLogManagerCoordination extends ZKListener implements
     SplitLogManagerCoordination {
 
   public static final int DEFAULT_TIMEOUT = 120000;
@@ -85,7 +85,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   public boolean ignoreZKDeleteForTesting = false;
 
-  public ZKSplitLogManagerCoordination(Configuration conf, ZooKeeperWatcher watcher) {
+  public ZKSplitLogManagerCoordination(Configuration conf, ZKWatcher watcher) {
     super(watcher);
     this.conf = conf;
     taskFinisher = new TaskFinisher() {

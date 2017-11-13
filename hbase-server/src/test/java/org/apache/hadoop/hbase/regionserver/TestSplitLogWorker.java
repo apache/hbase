@@ -52,8 +52,8 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -74,16 +74,16 @@ public class TestSplitLogWorker {
   private final static HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
   private DummyServer ds;
-  private ZooKeeperWatcher zkw;
+  private ZKWatcher zkw;
   private SplitLogWorker slw;
   private ExecutorService executorService;
 
   class DummyServer implements Server {
-    private ZooKeeperWatcher zkw;
+    private ZKWatcher zkw;
     private Configuration conf;
     private CoordinatedStateManager cm;
 
-    public DummyServer(ZooKeeperWatcher zkw, Configuration conf) {
+    public DummyServer(ZKWatcher zkw, Configuration conf) {
       this.zkw = zkw;
       this.conf = conf;
       cm = new ZkCoordinatedStateManager(this);
@@ -113,7 +113,7 @@ public class TestSplitLogWorker {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zkw;
     }
 
@@ -193,7 +193,7 @@ public class TestSplitLogWorker {
   public void setup() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
-    zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    zkw = new ZKWatcher(TEST_UTIL.getConfiguration(),
         "split-log-worker-tests", null);
     ds = new DummyServer(zkw, conf);
     ZKUtil.deleteChildrenRecursively(zkw, zkw.znodePaths.baseZNode);

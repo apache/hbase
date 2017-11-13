@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication.master;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -48,7 +48,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
-  private ZooKeeperWatcher zkw;
+  private ZKWatcher zkw;
   private ReplicationQueuesClient replicationQueues;
   private boolean stopped = false;
   private Set<String> wals;
@@ -101,14 +101,14 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     // I can close myself when comes time.
     Configuration conf = new Configuration(config);
     try {
-      setConf(conf, new ZooKeeperWatcher(conf, "replicationLogCleaner", null));
+      setConf(conf, new ZKWatcher(conf, "replicationLogCleaner", null));
     } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
 
   @VisibleForTesting
-  public void setConf(Configuration conf, ZooKeeperWatcher zk) {
+  public void setConf(Configuration conf, ZKWatcher zk) {
     super.setConf(conf);
     try {
       this.zkw = zk;

@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
 /**
  * A factory class for instantiating replication objects that deal with replication state.
@@ -48,17 +48,17 @@ public class ReplicationFactory {
     return (ReplicationQueuesClient) ConstructorUtils.invokeConstructor(classToBuild, args);
   }
 
-  public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
-      Abortable abortable) {
+  public static ReplicationPeers getReplicationPeers(final ZKWatcher zk, Configuration conf,
+                                                     Abortable abortable) {
     return getReplicationPeers(zk, conf, null, abortable);
   }
 
-  public static ReplicationPeers getReplicationPeers(final ZooKeeperWatcher zk, Configuration conf,
-      final ReplicationQueuesClient queuesClient, Abortable abortable) {
+  public static ReplicationPeers getReplicationPeers(final ZKWatcher zk, Configuration conf,
+                                                     final ReplicationQueuesClient queuesClient, Abortable abortable) {
     return new ReplicationPeersZKImpl(zk, conf, queuesClient, abortable);
   }
 
-  public static ReplicationTracker getReplicationTracker(ZooKeeperWatcher zookeeper,
+  public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper,
       final ReplicationPeers replicationPeers, Configuration conf, Abortable abortable,
       Stoppable stopper) {
     return new ReplicationTrackerZKImpl(zookeeper, replicationPeers, conf, abortable, stopper);

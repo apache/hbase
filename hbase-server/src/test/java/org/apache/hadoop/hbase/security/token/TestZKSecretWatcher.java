@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -71,13 +71,13 @@ public class TestZKSecretWatcher {
   private static class AuthenticationTokenSecretManagerForTest
   extends AuthenticationTokenSecretManager {
     private CountDownLatch latch = new CountDownLatch(1);
-    
+
     public AuthenticationTokenSecretManagerForTest(Configuration conf,
-        ZooKeeperWatcher zk, String serverName,
-        long keyUpdateInterval, long tokenMaxLifetime) {
+                                                   ZKWatcher zk, String serverName,
+                                                   long keyUpdateInterval, long tokenMaxLifetime) {
       super(conf, zk, serverName, keyUpdateInterval, tokenMaxLifetime);
     }
-    
+
     @Override
     synchronized boolean removeKey(Integer keyId) {
       boolean b = super.removeKey(keyId);
@@ -86,19 +86,19 @@ public class TestZKSecretWatcher {
       }
       return b;
     }
-    
+
     CountDownLatch getLatch() {
       return latch;
     }
   }
-  
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
 
-    ZooKeeperWatcher zk = newZK(conf, "server1", new MockAbortable());
+    ZKWatcher zk = newZK(conf, "server1", new MockAbortable());
     AuthenticationTokenSecretManagerForTest[] tmp = new AuthenticationTokenSecretManagerForTest[2];
     tmp[0] = new AuthenticationTokenSecretManagerForTest(
         conf, zk, "server1", 60*60*1000, 60*1000);
@@ -179,7 +179,7 @@ public class TestZKSecretWatcher {
 
     // bring up a new slave
     Configuration conf = TEST_UTIL.getConfiguration();
-    ZooKeeperWatcher zk = newZK(conf, "server3", new MockAbortable());
+    ZKWatcher zk = newZK(conf, "server3", new MockAbortable());
     KEY_SLAVE2 = new AuthenticationTokenSecretManager(
         conf, zk, "server3", 60*60*1000, 60*1000);
     KEY_SLAVE2.start();
@@ -233,7 +233,7 @@ public class TestZKSecretWatcher {
     assertTrue(newCurrent.getKeyId() > current.getKeyId());
 
     // add another slave
-    ZooKeeperWatcher zk3 = newZK(conf, "server4", new MockAbortable());
+    ZKWatcher zk3 = newZK(conf, "server4", new MockAbortable());
     KEY_SLAVE3 = new AuthenticationTokenSecretManager(
         conf, zk3, "server4", 60*60*1000, 60*1000);
     KEY_SLAVE3.start();
@@ -275,10 +275,10 @@ public class TestZKSecretWatcher {
     assertTrue(newCurrent2.getKeyId() > current2.getKeyId());
   }
 
-  private static ZooKeeperWatcher newZK(Configuration conf, String name,
-      Abortable abort) throws Exception {
+  private static ZKWatcher newZK(Configuration conf, String name,
+                                 Abortable abort) throws Exception {
     Configuration copy = HBaseConfiguration.create(conf);
-    ZooKeeperWatcher zk = new ZooKeeperWatcher(copy, name, abort);
+    ZKWatcher zk = new ZKWatcher(copy, name, abort);
     return zk;
   }
 }

@@ -25,14 +25,14 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -52,7 +52,7 @@ public class ZKDataMigrator {
    * table descriptor based states.
    */
   @Deprecated
-  public static Map<TableName, TableState.State> queryForTableStates(ZooKeeperWatcher zkw)
+  public static Map<TableName, TableState.State> queryForTableStates(ZKWatcher zkw)
       throws KeeperException, InterruptedException {
     Map<TableName, TableState.State> rv = new HashMap<>();
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.tableZNode);
@@ -86,14 +86,14 @@ public class ZKDataMigrator {
 
   /**
    * Gets table state from ZK.
-   * @param zkw ZooKeeperWatcher instance to use
+   * @param zkw ZKWatcher instance to use
    * @param tableName table we're checking
    * @return Null or {@link ZooKeeperProtos.DeprecatedTableState.State} found in znode.
    * @throws KeeperException
    */
   @Deprecated
   private static  ZooKeeperProtos.DeprecatedTableState.State getTableState(
-      final ZooKeeperWatcher zkw, final TableName tableName)
+          final ZKWatcher zkw, final TableName tableName)
       throws KeeperException, InterruptedException {
     String znode = ZNodePaths.joinZNode(zkw.znodePaths.tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(zkw, znode);

@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -184,8 +184,8 @@ public class TestZooKeeper {
    */
   @Test
   public void testCreateWithParents() throws Exception {
-    ZooKeeperWatcher zkw =
-        new ZooKeeperWatcher(new Configuration(TEST_UTIL.getConfiguration()),
+    ZKWatcher zkw =
+        new ZKWatcher(new Configuration(TEST_UTIL.getConfiguration()),
             TestZooKeeper.class.getName(), null);
     byte[] expectedData = new byte[] { 1, 2, 3 };
     ZKUtil.createWithParents(zkw, "/l1/l2/l3/l4/testCreateWithParents", expectedData);
@@ -206,7 +206,7 @@ public class TestZooKeeper {
    */
   @Test
   public void testZNodeDeletes() throws Exception {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(
+    ZKWatcher zkw = new ZKWatcher(
       new Configuration(TEST_UTIL.getConfiguration()),
       TestZooKeeper.class.getName(), null);
     ZKUtil.createWithParents(zkw, "/l1/l2/l3/l4");
@@ -247,7 +247,7 @@ public class TestZooKeeper {
 
     // Assumes the  root of the ZooKeeper space is writable as it creates a node
     // wherever the cluster home is defined.
-    ZooKeeperWatcher zk2 = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+    ZKWatcher zk2 = new ZKWatcher(TEST_UTIL.getConfiguration(),
       "testCreateSilentIsReallySilent", null);
 
     // Save the previous ACL
@@ -330,7 +330,7 @@ public class TestZooKeeper {
   @SuppressWarnings("deprecation")
   public void testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE()
       throws Exception {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
+    ZKWatcher zkw = new ZKWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
     ZKUtil.getChildDataAndWatchForNewChildren(zkw, "/wrongNode");
   }
 
@@ -345,7 +345,7 @@ public class TestZooKeeper {
     cluster.startRegionServer();
     cluster.waitForActiveAndReadyMaster(10000);
     HMaster m = cluster.getMaster();
-    final ZooKeeperWatcher zkw = m.getZooKeeper();
+    final ZKWatcher zkw = m.getZooKeeper();
     // now the cluster is up. So assign some regions.
     try (Admin admin = TEST_UTIL.getAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
@@ -376,14 +376,14 @@ public class TestZooKeeper {
    * Count listeners in zkw excluding listeners, that belongs to workers or other
    * temporary processes.
    */
-  private int countPermanentListeners(ZooKeeperWatcher watcher) {
+  private int countPermanentListeners(ZKWatcher watcher) {
     return countListeners(watcher, ZkSplitLogWorkerCoordination.class);
   }
 
   /**
    * Count listeners in zkw excluding provided classes
    */
-  private int countListeners(ZooKeeperWatcher watcher, Class<?>... exclude) {
+  private int countListeners(ZKWatcher watcher, Class<?>... exclude) {
     int cnt = 0;
     for (Object o : watcher.getListeners()) {
       boolean skip = false;

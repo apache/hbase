@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -75,9 +75,9 @@ public class TestZKPermissionWatcher {
 
     // start minicluster
     UTIL.startMiniCluster();
-    AUTH_A = TableAuthManager.getOrCreate(new ZooKeeperWatcher(conf,
+    AUTH_A = TableAuthManager.getOrCreate(new ZKWatcher(conf,
       "TestZKPermissionsWatcher_1", ABORTABLE), conf);
-    AUTH_B = TableAuthManager.getOrCreate(new ZooKeeperWatcher(conf,
+    AUTH_B = TableAuthManager.getOrCreate(new ZKWatcher(conf,
       "TestZKPermissionsWatcher_2", ABORTABLE), conf);
   }
 

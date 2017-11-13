@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -139,7 +139,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
 
   private void testZNodeACLs() throws IOException, KeeperException, InterruptedException {
 
-    ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, "IntegrationTestZnodeACLs", null);
+    ZKWatcher watcher = new ZKWatcher(conf, "IntegrationTestZnodeACLs", null);
     RecoverableZooKeeper zk = ZKUtil.connect(this.conf, watcher);
 
     String baseZNode = watcher.znodePaths.baseZNode;
@@ -155,7 +155,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
     LOG.info("Checking ZK permissions: SUCCESS");
   }
 
-  private void checkZnodePermsRecursive(ZooKeeperWatcher watcher,
+  private void checkZnodePermsRecursive(ZKWatcher watcher,
       RecoverableZooKeeper zk, String znode) throws KeeperException, InterruptedException {
 
     boolean expectedWorldReadable = watcher.isClientReadable(znode);
@@ -201,7 +201,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
         assertTrue(expectedWorldReadable);
         // assert that anyone can only read
         assertEquals(perms, Perms.READ);
-      } else if (superUsers != null && ZooKeeperWatcher.isSuperUserId(superUsers, id)) {
+      } else if (superUsers != null && ZKWatcher.isSuperUserId(superUsers, id)) {
         // assert that super user has all the permissions
         assertEquals(perms, Perms.ALL);
       } else if (new Id("sasl", masterPrincipal).equals(id)) {

@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -900,7 +900,7 @@ public class RegionMover extends AbstractHBaseTool {
       return null;
     }
     if (region.isMetaRegion()) {
-      ZooKeeperWatcher zkw = new ZooKeeperWatcher(admin.getConfiguration(), "region_mover", null);
+      ZKWatcher zkw = new ZKWatcher(admin.getConfiguration(), "region_mover", null);
       MetaTableLocator locator = new MetaTableLocator();
       int maxWaitInSeconds =
           admin.getConfiguration().getInt(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);

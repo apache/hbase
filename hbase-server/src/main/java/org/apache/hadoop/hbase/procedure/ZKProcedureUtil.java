@@ -23,11 +23,11 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -50,7 +50,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public abstract class ZKProcedureUtil
-    extends ZooKeeperListener implements Closeable {
+    extends ZKListener implements Closeable {
 
   private static final Log LOG = LogFactory.getLog(ZKProcedureUtil.class);
 
@@ -73,7 +73,7 @@ public abstract class ZKProcedureUtil
    * @param procDescription name of the znode describing the procedure to run
    * @throws KeeperException when the procedure znodes cannot be created
    */
-  public ZKProcedureUtil(ZooKeeperWatcher watcher, String procDescription)
+  public ZKProcedureUtil(ZKWatcher watcher, String procDescription)
       throws KeeperException {
     super(watcher);
     // make sure we are listening for events
@@ -157,7 +157,7 @@ public abstract class ZKProcedureUtil
     return ZNodePaths.joinZNode(controller.abortZnode, opInstanceName);
   }
 
-  public ZooKeeperWatcher getWatcher() {
+  public ZKWatcher getWatcher() {
     return watcher;
   }
 

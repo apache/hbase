@@ -34,9 +34,9 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -62,7 +62,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    * @param id string representation of this peer's identifier
    * @param peerConfig configuration for the replication peer
    */
-  public ReplicationPeerZKImpl(ZooKeeperWatcher zkWatcher, Configuration conf,
+  public ReplicationPeerZKImpl(ZKWatcher zkWatcher, Configuration conf,
                                String id, ReplicationPeerConfig peerConfig,
                                Abortable abortable)
       throws ReplicationException {
@@ -258,9 +258,9 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   /**
    * Tracker for state of this peer
    */
-  public class PeerStateTracker extends ZooKeeperNodeTracker {
+  public class PeerStateTracker extends ZKNodeTracker {
 
-    public PeerStateTracker(String peerStateZNode, ZooKeeperWatcher watcher,
+    public PeerStateTracker(String peerStateZNode, ZKWatcher watcher,
         Abortable abortable) {
       super(watcher, peerStateZNode, abortable);
     }
@@ -281,11 +281,11 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   /**
    * Tracker for PeerConfigNode of this peer
    */
-  public class PeerConfigTracker extends ZooKeeperNodeTracker {
+  public class PeerConfigTracker extends ZKNodeTracker {
 
     ReplicationPeerConfigListener listener;
 
-    public PeerConfigTracker(String peerConfigNode, ZooKeeperWatcher watcher,
+    public PeerConfigTracker(String peerConfigNode, ZKWatcher watcher,
         Abortable abortable) {
       super(watcher, peerConfigNode, abortable);
     }

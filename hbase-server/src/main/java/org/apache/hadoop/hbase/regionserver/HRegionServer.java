@@ -162,10 +162,10 @@ import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -380,7 +380,7 @@ public class HRegionServer extends HasThread implements
   final AtomicBoolean online = new AtomicBoolean(false);
 
   // zookeeper connection and watcher
-  protected ZooKeeperWatcher zooKeeper;
+  protected ZKWatcher zooKeeper;
 
   // master address tracker
   private MasterAddressTracker masterAddressTracker;
@@ -616,7 +616,7 @@ public class HRegionServer extends HasThread implements
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
         // Open connection to zookeeper and set primary watcher
-        zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
+        zooKeeper = new ZKWatcher(conf, getProcessName() + ":" +
           rpcServices.isa.getPort(), this, canCreateBaseZNode());
 
         // If no master in cluster, skip trying to track one or look for a cluster status.
@@ -905,7 +905,7 @@ public class HRegionServer extends HasThread implements
    * @throws IOException any IO exception, plus if the RS is stopped
    * @throws InterruptedException
    */
-  private void blockAndCheckIfStopped(ZooKeeperNodeTracker tracker)
+  private void blockAndCheckIfStopped(ZKNodeTracker tracker)
       throws IOException, InterruptedException {
     while (tracker.blockUntilAvailable(this.msgInterval, false) == null) {
       if (this.stopped) {
@@ -2886,7 +2886,7 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public ZooKeeperWatcher getZooKeeper() {
+  public ZKWatcher getZooKeeper() {
     return zooKeeper;
   }
 

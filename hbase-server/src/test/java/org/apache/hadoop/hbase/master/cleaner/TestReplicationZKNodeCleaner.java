@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,12 +48,12 @@ public class TestReplicationZKNodeCleaner {
   private final String SERVER_TWO = "server2";
 
   private final Configuration conf;
-  private final ZooKeeperWatcher zkw;
+  private final ZKWatcher zkw;
   private final ReplicationQueues repQueues;
 
   public TestReplicationZKNodeCleaner() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    zkw = new ZooKeeperWatcher(conf, "TestReplicationZKNodeCleaner", null);
+    zkw = new ZKWatcher(conf, "TestReplicationZKNodeCleaner", null);
     repQueues = ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, null,
         zkw));
     assertTrue(repQueues instanceof ReplicationQueuesZKImpl);

@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -58,7 +58,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
 
   private static Configuration conf;
   private static HBaseTestingUtility utility;
-  private static ZooKeeperWatcher zkw;
+  private static ZKWatcher zkw;
   private static String replicationZNode;
   private ReplicationQueuesZKImpl rqZK;
 
@@ -80,7 +80,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     // Add a dummy region server and set up the cluster id
     Configuration testConf = new Configuration(conf);
     testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
-    ZooKeeperWatcher zkw1 = new ZooKeeperWatcher(testConf, "test1", null);
+    ZKWatcher zkw1 = new ZKWatcher(testConf, "test1", null);
     String fakeRs = ZNodePaths.joinZNode(zkw1.znodePaths.rsZNode, "hostname1.example.org:1234");
     ZKUtil.createWithParents(zkw1, fakeRs);
     ZKClusterId.setClusterId(zkw1, new ClusterId());
@@ -152,7 +152,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     }
 
     @Override
-    public ZooKeeperWatcher getZooKeeper() {
+    public ZKWatcher getZooKeeper() {
       return zkw;
     }
 

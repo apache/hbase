@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
@@ -85,7 +85,7 @@ public class MasterMetaBootstrap {
   }
 
   private void unassignExcessMetaReplica(int numMetaReplicasConfigured) {
-    final ZooKeeperWatcher zooKeeper = master.getZooKeeper();
+    final ZKWatcher zooKeeper = master.getZooKeeper();
     // unassign the unneeded replicas (for e.g., if the previous master was configured
     // with a replication of 3 and now it is 2, we need to unassign the 1 unneeded replica)
     try {
