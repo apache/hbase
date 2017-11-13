@@ -609,7 +609,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     // pending calls map.
     try {
       call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
-    } catch (IOException e) {
+    } catch (Throwable t) {
+      if(LOG.isTraceEnabled()) {
+        LOG.trace("Error while writing call, call_id:" + call.id, t);
+      }
+      IOException e = IPCUtil.toIOE(t);
       closeConn(e);
       return;
     }
