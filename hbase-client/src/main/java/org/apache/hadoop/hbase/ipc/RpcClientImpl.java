@@ -924,11 +924,14 @@ public class RpcClientImpl extends AbstractRpcClient {
         try {
           call.callStats.setRequestSizeBytes(IPCUtil.write(this.out, header, call.param,
               cellBlock));
-        } catch (IOException e) {
+        } catch (Throwable t) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Error while writing call, call_id:" + call.id, t);
+          }
           // We set the value inside the synchronized block, this way the next in line
           //  won't even try to write. Otherwise we might miss a call in the calls map?
           shouldCloseConnection.set(true);
-          writeException = e;
+          writeException = IPCUtil.toIOE(t);
           interrupt();
         }
       }
