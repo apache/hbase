@@ -25,11 +25,11 @@ package org.apache.hadoop.hbase.regionserver;
 public interface MetricsTableSource extends Comparable<MetricsTableSource> {
 
   String READ_REQUEST_COUNT = "readRequestCount";
-  String READ_REQUEST_COUNT_DESC = "Number fo read requests";
+  String READ_REQUEST_COUNT_DESC = "Number of read requests";
   String WRITE_REQUEST_COUNT = "writeRequestCount";
-  String WRITE_REQUEST_COUNT_DESC = "Number fo write requests";
+  String WRITE_REQUEST_COUNT_DESC = "Number of write requests";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
-  String TOTAL_REQUEST_COUNT_DESC = "Number fo total requests";
+  String TOTAL_REQUEST_COUNT_DESC = "Number of total requests";
   String MEMSTORE_SIZE = "memstoreSize";
   String MEMSTORE_SIZE_DESC = "The size of memory stores";
   String STORE_FILE_SIZE = "storeFileSize";
