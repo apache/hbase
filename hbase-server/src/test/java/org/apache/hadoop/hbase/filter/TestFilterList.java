@@ -960,5 +960,59 @@ public class TestFilterList {
     filter.filterCell(kv2);
     assertEquals(2, mockNextRowFilter.getHitCount());
   }
+
+  private static class TransformFilter extends FilterBase {
+    private ReturnCode targetRetCode;
+    private boolean transformed = false;
+
+    public TransformFilter(ReturnCode targetRetCode) {
+      this.targetRetCode = targetRetCode;
+    }
+
+    @Override
+    public ReturnCode filterCell(final Cell v) throws IOException {
+      return targetRetCode;
+    }
+
+    @Override
+    public Cell transformCell(Cell c) throws IOException {
+      transformed = true;
+      return super.transformCell(c);
+    }
+
+    public boolean getTransformed() {
+      return this.transformed;
+    }
+  }
+
+  @Test
+  public void testTransformCell() throws IOException {
+    KeyValue kv =
+        new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("column1"), 1,
+            Bytes.toBytes("value"));
+
+    // case MUST_PASS_ONE
+    TransformFilter filter1 = new TransformFilter(ReturnCode.INCLUDE);
+    TransformFilter filter2 = new TransformFilter(ReturnCode.NEXT_ROW);
+    TransformFilter filter3 = new TransformFilter(ReturnCode.SEEK_NEXT_USING_HINT);
+    FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, filter1, filter2, filter3);
+    Assert.assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv));
+    Assert.assertEquals(kv, filterList.transformCell(kv));
+    Assert.assertEquals(true, filter1.getTransformed());
+    Assert.assertEquals(false, filter2.getTransformed());
+    Assert.assertEquals(false, filter3.getTransformed());
+
+    // case MUST_PASS_ALL
+    filter1 = new TransformFilter(ReturnCode.INCLUDE);
+    filter2 = new TransformFilter(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
+    filter3 = new TransformFilter(ReturnCode.INCLUDE_AND_NEXT_COL);
+    filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2, filter3);
+
+    Assert.assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv));
+    Assert.assertEquals(kv, filterList.transformCell(kv));
+    Assert.assertEquals(true, filter1.getTransformed());
+    Assert.assertEquals(true, filter2.getTransformed());
+    Assert.assertEquals(true, filter3.getTransformed());
+  }
 }
 

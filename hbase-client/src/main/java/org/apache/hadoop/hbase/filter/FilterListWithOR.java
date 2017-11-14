@@ -48,6 +48,7 @@ public class FilterListWithOR extends FilterListBase {
     super(filters);
     prevFilterRCList = new ArrayList<>(Collections.nCopies(filters.size(), null));
     prevCellList = new ArrayList<>(Collections.nCopies(filters.size(), null));
+    subFiltersIncludedCell = new ArrayList<>(Collections.nCopies(filters.size(), false));
   }
 
   @Override
@@ -56,6 +57,7 @@ public class FilterListWithOR extends FilterListBase {
       throw new IllegalArgumentException("Filters in the list must have the same reversed flag");
     }
     this.filters.addAll(filters);
+    this.subFiltersIncludedCell.addAll(Collections.nCopies(filters.size(), false));
     this.prevFilterRCList.addAll(Collections.nCopies(filters.size(), null));
     this.prevCellList.addAll(Collections.nCopies(filters.size(), null));
   }
@@ -246,16 +248,15 @@ public class FilterListWithOR extends FilterListBase {
   }
 
   @Override
-  ReturnCode internalFilterCell(Cell c, Cell transformCell) throws IOException {
+  public ReturnCode filterCell(Cell c) throws IOException {
     if (isEmpty()) {
       return ReturnCode.INCLUDE;
     }
     ReturnCode rc = null;
     boolean everyFilterReturnHint = true;
-    Cell transformed = transformCell;
-    this.referenceCell = c;
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
+      subFiltersIncludedCell.set(i, false);
 
       Cell prevCell = this.prevCellList.get(i);
       ReturnCode prevCode = this.prevFilterRCList.get(i);
@@ -264,12 +265,7 @@ public class FilterListWithOR extends FilterListBase {
         continue;
       }
 
-      ReturnCode localRC;
-      if (filter instanceof FilterList) {
-        localRC = ((FilterList) filter).internalFilterCell(c, transformed);
-      } else {
-        localRC = filter.filterCell(c);
-      }
+      ReturnCode localRC = filter.filterCell(c);
 
       // Update previous return code and previous cell for filter[i].
       updatePrevFilterRCList(i, localRC);
@@ -284,11 +280,10 @@ public class FilterListWithOR extends FilterListBase {
       // For INCLUDE* case, we need to update the transformed cell.
       if (isInReturnCodes(localRC, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
         ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        transformed = filter.transformCell(transformed);
+        subFiltersIncludedCell.set(i, true);
       }
     }
 
-    this.transformedCell = transformed;
     if (everyFilterReturnHint) {
       return ReturnCode.SEEK_NEXT_USING_HINT;
     } else if (rc == null) {
@@ -303,6 +298,7 @@ public class FilterListWithOR extends FilterListBase {
   public void reset() throws IOException {
     for (int i = 0, n = filters.size(); i < n; i++) {
       filters.get(i).reset();
+      subFiltersIncludedCell.set(i, false);
       prevFilterRCList.set(i, null);
       prevCellList.set(i, null);
     }
