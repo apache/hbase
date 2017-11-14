@@ -409,7 +409,10 @@ public interface Region extends ConfigurationObserver {
    * Performs atomic multiple reads and writes on a given row.
    *
    * @param processor The object defines the reads and writes to a row.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+   * Coprocessors instead.
    */
+  @Deprecated
   void processRowsWithLocks(RowProcessor<?,?> processor) throws IOException;
 
   /**
@@ -418,9 +421,12 @@ public interface Region extends ConfigurationObserver {
    * @param processor The object defines the reads and writes to a row.
    * @param nonceGroup Optional nonce group of the operation (client Id)
    * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+   * Coprocessors instead.
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
   // Changing processRowsWithLocks and RowProcessor
+  @Deprecated
   void processRowsWithLocks(RowProcessor<?,?> processor, long nonceGroup, long nonce)
       throws IOException;
 
@@ -432,9 +438,12 @@ public interface Region extends ConfigurationObserver {
    *                Use a negative number to switch off the time bound
    * @param nonceGroup Optional nonce group of the operation (client Id)
    * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+   * Coprocessors instead.
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
   // Changing processRowsWithLocks and RowProcessor
+  @Deprecated
   void processRowsWithLocks(RowProcessor<?,?> processor, long timeout, long nonceGroup, long nonce)
       throws IOException;
 

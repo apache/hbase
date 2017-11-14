@@ -39,11 +39,15 @@ import com.google.protobuf.Message;
  * This class performs scans and generates mutations and WAL edits.
  * The locks and MVCC will be handled by HRegion.
  *
- * The RowProcessor user code could have data that needs to be 
- * sent across for proper initialization at the server side. The generic type 
+ * The RowProcessor user code could have data that needs to be
+ * sent across for proper initialization at the server side. The generic type
  * parameter S is the type of the request data sent to the server.
  * The generic type parameter T is the return type of RowProcessor.getResult().
+ *
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
+ * Coprocessors instead.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface RowProcessor<S extends Message, T extends Message> {
