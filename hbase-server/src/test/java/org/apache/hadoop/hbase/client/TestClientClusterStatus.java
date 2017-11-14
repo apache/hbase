@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -86,9 +88,9 @@ public class TestClientClusterStatus {
     Assert.assertTrue(origin.equals(defaults));
   }
 
-
   @Test
   public void testLiveAndDeadServersStatus() throws Exception {
+    // Count the number of live regionservers
     List<RegionServerThread> regionserverThreads = CLUSTER.getLiveRegionServerThreads();
     int numRs = 0;
     int len = regionserverThreads.size();
@@ -98,6 +100,16 @@ public class TestClientClusterStatus {
       }
     }
     // Retrieve live servers and dead servers info.
+    // Depending on the (random) order of unit execution we may run this unit before the
+    // minicluster is fully up and recovered from the RS shutdown done during test init.
+    Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ClusterStatus status = ADMIN.getClusterStatus();
+        Assert.assertNotNull(status);
+        return status.getRegionsCount() > 0;
+      }
+    });
     ClusterStatus status = ADMIN.getClusterStatus();
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
