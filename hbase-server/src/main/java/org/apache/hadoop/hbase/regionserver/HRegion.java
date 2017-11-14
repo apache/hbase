@@ -3853,7 +3853,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               nonceKey.getNonceGroup(), nonceKey.getNonce(), batchOp.getOrigLogSeqNum());
         }
 
-        // STEP 6. Complete mvcc for all but last writeEntry (for replay case)
+        // Complete mvcc for all but last writeEntry (for replay case)
         if (it.hasNext() && writeEntry != null) {
           mvcc.complete(writeEntry);
           writeEntry = null;
