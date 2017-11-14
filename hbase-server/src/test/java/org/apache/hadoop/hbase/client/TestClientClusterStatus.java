@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -127,6 +129,7 @@ public class TestClientClusterStatus {
 
   @Test
   public void testLiveAndDeadServersStatus() throws Exception {
+    // Count the number of live regionservers
     List<RegionServerThread> regionserverThreads = CLUSTER.getLiveRegionServerThreads();
     int numRs = 0;
     int len = regionserverThreads.size();
@@ -135,6 +138,16 @@ public class TestClientClusterStatus {
         numRs++;
       }
     }
+    // Depending on the (random) order of unit execution we may run this unit before the
+    // minicluster is fully up and recovered from the RS shutdown done during test init.
+    Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        ClusterStatus status = ADMIN.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+        Assert.assertNotNull(status);
+        return status.getRegionsCount() > 0;
+      }
+    });
     // Retrieve live servers and dead servers info.
     EnumSet<Option> options = EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS);
     ClusterStatus status = ADMIN.getClusterStatus(options);
