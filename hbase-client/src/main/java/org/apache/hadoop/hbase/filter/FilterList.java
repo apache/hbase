@@ -165,25 +165,6 @@ final public class FilterList extends FilterBase {
     return filterListBase.transformCell(c);
   }
 
-  /**
-   * Internal implementation of {@link #filterCell(Cell)}. Compared to the
-   * {@link #filterCell(Cell)} method, this method accepts an additional parameter named
-   * transformedCell. This parameter indicates the initial value of transformed cell before this
-   * filter operation. <br/>
-   * For FilterList, we can consider a filter list as a node in a tree. sub-filters of the filter
-   * list are children of the relative node. The logic of transforming cell of a filter list, well,
-   * we can consider it as the process of post-order tree traverse. For a node , Before we traverse
-   * the current child, we should set the traverse result (transformed cell) of previous node(s) as
-   * the initial value. so the additional currentTransformedCell parameter is needed (HBASE-18879).
-   * @param c The cell in question.
-   * @param transformedCell The transformed cell of previous filter(s)
-   * @return ReturnCode of this filter operation.
-   * @throws IOException
-   */
-  ReturnCode internalFilterCell(Cell c, Cell transformedCell) throws IOException {
-    return this.filterListBase.internalFilterCell(c, transformedCell);
-  }
-
   @Override
   @Deprecated
   public ReturnCode filterKeyValue(final Cell c) throws IOException {

@@ -26,8 +26,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -38,17 +36,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 public abstract class FilterListBase extends FilterBase {
   private static final int MAX_LOG_FILTERS = 5;
   protected final ArrayList<Filter> filters;
-
-  /** Reference Cell used by {@link #transformCell(Cell)} for validation purpose. */
-  protected Cell referenceCell = null;
-
   /**
-   * When filtering a given Cell in {@link #filterCell(Cell)}, this stores the transformed Cell
-   * to be returned by {@link #transformCell(Cell)}. Individual filters transformation are applied
-   * only when the filter includes the Cell. Transformations are composed in the order specified by
-   * {@link #filters}.
+   * For each sub-filter in filter list, we save a boolean flag to indicate that whether the return
+   * code of filterCell(c) for sub-filter is INCLUDE* (INCLUDE, INCLUDE_AND_NEXT_COL,
+   * INCLUDE_AND_SEEK_NEXT_ROW) case. if true, we need to transform cell for the sub-filter.
    */
-  protected Cell transformedCell = null;
+  protected ArrayList<Boolean> subFiltersIncludedCell;
 
   public FilterListBase(List<Filter> filters) {
     reversed = checkAndGetReversed(filters, reversed);
@@ -90,41 +83,33 @@ public abstract class FilterListBase extends FilterBase {
     return reversed ? -1 * cmp : cmp;
   }
 
+  /**
+   * For FilterList, we can consider a filter list as a node in a tree. sub-filters of the filter
+   * list are children of the relative node. The logic of transforming cell of a filter list, well,
+   * we can consider it as the process of post-order tree traverse. For a node , before we traverse
+   * the current child, we should set the traverse result (transformed cell) of previous node(s) as
+   * the initial value. (HBASE-18879).
+   * @param c The cell in question.
+   * @return the transformed cell.
+   * @throws IOException
+   */
   @Override
   public Cell transformCell(Cell c) throws IOException {
     if (isEmpty()) {
       return super.transformCell(c);
     }
-    if (!CellUtil.equals(c, referenceCell)) {
-      throw new IllegalStateException(
-          "Reference Cell: " + this.referenceCell + " does not match: " + c);
+    Cell transformed = c;
+    for (int i = 0, n = filters.size(); i < n; i++) {
+      if (subFiltersIncludedCell.get(i)) {
+        transformed = filters.get(i).transformCell(transformed);
+      }
     }
-    // Copy transformedCell into a new cell and reset transformedCell & referenceCell to null for
-    // Java GC optimization
-    Cell cell = KeyValueUtil.copyToNewKeyValue(this.transformedCell);
-    this.transformedCell = null;
-    this.referenceCell = null;
-    return cell;
+    return transformed;
   }
-
-  /**
-   * Internal implementation of {@link #filterCell(Cell)}
-   * @param c The cell in question.
-   * @param transformedCell The transformed cell of previous filter(s)
-   * @return ReturnCode of this filter operation.
-   * @throws IOException
-   * @see org.apache.hadoop.hbase.filter.FilterList#internalFilterCell(Cell, Cell)
-   */
-  abstract ReturnCode internalFilterCell(Cell c, Cell transformedCell) throws IOException;
 
   @Override
   public ReturnCode filterKeyValue(final Cell c) throws IOException {
     return filterCell(c);
-  }
-
-  @Override
-  public ReturnCode filterCell(final Cell c) throws IOException {
-    return internalFilterCell(c, c);
   }
 
   /**
