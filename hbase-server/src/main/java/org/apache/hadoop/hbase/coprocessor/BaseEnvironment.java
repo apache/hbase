@@ -61,7 +61,6 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
   }
 
   /** Initialize the environment */
-  @Override
   public void startup() throws IOException {
     if (state == Coprocessor.State.INSTALLED ||
         state == Coprocessor.State.STOPPED) {
@@ -82,7 +81,6 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
   }
 
   /** Clean up the environment */
-  @Override
   public void shutdown() {
     if (state == Coprocessor.State.ACTIVE) {
       state = Coprocessor.State.STOPPING;

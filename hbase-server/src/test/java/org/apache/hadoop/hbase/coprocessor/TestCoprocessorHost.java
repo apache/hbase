@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -68,52 +66,9 @@ public class TestCoprocessorHost {
           final Configuration cpHostConf = conf;
 
       @Override
-      public CoprocessorEnvironment createEnvironment(final RegionCoprocessor instance,
-          final int priority, int sequence, Configuration conf) {
-        return new CoprocessorEnvironment() {
-          final Coprocessor envInstance = instance;
-
-          @Override
-          public int getVersion() {
-            return 0;
-          }
-
-          @Override
-          public String getHBaseVersion() {
-            return "0.0.0";
-          }
-
-          @Override
-          public Coprocessor getInstance() {
-            return envInstance;
-          }
-
-          @Override
-          public int getPriority() {
-            return priority;
-          }
-
-          @Override
-          public int getLoadSequence() {
-            return 0;
-          }
-
-          @Override
-          public Configuration getConfiguration() {
-            return cpHostConf;
-          }
-
-          @Override
-          public void startup() throws IOException {}
-
-          @Override
-          public void shutdown() {}
-
-          @Override
-          public ClassLoader getClassLoader() {
-            return null;
-          }
-        };
+      public CoprocessorEnvironment<RegionCoprocessor> createEnvironment(
+          final RegionCoprocessor instance, final int priority, int sequence, Configuration conf) {
+        return new BaseEnvironment<RegionCoprocessor>(instance, priority, 0, cpHostConf);
       }
     };
     final String key = "KEY";

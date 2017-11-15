@@ -19,15 +19,15 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Coprocessor environment state.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public interface CoprocessorEnvironment<C extends Coprocessor> {
 
   /** @return the Coprocessor interface version */
@@ -52,13 +52,4 @@ public interface CoprocessorEnvironment<C extends Coprocessor> {
    * @return the classloader for the loaded coprocessor instance
    */
   ClassLoader getClassLoader();
-
-  /**
-   * After a coprocessor has been loaded in an encapsulation of an environment, CoprocessorHost
-   * calls this function to initialize the environment.
-   */
-  void startup() throws IOException;
-
-  /** Clean up the environment. Called by CoprocessorHost when it itself is shutting down. */
-  void shutdown();
 }

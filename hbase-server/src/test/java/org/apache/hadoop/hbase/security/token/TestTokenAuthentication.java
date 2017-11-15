@@ -279,12 +279,6 @@ public class TestTokenAuthentication {
         }
 
         @Override
-        public void startup() throws IOException {}
-
-        @Override
-        public void shutdown() {}
-
-        @Override
         public ConcurrentMap<String, Object> getSharedData() { return null; }
 
         @Override
