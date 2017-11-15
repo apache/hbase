@@ -65,7 +65,8 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
     }
     switch (state) {
       case MOVE_REGION_UNASSIGN:
-        addChildProcedure(new UnassignProcedure(plan.getRegionInfo(), plan.getSource(), true));
+        addChildProcedure(new UnassignProcedure(plan.getRegionInfo(), plan.getSource(),
+            plan.getDestination(), true));
         setNextState(MoveRegionState.MOVE_REGION_ASSIGN);
         break;
       case MOVE_REGION_ASSIGN:
