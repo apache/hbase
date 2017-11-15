@@ -69,7 +69,7 @@ public class ReplicationProtbufUtil {
     try {
       admin.replicateWALEntry(controller, p.getFirst());
     } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
-      throw ProtobufUtil.handleRemoteException(e);
+      throw ProtobufUtil.getServiceException(e);
     }
   }
 

@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
@@ -48,6 +49,14 @@ extends RetriesExhaustedException {
   List<Throwable> exceptions;
   List<Row> actions;
   List<String> hostnameAndPort;
+
+  public RetriesExhaustedWithDetailsException(final String msg) {
+    super(msg);
+  }
+
+  public RetriesExhaustedWithDetailsException(final String msg, final IOException e) {
+    super(msg, e);
+  }
 
   public RetriesExhaustedWithDetailsException(List<Throwable> exceptions,
                                               List<Row> actions,
