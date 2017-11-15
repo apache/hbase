@@ -55,7 +55,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -306,7 +305,6 @@ public class TestRegionReplicas {
     }
   }
 
-  @Ignore
   @Test(timeout = 300000)
   public void testFlushAndCompactionsInPrimary() throws Exception {
 
