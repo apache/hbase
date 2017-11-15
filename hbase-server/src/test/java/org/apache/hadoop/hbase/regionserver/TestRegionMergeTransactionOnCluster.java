@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -62,7 +61,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -73,8 +72,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -88,14 +85,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionMergeTransactionOnCluster {
-  private static final Log LOG = LogFactory
-      .getLog(TestRegionMergeTransactionOnCluster.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionMergeTransactionOnCluster.class);
   @Rule public TestName name = new TestName();
-  @ClassRule
-  public static final TestRule timeout =
-      CategoryBasedTimeout.forClass(TestRegionMergeTransactionOnCluster.class);
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).
+      withLookingForStuckThread(true).
+      build();
 
   private static final int NB_SERVERS = 3;
 
@@ -357,7 +354,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
   }
 
-  @Ignore @Test // DISABLED FOR NOW. DON'T KNOW HOW IT IS SUPPOSED TO WORK.
+  @Test
   public void testMergeWithReplicas() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create table and load data.
