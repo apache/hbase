@@ -255,6 +255,21 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Return the Exception thrown by the remote server wrapped in
+   * ServiceException as cause. RemoteException are left untouched.
+   *
+   * @param se ServiceException that wraps IO exception thrown by the server
+   * @return Exception wrapped in ServiceException.
+   */
+  public static IOException getServiceException(org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
+    Throwable t = e.getCause();
+    if (ExceptionUtil.isInterrupt(t)) {
+      return ExceptionUtil.asInterrupt(t);
+    }
+    return t instanceof IOException ? (IOException) t : new HBaseIOException(t);
+  }
+
+  /**
    * Like {@link #getRemoteException(ServiceException)} but more generic, able to handle more than
    * just {@link ServiceException}. Prefer this method to
    * {@link #getRemoteException(ServiceException)} because trying to

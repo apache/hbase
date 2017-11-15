@@ -36,6 +36,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -45,9 +47,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
@@ -79,6 +83,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private static final long DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER = 2;
 
   private ClusterConnection conn;
+  private Configuration localConf;
   private Configuration conf;
   // How long should we sleep for each retry
   private long sleepForRetries;
@@ -102,11 +107,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private Path hfileArchiveDir;
   private boolean replicationBulkLoadDataEnabled;
   private Abortable abortable;
+  private boolean dropOnDeletedTables;
 
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
     this.conf = HBaseConfiguration.create(ctx.getConfiguration());
+    this.localConf = HBaseConfiguration.create(ctx.getLocalConfiguration());
     decorateConf();
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
@@ -139,6 +146,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     // conservative for now.
     this.replicationRpcLimit = (int)(0.95 * (double)conf.getLong(RpcServer.MAX_REQUEST_SIZE,
       RpcServer.DEFAULT_MAX_REQUEST_SIZE));
+    this.dropOnDeletedTables =
+        this.conf.getBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
 
     this.replicationBulkLoadDataEnabled =
         conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
@@ -222,6 +231,37 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
 
     entryLists.addAll(entryMap.values());
+    return entryLists;
+  }
+
+  private TableName parseTable(String msg) {
+    // ... TableNotFoundException: '<table>'/n...
+    Pattern p = Pattern.compile("TableNotFoundException: \\'([\\S]*)\\'");
+    Matcher m = p.matcher(msg);
+    if (m.find()) {
+      String table = m.group(1);
+      try {
+        // double check that table is a valid table name
+        TableName.valueOf(TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(table)));
+        return TableName.valueOf(table);
+      } catch (IllegalArgumentException ignore) {
+      }
+    }
+    return null;
+  }
+
+  // Filter a set of batches by TableName
+  private List<List<Entry>> filterBatches(final List<List<Entry>> oldEntryList, TableName table) {
+    List<List<Entry>> entryLists = new ArrayList<>();
+    for (List<Entry> entries : oldEntryList) {
+      ArrayList<Entry> thisList = new ArrayList<Entry>(entries.size());
+      entryLists.add(thisList);
+      for (Entry e : entries) {
+        if (!e.getKey().getTablename().equals(table)) {
+          thisList.add(e);
+        }
+      }
+    }
     return entryLists;
   }
 
@@ -325,10 +365,27 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           ioe = ((RemoteException) ioe).unwrapRemoteException();
           LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);
           if (ioe instanceof TableNotFoundException) {
-            if (sleepForRetries("A table is missing in the peer cluster. "
-                + "Replication cannot proceed without losing data.", sleepMultiplier)) {
-              sleepMultiplier++;
+            if (dropOnDeletedTables) {
+              // this is a bit fragile, but cannot change how TNFE is serialized
+              // at least check whether the table name is legal
+              TableName table = parseTable(ioe.getMessage());
+              if (table != null) {
+                try (Connection localConn =
+                    ConnectionFactory.createConnection(ctx.getLocalConfiguration())) {
+                  if (!localConn.getAdmin().tableExists(table)) {
+                    // Would potentially be better to retry in one of the outer loops
+                    // and add a table filter there; but that would break the encapsulation,
+                    // so we're doing the filtering here.
+                    LOG.info("Missing table detected at sink, local table also does not exist, filtering edits for '"+table+"'");
+                    batches = filterBatches(batches, table);
+                    continue;
+                  }
+                } catch (IOException iox) {
+                  LOG.warn("Exception checking for local table: ", iox);
+                }
+              }
             }
+            // fall through and sleep below
           } else {
             LOG.warn("Peer encountered RemoteException, rechecking all sinks: ", ioe);
             replicationSinkMgr.chooseSinks();
