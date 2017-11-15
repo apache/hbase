@@ -48,7 +48,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>${surefire.version}</version>
         <configuration>
           <!-- Have to set the groups here because we only do
                     split tests in this package, so groups on live in this module -->
@@ -91,19 +90,6 @@
                     <versionRange>[2.8,)</versionRange>
                     <goals>
                       <goal>build-classpath</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore/>
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <versionRange>[3.2,)</versionRange>
-                    <goals>
-                      <goal>compile</goal>
                     </goals>
                   </pluginExecutionFilter>
                   <action>

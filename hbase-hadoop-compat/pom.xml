@@ -67,19 +67,6 @@
             <configuration>
               <lifecycleMappingMetadata>
                 <pluginExecutions>
-                  <pluginExecution>
-                    <pluginExecutionFilter>
-                      <groupId>org.apache.maven.plugins</groupId>
-                      <artifactId>maven-compiler-plugin</artifactId>
-                      <versionRange>[3.2,)</versionRange>
-                      <goals>
-                        <goal>compile</goal>
-                      </goals>
-                    </pluginExecutionFilter>
-                    <action>
-                      <ignore></ignore>
-                    </action>
-                  </pluginExecution>
                 </pluginExecutions>
               </lifecycleMappingMetadata>
             </configuration>
