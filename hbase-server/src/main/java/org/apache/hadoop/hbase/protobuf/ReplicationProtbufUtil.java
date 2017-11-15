@@ -71,7 +71,7 @@ public class ReplicationProtbufUtil {
     try {
       admin.replicateWALEntry(controller, p.getFirst());
     } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
+      throw ProtobufUtil.getServiceException(se);
     }
   }
 
