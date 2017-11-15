@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,17 +19,24 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
-@Category({FlakeyTests.class, MediumTests.class})
+@Category({FlakeyTests.class, LargeTests.class})
 public class TestStochasticLoadBalancer2 extends BalancerTestBase {
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer2.class);
+  @Rule
+  public final TestRule timeout = CategoryBasedTimeout.builder()
+      .withTimeout(this.getClass())
+      .withLookingForStuckThread(true)
+      .build();
 
   @Before
   public void before() {
@@ -47,7 +54,7 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     loadBalancer.setConf(conf);
   }
 
-  @Test (timeout = 800000)
+  @Test
   public void testRegionReplicasOnMidCluster() {
     int numNodes = 200;
     int numRegions = 40 * 200;
@@ -57,7 +64,7 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Test (timeout = 800000)
+  @Test
   public void testRegionReplicasOnLargeCluster() {
     int numNodes = 1000;
     int numRegions = 20 * numNodes; // 20 * replication regions per RS
@@ -67,7 +74,7 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
-  @Ignore @Test (timeout = 800000)
+  @Test
   public void testRegionReplicasOnMidClusterHighReplication() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
@@ -80,7 +87,7 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false, true);
   }
 
-  @Test (timeout = 800000)
+  @Test
   public void testRegionReplicationOnMidClusterReplicationGreaterThanNumNodes() {
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
     loadBalancer.setConf(conf);
