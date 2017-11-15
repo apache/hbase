@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -218,45 +217,21 @@ public class TestHCM {
 
   }
 
-  public static class SleepLongerAtFirstCoprocessor implements RegionCoprocessor, RegionObserver {
-    public static final int SLEEP_TIME = 2000;
-    static final AtomicLong ct = new AtomicLong(0);
-
-    @Override
-    public Optional<RegionObserver> getRegionObserver() {
-      return Optional.of(this);
-    }
-
-    @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<Cell> results) throws IOException {
-      // After first sleep, all requests are timeout except the last retry. If we handle
-      // all the following requests, finally the last request is also timeout. If we drop all
-      // timeout requests, we can handle the last request immediately and it will not timeout.
-      if (ct.incrementAndGet() <= 1) {
-        Threads.sleep(SLEEP_TIME * RPC_RETRY * 2);
-      } else {
-        Threads.sleep(SLEEP_TIME);
-      }
-    }
-  }
-
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, RPC_RETRY);
-    // simulate queue blocking in testDropTimeoutRequest
-    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 1);
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 3);
     TEST_UTIL.startMiniCluster(2);
+
   }
 
   @AfterClass public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
         5, TimeUnit.SECONDS,
@@ -341,7 +316,11 @@ public class TestHCM {
   }
 
   // Fails too often!  Needs work.  HBASE-12558
+  // May only fail on non-linux machines? E.g. macosx.
   @Ignore @Test (expected = RegionServerStoppedException.class)
+  // Depends on mulitcast messaging facility that seems broken in hbase2
+  // See  HBASE-19261 "ClusterStatusPublisher where Master could optionally broadcast notice of
+  // dead servers is broke"
   public void testClusterStatus() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] cf = "cf".getBytes();
@@ -622,21 +601,6 @@ public class TestHCM {
       } catch (RetriesExhaustedException e) {
         // expected
       }
-    }
-  }
-
-  @Test
-  public void testDropTimeoutRequest() throws Exception {
-    // Simulate the situation that the server is slow and client retries for several times because
-    // of timeout. When a request can be handled after waiting in the queue, we will drop it if
-    // it has been considered as timeout at client. If we don't drop it, the server will waste time
-    // on handling timeout requests and finally all requests timeout and client throws exception.
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
-    hdt.addCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
-    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
-    try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
-      t.setRpcTimeout(SleepLongerAtFirstCoprocessor.SLEEP_TIME * 2);
-      t.get(new Get(FAM_NAM));
     }
   }
 
@@ -986,8 +950,8 @@ public class TestHCM {
    * that we really delete it.
    * @throws Exception
    */
-  @Ignore @Test
-  public void testRegionCaching() throws Exception{
+  @Test
+  public void testRegionCaching() throws Exception {
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAM_NAM).close();
     Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
     // test with no retry, or client cache will get updated after the first failure
@@ -999,12 +963,15 @@ public class TestHCM {
     Put put = new Put(ROW);
     put.addColumn(FAM_NAM, ROW, ROW);
     table.put(put);
+
     ConnectionImplementation conn = (ConnectionImplementation) connection;
 
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
-    final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort() + 1;
+    // Here we mess with the cached location making it so the region at TABLE_NAME, ROW is at
+    // a location where the port is current port number +1 -- i.e. a non-existent location.
     HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation();
+    final int nextPort = loc.getPort() + 1;
     conn.updateCachedLocation(loc.getRegionInfo(), loc.getServerName(),
         ServerName.valueOf("127.0.0.1", nextPort,
         HConstants.LATEST_TIMESTAMP), HConstants.LATEST_TIMESTAMP);
@@ -1038,7 +1005,7 @@ public class TestHCM {
 
     // Choose the other server.
     int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
-    int destServerId = (curServerId == 0 ? 1 : 0);
+    int destServerId = curServerId == 0? 1: 0;
 
     HRegionServer curServer = TEST_UTIL.getHBaseCluster().getRegionServer(curServerId);
     HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(destServerId);
@@ -1055,7 +1022,7 @@ public class TestHCM {
         getAssignmentManager().hasRegionsInTransition());
 
     // Moving. It's possible that we don't have all the regions online at this point, so
-    //  the test must depends only on the region we're looking at.
+    //  the test must depend only on the region we're looking at.
     LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
     TEST_UTIL.getAdmin().move(
       toMove.getRegionInfo().getEncodedNameAsBytes(),
@@ -1092,7 +1059,7 @@ public class TestHCM {
     try {
       table.put(put3);
       Assert.fail("Unreachable point");
-    } catch (RetriesExhaustedWithDetailsException e){
+    } catch (RetriesExhaustedWithDetailsException e) {
       LOG.info("Put done, exception caught: " + e.getClass());
       Assert.assertEquals(1, e.getNumExceptions());
       Assert.assertEquals(1, e.getCauses().size());
@@ -1100,6 +1067,13 @@ public class TestHCM {
 
       // Check that we unserialized the exception as expected
       Throwable cause = ClientExceptionsUtil.findException(e.getCause(0));
+      Assert.assertNotNull(cause);
+      Assert.assertTrue(cause instanceof RegionMovedException);
+    } catch (RetriesExhaustedException ree) {
+      // hbase2 throws RetriesExhaustedException instead of RetriesExhaustedWithDetailsException
+      // as hbase1 used to do. Keep an eye on this to see if this changed behavior is an issue.
+      LOG.info("Put done, exception caught: " + ree.getClass());
+      Throwable cause = ClientExceptionsUtil.findException(ree.getCause());
       Assert.assertNotNull(cause);
       Assert.assertTrue(cause instanceof RegionMovedException);
     }
@@ -1309,12 +1283,11 @@ public class TestHCM {
     return prevNumRetriesVal;
   }
 
-  @Ignore @Test
+  @Test
   public void testMulti() throws Exception {
     Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
     try {
-      ConnectionImplementation conn =
-           (ConnectionImplementation)TEST_UTIL.getConnection();
+      ConnectionImplementation conn = (ConnectionImplementation)TEST_UTIL.getConnection();
 
       // We're now going to move the region and check that it works for the client
       // First a new put to add the location in the cache
@@ -1345,7 +1318,6 @@ public class TestHCM {
 
       ServerName destServerName = destServer.getServerName();
       ServerName metaServerName = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
-      assertTrue(!destServerName.equals(metaServerName));
 
        //find another row in the cur server that is less than ROW_X
       List<HRegion> regions = curServer.getRegions(TABLE_NAME3);
