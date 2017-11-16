@@ -72,7 +72,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   private WALProcedureStore store;
   static byte[] serializedState;
 
-  private class LoadCounter implements ProcedureStore.ProcedureLoader {
+  private static class LoadCounter implements ProcedureStore.ProcedureLoader {
     public LoadCounter() {}
 
     @Override
@@ -85,7 +85,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
         if (procIter.isNextCompleted()) {
           ProcedureInfo proc = procIter.nextAsProcedureInfo();
         } else {
-          Procedure proc = procIter.nextAsProcedure();
+          Procedure<?> proc = procIter.nextAsProcedure();
         }
       }
     }
@@ -93,7 +93,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     @Override
     public void handleCorrupted(ProcedureIterator procIter) throws IOException {
       while (procIter.hasNext()) {
-        Procedure proc = procIter.nextAsProcedure();
+        Procedure<?> proc = procIter.nextAsProcedure();
       }
     }
   }
@@ -171,8 +171,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   private void writeWals() throws IOException {
     List<Integer> procStates = shuffleProcWriteSequence();
     TestProcedure[] procs = new TestProcedure[numProcs + 1];  // 0 is not used.
-    int numProcsPerWal = numWals > 0 ? (int)Math.ceil(procStates.size() / numWals)
-        : Integer.MAX_VALUE;
+    int numProcsPerWal = numWals > 0 ? procStates.size() / numWals : Integer.MAX_VALUE;
     long startTime = currentTimeMillis();
     long lastTime = startTime;
     for (int i = 0; i < procStates.size(); ++i) {

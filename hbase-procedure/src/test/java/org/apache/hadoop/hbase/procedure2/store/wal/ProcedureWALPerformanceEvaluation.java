@@ -237,7 +237,7 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
     }
   }
 
-  public class NoSyncWalProcedureStore extends WALProcedureStore {
+  public static class NoSyncWalProcedureStore extends WALProcedureStore {
     public NoSyncWalProcedureStore(final Configuration conf, final FileSystem fs,
         final Path logDir) {
       super(conf, fs, logDir, new WALProcedureStore.LeaseRecovery() {

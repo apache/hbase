@@ -146,6 +146,7 @@ public class TestChildProcedures {
   public static class TestRootProcedure extends SequentialProcedure<TestProcEnv> {
     public TestRootProcedure() {}
 
+    @Override
     public Procedure[] execute(TestProcEnv env) {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
@@ -153,6 +154,7 @@ public class TestChildProcedures {
       return new Procedure[] { new TestChildProcedure(), new TestChildProcedure() };
     }
 
+    @Override
     public void rollback(TestProcEnv env) {
     }
 
@@ -165,6 +167,7 @@ public class TestChildProcedures {
   public static class TestChildProcedure extends SequentialProcedure<TestProcEnv> {
     public TestChildProcedure() {}
 
+    @Override
     public Procedure[] execute(TestProcEnv env) {
       if (env.toggleKillBeforeStoreUpdate) {
         ProcedureTestingUtility.toggleKillBeforeStoreUpdate(procExecutor);
@@ -175,6 +178,7 @@ public class TestChildProcedures {
       return null;
     }
 
+    @Override
     public void rollback(TestProcEnv env) {
     }
 
