@@ -29,7 +29,7 @@ import java.io.IOException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ZooKeeperConnectionException extends IOException {
-  private static final long serialVersionUID = 1L << 23 - 1L;
+  private static final long serialVersionUID = (1L << 23) - 1L;
   /** default constructor */
   public ZooKeeperConnectionException() {
     super();

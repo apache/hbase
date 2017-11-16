@@ -1284,6 +1284,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @deprecated Writables are going away.  Use pb {@link #parseFrom(byte[])} instead.
    */
   @Deprecated
+  @Override
   public void readFields(DataInput in) throws IOException {
     int version = in.readByte();
     if (version < 6) {
@@ -1367,6 +1368,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @deprecated Writables are going away.  Use {@link #toByteArray()} instead.
    */
   @Deprecated
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeByte(COLUMN_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, this.name);

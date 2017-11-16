@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -124,8 +125,7 @@ class HConnectionKey {
       for (String property : CONNECTION_PROPERTIES) {
         String thisValue = this.properties.get(property);
         String thatValue = that.properties.get(property);
-        //noinspection StringEquality
-        if (thisValue == thatValue) {
+        if (Objects.equals(thisValue, thatValue)) {
           continue;
         }
         if (thisValue == null || !thisValue.equals(thatValue)) {

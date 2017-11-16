@@ -38,7 +38,7 @@ class RegistryFactory {
       ZooKeeperRegistry.class.getName());
     Registry registry = null;
     try {
-      registry = (Registry)Class.forName(registryClass).newInstance();
+      registry = (Registry)Class.forName(registryClass).getDeclaredConstructor().newInstance();
     } catch (Throwable t) {
       throw new IOException(t);
     }

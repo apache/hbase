@@ -172,7 +172,7 @@ public class ClusterStatus extends VersionedWritable {
     int count = 0;
     if (liveServers != null && !liveServers.isEmpty()) {
       for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-        count += e.getValue().getNumberOfRequests();
+        count = (int) (count + e.getValue().getNumberOfRequests());
       }
     }
     return count;
@@ -188,6 +188,7 @@ public class ClusterStatus extends VersionedWritable {
   /**
    * @see java.lang.Object#equals(java.lang.Object)
    */
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -208,6 +209,7 @@ public class ClusterStatus extends VersionedWritable {
   /**
    * @see java.lang.Object#hashCode()
    */
+  @Override
   public int hashCode() {
     return VERSION + hbaseVersion.hashCode() + this.liveServers.hashCode() +
       this.deadServers.hashCode() + this.master.hashCode() +
@@ -215,6 +217,7 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   /** @return the object version number */
+  @Override
   public byte getVersion() {
     return VERSION;
   }
@@ -322,6 +325,7 @@ public class ClusterStatus extends VersionedWritable {
     return balancerOn;
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     sb.append("Master: " + master);
@@ -440,7 +444,7 @@ public class ClusterStatus extends VersionedWritable {
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
 
     Map<ServerName, ServerLoad> servers = null;
-    if (proto.getLiveServersList() != null) {
+    if (!proto.getLiveServersList().isEmpty()) {
       servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
       for (LiveServerInfo lsi : proto.getLiveServersList()) {
         servers.put(ProtobufUtil.toServerName(
@@ -449,7 +453,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     Collection<ServerName> deadServers = null;
-    if (proto.getDeadServersList() != null) {
+    if (!proto.getDeadServersList().isEmpty()) {
       deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
       for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
         deadServers.add(ProtobufUtil.toServerName(sn));
@@ -457,7 +461,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     Collection<ServerName> backupMasters = null;
-    if (proto.getBackupMastersList() != null) {
+    if (!proto.getBackupMastersList().isEmpty()) {
       backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
       for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
         backupMasters.add(ProtobufUtil.toServerName(sn));
@@ -465,7 +469,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     Set<RegionState> rit = null;
-    if (proto.getRegionsInTransitionList() != null) {
+    if (!proto.getRegionsInTransitionList().isEmpty()) {
       rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
       for (RegionInTransition region : proto.getRegionsInTransitionList()) {
         RegionState value = RegionState.convert(region.getRegionState());
@@ -474,7 +478,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     String[] masterCoprocessors = null;
-    if (proto.getMasterCoprocessorsList() != null) {
+    if (!proto.getMasterCoprocessorsList().isEmpty()) {
       final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
       masterCoprocessors = new String[numMasterCoprocessors];
       for (int i = 0; i < numMasterCoprocessors; i++) {

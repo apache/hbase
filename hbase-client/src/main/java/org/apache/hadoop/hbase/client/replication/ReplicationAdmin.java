@@ -656,8 +656,8 @@ public class ReplicationAdmin implements Closeable {
       admin = this.connection.getAdmin();
       HTableDescriptor htd = admin.getTableDescriptor(tableName);
       ReplicationState currentReplicationState = getTableReplicationState(htd);
-      if (enableRep && currentReplicationState != ReplicationState.ENABLED
-          || !enableRep && currentReplicationState != ReplicationState.DISABLED) {
+      if ((enableRep && currentReplicationState != ReplicationState.ENABLED)
+          || (!enableRep && currentReplicationState != ReplicationState.DISABLED)) {
         boolean isOnlineSchemaUpdateEnabled =
             this.connection.getConfiguration()
                 .getBoolean("hbase.online.schema.update.enable", true);
@@ -716,6 +716,7 @@ public class ReplicationAdmin implements Closeable {
     return ReplicationState.DISABLED;
   }
 
+  @SuppressWarnings("unchecked")
   private void checkConfiguredWALEntryFilters(ReplicationPeerConfig peerConfig)
     throws ReplicationException {
     String filterCSV = peerConfig.getConfiguration().
@@ -724,8 +725,8 @@ public class ReplicationAdmin implements Closeable {
       String[] filters = filterCSV.split(",");
       for (String filter : filters) {
         try {
-          Class clazz = Class.forName(filter);
-          Object o = clazz.newInstance();
+          Class<?> clazz = Class.forName(filter);
+          Object o = clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
           throw new ReplicationException("Configured WALEntryFilter " + filter +
               " could not be created. Failing add/update " + "peer operation.", e);
@@ -783,11 +784,11 @@ public class ReplicationAdmin implements Closeable {
    * @see java.lang.Object#equals(java.lang.Object)
    */
   private boolean compareForReplication(HTableDescriptor peerHtd, HTableDescriptor localHtd) {
-    if (peerHtd == localHtd) {
-      return true;
-    }
     if (peerHtd == null) {
       return false;
+    }
+    if (peerHtd.equals(localHtd)) {
+      return true;
     }
     boolean result = false;
 

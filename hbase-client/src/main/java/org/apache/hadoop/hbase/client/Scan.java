@@ -871,6 +871,7 @@ public class Scan extends Query {
     return allowPartialResults;
   }
 
+  @Override
   public Scan setLoadColumnFamiliesOnDemand(boolean value) {
     return (Scan) super.setLoadColumnFamiliesOnDemand(value);
   }

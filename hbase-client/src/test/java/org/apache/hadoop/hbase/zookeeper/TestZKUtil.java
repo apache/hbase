@@ -23,7 +23,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -51,7 +50,7 @@ public class TestZKUtil {
     String node = "/hbase/testUnsecure";
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
     List<ACL> aclList = ZKUtil.createACL(watcher, node, false);
-    Assert.assertEquals(aclList.size(), 1);
+    Assert.assertEquals(1, aclList.size());
     Assert.assertTrue(aclList.contains(Ids.OPEN_ACL_UNSAFE.iterator().next()));
   }
 
@@ -62,7 +61,7 @@ public class TestZKUtil {
     String node = "/hbase/testSecuritySingleSuperuser";
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
     List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
-    Assert.assertEquals(aclList.size(), 2); // 1+1, since ACL will be set for the creator by default
+    Assert.assertEquals(2, aclList.size()); // 1+1, since ACL will be set for the creator by default
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user1"))));
     Assert.assertTrue(aclList.contains(Ids.CREATOR_ALL_ACL.iterator().next()));
   }
@@ -74,7 +73,7 @@ public class TestZKUtil {
     String node = "/hbase/testCreateACL";
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
     List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
-    Assert.assertEquals(aclList.size(), 4); // 3+1, since ACL will be set for the creator by default
+    Assert.assertEquals(4, aclList.size()); // 3+1, since ACL will be set for the creator by default
     Assert.assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group1"))));
     Assert.assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group2"))));
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user1"))));
@@ -90,13 +89,14 @@ public class TestZKUtil {
     String node = "/hbase/testCreateACL";
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
     List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
-    Assert.assertEquals(aclList.size(), 3); // 3, since service user the same as one of superuser
+    Assert.assertEquals(3, aclList.size()); // 3, since service user the same as one of superuser
     Assert.assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group1"))));
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("auth", ""))));
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user5"))));
     Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user6"))));
   }
 
+  @Test
   public void testInterruptedDuringAction()
       throws ZooKeeperConnectionException, IOException, KeeperException, InterruptedException {
     final RecoverableZooKeeper recoverableZk = Mockito.mock(RecoverableZooKeeper.class);

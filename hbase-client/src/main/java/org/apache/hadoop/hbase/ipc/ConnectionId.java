@@ -57,20 +57,49 @@ public class ConnectionId {
   }
 
   @Override
-  public boolean equals(Object obj) {
-   if (obj instanceof ConnectionId) {
-     ConnectionId id = (ConnectionId) obj;
-     return address.equals(id.address) &&
-            ((ticket != null && ticket.equals(id.ticket)) ||
-             (ticket == id.ticket)) &&
-             this.serviceName == id.serviceName;
-   }
-   return false;
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((address == null) ? 0 : address.hashCode());
+    result = prime * result + ((serviceName == null) ? 0 : serviceName.hashCode());
+    result = prime * result + ((ticket == null) ? 0 : ticket.hashCode());
+    return result;
   }
 
-  @Override  // simply use the default Object#hashcode() ?
-  public int hashCode() {
-    return hashCode(ticket,serviceName,address);
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    ConnectionId other = (ConnectionId) obj;
+    if (address == null) {
+      if (other.address != null) {
+        return false;
+      }
+    } else if (!address.equals(other.address)) {
+      return false;
+    }
+    if (serviceName == null) {
+      if (other.serviceName != null) {
+        return false;
+      }
+    } else if (!serviceName.equals(other.serviceName)) {
+      return false;
+    }
+    if (ticket == null) {
+      if (other.ticket != null) {
+        return false;
+      }
+    } else if (!ticket.equals(other.ticket)) {
+      return false;
+    }
+    return true;
   }
 
   public static int hashCode(User ticket, String serviceName, InetSocketAddress address){

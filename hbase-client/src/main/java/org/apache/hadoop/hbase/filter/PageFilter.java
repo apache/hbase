@@ -24,11 +24,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
 /**
  * Implementation of Filter interface that limits results to a specific page
  * size. It terminates scanning once the number of filter-passed rows is &gt;
@@ -72,15 +72,18 @@ public class PageFilter extends FilterBase {
     return v;
   }
 
+  @Override
   public boolean filterAllRemaining() {
     return this.rowsAccepted >= this.pageSize;
   }
 
+  @Override
   public boolean filterRow() {
     this.rowsAccepted++;
     return this.rowsAccepted > this.pageSize;
   }
   
+  @Override
   public boolean hasFilterRow() {
     return true;
   }
@@ -95,6 +98,7 @@ public class PageFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.PageFilter.Builder builder =
       FilterProtos.PageFilter.newBuilder();
@@ -124,6 +128,7 @@ public class PageFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof PageFilter)) return false;

@@ -1808,6 +1808,7 @@ public class HTable implements HTableInterface, RegionLocator {
     return getKeysAndRegionsInRange(start, end, true).getFirst();
   }
 
+  @Override
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
     if (mutator != null) {
@@ -1816,6 +1817,7 @@ public class HTable implements HTableInterface, RegionLocator {
     multiAp.setOperationTimeout(operationTimeout);
   }
 
+  @Override
   public int getOperationTimeout() {
     return operationTimeout;
   }

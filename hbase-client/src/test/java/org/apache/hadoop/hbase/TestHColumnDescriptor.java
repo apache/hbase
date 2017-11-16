@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -77,7 +80,8 @@ public class TestHColumnDescriptor {
   public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
       throws Exception {
     try {
-      new HColumnDescriptor("".getBytes());
+      new HColumnDescriptor("".getBytes(StandardCharsets.UTF_8));
+      fail("Did not throw");
     } catch (IllegalArgumentException e) {
       assertEquals("Family name can not be empty", e.getLocalizedMessage());
     }

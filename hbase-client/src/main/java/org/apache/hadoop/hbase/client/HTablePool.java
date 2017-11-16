@@ -308,6 +308,7 @@ public class HTablePool implements Closeable {
    * <p>
    * Note: this is a 'shutdown' of all the table pools.
    */
+  @Override
   public void close() throws IOException {
     for (String tableName : tables.keySet()) {
       closeTablePool(tableName);
@@ -524,6 +525,7 @@ public class HTablePool implements Closeable {
      *
      * @throws IOException
      */
+    @Override
     public void close() throws IOException {
       checkState();
       open = false;
@@ -635,7 +637,8 @@ public class HTablePool implements Closeable {
 
     private void checkState() {
       if (!isOpen()) {
-        throw new IllegalStateException("Table=" + new String(table.getTableName()) + " already closed");
+        throw new IllegalStateException("Table=" + table.getName().getNameAsString()
+          + " already closed");
       }
     }
 

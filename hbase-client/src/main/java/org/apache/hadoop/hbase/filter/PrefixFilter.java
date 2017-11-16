@@ -50,6 +50,7 @@ public class PrefixFilter extends FilterBase {
     return prefix;
   }
 
+  @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     if (buffer == null || this.prefix == null)
       return true;
@@ -80,14 +81,17 @@ public class PrefixFilter extends FilterBase {
     return v;
   }
 
+  @Override
   public boolean filterRow() {
     return filterRow;
   }
 
+  @Override
   public void reset() {
     filterRow = true;
   }
 
+  @Override
   public boolean filterAllRemaining() {
     return passedPrefix;
   }
@@ -102,6 +106,7 @@ public class PrefixFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.PrefixFilter.Builder builder =
       FilterProtos.PrefixFilter.newBuilder();
@@ -131,6 +136,7 @@ public class PrefixFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof PrefixFilter)) return false;

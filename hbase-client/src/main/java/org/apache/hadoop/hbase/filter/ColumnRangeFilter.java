@@ -143,8 +143,8 @@ public class ColumnRangeFilter extends FilterBase {
     int cmpMax = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
         this.maxColumn, 0, this.maxColumn.length);
 
-    if (this.maxColumnInclusive && cmpMax <= 0 ||
-        !this.maxColumnInclusive && cmpMax < 0) {
+    if ((this.maxColumnInclusive && cmpMax <= 0) ||
+        (!this.maxColumnInclusive && cmpMax < 0)) {
       return ReturnCode.INCLUDE;
     }
 
@@ -177,6 +177,7 @@ public class ColumnRangeFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.ColumnRangeFilter.Builder builder =
       FilterProtos.ColumnRangeFilter.newBuilder();
@@ -211,6 +212,7 @@ public class ColumnRangeFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
    if (o == this) return true;
    if (!(o instanceof ColumnRangeFilter)) return false;

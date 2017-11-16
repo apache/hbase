@@ -31,7 +31,7 @@ import java.io.IOException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class NotServingRegionException extends IOException {
-  private static final long serialVersionUID = 1L << 17 - 1L;
+  private static final long serialVersionUID = (1L << 17) - 1L;
 
   /** default constructor */
   public NotServingRegionException() {

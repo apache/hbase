@@ -67,6 +67,7 @@ public final class QuotaRetriever implements Closeable, Iterable<QuotaSettings> 
     }
   }
 
+  @Override
   public void close() throws IOException {
     if (this.table != null) {
       this.table.close();

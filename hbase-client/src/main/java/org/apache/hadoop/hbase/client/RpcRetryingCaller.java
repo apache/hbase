@@ -66,6 +66,7 @@ public class RpcRetryingCaller<T> {
   private final long pauseForCQTBE;
   private final int retries;
   private final int rpcTimeout;// timeout for each rpc request
+  private final Object lock = new Object();
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private final RetryingCallerInterceptor interceptor;
   private final RetryingCallerInterceptorContext context;
@@ -105,16 +106,16 @@ public class RpcRetryingCaller<T> {
 
   private int getTimeout(int callTimeout){
     int timeout = getRemainingTime(callTimeout);
-    if (timeout <= 0 || rpcTimeout > 0 && rpcTimeout < timeout){
+    if (timeout <= 0 || (rpcTimeout > 0 && rpcTimeout < timeout)){
       timeout = rpcTimeout;
     }
     return timeout;
   }
 
   public void cancel(){
-    synchronized (cancelled){
+    synchronized (lock){
       cancelled.set(true);
-      cancelled.notifyAll();
+      lock.notifyAll();
     }
   }
 
@@ -181,9 +182,9 @@ public class RpcRetryingCaller<T> {
       }
       try {
         if (expectedSleep > 0) {
-          synchronized (cancelled) {
+          synchronized (lock) {
             if (cancelled.get()) return null;
-            cancelled.wait(expectedSleep);
+            lock.wait(expectedSleep);
           }
         }
         if (cancelled.get()) return null;

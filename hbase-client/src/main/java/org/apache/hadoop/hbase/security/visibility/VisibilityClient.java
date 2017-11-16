@@ -132,6 +132,7 @@ public class VisibilityClient {
             BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
                 new BlockingRpcCallback<VisibilityLabelsResponse>();
 
+            @Override
             public VisibilityLabelsResponse call(VisibilityLabelsService service)
                 throws IOException {
               VisibilityLabelsRequest.Builder builder = VisibilityLabelsRequest.newBuilder();
@@ -217,6 +218,7 @@ public class VisibilityClient {
           BlockingRpcCallback<GetAuthsResponse> rpcCallback =
               new BlockingRpcCallback<GetAuthsResponse>();
 
+          @Override
           public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
             GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
             getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
@@ -268,6 +270,7 @@ public class VisibilityClient {
             BlockingRpcCallback<ListLabelsResponse> rpcCallback =
                 new BlockingRpcCallback<ListLabelsResponse>();
 
+            @Override
             public ListLabelsResponse call(VisibilityLabelsService service) throws IOException {
               ListLabelsRequest.Builder listAuthLabelsReqBuilder = ListLabelsRequest.newBuilder();
               if (regex != null) {
@@ -332,6 +335,7 @@ public class VisibilityClient {
           BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
               new BlockingRpcCallback<VisibilityLabelsResponse>();
 
+          @Override
           public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
             SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
             setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));

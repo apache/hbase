@@ -52,6 +52,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     ComparatorProtos.BinaryPrefixComparator.Builder builder =
       ComparatorProtos.BinaryPrefixComparator.newBuilder();
@@ -81,6 +82,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof BinaryPrefixComparator)) return false;
