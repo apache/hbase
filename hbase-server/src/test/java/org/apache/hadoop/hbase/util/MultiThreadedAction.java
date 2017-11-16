@@ -509,9 +509,13 @@ public abstract class MultiThreadedAction {
     } catch (IOException e) {
       LOG.warn("Couldn't get locations for row " + Bytes.toString(r.getRow()));
     }
-    HRegionLocation locations[] = rl.getRegionLocations();
-    for (HRegionLocation h : locations) {
-      LOG.info("LOCATION " + h);
+    if (rl != null) {
+      HRegionLocation locations[] = rl.getRegionLocations();
+      if (locations != null) {
+        for (HRegionLocation h : locations) {
+          LOG.info("LOCATION " + h);
+        }
+      }
     }
   }
 

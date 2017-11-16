@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.util.ConfigUtil;
  * This is executed after receiving an OPEN RPC from the master or client.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Use of an atomic type both as monitor and condition variable is intended")
 public class OpenRegionHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(OpenRegionHandler.class);
 

@@ -120,7 +120,6 @@ public class TestExportSnapshot {
     admin.snapshot(emptySnapshotName, tableName);
 
     // Add some rows
-    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 50, FAMILY);
     tableNumFiles = admin.getTableRegions(tableName).size();
 

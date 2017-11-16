@@ -83,9 +83,9 @@ public class SplitLogWorker implements Runnable {
   }
 
   public SplitLogWorker(final Server hserver, final Configuration conf,
-      final RegionServerServices server, final LastSequenceId sequenceIdChecker,
+      final RegionServerServices rsServices, final LastSequenceId sequenceIdChecker,
       final WALFactory factory) {
-    this(server, conf, server, new TaskExecutor() {
+    this(hserver, conf, rsServices, new TaskExecutor() {
       @Override
       public Status exec(String filename, RecoveryMode mode, CancelableProgressable p) {
         Path walDir;
@@ -102,7 +102,7 @@ public class SplitLogWorker implements Runnable {
         // encountered a bad non-retry-able persistent error.
         try {
           if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
-            fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode, factory)) {
+            fs, conf, p, sequenceIdChecker, rsServices.getCoordinatedStateManager(), mode, factory)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {

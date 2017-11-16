@@ -573,6 +573,7 @@ public class ExportSnapshot extends Configured implements Tool {
       final List<Pair<SnapshotFileInfo, Long>> files, final int ngroups) {
     // Sort files by size, from small to big
     Collections.sort(files, new Comparator<Pair<SnapshotFileInfo, Long>>() {
+      @Override
       public int compare(Pair<SnapshotFileInfo, Long> a, Pair<SnapshotFileInfo, Long> b) {
         long r = a.getSecond() - b.getSecond();
         return (r < 0) ? -1 : ((r > 0) ? 1 : 0);

@@ -83,7 +83,8 @@ public class TestSplitTransaction {
   private static boolean preRollBackCalled = false;
   private static boolean postRollBackCalled = false;
   
-  @Before public void setup() throws IOException {
+  @Before
+  public void setup() throws IOException {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
     this.fs.delete(this.testdir, true);
@@ -97,11 +98,14 @@ public class TestSplitTransaction {
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
   }
 
-  @After public void teardown() throws IOException {
+  @After
+  public void teardown() throws IOException {
     if (this.parent != null && !this.parent.isClosed()) this.parent.close();
-    Path regionDir = this.parent.getRegionFileSystem().getRegionDir();
-    if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
-      throw new IOException("Failed delete of " + regionDir);
+    if (this.parent != null) {
+      Path regionDir = this.parent.getRegionFileSystem().getRegionDir();
+      if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
+        throw new IOException("Failed delete of " + regionDir);
+      }
     }
     if (this.wals != null) {
       this.wals.close();
@@ -109,7 +113,8 @@ public class TestSplitTransaction {
     this.fs.delete(this.testdir, true);
   }
 
-  @Test public void testFailAfterPONR() throws IOException, KeeperException {
+  @Test
+  public void testFailAfterPONR() throws IOException, KeeperException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
     int parentRowCount = countRows(this.parent);
@@ -153,7 +158,8 @@ public class TestSplitTransaction {
    * Test straight prepare works.  Tries to split on {@link #GOOD_SPLIT_ROW}
    * @throws IOException
    */
-  @Test public void testPrepare() throws IOException {
+  @Test
+  public void testPrepare() throws IOException {
     prepareGOOD_SPLIT_ROW();
   }
 
@@ -171,7 +177,8 @@ public class TestSplitTransaction {
   /**
    * Pass a reference store
    */
-  @Test public void testPrepareWithRegionsWithReference() throws IOException {
+  @Test
+  public void testPrepareWithRegionsWithReference() throws IOException {
     HStore storeMock = Mockito.mock(HStore.class);
     when(storeMock.hasReferences()).thenReturn(true);
     when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
@@ -187,7 +194,8 @@ public class TestSplitTransaction {
   /**
    * Test SplitTransactionListener
    */
-  @Test public void testSplitTransactionListener() throws IOException {
+  @Test
+  public void testSplitTransactionListener() throws IOException {
     SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
     SplitTransaction.TransactionListener listener =
             Mockito.mock(SplitTransaction.TransactionListener.class);
@@ -207,7 +215,8 @@ public class TestSplitTransaction {
   /**
    * Pass an unreasonable split row.
    */
-  @Test public void testPrepareWithBadSplitRow() throws IOException {
+  @Test
+  public void testPrepareWithBadSplitRow() throws IOException {
     // Pass start row as split key.
     SplitTransactionImpl st = new SplitTransactionImpl(this.parent, STARTROW);
     assertFalse(st.prepare());
@@ -219,13 +228,15 @@ public class TestSplitTransaction {
     assertFalse(st.prepare());
   }
 
-  @Test public void testPrepareWithClosedRegion() throws IOException {
+  @Test
+  public void testPrepareWithClosedRegion() throws IOException {
     this.parent.close();
     SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
     assertFalse(st.prepare());
   }
 
-  @Test public void testWholesomeSplit() throws IOException {
+  @Test
+  public void testWholesomeSplit() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF, true);
     assertTrue(rowcount > 0);
     int parentRowCount = countRows(this.parent);
@@ -302,8 +313,8 @@ public class TestSplitTransaction {
     assertTrue(expectedException);
   }
 
-
-  @Test public void testRollback() throws IOException {
+  @Test
+  public void testRollback() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
     int parentRowCount = countRows(this.parent);
@@ -416,4 +427,3 @@ public class TestSplitTransaction {
   }
 
 }
-

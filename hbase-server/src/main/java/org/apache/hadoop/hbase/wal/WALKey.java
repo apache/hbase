@@ -476,8 +476,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.encodedRegionName);
-    result ^= this.logSeqNum;
-    result ^= this.writeTime;
+    result = (int) (result ^ this.logSeqNum);
+    result = (int) (result ^ this.writeTime);
     return result;
   }
 

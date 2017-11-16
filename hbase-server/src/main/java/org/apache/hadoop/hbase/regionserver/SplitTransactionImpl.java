@@ -170,6 +170,7 @@ public class SplitTransactionImpl implements SplitTransaction {
    * @return <code>true</code> if the region is splittable else
    * <code>false</code> if it is not (e.g. its already closed, etc.).
    */
+  @Override
   public boolean prepare() throws IOException {
     if (!this.parent.isSplittable()) return false;
     // Split key can be null if this region is unsplittable; i.e. has refs.
@@ -886,6 +887,7 @@ public class SplitTransactionImpl implements SplitTransaction {
       this.family = family;
     }
 
+    @Override
     public Pair<Path,Path> call() throws IOException {
       return splitStoreFile(family, sf);
     }

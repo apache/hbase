@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -394,7 +395,7 @@ public class HFileOutputFormat2
       new TreeSet<ImmutableBytesWritable>(startKeys);
 
     ImmutableBytesWritable first = sorted.first();
-    if (!first.equals(HConstants.EMPTY_BYTE_ARRAY)) {
+    if (!Bytes.equals(first.get(), HConstants.EMPTY_BYTE_ARRAY)) {
       throw new IllegalArgumentException(
           "First region of table should have empty start key. Instead has: "
           + Bytes.toStringBinary(first.get()));
@@ -646,7 +647,8 @@ public class HFileOutputFormat2
         continue;
       }
       try {
-        confValMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(),
+        confValMap.put(URLDecoder.decode(familySplit[0], "UTF-8")
+              .getBytes(StandardCharsets.UTF_8),
             URLDecoder.decode(familySplit[1], "UTF-8"));
       } catch (UnsupportedEncodingException e) {
         // will not happen with UTF-8 encoding

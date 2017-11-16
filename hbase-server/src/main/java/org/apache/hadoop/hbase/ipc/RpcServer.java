@@ -54,7 +54,6 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -768,8 +767,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         int start = 0;
         int end = numConnections - 1;
         if (!force) {
-          start = rand.nextInt() % numConnections;
-          end = rand.nextInt() % numConnections;
+          start = rand.nextInt(numConnections);
+          end = rand.nextInt(numConnections);
           int temp;
           if (end < start) {
             temp = start;
@@ -1859,14 +1858,15 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       String className = header.getCellBlockCodecClass();
       if (className == null || className.length() == 0) return;
       try {
-        this.codec = (Codec)Class.forName(className).newInstance();
+        this.codec = (Codec)Class.forName(className).getDeclaredConstructor().newInstance();
       } catch (Exception e) {
         throw new UnsupportedCellCodecException(className, e);
       }
       if (!header.hasCellBlockCompressorClass()) return;
       className = header.getCellBlockCompressorClass();
       try {
-        this.compressionCodec = (CompressionCodec)Class.forName(className).newInstance();
+        this.compressionCodec = (CompressionCodec)
+          Class.forName(className).getDeclaredConstructor().newInstance();
       } catch (Exception e) {
         throw new UnsupportedCompressionCodecException(className, e);
       }

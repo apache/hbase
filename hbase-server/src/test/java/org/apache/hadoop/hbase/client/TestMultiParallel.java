@@ -713,12 +713,15 @@ public class TestMultiParallel {
     int retryNum = 10;
     Result[] results = null;
     do  {
+      boolean finished = false;
       results = table.get(gets);
-      boolean finished = true;
-      for (Result result : results) {
-        if (result.isEmpty()) {
-          finished = false;
-          break;
+      if (results != null) {
+        finished = true;
+        for (Result result : results) {
+          if (result.isEmpty()) {
+            finished = false;
+            break;
+          }
         }
       }
       if (finished) {

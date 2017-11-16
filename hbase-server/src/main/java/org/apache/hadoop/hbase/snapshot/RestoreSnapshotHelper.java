@@ -749,7 +749,7 @@ public class RestoreSnapshotHelper {
 
   public static void restoreSnapshotACL(SnapshotDescription snapshot, TableName newTableName,
       Configuration conf) throws IOException {
-    if (snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null) {
+    if (snapshot.hasUsersAndPermissions()) {
       LOG.info("Restore snapshot acl to table. snapshot: " + snapshot + ", table: " + newTableName);
       ListMultimap<String, TablePermission> perms =
           ProtobufUtil.toUserTablePermissions(snapshot.getUsersAndPermissions());

@@ -75,6 +75,7 @@ public abstract class TableEventHandler extends EventHandler {
     this.tableName = tableName;
   }
 
+  @Override
   public TableEventHandler prepare() throws IOException {
     //acquire the table write lock, blocking
     this.tableLock = masterServices.getTableLockManager()

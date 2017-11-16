@@ -61,6 +61,7 @@ extends TableMapper<ImmutableBytesWritable, Result> {
    * @throws IOException When writing the record fails.
    * @throws InterruptedException When the job is aborted.
    */
+  @Override
   public void map(ImmutableBytesWritable key, Result value, Context context)
   throws IOException, InterruptedException {
     context.write(key, value);

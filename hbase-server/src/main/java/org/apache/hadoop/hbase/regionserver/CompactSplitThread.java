@@ -314,6 +314,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     return ret;
   }
 
+  @Override
   public CompactionRequest requestCompaction(final Region r, final Store s,
       final String why, int priority, CompactionRequest request, User user) throws IOException {
     return requestCompactionInternal(r, s, why, priority, request, true, user);

@@ -742,7 +742,9 @@ public class TestHBaseFsck {
       htd = admin.getTableDescriptor(table);
       assertEquals(htd.getValue("NOT_DEFAULT"), "true");
     } finally {
-      fs.rename(new Path("/.tableinfo"), tableinfo);
+      if (fs != null) {
+        fs.rename(new Path("/.tableinfo"), tableinfo);
+      }
       cleanupTable(table);
     }
   }

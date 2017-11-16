@@ -288,11 +288,13 @@ public class Leases extends HasThread {
       return this.leaseName.hashCode();
     }
 
+    @Override
     public long getDelay(TimeUnit unit) {
       return unit.convert(this.expirationTime - EnvironmentEdgeManager.currentTime(),
           TimeUnit.MILLISECONDS);
     }
 
+    @Override
     public int compareTo(Delayed o) {
       long delta = this.getDelay(TimeUnit.MILLISECONDS) -
         o.getDelay(TimeUnit.MILLISECONDS);

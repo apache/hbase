@@ -109,7 +109,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       Class<? extends FileCleanerDelegate> c = Class.forName(className).asSubclass(
         FileCleanerDelegate.class);
       @SuppressWarnings("unchecked")
-      T cleaner = (T) c.newInstance();
+      T cleaner = (T) c.getDeclaredConstructor().newInstance();
       cleaner.setConf(conf);
       return cleaner;
     } catch (Exception e) {
@@ -282,7 +282,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   }
 
   @Override
-  public void cleanup() {
+  public synchronized void cleanup() {
     for (T lc : this.cleanersChain) {
       try {
         lc.stop("Exiting");

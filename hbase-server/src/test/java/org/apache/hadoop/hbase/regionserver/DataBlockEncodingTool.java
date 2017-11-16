@@ -123,6 +123,7 @@ public class DataBlockEncodingTool {
   private long totalValueLength = 0;
   private long totalKeyRedundancyLength = 0;
   private long totalCFLength = 0;
+  private long totalTagsLength = 0;
 
   private byte[] rawKVs;
   private boolean useHBaseChecksum = false;
@@ -201,15 +202,17 @@ public class DataBlockEncodingTool {
       int vLen = currentKV.getValueLength();
       int cfLen = currentKV.getFamilyLength(currentKV.getFamilyOffset());
       int restLen = currentKV.getLength() - kLen - vLen;
+      int tagsLen = currentKV.getTagsLength();
 
       totalKeyLength += kLen;
       totalValueLength += vLen;
       totalPrefixLength += restLen;
       totalCFLength += cfLen;
+      totalTagsLength += tagsLen;
     }
 
     rawKVs = uncompressedOutputStream.toByteArray();
-    boolean useTag = (currentKV.getTagsLength() > 0);
+    boolean useTag = (totalTagsLength > 0);
     for (DataBlockEncoding encoding : encodings) {
       if (encoding == DataBlockEncoding.NONE) {
         continue;

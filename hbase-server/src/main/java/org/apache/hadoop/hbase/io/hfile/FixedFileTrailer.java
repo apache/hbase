@@ -539,7 +539,7 @@ public class FixedFileTrailer {
   public void setComparatorClass(Class<? extends KVComparator> klass) {
     // Is the comparator instantiable?
     try {
-      KVComparator comp = klass.newInstance();
+      KVComparator comp = klass.getDeclaredConstructor().newInstance();
 
       // HFile V2 legacy comparator class names.
       if (KeyValue.COMPARATOR.getClass().equals(klass)) {
@@ -592,11 +592,8 @@ public class FixedFileTrailer {
   public static KVComparator createComparator(
       String comparatorClassName) throws IOException {
     try {
-      return getComparatorClass(comparatorClassName).newInstance();
-    } catch (InstantiationException e) {
-      throw new IOException("Comparator class " + comparatorClassName +
-        " is not instantiable", e);
-    } catch (IllegalAccessException e) {
+      return getComparatorClass(comparatorClassName).getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IOException("Comparator class " + comparatorClassName +
         " is not instantiable", e);
     }

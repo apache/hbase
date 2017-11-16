@@ -387,11 +387,13 @@ public class TestCompactedHFilesDischarger {
         } catch (InterruptedException e) {
         }
         while (!next) {
-          resScanner.next(results);
+          next = resScanner.next(results);
         }
       } finally {
         scanCompletedCounter.incrementAndGet();
-        resScanner.close();
+        if (resScanner != null) {
+          resScanner.close();
+        }
       }
     }
   }

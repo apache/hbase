@@ -574,8 +574,10 @@ public class TestHRegion {
         } finally {
           // Make it so all writes succeed from here on out so can close clean
           ffs.fault.set(false);
-          region.getWAL().rollWriter(true);
-          HRegion.closeHRegion(region);
+          if (region != null) {
+            region.getWAL().rollWriter(true);
+            HRegion.closeHRegion(region);
+          }
         }
         return null;
       }
@@ -2756,6 +2758,8 @@ public class TestHRegion {
     finally {
       parent.clearSplit();
     }
+
+    assertNotNull(result);
     return new HRegion[] { (HRegion)result.getFirst(), (HRegion)result.getSecond() };
   }
 
@@ -2880,7 +2884,7 @@ public class TestHRegion {
     try {
       region.closed.set(true);
       try {
-        region.getScanner(null);
+        region.getScanner(new Scan());
         fail("Expected to get an exception during getScanner on a region that is closed");
       } catch (NotServingRegionException e) {
         // this is the correct exception that is expected
@@ -4034,8 +4038,8 @@ public class TestHRegion {
   }
 
   protected class PutThread extends Thread {
-    private volatile boolean done;
-    private volatile int numPutsFinished = 0;
+    private boolean done;
+    private int numPutsFinished = 0;
 
     private Throwable error = null;
     private int numRows;

@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.io.Closeable;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -382,7 +379,7 @@ public class DefaultWALProvider implements WALProvider {
         ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
-      writer = logWriterClass.newInstance();
+      writer = logWriterClass.getDeclaredConstructor().newInstance();
       writer.init(fs, path, conf, overwritable);
       return writer;
     } catch (Exception e) {

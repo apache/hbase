@@ -421,8 +421,7 @@ public class TestRegionPlacement {
       for (Region region: rs.getOnlineRegions(TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
-        String regionName = region.getRegionInfo().getRegionNameAsString();
-        List<ServerName> favoredServerList = plan.getAssignmentMap().get(regionName);
+        List<ServerName> favoredServerList = plan.getAssignmentMap().get(region.getRegionInfo());
 
         // All regions are supposed to have favored nodes,
         // except for hbase:meta and ROOT
@@ -474,8 +473,8 @@ public class TestRegionPlacement {
         try {
           @SuppressWarnings("deprecation")
           HRegionInfo info = MetaScanner.getHRegionInfo(result);
-          if(info.getTable().getNamespaceAsString()
-              .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+          if(info != null && NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR
+              .equals(info.getTable().getNamespaceAsString())) {
             return true;
           }
           byte[] server = result.getValue(HConstants.CATALOG_FAMILY,

@@ -425,8 +425,8 @@ public class ScannerContext {
     TIME_LIMIT_REACHED_MID_ROW(true, true),
     BATCH_LIMIT_REACHED(true, true);
 
-    private boolean moreValues;
-    private boolean limitReached;
+    private final boolean moreValues;
+    private final boolean limitReached;
 
     private NextState(boolean moreValues, boolean limitReached) {
       this.moreValues = moreValues;
@@ -482,7 +482,7 @@ public class ScannerContext {
      * limits, the checker must know their own scope (i.e. are they checking the limits between
      * rows, between cells, etc...)
      */
-    int depth;
+    final int depth;
 
     LimitScope(int depth) {
       this.depth = depth;

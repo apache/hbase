@@ -49,6 +49,8 @@ import org.apache.zookeeper.KeeperException;
  * the active master of the cluster.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Use of an atomic type both as monitor and condition variable is intended")
 public class ActiveMasterManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
 

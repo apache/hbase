@@ -971,6 +971,9 @@ public class TestMasterFailover {
       }
     }
 
+    assertNotNull(metaRegion);
+    assertNotNull(metaRegionServer);
+
     TEST_UTIL.shutdownMiniHBaseCluster();
 
     // Create a ZKW to use in the test

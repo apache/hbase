@@ -242,12 +242,15 @@ public class HttpServerFunctionalTest extends Assert {
    */
   protected static void deleteRecursively(File d) {
     if (d.isDirectory()) {
-      for (String name : d.list()) {
-        File child = new File(d, name);
-        if (child.isFile()) {
-          child.delete();
-        } else {
-          deleteRecursively(child);
+      String[] dirs = d.list();
+      if (dirs != null) {
+        for (String name: dirs) {
+          File child = new File(d, name);
+          if (child.isFile()) {
+            child.delete();
+          } else {
+            deleteRecursively(child);
+          }
         }
       }
     }

@@ -91,6 +91,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
     }
   }
 
+  @Override
   protected void finishFileInfo() throws IOException {
     super.finishFileInfo();
     if (hFileContext.getDataBlockEncoding() == DataBlockEncoding.PREFIX_TREE) {

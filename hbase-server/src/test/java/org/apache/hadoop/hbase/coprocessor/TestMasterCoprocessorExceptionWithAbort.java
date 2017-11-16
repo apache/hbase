@@ -102,6 +102,9 @@ public class TestMasterCoprocessorExceptionWithAbort {
     private boolean postStartMasterCalled;
 
     @Override
+    @SuppressWarnings("null")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Preconditions checks insure we are not going to dereference a null value")
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
         HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
       // cause a NullPointerException and don't catch it: this will cause the

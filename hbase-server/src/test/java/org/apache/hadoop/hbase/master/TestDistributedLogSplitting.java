@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_err;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_resigned;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -699,6 +700,7 @@ public class TestDistributedLogSplitting {
       slm.markRegionsRecovering(firstFailedServer, regionSet);
       slm.markRegionsRecovering(secondFailedServer, regionSet);
 
+      assertNotNull(zkw.recoveringRegionsZNode);
       List<String> recoveringRegions = ZKUtil.listChildrenNoWatch(zkw,
           ZKUtil.joinZNode(zkw.recoveringRegionsZNode, region.getEncodedName()));
 
@@ -942,6 +944,9 @@ public class TestDistributedLogSplitting {
         dstRS = rsts.get((i+1) % NUM_RS).getRegionServer();
         break;
       }
+
+      assertNotNull(region);
+      assertNotNull(dstRS);
 
       slm.markRegionsRecovering(hrs.getServerName(), regionSet);
       // move region in order for the region opened in recovering state
@@ -1239,7 +1244,6 @@ public class TestDistributedLogSplitting {
     conf.setLong("hbase.regionserver.hlog.blocksize", 15 * 1024);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     startCluster(NUM_RS);
-    final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
     // turn off load balancing to prevent regions from moving around otherwise
@@ -1336,7 +1340,6 @@ public class TestDistributedLogSplitting {
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 30 * 1024);
     conf.setInt("hbase.hstore.compactionThreshold", 3);
     startCluster(NUM_RS);
-    final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 2000;
     // turn off load balancing to prevent regions from moving around otherwise
@@ -1563,8 +1566,6 @@ public class TestDistributedLogSplitting {
     // remove root and meta region
     regions.remove(HRegionInfo.FIRST_META_REGIONINFO);
     // using one sequenceId for edits across all regions is ok.
-    final AtomicLong sequenceId = new AtomicLong(10);
-
 
     for(Iterator<HRegionInfo> iter = regions.iterator(); iter.hasNext(); ) {
       HRegionInfo regionInfo = iter.next();

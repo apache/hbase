@@ -384,7 +384,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     if (opts.replicas != DEFAULT_OPTS.replicas) {
       desc.setRegionReplication(opts.replicas);
     }
-    if (opts.splitPolicy != DEFAULT_OPTS.splitPolicy) {
+    if (!opts.splitPolicy.equals(DEFAULT_OPTS.splitPolicy)) {
       desc.setRegionSplitPolicyClassName(opts.splitPolicy);
     }
     return desc;

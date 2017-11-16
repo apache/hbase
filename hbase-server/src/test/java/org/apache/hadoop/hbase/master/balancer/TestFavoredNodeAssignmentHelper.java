@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -345,13 +346,13 @@ public class TestFavoredNodeAssignmentHelper {
     regionMap.put(regionsOnRack3, 3);
     assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
         regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(firstRackSize) == regionMap.get(regionsOnRack1));
+        Objects.equals(rackMap.get(firstRackSize), regionMap.get(regionsOnRack1)));
     assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
         regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(secondRackSize) == regionMap.get(regionsOnRack2));
+        Objects.equals(rackMap.get(secondRackSize), regionMap.get(regionsOnRack2)));
     assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
         regionsOnRack1, regionsOnRack2, regionsOnRack3),
-        rackMap.get(thirdRackSize) == regionMap.get(regionsOnRack3));
+        Objects.equals(rackMap.get(thirdRackSize), regionMap.get(regionsOnRack3)));
   }
 
   private String printProportions(int firstRackSize, int secondRackSize,

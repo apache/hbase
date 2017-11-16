@@ -46,7 +46,6 @@ public class TestMultiVersionConcurrencyControl extends TestCase {
     public boolean failed = false;
 
     public void run() {
-      AtomicLong startPoint = new AtomicLong();
       while (!finished.get()) {
         MultiVersionConcurrencyControl.WriteEntry e =
             mvcc.begin();

@@ -840,6 +840,7 @@ public class BucketCache implements BlockCache, HeapSize {
       this.writerEnabled = false;
     }
 
+    @Override
     public void run() {
       List<RAMQueueEntry> entries = new ArrayList<RAMQueueEntry>();
       try {
@@ -1324,8 +1325,49 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     @Override
-    public boolean equals(Object that) {
-      return this == that;
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + getOuterType().hashCode();
+      result = prime * result + (int) (bucketSize ^ (bucketSize >>> 32));
+      result = prime * result + ((queue == null) ? 0 : queue.hashCode());
+      result = prime * result + (int) (totalSize ^ (totalSize >>> 32));
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      BucketEntryGroup other = (BucketEntryGroup) obj;
+      if (!getOuterType().equals(other.getOuterType())) {
+        return false;
+      }
+      if (bucketSize != other.bucketSize) {
+        return false;
+      }
+      if (queue == null) {
+        if (other.queue != null) {
+          return false;
+        }
+      } else if (!queue.equals(other.queue)) {
+        return false;
+      }
+      if (totalSize != other.totalSize) {
+        return false;
+      }
+      return true;
+    }
+
+    private BucketCache getOuterType() {
+      return BucketCache.this;
     }
 
   }

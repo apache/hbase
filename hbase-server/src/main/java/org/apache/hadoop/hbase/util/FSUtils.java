@@ -1078,7 +1078,7 @@ public abstract class FSUtils {
 
   private static boolean isValidWALRootDir(Path walDir, final Configuration c) throws IOException {
     Path rootDir = FSUtils.getRootDir(c);
-    if (walDir != rootDir) {
+    if (!walDir.equals(rootDir)) {
       if (walDir.toString().startsWith(rootDir.toString() + "/")) {
         throw new IllegalStateException("Illegal WAL directory specified. " +
             "WAL directories are not permitted to be under the root directory if set.");
@@ -1343,6 +1343,7 @@ public abstract class FSUtils {
       super(fs, HConstants.HBASE_NON_TABLE_DIRS);
     }
 
+    @Override
     protected boolean isValidName(final String name) {
       if (!super.isValidName(name))
         return false;

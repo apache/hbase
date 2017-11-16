@@ -43,6 +43,7 @@ import java.util.List;
 import static org.junit.Assert.assertTrue;
 
 @Category({ LargeTests.class })
+@edu.umd.cs.findbugs.annotations.SuppressWarnings("NM_SAME_SIMPLE_NAME_AS_SUPERCLASS")
 public class TestMultiTableSnapshotInputFormat
     extends org.apache.hadoop.hbase.mapreduce.TestMultiTableSnapshotInputFormat {
 

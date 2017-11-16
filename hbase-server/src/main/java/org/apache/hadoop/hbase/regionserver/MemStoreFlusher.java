@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.BlockingQueue;
@@ -700,8 +701,13 @@ class MemStoreFlusher implements FlushRequester {
     }
 
     @Override
+    public int hashCode() {
+      return System.identityHashCode(this);
+    }
+
+    @Override
     public boolean equals(Object obj) {
-      return (this == obj);
+      return Objects.equals(this, obj);
     }
   }
 

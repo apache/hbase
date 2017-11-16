@@ -80,7 +80,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -109,6 +108,8 @@ import org.apache.zookeeper.KeeperException;
  * and has completed the handling.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Synchronization on concurrent map is intended")
 public class ServerManager {
   public static final String WAIT_ON_REGIONSERVERS_MAXTOSTART =
       "hbase.master.wait.on.regionservers.maxtostart";

@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -92,7 +90,6 @@ public class TestBucketCache {
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
   String ioEngineName = "heap";
-  String persistencePath = null;
 
   private class MockedBucketCache extends BucketCache {
 
@@ -126,7 +123,7 @@ public class TestBucketCache {
   public void setup() throws FileNotFoundException, IOException {
     cache =
         new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
-            constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+            constructedBlockSizes, writeThreads, writerQLen, null);
   }
 
   @After
@@ -288,7 +285,7 @@ public class TestBucketCache {
     conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
 
     BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+        constructedBlockSizes, writeThreads, writerQLen, null, 100, conf);
 
     validateGetPartitionSize(cache, 0.1f, 0.5f);
     validateGetPartitionSize(cache, 0.7f, 0.5f);
@@ -306,7 +303,7 @@ public class TestBucketCache {
     conf.setFloat(BucketCache.MEMORY_FACTOR_CONFIG_NAME, 0.2f);
 
     BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-        constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+        constructedBlockSizes, writeThreads, writerQLen, null, 100, conf);
 
     assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getAcceptableFactor(), 0.9f, 0);
     assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMinFactor(), 0.5f, 0);
@@ -366,8 +363,8 @@ public class TestBucketCache {
         for (String configName : configNames) {
           conf.setFloat(configName, configMap.get(configName)[i]);
         }
-        BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
-            constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
+        new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+            constructedBlockSizes, writeThreads, writerQLen, null, 100, conf);
         assertTrue("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
       } catch (IllegalArgumentException e) {
         assertFalse("Created BucketCache and expected it to succeed: " + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);

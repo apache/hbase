@@ -574,10 +574,12 @@ public class HBaseFsck extends Configured implements Closeable {
     errors.print("Number of regions: " + status.getRegionsCount());
 
     Set<RegionState> rits = status.getRegionsInTransition();
-    errors.print("Number of regions in transition: " + rits.size());
-    if (details) {
-      for (RegionState state: rits) {
-        errors.print("  " + state.toDescriptiveString());
+    if (rits != null) {
+      errors.print("Number of regions in transition: " + rits.size());
+      if (details) {
+        for (RegionState state: rits) {
+          errors.print("  " + state.toDescriptiveString());
+        }
       }
     }
 
@@ -3798,7 +3800,7 @@ public class HBaseFsck extends Configured implements Closeable {
     @Override
     public int hashCode() {
       int hash = Arrays.hashCode(getRegionName());
-      hash ^= getRegionId();
+      hash = (int) (hash ^ getRegionId());
       hash ^= Arrays.hashCode(getStartKey());
       hash ^= Arrays.hashCode(getEndKey());
       hash ^= Boolean.valueOf(isOffline()).hashCode();
@@ -3806,7 +3808,7 @@ public class HBaseFsck extends Configured implements Closeable {
       if (regionServer != null) {
         hash ^= regionServer.hashCode();
       }
-      hash ^= modTime;
+      hash = (int) (hash ^ modTime);
       return hash;
     }
   }

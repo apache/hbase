@@ -82,8 +82,11 @@ public class TestWALFiltering {
         Delete del = new Delete(row);
         for (int iCol = 0; iCol < 10; ++iCol) {
           final byte[] cf = rand.nextBoolean() ? CF1 : CF2;
-          final long ts = Math.abs(rand.nextInt());
           final byte[] qual = Bytes.toBytes("col" + iCol);
+          long ts = rand.nextInt();
+          if (ts < 0) {
+            ts = -ts;
+          }
           if (rand.nextBoolean()) {
             final byte[] value = Bytes.toBytes("value_for_row_" + iRow +
                 "_cf_" + Bytes.toStringBinary(cf) + "_col_" + iCol + "_ts_" +

@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -139,8 +140,8 @@ public class HStore implements Store {
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
-  private volatile long storeSize = 0L;
-  private volatile long totalUncompressedBytes = 0L;
+  private AtomicLong storeSize = new AtomicLong();
+  private AtomicLong totalUncompressedBytes = new AtomicLong();
 
   /**
    * RWLock for store operations.
@@ -200,13 +201,13 @@ public class HStore implements Store {
 
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
-  private volatile long flushedCellsCount = 0;
-  private volatile long compactedCellsCount = 0;
-  private volatile long majorCompactedCellsCount = 0;
-  private volatile long flushedCellsSize = 0;
-  private volatile long flushedOutputFileSize = 0;
-  private volatile long compactedCellsSize = 0;
-  private volatile long majorCompactedCellsSize = 0;
+  private AtomicLong flushedCellsCount = new AtomicLong();
+  private AtomicLong compactedCellsCount = new AtomicLong();
+  private AtomicLong majorCompactedCellsCount = new AtomicLong();
+  private AtomicLong flushedCellsSize = new AtomicLong();
+  private AtomicLong flushedOutputFileSize = new AtomicLong();
+  private AtomicLong compactedCellsSize = new AtomicLong();
+  private AtomicLong majorCompactedCellsSize = new AtomicLong();
 
   /**
    * Constructor
@@ -549,8 +550,8 @@ public class HStore implements Store {
           StoreFile storeFile = future.get();
           if (storeFile != null) {
             long length = storeFile.getReader().length();
-            this.storeSize += length;
-            this.totalUncompressedBytes += storeFile.getReader().getTotalUncompressedBytes();
+            this.storeSize.addAndGet(length);
+            this.totalUncompressedBytes.addAndGet(storeFile.getReader().getTotalUncompressedBytes());
             if (LOG.isDebugEnabled()) {
               LOG.debug("loaded " + storeFile.toStringDetailed());
             }
@@ -844,8 +845,8 @@ public class HStore implements Store {
 
   private void bulkLoadHFile(StoreFile sf) throws IOException {
     StoreFile.Reader r = sf.getReader();
-    this.storeSize += r.length();
-    this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+    this.storeSize.addAndGet(r.length());
+    this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
 
     // Append the new storefile into the list
     this.lock.writeLock().lock();
@@ -1014,8 +1015,8 @@ public class HStore implements Store {
     StoreFile sf = createStoreFileAndReader(dstPath);
 
     StoreFile.Reader r = sf.getReader();
-    this.storeSize += r.length();
-    this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+    this.storeSize.addAndGet(r.length());
+    this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
 
     if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
@@ -1348,11 +1349,11 @@ public class HStore implements Store {
       writeCompactionWalRecord(filesToCompact, sfs);
       replaceStoreFiles(filesToCompact, sfs);
       if (cr.isMajor()) {
-        majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
-        majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
+        majorCompactedCellsCount.addAndGet(getCompactionProgress().totalCompactingKVs);
+        majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
       } else {
-        compactedCellsCount += getCompactionProgress().totalCompactingKVs;
-        compactedCellsSize += getCompactionProgress().totalCompactedSize;
+        compactedCellsCount.addAndGet(getCompactionProgress().totalCompactingKVs);
+        compactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
       }
 
       for (StoreFile sf : sfs) {
@@ -1475,7 +1476,7 @@ public class HStore implements Store {
       }
     }
     message.append("total size for store is ")
-      .append(StringUtils.TraditionalBinaryPrefix.long2String(storeSize, "", 1))
+      .append(StringUtils.TraditionalBinaryPrefix.long2String(storeSize.get(), "", 1))
       .append(". This selection was in queue for ")
       .append(StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()))
       .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
@@ -1812,7 +1813,7 @@ public class HStore implements Store {
     completeCompaction(delSfs);
     LOG.info("Completed removal of " + delSfs.size() + " unnecessary (expired) file(s) in "
         + this + " of " + this.getRegionInfo().getRegionNameAsString()
-        + "; total size for store is " + TraditionalBinaryPrefix.long2String(storeSize, "", 1));
+        + "; total size for store is " + TraditionalBinaryPrefix.long2String(storeSize.get(), "", 1));
   }
 
   @Override
@@ -1892,16 +1893,16 @@ public class HStore implements Store {
   protected void completeCompaction(final Collection<StoreFile> compactedFiles, boolean removeFiles)
       throws IOException {
     LOG.debug("Completing compaction...");
-    this.storeSize = 0L;
-    this.totalUncompressedBytes = 0L;
+    this.storeSize.set(0L);
+    this.totalUncompressedBytes.set(0L);
     for (StoreFile hsf : this.storeEngine.getStoreFileManager().getStorefiles()) {
       StoreFile.Reader r = hsf.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + hsf + " has a null Reader");
         continue;
       }
-      this.storeSize += r.length();
-      this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+      this.storeSize.addAndGet(r.length());
+      this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
     }
   }
 
@@ -2147,7 +2148,7 @@ public class HStore implements Store {
 
   @Override
   public long getSize() {
-    return storeSize;
+    return storeSize.get();
   }
 
   @Override
@@ -2275,7 +2276,7 @@ public class HStore implements Store {
 
   @Override
   public long getStoreSizeUncompressed() {
-    return this.totalUncompressedBytes;
+    return this.totalUncompressedBytes.get();
   }
 
   @Override
@@ -2491,9 +2492,9 @@ public class HStore implements Store {
         committedFiles.add(sf.getPath());
       }
 
-      HStore.this.flushedCellsCount += cacheFlushCount;
-      HStore.this.flushedCellsSize += cacheFlushSize;
-      HStore.this.flushedOutputFileSize += outputFileSize;
+      HStore.this.flushedCellsCount.addAndGet(cacheFlushCount);
+      HStore.this.flushedCellsSize.addAndGet(cacheFlushSize);
+      HStore.this.flushedOutputFileSize.addAndGet(outputFileSize);
 
       // Add new file to store files.  Clear snapshot too while we have the Store write lock.
       return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
@@ -2526,8 +2527,9 @@ public class HStore implements Store {
         StoreFileInfo storeFileInfo = fs.getStoreFileInfo(getColumnFamilyName(), file);
         StoreFile storeFile = createStoreFileAndReader(storeFileInfo);
         storeFiles.add(storeFile);
-        HStore.this.storeSize += storeFile.getReader().length();
-        HStore.this.totalUncompressedBytes += storeFile.getReader().getTotalUncompressedBytes();
+        HStore.this.storeSize.addAndGet(storeFile.getReader().length());
+        HStore.this.totalUncompressedBytes.addAndGet(
+          storeFile.getReader().getTotalUncompressedBytes());
         if (LOG.isInfoEnabled()) {
           LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
             " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
@@ -2567,7 +2569,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (17 * ClassSize.REFERENCE) + (11 * Bytes.SIZEOF_LONG)
+      ClassSize.align(ClassSize.OBJECT + (26 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
               + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -2606,37 +2608,37 @@ public class HStore implements Store {
 
   @Override
   public long getFlushedCellsCount() {
-    return flushedCellsCount;
+    return flushedCellsCount.get();
   }
 
   @Override
   public long getFlushedCellsSize() {
-    return flushedCellsSize;
+    return flushedCellsSize.get();
   }
 
   @Override
   public long getFlushedOutputFileSize() {
-    return flushedOutputFileSize;
+    return flushedOutputFileSize.get();
   }
 
   @Override
   public long getCompactedCellsCount() {
-    return compactedCellsCount;
+    return compactedCellsCount.get();
   }
 
   @Override
   public long getCompactedCellsSize() {
-    return compactedCellsSize;
+    return compactedCellsSize.get();
   }
 
   @Override
   public long getMajorCompactedCellsCount() {
-    return majorCompactedCellsCount;
+    return majorCompactedCellsCount.get();
   }
 
   @Override
   public long getMajorCompactedCellsSize() {
-    return majorCompactedCellsSize;
+    return majorCompactedCellsSize.get();
   }
 
   /**

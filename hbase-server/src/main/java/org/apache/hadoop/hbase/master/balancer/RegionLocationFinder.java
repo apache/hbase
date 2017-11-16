@@ -75,7 +75,7 @@ class RegionLocationFinder {
 
   private CacheLoader<HRegionInfo, HDFSBlocksDistribution> loader =
       new CacheLoader<HRegionInfo, HDFSBlocksDistribution>() {
-
+        @Override
         public ListenableFuture<HDFSBlocksDistribution> reload(final HRegionInfo hri,
                HDFSBlocksDistribution oldValue) throws Exception {
           return executor.submit(new Callable<HDFSBlocksDistribution>() {

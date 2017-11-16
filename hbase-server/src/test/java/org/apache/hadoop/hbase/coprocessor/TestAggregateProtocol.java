@@ -200,8 +200,7 @@ public class TestAggregateProtocol {
     try {
       rowCount = aClient.rowCount(TEST_TABLE, ci, scan);
     } catch (Throwable e) {
-      myLog.error("Exception thrown in the invalidRange method"
-          + e.getStackTrace());
+      myLog.error("Exception thrown in the invalidRange method", e);
     }
     assertEquals(-1, rowCount);
   }

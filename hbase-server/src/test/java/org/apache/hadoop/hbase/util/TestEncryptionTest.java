@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.security.Key;
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +52,7 @@ public class TestEncryptionTest {
       conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, FailingKeyProvider.class.getName());
       EncryptionTest.testKeyProvider(conf);
       fail("Instantiation of bad test key provider should have failed check");
-    } catch (Exception e) { }
+    } catch (IOException e) { }
   }
 
   @Test
@@ -67,7 +68,7 @@ public class TestEncryptionTest {
       conf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, FailingCipherProvider.class.getName());
       EncryptionTest.testCipherProvider(conf);
       fail("Instantiation of bad test cipher provider should have failed check");
-    } catch (Exception e) { }
+    } catch (IOException e) { }
   }
 
   @Test
@@ -84,7 +85,7 @@ public class TestEncryptionTest {
     try {
       EncryptionTest.testEncryption(conf, "foobar", null);
       fail("Test for bogus cipher should have failed");
-    } catch (Exception e) { }
+    } catch (IOException e) { }
   }
 
   public static class FailingKeyProvider implements KeyProvider {

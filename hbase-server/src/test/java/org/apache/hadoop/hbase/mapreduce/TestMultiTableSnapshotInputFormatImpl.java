@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -120,13 +119,41 @@ public class TestMultiTableSnapshotInputFormatImpl {
     }
 
     @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((startRow == null) ? 0 : startRow.hashCode());
+      result = prime * result + ((stopRow == null) ? 0 : stopRow.hashCode());
+      return result;
+    }
+
+    @Override
     public boolean equals(Object obj) {
-      if (!(obj instanceof ScanWithEquals)) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
         return false;
       }
-      ScanWithEquals otherScan = (ScanWithEquals) obj;
-      return Objects.equals(this.startRow, otherScan.startRow) && Objects
-          .equals(this.stopRow, otherScan.stopRow);
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      ScanWithEquals other = (ScanWithEquals) obj;
+      if (startRow == null) {
+        if (other.startRow != null) {
+          return false;
+        }
+      } else if (!startRow.equals(other.startRow)) {
+        return false;
+      }
+      if (stopRow == null) {
+        if (other.stopRow != null) {
+          return false;
+        }
+      } else if (!stopRow.equals(other.stopRow)) {
+        return false;
+      }
+      return true;
     }
 
     @Override

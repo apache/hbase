@@ -41,6 +41,7 @@ public class SslSocketConnectorSecure extends SslSocketConnector {
    * Create a new ServerSocket that will not accept SSLv3 connections,
    * but will accept TLSv1.x connections.
    */
+  @Override
   protected ServerSocket newServerSocket(String host, int port,int backlog)
           throws IOException {
     SSLServerSocket socket = (SSLServerSocket)

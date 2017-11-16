@@ -93,6 +93,7 @@ public class TestRegionServerHostname {
           List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
           while (servers == null) {
             Threads.sleep(10);
+            servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
           }
           assertTrue(servers.size() == NUM_RS);
           for (String server : servers) {

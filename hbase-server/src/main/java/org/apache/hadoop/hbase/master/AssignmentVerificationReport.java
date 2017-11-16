@@ -242,7 +242,7 @@ public class AssignmentVerificationReport {
         this.maxDispersionScoreServerSet.clear();
         this.maxDispersionScoreServerSet.add(primaryRS);
         this.maxDispersionScore = dispersionScore;
-      } else if (dispersionScore == this.maxDispersionScore) {
+      } else if (Math.abs(dispersionScore - this.maxDispersionScore) < 0.0000001) {
         this.maxDispersionScoreServerSet.add(primaryRS);
       }
 
@@ -260,7 +260,7 @@ public class AssignmentVerificationReport {
         this.minDispersionScoreServerSet.clear();
         this.minDispersionScoreServerSet.add(primaryRS);
         this.minDispersionScore = dispersionScore;
-      } else if (dispersionScore == this.minDispersionScore) {
+      } else if (Math.abs(dispersionScore - this.minDispersionScore) < 0.0000001) {
         this.minDispersionScoreServerSet.add(primaryRS);
       }
 
@@ -418,7 +418,7 @@ public class AssignmentVerificationReport {
         this.minDispersionScoreServerSet.clear();
         this.minDispersionScoreServerSet.add(primaryRS);
         this.minDispersionScore = dispersionScore;
-      } else if (dispersionScore == this.minDispersionScore) {
+      } else if (Math.abs(dispersionScore - this.minDispersionScore) < 0.0000001) {
         this.minDispersionScoreServerSet.add(primaryRS);
       }
 

@@ -228,6 +228,7 @@ public abstract class AbstractHFileReader
    * @return the total heap size of data and meta block indexes in bytes. Does
    *         not take into account non-root blocks of a multilevel data index.
    */
+  @Override
   public long indexSize() {
     return (dataBlockIndexReader != null ? dataBlockIndexReader.heapSize() : 0)
         + ((metaBlockIndexReader != null) ? metaBlockIndexReader.heapSize()
@@ -259,6 +260,7 @@ public abstract class AbstractHFileReader
     this.isPrimaryReplicaReader = isPrimaryReplicaReader;
   }
 
+  @Override
   public FileInfo loadFileInfo() throws IOException {
     return fileInfo;
   }
@@ -345,6 +347,7 @@ public abstract class AbstractHFileReader
   /** For testing */
   abstract HFileBlock.FSReader getUncachedBlockReader();
 
+  @Override
   public Path getPath() {
     return path;
   }

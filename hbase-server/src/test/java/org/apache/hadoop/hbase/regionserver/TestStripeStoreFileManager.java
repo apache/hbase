@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -182,17 +183,17 @@ public class TestStripeStoreFileManager {
     sf5.splitPoint = new byte[1];
     manager.insertNewFiles(al(sf5));
     manager.insertNewFiles(al(createFile(1, 0)));
-    assertEquals(sf5.splitPoint, manager.getSplitPoint());
+    assertArrayEquals(sf5.splitPoint, manager.getSplitPoint());
 
     // Same if there's one stripe but the biggest file is still in L0.
     manager.addCompactionResults(al(), al(createFile(2, 0, OPEN_KEY, OPEN_KEY)));
-    assertEquals(sf5.splitPoint, manager.getSplitPoint());
+    assertArrayEquals(sf5.splitPoint, manager.getSplitPoint());
 
     // If the biggest file is in the stripe, should get from it.
     MockStoreFile sf6 = createFile(6, 0, OPEN_KEY, OPEN_KEY);
     sf6.splitPoint = new byte[1];
     manager.addCompactionResults(al(), al(sf6));
-    assertEquals(sf6.splitPoint, manager.getSplitPoint());
+    assertArrayEquals(sf6.splitPoint, manager.getSplitPoint());
   }
 
   @Test

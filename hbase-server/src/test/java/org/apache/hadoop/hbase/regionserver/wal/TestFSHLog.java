@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -285,13 +284,13 @@ public class TestFSHLog {
       // return only one region.
       byte[][] regionsToFlush = wal.findRegionsToForceFlush();
       assertEquals(1, regionsToFlush.length);
-      assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
+      assertTrue(Bytes.equals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]));
       // insert edits in second region
       addEdits(wal, hri2, t2, 2, mvcc);
       // get the regions to flush, it should still read region1.
       regionsToFlush = wal.findRegionsToForceFlush();
       assertEquals(regionsToFlush.length, 1);
-      assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
+      assertTrue(Bytes.equals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]));
       // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
       // remain.
       flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getFamiliesKeys());

@@ -95,7 +95,7 @@ public class TestRegionMergeTransaction {
   public void teardown() throws IOException {
     for (HRegion region : new HRegion[] { region_a, region_b, region_c }) {
       if (region != null && !region.isClosed()) region.close();
-      if (this.fs.exists(region.getRegionFileSystem().getRegionDir())
+      if (region != null && this.fs.exists(region.getRegionFileSystem().getRegionDir())
           && !this.fs.delete(region.getRegionFileSystem().getRegionDir(), true)) {
         throw new IOException("Failed deleting of "
             + region.getRegionFileSystem().getRegionDir());

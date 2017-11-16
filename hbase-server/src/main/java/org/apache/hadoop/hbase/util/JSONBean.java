@@ -16,12 +16,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -371,7 +374,8 @@ public class JSONBean {
    * @throws MalformedObjectNameException
    */
   public static void dumpAllBeans() throws IOException, MalformedObjectNameException {
-    try (PrintWriter writer = new PrintWriter(System.out)) {
+    try (PrintWriter writer = new PrintWriter(new BufferedWriter(
+        new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))) {
       JSONBean dumper = new JSONBean();
       try (JSONBean.Writer jsonBeanWriter = dumper.open(writer)) {
         MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();

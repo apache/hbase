@@ -142,6 +142,7 @@ public abstract class GenericTestUtils {
       Layout layout = Logger.getRootLogger().getAppender("stdout").getLayout();
       WriterAppender wa = new WriterAppender(layout, sw);
       logger.addAppender(wa);
+      appender = wa;
     }
     
     public String getOutput() {
@@ -150,7 +151,6 @@ public abstract class GenericTestUtils {
     
     public void stopCapturing() {
       logger.removeAppender(appender);
-
     }
   }
   

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import java.util.List;
 import java.util.Map;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.conf.Configurable;
@@ -151,5 +150,6 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Notification that config has changed
    * @param conf
    */
+  @Override
   void onConfigurationChange(Configuration conf);
 }

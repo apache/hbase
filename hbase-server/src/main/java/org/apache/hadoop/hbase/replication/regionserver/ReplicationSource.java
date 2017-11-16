@@ -572,7 +572,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
 
       if (replicationQueueInfo.isQueueRecovered() && getWorkerState() == WorkerState.FINISHED) {
         // use synchronize to make sure one last thread will clean the queue
-        synchronized (workerThreads) {
+        synchronized (this) {
           Threads.sleep(100);// wait a short while for other worker thread to fully exit
           boolean allOtherTaskDone = true;
           for (ReplicationSourceShipperThread worker : workerThreads.values()) {

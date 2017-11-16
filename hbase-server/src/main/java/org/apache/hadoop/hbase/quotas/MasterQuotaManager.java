@@ -344,12 +344,14 @@ public class MasterQuotaManager implements RegionStateListener {
     return -1;
   }
 
+  @Override
   public void onRegionMerged(HRegionInfo hri) throws IOException {
     if (initialized) {
       namespaceQuotaManager.updateQuotaForRegionMerge(hri);
     }
   }
 
+  @Override
   public void onRegionSplit(HRegionInfo hri) throws IOException {
     if (initialized) {
       namespaceQuotaManager.checkQuotaToSplitRegion(hri);
@@ -498,7 +500,7 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   private static class NamedLock<T> {
-    private HashSet<T> locks = new HashSet<T>();
+    private final HashSet<T> locks = new HashSet<T>();
 
     public void lock(final T name) throws InterruptedException {
       synchronized (locks) {

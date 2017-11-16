@@ -132,6 +132,8 @@ import com.google.protobuf.TextFormat;
  * region to replay on startup. Delete the old log files when finished.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Synchronization on concurrent map is intended")
 public class WALSplitter {
   private static final Log LOG = LogFactory.getLog(WALSplitter.class);
 
@@ -1145,7 +1147,7 @@ public class WALSplitter {
     protected PipelineController controller;
     protected EntryBuffers entryBuffers;
 
-    protected Map<byte[], SinkWriter> writers = Collections
+    protected final Map<byte[], SinkWriter> writers = Collections
         .synchronizedMap(new TreeMap<byte[], SinkWriter>(Bytes.BYTES_COMPARATOR));;
 
     protected final Map<byte[], Long> regionMaximumEditLogSeqNum = Collections
@@ -1710,21 +1712,21 @@ public class WALSplitter {
 
     private long waitRegionOnlineTimeOut;
     private final Set<String> recoveredRegions = Collections.synchronizedSet(new HashSet<String>());
-    private final Map<String, RegionServerWriter> writers =
+    private final Map<String, RegionServerWriter> rsWriters =
         new ConcurrentHashMap<String, RegionServerWriter>();
     // online encoded region name -> region location map
     private final Map<String, HRegionLocation> onlineRegions =
         new ConcurrentHashMap<String, HRegionLocation>();
 
-    private Map<TableName, HConnection> tableNameToHConnectionMap = Collections
+    private final Map<TableName, HConnection> tableNameToHConnectionMap = Collections
         .synchronizedMap(new TreeMap<TableName, HConnection>());
     /**
      * Map key -> value layout
      * <servername>:<table name> -> Queue<Row>
      */
-    private Map<String, List<Pair<HRegionLocation, Entry>>> serverToBufferQueueMap =
+    private final Map<String, List<Pair<HRegionLocation, Entry>>> serverToBufferQueueMap =
         new ConcurrentHashMap<String, List<Pair<HRegionLocation, Entry>>>();
-    private List<Throwable> thrown = new ArrayList<Throwable>();
+    private final List<Throwable> thrown = new ArrayList<Throwable>();
 
     // The following sink is used in distrubitedLogReplay mode for entries of regions in a disabling
     // table. It's a limitation of distributedLogReplay. Because log replay needs a region is
@@ -2124,7 +2126,7 @@ public class WALSplitter {
 
     @Override
     int getNumOpenWriters() {
-      return this.writers.size() + this.logRecoveredEditsOutputSink.getNumOpenWriters();
+      return this.rsWriters.size() + this.logRecoveredEditsOutputSink.getNumOpenWriters();
     }
 
     private List<IOException> closeRegionServerWriters() throws IOException {
@@ -2146,8 +2148,8 @@ public class WALSplitter {
             }
           }
         } finally {
-          synchronized (writers) {
-            for (Map.Entry<String, RegionServerWriter> entry : writers.entrySet()) {
+          synchronized (rsWriters) {
+            for (Map.Entry<String, RegionServerWriter> entry : rsWriters.entrySet()) {
               String locationKey = entry.getKey();
               RegionServerWriter tmpW = entry.getValue();
               try {
@@ -2182,8 +2184,8 @@ public class WALSplitter {
     @Override
     public Map<byte[], Long> getOutputCounts() {
       TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-      synchronized (writers) {
-        for (Map.Entry<String, RegionServerWriter> entry : writers.entrySet()) {
+      synchronized (rsWriters) {
+        for (Map.Entry<String, RegionServerWriter> entry : rsWriters.entrySet()) {
           ret.put(Bytes.toBytes(entry.getKey()), entry.getValue().editsWritten);
         }
       }
@@ -2201,7 +2203,7 @@ public class WALSplitter {
      * @return null if this region shouldn't output any logs
      */
     private RegionServerWriter getRegionServerWriter(String loc) throws IOException {
-      RegionServerWriter ret = writers.get(loc);
+      RegionServerWriter ret = rsWriters.get(loc);
       if (ret != null) {
         return ret;
       }
@@ -2212,11 +2214,11 @@ public class WALSplitter {
       }
 
       HConnection hconn = getConnectionByTableName(tableName);
-      synchronized (writers) {
-        ret = writers.get(loc);
+      synchronized (rsWriters) {
+        ret = rsWriters.get(loc);
         if (ret == null) {
           ret = new RegionServerWriter(conf, tableName, hconn);
-          writers.put(loc, ret);
+          rsWriters.put(loc, ret);
         }
       }
       return ret;
