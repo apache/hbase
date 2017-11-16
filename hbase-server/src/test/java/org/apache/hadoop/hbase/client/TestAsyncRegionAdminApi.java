@@ -138,34 +138,6 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Ignore @Test
-  // Turning off this tests in AMv2. Doesn't make sense.Offlining means something
-  // different now.
-  // You can't 'offline' a region unless you know what you are doing
-  // Will cause the Master to tell the regionserver to shut itself down because
-  // regionserver is reporting the state as OPEN.
-  public void testOfflineRegion() throws Exception {
-    RegionInfo hri = createTableAndGetOneRegion(tableName);
-
-    RegionStates regionStates =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-    admin.offline(hri.getRegionName()).get();
-
-    long timeoutTime = System.currentTimeMillis() + 3000;
-    while (true) {
-      if (regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OFFLINE)
-          .stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0)) break;
-      long now = System.currentTimeMillis();
-      if (now > timeoutTime) {
-        fail("Failed to offline the region in time");
-        break;
-      }
-      Thread.sleep(10);
-    }
-    RegionState regionState = regionStates.getRegionState(hri);
-    assertTrue(regionState.isOffline());
-  }
-
   @Test
   public void testGetRegionByStateOfTable() throws Exception {
     RegionInfo hri = createTableAndGetOneRegion(tableName);
