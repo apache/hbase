@@ -26,7 +26,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -166,6 +165,7 @@ public class TestScannersWithLabels {
 
   private static void createLabels() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -200,14 +200,14 @@ public class TestScannersWithLabels {
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     // Respond with 204 as there are no cells to be retrieved
-    assertEquals(response.getCode(), 204);
+    assertEquals(204, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
   }
 
@@ -225,18 +225,18 @@ public class TestScannersWithLabels {
     // recall previous put operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     Response response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML, body);
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     // Respond with 204 as there are no cells to be retrieved
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response
         .getBody()));
-    assertEquals(countCellSet(cellSet), 5);
+    assertEquals(5, countCellSet(cellSet));
   }
 
 }

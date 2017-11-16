@@ -487,10 +487,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return clazz;
     }
 
+    @Override
     protected void map(NullWritable key, PeInputSplit value, final Context context)
            throws IOException, InterruptedException {
-
       Status status = new Status() {
+        @Override
         public void setStatus(String msg) {
            context.setStatus(msg);
         }
@@ -632,6 +633,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                 perClientRows, R,
                  flushCommits, writeToWAL, useTags, noOfTags, connection, new Status() {
+                   @Override
                    public void setStatus(final String msg) throws IOException {
                      LOG.info("client-" + getName() + " " + msg);
                    }
@@ -952,6 +954,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       super(conf, options, status);
     }
 
+    @Override
     void testSetup() throws IOException {
       this.table = connection.getTable(tableName);
     }
@@ -971,10 +974,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = options.isFlushCommits();
     }
 
+    @Override
     void testSetup() throws IOException {
       this.mutator = connection.getBufferedMutator(tableName);
     }
 
+    @Override
     void testTakedown()  throws IOException {
       if (flushCommits) {
         this.mutator.flush();
@@ -1323,6 +1328,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   private void runNIsOne(final Class<? extends Test> cmd) {
     Status status = new Status() {
+      @Override
       public void setStatus(String msg) throws IOException {
         LOG.info(msg);
       }

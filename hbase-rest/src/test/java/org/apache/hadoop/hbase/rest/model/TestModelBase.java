@@ -93,7 +93,7 @@ public abstract class TestModelBase<T> extends TestCase {
   protected T fromPB(String pb) throws
       Exception {
     return (T)clazz.getMethod("getObjectFromMessage", byte[].class).invoke(
-        clazz.newInstance(),
+        clazz.getDeclaredConstructor().newInstance(),
         Base64.decode(AS_PB));
   }
 

@@ -47,6 +47,7 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
           "\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}";
   }
 
+  @Override
   protected ColumnSchemaModel buildTestModel() {
     ColumnSchemaModel model = new ColumnSchemaModel();
     model.setName(COLUMN_NAME);
@@ -60,18 +61,19 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(ColumnSchemaModel model) {
-    assertEquals(model.getName(), COLUMN_NAME);
-    assertEquals(model.__getBlockcache(), BLOCKCACHE);
-    assertEquals(model.__getBlocksize(), BLOCKSIZE);
-    assertEquals(model.__getBloomfilter(), BLOOMFILTER);
+    assertEquals(COLUMN_NAME, model.getName());
+    assertEquals(BLOCKCACHE, model.__getBlockcache());
+    assertEquals(BLOCKSIZE, model.__getBlocksize());
+    assertEquals(BLOOMFILTER, model.__getBloomfilter());
     assertTrue(model.__getCompression().equalsIgnoreCase(COMPRESSION));
-    assertEquals(model.__getInMemory(), IN_MEMORY);
-    assertEquals(model.__getTTL(), TTL);
-    assertEquals(model.__getVersions(), VERSIONS);
+    assertEquals(IN_MEMORY, model.__getInMemory());
+    assertEquals(TTL, model.__getTTL());
+    assertEquals(VERSIONS, model.__getVersions());
   }
 
+  @Override
   public void testFromPB() throws Exception {
   }
 }
-

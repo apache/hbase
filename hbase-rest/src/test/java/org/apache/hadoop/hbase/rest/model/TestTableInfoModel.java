@@ -23,7 +23,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -54,6 +54,7 @@ public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
       "startKey\":\"YWJyYWNhZGJyYQ==\"}]}";
   }
 
+  @Override
   protected TableInfoModel buildTestModel() {
     TableInfoModel model = new TableInfoModel();
     model.setName(TABLE);
@@ -61,25 +62,32 @@ public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(TableInfoModel model) {
-    assertEquals(model.getName(), TABLE);
+    assertEquals(TABLE, model.getName());
     Iterator<TableRegionModel> regions = model.getRegions().iterator();
     TableRegionModel region = regions.next();
     assertTrue(Bytes.equals(region.getStartKey(), START_KEY));
     assertTrue(Bytes.equals(region.getEndKey(), END_KEY));
-    assertEquals(region.getId(), ID);
-    assertEquals(region.getLocation(), LOCATION);
+    assertEquals(ID, region.getId());
+    assertEquals(LOCATION, region.getLocation());
     assertFalse(regions.hasNext());
   }
 
+  @Test
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Test
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Test
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }

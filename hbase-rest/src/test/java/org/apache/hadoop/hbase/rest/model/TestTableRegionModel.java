@@ -48,20 +48,22 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
           "startKey\":\"YWJyYWNhZGJyYQ==\"}";
   }
 
+  @Override
   protected TableRegionModel buildTestModel() {
     TableRegionModel model =
       new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION);
     return model;
   }
 
+  @Override
   protected void checkModel(TableRegionModel model) {
     assertTrue(Bytes.equals(model.getStartKey(), START_KEY));
     assertTrue(Bytes.equals(model.getEndKey(), END_KEY));
-    assertEquals(model.getId(), ID);
-    assertEquals(model.getLocation(), LOCATION);
-    assertEquals(model.getName(), 
-      TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID) +
-      ".ad9860f031282c46ed431d7af8f94aca.");
+    assertEquals(ID, model.getId());
+    assertEquals(LOCATION, model.getLocation());
+    assertEquals(TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID) +
+        ".ad9860f031282c46ed431d7af8f94aca.",
+      model.getName());
   }
 
   public void testGetName() {

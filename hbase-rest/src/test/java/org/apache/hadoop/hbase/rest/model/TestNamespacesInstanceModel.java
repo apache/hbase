@@ -53,6 +53,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
       "\"KEY_1\":\"VALUE_1\",\"KEY_2\":\"VALUE_2\"}}";
   }
 
+  @Override
   protected NamespacesInstanceModel buildTestModel() {
     return buildTestModel(NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
@@ -65,6 +66,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     return model;
   }
 
+  @Override
   protected void checkModel(NamespacesInstanceModel model) {
     checkModel(model, NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
@@ -81,16 +83,19 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
   }
 
   @Test
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
   @Test
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
   @Test
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
