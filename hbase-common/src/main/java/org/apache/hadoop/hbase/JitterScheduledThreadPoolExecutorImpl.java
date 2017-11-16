@@ -51,12 +51,13 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
     this.spread = spread;
   }
 
+  @Override
   protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(
       Runnable runnable, java.util.concurrent.RunnableScheduledFuture<V> task) {
     return new JitteredRunnableScheduledFuture<>(task);
   }
 
-
+  @Override
   protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(
       Callable<V> callable, java.util.concurrent.RunnableScheduledFuture<V> task) {
     return new JitteredRunnableScheduledFuture<>(task);

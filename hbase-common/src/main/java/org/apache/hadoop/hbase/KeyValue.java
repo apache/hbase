@@ -197,9 +197,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    */
   public static long getKeyValueDataStructureSize(int klength, int vlength, int tagsLength) {
     if (tagsLength == 0) {
-      return KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + klength + vlength;
+      return (long) KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + klength + vlength;
     }
-    return KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE + klength + vlength + tagsLength;
+    return (long) KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE + klength + vlength + tagsLength;
   }
 
   /**
@@ -213,7 +213,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * @return the key data structure length
    */
   public static long getKeyDataStructureSize(int rlength, int flength, int qlength) {
-    return KeyValue.KEY_INFRASTRUCTURE_SIZE + rlength + flength + qlength;
+    return (long) KeyValue.KEY_INFRASTRUCTURE_SIZE + rlength + flength + qlength;
   }
 
   /**
@@ -2531,7 +2531,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     int length = kv.getLength();
     out.writeInt(length);
     out.write(kv.getBuffer(), kv.getOffset(), length);
-    return length + Bytes.SIZEOF_INT;
+    return (long) length + Bytes.SIZEOF_INT;
   }
 
   /**
@@ -2553,7 +2553,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     // This does same as DataOuput#writeInt (big-endian, etc.)
     out.write(Bytes.toBytes(length));
     out.write(kv.getBuffer(), kv.getOffset(), length);
-    return length + Bytes.SIZEOF_INT;
+    return (long) length + Bytes.SIZEOF_INT;
   }
 
   /**
@@ -2580,7 +2580,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     // This does same as DataOuput#writeInt (big-endian, etc.)
     StreamUtils.writeInt(out, length);
     out.write(kv.getBuffer(), kv.getOffset(), length);
-    return length + Bytes.SIZEOF_INT;
+    return (long) length + Bytes.SIZEOF_INT;
   }
 
   /**

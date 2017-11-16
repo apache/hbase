@@ -287,7 +287,7 @@ public class ClassFinder {
     return null;
   }
 
-  private class FileFilterWithName implements FileFilter {
+  private static class FileFilterWithName implements FileFilter {
     private FileNameFilter nameFilter;
 
     public FileFilterWithName(FileNameFilter nameFilter) {

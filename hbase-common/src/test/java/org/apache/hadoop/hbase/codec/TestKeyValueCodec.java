@@ -67,7 +67,7 @@ public class TestKeyValueCodec {
     Codec.Encoder encoder = kvc.getEncoder(dos);
     final KeyValue kv =
       new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("v"));
-    final long length = kv.getLength() + Bytes.SIZEOF_INT; 
+    final long length = (long) kv.getLength() + Bytes.SIZEOF_INT;
     encoder.write(kv);
     encoder.flush();
     dos.close();
@@ -97,7 +97,7 @@ public class TestKeyValueCodec {
       new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"), Bytes.toBytes("2"));
     final KeyValue kv3 =
       new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"), Bytes.toBytes("3"));
-    final long length = kv1.getLength() + Bytes.SIZEOF_INT; 
+    final long length = (long) kv1.getLength() + Bytes.SIZEOF_INT;
     encoder.write(kv1);
     encoder.write(kv2);
     encoder.write(kv3);

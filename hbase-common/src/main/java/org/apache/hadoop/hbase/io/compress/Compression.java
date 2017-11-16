@@ -106,7 +106,7 @@ public final class Compression {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lzoCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -133,7 +133,7 @@ public final class Compression {
     },
     GZ("gz") {
       private volatile transient GzipCodec codec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       DefaultCodec getCodec(Configuration conf) {
@@ -185,7 +185,7 @@ public final class Compression {
     SNAPPY("snappy") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec snappyCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -212,7 +212,7 @@ public final class Compression {
     LZ4("lz4") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lz4Codec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -239,7 +239,7 @@ public final class Compression {
     BZIP2("bzip2") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec bzipCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {
@@ -266,7 +266,7 @@ public final class Compression {
     ZSTD("zstd") {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec zStandardCodec;
-      private transient Object lock = new Object();
+      private final transient Object lock = new Object();
 
       @Override
       CompressionCodec getCodec(Configuration conf) {

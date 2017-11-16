@@ -706,7 +706,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
   }
 
-  private final class ArrayKeyIterator<K, V> implements Iterator<K> {
+  private static final class ArrayKeyIterator<K, V> implements Iterator<K> {
     int index;
     private final ArrayHolder<K, V> holder;
 
@@ -732,7 +732,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
   }
 
-  private final class ArrayValueIterator<K, V> implements Iterator<V> {
+  private static final class ArrayValueIterator<K, V> implements Iterator<V> {
     int index;
     private final ArrayHolder<K, V> holder;
 
@@ -758,7 +758,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
   }
 
-  private final class ArrayEntryIterator<K, V> implements Iterator<Map.Entry<K, V>> {
+  private static final class ArrayEntryIterator<K, V> implements Iterator<Map.Entry<K, V>> {
 
     int index;
     private final ArrayHolder<K, V> holder;

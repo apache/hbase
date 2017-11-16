@@ -40,6 +40,7 @@ public class AsyncConsoleAppender extends AsyncAppender {
     consoleAppender.setTarget(value);
   }
 
+  @Override
   public void activateOptions() {
     consoleAppender.activateOptions();
     super.activateOptions();

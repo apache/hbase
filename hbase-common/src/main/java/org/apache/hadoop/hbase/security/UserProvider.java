@@ -98,11 +98,11 @@ public class UserProvider extends BaseConfigurable {
           }
 
           // Provide the reload function that uses the executor thread.
-          public ListenableFuture<String[]> reload(final String k,
-                                                   String[] oldValue) throws Exception {
+          @Override
+          public ListenableFuture<String[]> reload(final String k, String[] oldValue)
+              throws Exception {
 
             return executor.submit(new Callable<String[]>() {
-
               @Override
               public String[] call() throws Exception {
                 return getGroupStrings(k);

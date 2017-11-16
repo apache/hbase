@@ -62,6 +62,7 @@ public class ClassLoaderBase extends URLClassLoader {
   /**
    * Returns the lock object for class loading operations.
    */
+  @Override
   protected Object getClassLoadingLock(String className) {
     Object lock = parallelLockMap.get(className);
     if (lock != null) {

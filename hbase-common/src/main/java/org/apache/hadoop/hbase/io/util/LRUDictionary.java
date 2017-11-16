@@ -134,7 +134,7 @@ public class LRUDictionary implements Dictionary {
     }
 
     private void moveToHead(Node n) {
-      if (head == n) {
+      if (head.equals(n)) {
         // no-op -- it's already the head.
         return;
       }
@@ -147,7 +147,7 @@ public class LRUDictionary implements Dictionary {
       if (n.next != null) {
         n.next.prev = n.prev;
       } else {
-        assert n == tail;
+        assert n.equals(tail);
         tail = n.prev;
       }
       // Node is now removed from the list. Re-add it at the head.

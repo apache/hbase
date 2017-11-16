@@ -18,11 +18,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -298,7 +300,8 @@ public class Threads {
       if (PRINT_THREAD_INFO_METHOD_WITH_PRINTSTREAM) {
         PRINT_THREAD_INFO_METHOD.invoke(null, stream, title);
       } else {
-        PRINT_THREAD_INFO_METHOD.invoke(null, new PrintWriter(stream), title);
+        PRINT_THREAD_INFO_METHOD.invoke(null,
+          new PrintWriter(new OutputStreamWriter(stream, StandardCharsets.UTF_8)), title);
       }
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
       throw new RuntimeException(e.getCause());

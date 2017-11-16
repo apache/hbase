@@ -1122,9 +1122,9 @@ public class Bytes implements Comparable<Bytes> {
       return toShortUnsafe(bytes, offset);
     } else {
       short n = 0;
-      n ^= bytes[offset] & 0xFF;
-      n <<= 8;
-      n ^= bytes[offset+1] & 0xFF;
+      n = (short) ((n ^ bytes[offset]) & 0xFF);
+      n = (short) (n << 8);
+      n = (short) ((n ^ bytes[offset+1]) & 0xFF);
       return n;
    }
   }
@@ -1565,8 +1565,8 @@ public class Bytes implements Comparable<Bytes> {
         final int stride = 8;
         final int minLength = Math.min(length1, length2);
         int strideLimit = minLength & ~(stride - 1);
-        final long offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
-        final long offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
+        final long offset1Adj = (long) offset1 + BYTE_ARRAY_BASE_OFFSET;
+        final long offset2Adj = (long) offset2 + BYTE_ARRAY_BASE_OFFSET;
         int i;
 
         /*

@@ -40,6 +40,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -571,7 +572,7 @@ public class Base64 {
       return new String(baos.toByteArray(), PREFERRED_ENCODING);
 
     } catch (UnsupportedEncodingException uue) {
-      return new String(baos.toByteArray());
+      return new String(baos.toByteArray(), StandardCharsets.UTF_8);
 
     } catch (IOException e) {
       LOG.error("error encoding object", e);
@@ -696,7 +697,7 @@ public class Base64 {
         return new String(baos.toByteArray(), PREFERRED_ENCODING);
 
       } catch (UnsupportedEncodingException uue) {
-        return new String(baos.toByteArray());
+        return new String(baos.toByteArray(), StandardCharsets.UTF_8);
 
       } catch (IOException e) {
         LOG.error("error encoding byte array", e);
@@ -753,7 +754,7 @@ public class Base64 {
       return new String(outBuff, 0, e, PREFERRED_ENCODING);
 
     } catch (UnsupportedEncodingException uue) {
-      return new String(outBuff, 0, e);
+      return new String(outBuff, 0, e, StandardCharsets.UTF_8);
     }
   } // end encodeBytes
 
@@ -928,7 +929,7 @@ public class Base64 {
       bytes = s.getBytes(PREFERRED_ENCODING);
 
     } catch (UnsupportedEncodingException uee) {
-      bytes = s.getBytes();
+      bytes = s.getBytes(StandardCharsets.UTF_8);
     } // end catch
 
     // Decode
