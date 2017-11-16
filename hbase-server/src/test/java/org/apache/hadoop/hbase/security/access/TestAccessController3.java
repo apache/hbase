@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -201,7 +202,7 @@ public class TestAccessController3 extends SecureTestUtil {
       TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       rs = thread.getRegionServer();
     }
-    // cleanUp();
+    cleanUp();
     TEST_UTIL.shutdownMiniCluster();
     assertTrue("region server should have aborted due to FaultyAccessController", rs.isAborted());
   }
@@ -265,13 +266,12 @@ public class TestAccessController3 extends SecureTestUtil {
     // TODO: Skipping delete because of access issues w/ AMv2.
     // AMv1 seems to crash servers on exit too for same lack of
     // auth perms but it gets hung up.
-    /*
     try {
       deleteTable(TEST_UTIL, TEST_TABLE);
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
       LOG.info("Test deleted table " + TEST_TABLE);
-    }*/
+    }
     // Verify all table/namespace permissions are erased
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
     assertEquals(

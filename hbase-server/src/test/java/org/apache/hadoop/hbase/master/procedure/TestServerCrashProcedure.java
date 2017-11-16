@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({MasterTests.class, LargeTests.class})
