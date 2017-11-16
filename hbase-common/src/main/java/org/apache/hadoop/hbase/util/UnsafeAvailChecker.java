@@ -52,7 +52,7 @@ public class UnsafeAvailChecker {
     // When Unsafe itself is not available/accessible consider unaligned as false.
     if (avail) {
       String arch = System.getProperty("os.arch");
-      if ("ppc64".equals(arch) || "ppc64le".equals(arch)) {
+      if ("ppc64".equals(arch) || "ppc64le".equals(arch) || "aarch64".equals(arch)) {
         // java.nio.Bits.unaligned() wrongly returns false on ppc (JDK-8165231),
         unaligned = true;
       } else {
