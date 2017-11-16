@@ -135,6 +135,8 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   }
 
   private static class TIOErrorWithCause extends TIOError {
+    private static final long serialVersionUID = -1164984328968862207L;
+
     private Throwable cause;
 
     public TIOErrorWithCause(Throwable cause) {
@@ -143,7 +145,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
 
     @Override
-    public Throwable getCause() {
+    public synchronized Throwable getCause() {
       return cause;
     }
 

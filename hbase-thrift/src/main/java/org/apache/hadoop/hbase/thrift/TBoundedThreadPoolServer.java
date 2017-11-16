@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -159,6 +158,7 @@ public class TBoundedThreadPoolServer extends TServer {
     serverOptions = options;
   }
 
+  @Override
   public void serve() {
     try {
       serverTransport_.listen();
@@ -272,6 +272,7 @@ public class TBoundedThreadPoolServer extends TServer {
     /**
      * Loops on processing a client forever
      */
+    @Override
     public void run() {
       TProcessor processor = null;
       TTransport inputTransport = null;

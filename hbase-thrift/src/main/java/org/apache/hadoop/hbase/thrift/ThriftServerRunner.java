@@ -36,13 +36,11 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
-import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslServer;
 
 import org.apache.commons.cli.CommandLine;
@@ -1906,13 +1904,15 @@ public class ThriftServerRunner implements Runnable {
   }
 
   public static class IOErrorWithCause extends IOError {
+    private static final long serialVersionUID = 3545290006843153883L;
+
     private Throwable cause;
     public IOErrorWithCause(Throwable cause) {
       this.cause = cause;
     }
 
     @Override
-    public Throwable getCause() {
+    public synchronized Throwable getCause() {
       return cause;
     }
 
