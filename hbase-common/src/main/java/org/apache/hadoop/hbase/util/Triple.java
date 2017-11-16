@@ -40,6 +40,7 @@ public class Triple<A, B, C> {
     return new Triple<A, B, C>(first, second, third);
   }
 
+  @Override
   public int hashCode() {
     int hashFirst = (first != null ? first.hashCode() : 0);
     int hashSecond = (second != null ? second.hashCode() : 0);
@@ -48,6 +49,7 @@ public class Triple<A, B, C> {
     return (hashFirst >> 1) ^ hashSecond ^ (hashThird << 1);
   }
 
+  @Override
   public boolean equals(Object obj) {
     if (!(obj instanceof Triple)) {
       return false;
@@ -65,6 +67,7 @@ public class Triple<A, B, C> {
     return true;
   }
 
+  @Override
   public String toString() {
     return "(" + first + ", " + second + "," + third + " )";
   }
@@ -93,6 +96,3 @@ public class Triple<A, B, C> {
     this.third = third;
   }
 }
-
-
-

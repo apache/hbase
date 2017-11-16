@@ -297,10 +297,10 @@ public class TestChoreService {
       }
     };
 
-    assertEquals("Name construction failed", chore1.getName(), NAME);
-    assertEquals("Period construction failed", chore1.getPeriod(), PERIOD);
-    assertEquals("Initial Delay construction failed", chore1.getInitialDelay(), VALID_DELAY);
-    assertEquals("TimeUnit construction failed", chore1.getTimeUnit(), UNIT);
+    assertEquals("Name construction failed", NAME, chore1.getName());
+    assertEquals("Period construction failed", PERIOD, chore1.getPeriod());
+    assertEquals("Initial Delay construction failed", VALID_DELAY, chore1.getInitialDelay());
+    assertEquals("TimeUnit construction failed", UNIT, chore1.getTimeUnit());
 
     ScheduledChore invalidDelayChore =
         new ScheduledChore(NAME, new SampleStopper(), PERIOD, INVALID_DELAY, UNIT) {
@@ -475,7 +475,7 @@ public class TestChoreService {
       Thread.sleep(chorePeriod * 10);
       assertEquals("Chores are missing their start time. Should expand core pool size",
         service.getNumberOfScheduledChores(), service.getCorePoolSize());
-      assertEquals(service.getNumberOfChoresMissingStartTime(), 5);
+      assertEquals(5, service.getNumberOfChoresMissingStartTime());
 
       // Now we begin to cancel the chores that caused an increase in the core thread pool of the
       // ChoreService. These cancellations should cause a decrease in the core thread pool.
@@ -483,31 +483,31 @@ public class TestChoreService {
       Thread.sleep(chorePeriod * 10);
       assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
         service.getCorePoolSize());
-      assertEquals(service.getNumberOfChoresMissingStartTime(), 4);
+      assertEquals(4, service.getNumberOfChoresMissingStartTime());
 
       slowChore4.cancel();
       Thread.sleep(chorePeriod * 10);
       assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
         service.getCorePoolSize());
-      assertEquals(service.getNumberOfChoresMissingStartTime(), 3);
+      assertEquals(3, service.getNumberOfChoresMissingStartTime());
 
       slowChore3.cancel();
       Thread.sleep(chorePeriod * 10);
       assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
         service.getCorePoolSize());
-      assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
+      assertEquals(2, service.getNumberOfChoresMissingStartTime());
 
       slowChore2.cancel();
       Thread.sleep(chorePeriod * 10);
       assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
         service.getCorePoolSize());
-      assertEquals(service.getNumberOfChoresMissingStartTime(), 1);
+      assertEquals(1, service.getNumberOfChoresMissingStartTime());
 
       slowChore1.cancel();
       Thread.sleep(chorePeriod * 10);
       assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
         service.getCorePoolSize());
-      assertEquals(service.getNumberOfChoresMissingStartTime(), 0);
+      assertEquals(0, service.getNumberOfChoresMissingStartTime());
     } finally {
       shutdownService(service);
     }

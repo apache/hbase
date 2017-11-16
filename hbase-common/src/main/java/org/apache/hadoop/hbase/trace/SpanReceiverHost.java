@@ -45,7 +45,7 @@ public class SpanReceiverHost {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SE_BAD_FIELD")
   private static enum SingletonHolder {
     INSTANCE;
-    Object lock = new Object();
+    final Object lock = new Object();
     SpanReceiverHost host = null; // FindBugs: SE_BAD_FIELD
   }
 

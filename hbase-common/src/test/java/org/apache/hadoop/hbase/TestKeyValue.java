@@ -640,7 +640,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(kvA2.equals(deSerKV2));
   }
 
-  private class MockKeyValue implements Cell {
+  private static class MockKeyValue implements Cell {
     private final KeyValue kv;
 
     public MockKeyValue(KeyValue kv) {

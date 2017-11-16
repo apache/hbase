@@ -157,9 +157,9 @@ public class TestBytes extends TestCase {
     float [] floats = {-1f, 123.123f, Float.MAX_VALUE};
     for (int i = 0; i < floats.length; i++) {
       byte [] b = Bytes.toBytes(floats[i]);
-      assertEquals(floats[i], Bytes.toFloat(b));
+      assertEquals(floats[i], Bytes.toFloat(b), 0.0f);
       byte [] b2 = bytesWithOffset(b);
-      assertEquals(floats[i], Bytes.toFloat(b2, 1));
+      assertEquals(floats[i], Bytes.toFloat(b2, 1), 0.0f);
     }
   }
 
@@ -167,9 +167,9 @@ public class TestBytes extends TestCase {
     double [] doubles = {Double.MIN_VALUE, Double.MAX_VALUE};
     for (int i = 0; i < doubles.length; i++) {
       byte [] b = Bytes.toBytes(doubles[i]);
-      assertEquals(doubles[i], Bytes.toDouble(b));
+      assertEquals(doubles[i], Bytes.toDouble(b), 0.0);
       byte [] b2 = bytesWithOffset(b);
-      assertEquals(doubles[i], Bytes.toDouble(b2, 1));
+      assertEquals(doubles[i], Bytes.toDouble(b2, 1), 0.0);
     }
   }
 
@@ -431,13 +431,13 @@ public class TestBytes extends TestCase {
 
   public void testUnsignedBinarySearch(){
     byte[] bytes = new byte[]{0,5,123,127,-128,-100,-1};
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5), 1);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127), 3);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128), 4);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-100), 5);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-1), 6);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)2), -1-1);
-    Assert.assertEquals(Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-5), -6-1);
+    Assert.assertEquals(1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5));
+    Assert.assertEquals(3, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127));
+    Assert.assertEquals(4, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128));
+    Assert.assertEquals(5, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-100));
+    Assert.assertEquals(6, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-1));
+    Assert.assertEquals(-1-1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)2));
+    Assert.assertEquals(-6-1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-5));
   }
 
   public void testUnsignedIncrement(){

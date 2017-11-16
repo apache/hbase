@@ -633,7 +633,7 @@ public final class CellUtil {
     if (cell instanceof KeyValue) {
       return ((KeyValue)cell).heapSizeWithoutTags();
     }
-    return getSumOfCellKeyElementLengths(cell) + cell.getValueLength();
+    return (long) getSumOfCellKeyElementLengths(cell) + cell.getValueLength();
   }
 
   /********************* tags *************************************/

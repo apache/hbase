@@ -176,13 +176,10 @@ public enum DataBlockEncoding {
 
   protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName){
       try {
-        return (DataBlockEncoder)Class.forName(fullyQualifiedClassName).newInstance();
-      } catch (InstantiationException e) {
+        return (DataBlockEncoder)Class.forName(fullyQualifiedClassName)
+            .getDeclaredConstructor().newInstance();
+      } catch (Exception e) {
         throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
-      } catch (ClassNotFoundException e) {
-        throw new IllegalArgumentException(e);
       }
   }
 

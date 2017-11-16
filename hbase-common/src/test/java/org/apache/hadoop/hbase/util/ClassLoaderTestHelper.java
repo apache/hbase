@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.JarEntry;
@@ -127,7 +129,7 @@ public class ClassLoaderTestHelper {
     File srcDirPath = new File(srcDir.toString());
     srcDirPath.mkdirs();
     File sourceCodeFile = new File(srcDir.toString(), className + ".java");
-    BufferedWriter bw = new BufferedWriter(new FileWriter(sourceCodeFile));
+    BufferedWriter bw = Files.newBufferedWriter(sourceCodeFile.toPath(), StandardCharsets.UTF_8);
     bw.write(javaCode);
     bw.close();
 

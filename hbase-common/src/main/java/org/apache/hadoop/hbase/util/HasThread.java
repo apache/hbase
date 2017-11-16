@@ -44,7 +44,8 @@ public abstract class HasThread implements Runnable {
   public Thread getThread() {
     return thread;
   }
-  
+
+  @Override
   public abstract void run();
   
   //// Begin delegation to Thread

@@ -190,27 +190,27 @@ public final class ByteBufferUtils {
       return 8;
     }
 
-    if (value < (1l << 4 * 8)) {
+    if (value < (1l << (4 * 8))) {
       // no more than 4 bytes
-      if (value < (1l << 2 * 8)) {
-        if (value < (1l << 1 * 8)) {
+      if (value < (1l << (2 * 8))) {
+        if (value < (1l << (1 * 8))) {
           return 1;
         }
         return 2;
       }
-      if (value < (1l << 3 * 8)) {
+      if (value < (1l << (3 * 8))) {
         return 3;
       }
       return 4;
     }
     // more than 4 bytes
-    if (value < (1l << 6 * 8)) {
-      if (value < (1l << 5 * 8)) {
+    if (value < (1l << (6 * 8))) {
+      if (value < (1l << (5 * 8))) {
         return 5;
       }
       return 6;
     }
-    if (value < (1l << 7 * 8)) {
+    if (value < (1l << (7 * 8))) {
       return 7;
     }
     return 8;
@@ -226,13 +226,13 @@ public final class ByteBufferUtils {
       return 4;
     }
 
-    if (value < (1 << 2 * 8)) {
-      if (value < (1 << 1 * 8)) {
+    if (value < (1 << (2 * 8))) {
+      if (value < (1 << (1 * 8))) {
         return 1;
       }
       return 2;
     }
-    if (value <= (1 << 3 * 8)) {
+    if (value <= (1 << (3 * 8))) {
       return 3;
     }
     return 4;

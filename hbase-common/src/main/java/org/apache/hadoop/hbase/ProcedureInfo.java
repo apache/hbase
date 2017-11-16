@@ -79,6 +79,7 @@ public class ProcedureInfo implements Cloneable {
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
       justification="Intentional; calling super class clone doesn't make sense here.")
+  @Override
   public ProcedureInfo clone() {
     return new ProcedureInfo(procId, procName, procOwner, procState, parentId, nonceKey,
       exception, lastUpdate, startTime, result);

@@ -167,7 +167,7 @@ public final class ByteBufferArray {
     int endBuffer = (int) (end / bufferSize), endOffset = (int) (end % bufferSize);
     assert array.length >= len + arrayOffset;
     assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert endBuffer >= 0 && endBuffer < bufferCount
+    assert (endBuffer >= 0 && endBuffer < bufferCount)
         || (endBuffer == bufferCount && endOffset == 0);
     if (startBuffer >= locks.length || startBuffer < 0) {
       String msg = "Failed multiple, start=" + start + ",startBuffer="

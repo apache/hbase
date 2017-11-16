@@ -250,7 +250,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
       throws IOException {
-    byte flag = 0;
+    int flag = 0; // Do not use more bits than will fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
     int vLength = cell.getValueLength();
 
