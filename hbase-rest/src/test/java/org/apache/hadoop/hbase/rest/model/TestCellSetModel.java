@@ -80,6 +80,7 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
       "\"timestamp\":1245393318192,\"$\":\"dGVzdHZhbHVlMw==\"}]}]}";
   }
 
+  @Override
   protected CellSetModel buildTestModel() {
     CellSetModel model = new CellSetModel();
     RowModel row;
@@ -95,6 +96,7 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(CellSetModel model) {
     Iterator<RowModel> rows = model.getRows().iterator();
     RowModel row = rows.next();
@@ -104,7 +106,7 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
     assertTrue(Bytes.equals(COLUMN1, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE1, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP1);
+    assertEquals(TIMESTAMP1, cell.getTimestamp());
     assertFalse(cells.hasNext());
     row = rows.next();
     assertTrue(Bytes.equals(ROW2, row.getKey()));
@@ -113,26 +115,28 @@ public class TestCellSetModel extends TestModelBase<CellSetModel> {
     assertTrue(Bytes.equals(COLUMN2, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE2, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP2);
+    assertEquals(TIMESTAMP2, cell.getTimestamp());
     cell = cells.next();
     assertTrue(Bytes.equals(COLUMN3, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE3, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP3);
+    assertEquals(TIMESTAMP3, cell.getTimestamp());
     assertFalse(cells.hasNext());
   }
 
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
 
 }
-

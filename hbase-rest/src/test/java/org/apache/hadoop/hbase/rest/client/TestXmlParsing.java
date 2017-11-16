@@ -23,6 +23,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import javax.xml.bind.UnmarshalException;
 
 import org.apache.commons.logging.Log;
@@ -48,7 +50,7 @@ public class TestXmlParsing {
         + "<ClusterVersion Version=\"2.0.0\"/>";
     Client client = mock(Client.class);
     RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
-    Response resp = new Response(200, null, xml.getBytes());
+    Response resp = new Response(200, null, xml.getBytes(StandardCharsets.UTF_8));
 
     when(client.get("/version/cluster", Constants.MIMETYPE_XML)).thenReturn(resp);
 
@@ -64,7 +66,7 @@ public class TestXmlParsing {
         + " <ClusterVersion>&xee;</ClusterVersion>";
     Client client = mock(Client.class);
     RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
-    Response resp = new Response(200, null, externalEntitiesXml.getBytes());
+    Response resp = new Response(200, null, externalEntitiesXml.getBytes(StandardCharsets.UTF_8));
 
     when(client.get("/version/cluster", Constants.MIMETYPE_XML)).thenReturn(resp);
 

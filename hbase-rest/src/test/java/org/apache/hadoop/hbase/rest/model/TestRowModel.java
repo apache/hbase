@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.rest.model;
 
 import java.util.Iterator;
 
-import javax.xml.bind.JAXBContext;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,8 +34,6 @@ public class TestRowModel extends TestModelBase<RowModel> {
   private static final byte[] VALUE1 = Bytes.toBytes("testvalue1");
   private static final long TIMESTAMP1 = 1245219839331L;
 
-  private JAXBContext context;
-
   public TestRowModel() throws Exception {
     super(RowModel.class);
     AS_XML =
@@ -49,6 +45,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
       "\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVlMQ==\"}]}";
   }
 
+  @Override
   protected RowModel buildTestModel() {
     RowModel model = new RowModel();
     model.setKey(ROW1);
@@ -56,6 +53,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(RowModel model) {
     assertTrue(Bytes.equals(ROW1, model.getKey()));
     Iterator<CellModel> cells = model.getCells().iterator();
@@ -63,7 +61,7 @@ public class TestRowModel extends TestModelBase<RowModel> {
     assertTrue(Bytes.equals(COLUMN1, cell.getColumn()));
     assertTrue(Bytes.equals(VALUE1, cell.getValue()));
     assertTrue(cell.hasUserTimestamp());
-    assertEquals(cell.getTimestamp(), TIMESTAMP1);
+    assertEquals(TIMESTAMP1, cell.getTimestamp());
     assertFalse(cells.hasNext());
   }
 

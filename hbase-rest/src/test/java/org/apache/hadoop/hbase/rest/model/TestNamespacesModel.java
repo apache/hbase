@@ -46,6 +46,7 @@ public class TestNamespacesModel extends TestModelBase<NamespacesModel> {
     AS_JSON = "{\"Namespace\":[\"testNamespace1\",\"testNamespace2\"]}";
   }
 
+  @Override
   protected NamespacesModel buildTestModel() {
     return buildTestModel(NAMESPACE_NAME_1, NAMESPACE_NAME_2);
   }
@@ -56,6 +57,7 @@ public class TestNamespacesModel extends TestModelBase<NamespacesModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(NamespacesModel model) {
     checkModel(model, NAMESPACE_NAME_1, NAMESPACE_NAME_2);
   }
@@ -69,16 +71,19 @@ public class TestNamespacesModel extends TestModelBase<NamespacesModel> {
   }
 
   @Test
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
   @Test
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
   @Test
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }

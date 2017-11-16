@@ -78,7 +78,7 @@ public class TestVersionResource {
   private static void validate(VersionModel model) {
     assertNotNull(model);
     assertNotNull(model.getRESTVersion());
-    assertEquals(model.getRESTVersion(), RESTServlet.VERSION_STRING);
+    assertEquals(RESTServlet.VERSION_STRING, model.getRESTVersion());
     String osVersion = model.getOSVersion(); 
     assertNotNull(osVersion);
     assertTrue(osVersion.contains(System.getProperty("os.name")));

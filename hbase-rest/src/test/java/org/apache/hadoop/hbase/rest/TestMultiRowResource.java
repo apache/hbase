@@ -43,8 +43,6 @@ import org.junit.runners.Parameterized;
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,9 +70,8 @@ public class TestMultiRowResource {
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
   private static Client client;
+  @SuppressWarnings("unused")
   private static JAXBContext context;
-  private static Marshaller marshaller;
-  private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
   private static Header extraHdr = null;
@@ -104,8 +101,6 @@ public class TestMultiRowResource {
             CellModel.class,
             CellSetModel.class,
             RowModel.class);
-    marshaller = context.createMarshaller();
-    unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
@@ -148,7 +143,7 @@ public class TestMultiRowResource {
 
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
 
     client.delete(row_5_url, extraHdr);
@@ -175,7 +170,7 @@ public class TestMultiRowResource {
 
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
 
     client.delete(row_5_url, extraHdr);
@@ -202,7 +197,7 @@ public class TestMultiRowResource {
     client.post(row_6_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_2), extraHdr);
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     ObjectMapper mapper =
         new JacksonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = (CellSetModel) mapper.readValue(response.getBody(), CellSetModel.class);
@@ -231,7 +226,7 @@ public class TestMultiRowResource {
 
     client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     ObjectMapper mapper = new JacksonProvider().locateMapper(CellSetModel.class,
       MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = (CellSetModel) mapper.readValue(response.getBody(), CellSetModel.class);

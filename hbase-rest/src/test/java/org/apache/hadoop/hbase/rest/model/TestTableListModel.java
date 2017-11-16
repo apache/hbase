@@ -43,6 +43,7 @@ public class TestTableListModel extends TestModelBase<TableListModel> {
       "{\"table\":[{\"name\":\"table1\"},{\"name\":\"table2\"},{\"name\":\"table3\"}]}";
   }
 
+  @Override
   protected TableListModel buildTestModel() {
     TableListModel model = new TableListModel();
     model.add(new TableModel(TABLE1));
@@ -51,15 +52,15 @@ public class TestTableListModel extends TestModelBase<TableListModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(TableListModel model) {
     Iterator<TableModel> tables = model.getTables().iterator();
     TableModel table = tables.next();
-    assertEquals(table.getName(), TABLE1);
+    assertEquals(TABLE1, table.getName());
     table = tables.next();
-    assertEquals(table.getName(), TABLE2);
+    assertEquals(TABLE2, table.getName());
     table = tables.next();
-    assertEquals(table.getName(), TABLE3);
+    assertEquals(TABLE3, table.getName());
     assertFalse(tables.hasNext());
   }
 }
-

@@ -35,14 +35,16 @@ public class TestStorageClusterVersionModel extends TestModelBase<StorageCluster
     AS_JSON = "{\"Version\": \"0.0.1-testing\"}";
   }
 
+  @Override
   protected StorageClusterVersionModel buildTestModel() {
     StorageClusterVersionModel model = new StorageClusterVersionModel();
     model.setVersion(VERSION);
     return model;
   }
 
+  @Override
   protected void checkModel(StorageClusterVersionModel model) {
-    assertEquals(model.getVersion(), VERSION);
+    assertEquals(VERSION, model.getVersion());
   }
 
   @Override

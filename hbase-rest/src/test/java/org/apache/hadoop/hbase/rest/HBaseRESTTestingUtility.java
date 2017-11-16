@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import java.util.Arrays;
+
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,7 +80,7 @@ public class HBaseRESTTestingUtility {
     conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
     RESTServer.addCSRFFilter(context, conf);
     HttpServerUtil.constrainHttpMethods(context);
-    LOG.info("Loaded filter classes :" + filterClasses);
+    LOG.info("Loaded filter classes :" + Arrays.toString(filterClasses));
       // start the server
     server.start();
       // get the port

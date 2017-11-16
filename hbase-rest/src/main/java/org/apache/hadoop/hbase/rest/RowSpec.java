@@ -377,6 +377,7 @@ public class RowSpec {
     this.endTime = endTime;
   }
 
+  @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
     result.append("{startRow => '");
