@@ -77,7 +77,17 @@
            <groupId>com.google.code.findbugs</groupId>
            <artifactId>jsr305</artifactId>
         </exclusion>
+        <exclusion>
+          <!-- exclude the wrong snappy-java version in spark-1.6 -->
+          <groupId>org.xerial.snappy</groupId>
+          <artifactId>snappy-java</artifactId>
+        </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.1.4</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
