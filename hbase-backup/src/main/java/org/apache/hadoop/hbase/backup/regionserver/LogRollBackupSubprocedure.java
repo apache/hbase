@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -35,9 +34,9 @@ import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
-import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This backup sub-procedure implementation forces a WAL rolling on a RS.
@@ -48,7 +47,6 @@ public class LogRollBackupSubprocedure extends Subprocedure {
 
   private final RegionServerServices rss;
   private final LogRollBackupSubprocedurePool taskManager;
-  private FSHLog hlog;
   private String backupRoot;
 
   public LogRollBackupSubprocedure(RegionServerServices rss, ProcedureMember member,
@@ -67,7 +65,7 @@ public class LogRollBackupSubprocedure extends Subprocedure {
 
   /**
    * Callable task. TODO. We don't need a thread pool to execute roll log. This can be simplified
-   * with no use of subprocedurepool.
+   * with no use of sub-procedure pool.
    */
   class RSRollLogTask implements Callable<Void> {
     RSRollLogTask() {
@@ -76,16 +74,17 @@ public class LogRollBackupSubprocedure extends Subprocedure {
     @Override
     public Void call() throws Exception {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("++ DRPC started: " + rss.getServerName());
+        LOG.debug("DRPC started: " + rss.getServerName());
       }
-      hlog = (FSHLog) rss.getWAL(null);
-      long filenum = hlog.getFilenum();
+
+      AbstractFSWAL<?> fsWAL = (AbstractFSWAL<?>) rss.getWAL(null);
+      long filenum = fsWAL.getFilenum();
       List<WAL> wals = rss.getWALs();
       long highest = -1;
       for (WAL wal : wals) {
         if (wal == null) continue;
-        if (((AbstractFSWAL) wal).getFilenum() > highest) {
-          highest = ((AbstractFSWAL) wal).getFilenum();
+        if (((AbstractFSWAL<?>) wal).getFilenum() > highest) {
+          highest = ((AbstractFSWAL<?>) wal).getFilenum();
         }
       }
 
@@ -97,7 +96,7 @@ public class LogRollBackupSubprocedure extends Subprocedure {
         Thread.sleep(20);
       }
       LOG.debug("log roll took " + (EnvironmentEdgeManager.currentTime() - start));
-      LOG.info("After roll log in backup subprocedure, current log number: " + hlog.getFilenum()
+      LOG.info("After roll log in backup subprocedure, current log number: " + fsWAL.getFilenum()
           + " on " + rss.getServerName());
 
       Connection connection = rss.getConnection();
