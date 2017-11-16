@@ -67,6 +67,7 @@ public class HistogramImpl implements Histogram {
     histogram.add(value, 1);
   }
 
+  @Override
   public long getCount() {
     return counter.getCount();
   }
@@ -75,6 +76,7 @@ public class HistogramImpl implements Histogram {
     return this.histogram.getMax();
   }
 
+  @Override
   public Snapshot snapshot() {
     return histogram.snapshotAndReset();
   }

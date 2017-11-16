@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -42,22 +42,24 @@ class RefCountingMap<K, V> {
   private ConcurrentHashMap<K, Payload<V>> map = new ConcurrentHashMap<>();
   private static class Payload<V> {
     V v;
-    volatile int refCount;
+    final AtomicInteger refCount = new AtomicInteger(1); // create with ref count = 1
     Payload(V v) {
       this.v = v;
-      this.refCount = 1; // create with ref count = 1
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
+    justification="We use the object monitor to serialize operations on the concurrent map")
   V put(K key, Supplier<V> supplier) {
-    synchronized (map) {
+    synchronized (this) {
       Payload<V> oldValue = map.get(key);
       if (oldValue == null) {
         oldValue = new Payload<V>(supplier.get());
         map.put(key, oldValue);
         return oldValue.v;
       }
-      oldValue.refCount++;
+      oldValue.refCount.incrementAndGet();
       return oldValue.v;
     }
   }
@@ -73,10 +75,10 @@ class RefCountingMap<K, V> {
    * @return the value associated with the specified key or null if key is removed from map.
    */
   V remove(K key) {
-    synchronized (map) {
+    synchronized (this) {
       Payload<V> oldValue = map.get(key);
       if (oldValue != null) {
-        if (--oldValue.refCount == 0) {
+        if (oldValue.refCount.decrementAndGet() == 0) {
           map.remove(key);
           return null;
         }
