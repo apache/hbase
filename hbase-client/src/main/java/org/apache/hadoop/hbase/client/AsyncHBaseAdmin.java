@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
@@ -56,7 +55,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * @see AsyncConnection#getAdminBuilder(ExecutorService)
  */
 @InterfaceAudience.Private
-public class AsyncHBaseAdmin implements AsyncAdmin {
+class AsyncHBaseAdmin implements AsyncAdmin {
 
   private final RawAsyncHBaseAdmin rawAdmin;
 
@@ -705,13 +704,13 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable) {
+      ServiceCaller<S, R> callable) {
     return wrap(rawAdmin.coprocessorService(stubMaker, callable));
   }
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable, ServerName serverName) {
+      ServiceCaller<S, R> callable, ServerName serverName) {
     return wrap(rawAdmin.coprocessorService(stubMaker, callable, serverName));
   }
 

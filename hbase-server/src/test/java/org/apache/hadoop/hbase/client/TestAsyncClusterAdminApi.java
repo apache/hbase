@@ -212,7 +212,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
   private HRegionServer startAndWriteData(TableName tableName, byte[] value) throws Exception {
     createTableWithDefaultConf(tableName);
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
@@ -305,7 +305,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(table);
       builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
       admin.createTable(builder.build(), Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), 16).join();
-      RawAsyncTable asyncTable = ASYNC_CONN.getRawTable(table);
+      AsyncTable<?> asyncTable = ASYNC_CONN.getTable(table);
       List<Put> puts = new ArrayList<>();
       for (byte[] row : HBaseTestingUtility.ROWS) {
         puts.add(new Put(row).addColumn(FAMILY, Bytes.toBytes("q"), Bytes.toBytes("v")));

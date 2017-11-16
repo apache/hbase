@@ -32,13 +32,15 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -80,20 +82,20 @@ public class TestAsyncTableBatch {
   public String tableType;
 
   @Parameter(1)
-  public Function<TableName, AsyncTableBase> tableGetter;
+  public Function<TableName, AsyncTable<?>> tableGetter;
 
-  private static RawAsyncTable getRawTable(TableName tableName) {
-    return CONN.getRawTable(tableName);
+  private static AsyncTable<?> getRawTable(TableName tableName) {
+    return CONN.getTable(tableName);
   }
 
-  private static AsyncTable getTable(TableName tableName) {
+  private static AsyncTable<?> getTable(TableName tableName) {
     return CONN.getTable(tableName, ForkJoinPool.commonPool());
   }
 
   @Parameters(name = "{index}: type={0}")
   public static List<Object[]> params() {
-    Function<TableName, AsyncTableBase> rawTableGetter = TestAsyncTableBatch::getRawTable;
-    Function<TableName, AsyncTableBase> tableGetter = TestAsyncTableBatch::getTable;
+    Function<TableName, AsyncTable<?>> rawTableGetter = TestAsyncTableBatch::getRawTable;
+    Function<TableName, AsyncTable<?>> tableGetter = TestAsyncTableBatch::getTable;
     return Arrays.asList(new Object[] { "raw", rawTableGetter },
       new Object[] { "normal", tableGetter });
   }
@@ -134,18 +136,15 @@ public class TestAsyncTableBatch {
   }
 
   @Test
-  public void test() throws InterruptedException, ExecutionException, IOException {
-    AsyncTableBase table = tableGetter.apply(TABLE_NAME);
+  public void test()
+      throws InterruptedException, ExecutionException, IOException, TimeoutException {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(IntStream.range(0, COUNT)
         .mapToObj(i -> new Put(getRow(i)).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
         .collect(Collectors.toList())).get();
-    List<Result> results =
-        table
-            .getAll(IntStream.range(0, COUNT)
-                .mapToObj(
-                  i -> Arrays.asList(new Get(getRow(i)), new Get(Arrays.copyOf(getRow(i), 4))))
-                .flatMap(l -> l.stream()).collect(Collectors.toList()))
-            .get();
+    List<Result> results = table.getAll(IntStream.range(0, COUNT)
+        .mapToObj(i -> Arrays.asList(new Get(getRow(i)), new Get(Arrays.copyOf(getRow(i), 4))))
+        .flatMap(l -> l.stream()).collect(Collectors.toList())).get();
     assertEquals(2 * COUNT, results.size());
     for (int i = 0; i < COUNT; i++) {
       assertEquals(i, Bytes.toInt(results.get(2 * i).getValue(FAMILY, CQ)));
@@ -153,19 +152,20 @@ public class TestAsyncTableBatch {
     }
     Admin admin = TEST_UTIL.getAdmin();
     admin.flush(TABLE_NAME);
-    TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).forEach(r -> {
-      byte[] startKey = r.getRegionInfo().getStartKey();
-      int number = startKey.length == 0 ? 55 : Integer.parseInt(Bytes.toString(startKey));
-      byte[] splitPoint = Bytes.toBytes(String.format("%03d", number + 55));
-      try {
-        admin.splitRegion(r.getRegionInfo().getRegionName(), splitPoint);
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    });
-    // we are not going to test the function of split so no assertion here. Just wait for a while
-    // and then start our work.
-    Thread.sleep(5000);
+    List<Future<?>> splitFutures =
+      TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream().map(r -> {
+        byte[] startKey = r.getRegionInfo().getStartKey();
+        int number = startKey.length == 0 ? 55 : Integer.parseInt(Bytes.toString(startKey));
+        byte[] splitPoint = Bytes.toBytes(String.format("%03d", number + 55));
+        try {
+          return admin.splitRegionAsync(r.getRegionInfo().getRegionName(), splitPoint);
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
+      }).collect(Collectors.toList());
+    for (Future<?> future : splitFutures) {
+      future.get(30, TimeUnit.SECONDS);
+    }
     table.deleteAll(
       IntStream.range(0, COUNT).mapToObj(i -> new Delete(getRow(i))).collect(Collectors.toList()))
         .get();
@@ -179,7 +179,7 @@ public class TestAsyncTableBatch {
 
   @Test
   public void testMixed() throws InterruptedException, ExecutionException {
-    AsyncTableBase table = tableGetter.apply(TABLE_NAME);
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(IntStream.range(0, 5)
         .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(FAMILY, CQ, Bytes.toBytes((long) i)))
         .collect(Collectors.toList())).get();
@@ -223,10 +223,10 @@ public class TestAsyncTableBatch {
   @Test
   public void testPartialSuccess() throws IOException, InterruptedException, ExecutionException {
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(TABLE_NAME));
-    htd.addCoprocessor(ErrorInjectObserver.class.getName());
-    admin.modifyTable(TABLE_NAME, htd);
-    AsyncTableBase table = tableGetter.apply(TABLE_NAME);
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(admin.getDescriptor(TABLE_NAME))
+        .addCoprocessor(ErrorInjectObserver.class.getName()).build();
+    admin.modifyTable(htd);
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(Arrays.asList(SPLIT_KEYS).stream().map(k -> new Put(k).addColumn(FAMILY, CQ, k))
         .collect(Collectors.toList())).get();
     List<CompletableFuture<Result>> futures = table

@@ -68,7 +68,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
     } catch (IOException e) {
       onError(e,
         () -> "Get async stub to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row)
-            + "' in " + loc.getRegionInfo().getEncodedName() + " of " + tableName + " failed",
+            + "' in " + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
         err -> conn.getLocator().updateCachedLocation(loc, err));
       return;
     }
@@ -78,7 +78,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
         if (error != null) {
           onError(error,
             () -> "Call to " + loc.getServerName() + " for '" + Bytes.toStringBinary(row) + "' in "
-                + loc.getRegionInfo().getEncodedName() + " of " + tableName + " failed",
+                + loc.getRegion().getEncodedName() + " of " + tableName + " failed",
             err -> conn.getLocator().updateCachedLocation(loc, err));
           return;
         }

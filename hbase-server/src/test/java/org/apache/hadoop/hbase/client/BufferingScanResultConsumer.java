@@ -25,7 +25,12 @@ import java.util.Queue;
 
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
-class SimpleRawScanResultConsumer implements RawScanResultConsumer {
+/**
+ * A scan result consumer which buffers all the data in memory and you can call the {@link #take()}
+ * method below to get the result one by one. Should only be used by tests, do not write production
+ * code like this as the buffer is unlimited and may cause OOM.
+ */
+class BufferingScanResultConsumer implements AdvancedScanResultConsumer {
 
   private ScanMetrics scanMetrics;
 

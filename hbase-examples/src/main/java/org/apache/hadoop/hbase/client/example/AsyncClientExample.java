@@ -141,7 +141,7 @@ public class AsyncClientExample extends Configured implements Tool {
           latch.countDown();
           return;
         }
-        AsyncTable table = conn.getTable(tableName, threadPool);
+        AsyncTable<?> table = conn.getTable(tableName, threadPool);
         table.put(new Put(getKey(i)).addColumn(FAMILY, QUAL, Bytes.toBytes(i)))
             .whenComplete((putResp, putErr) -> {
               if (putErr != null) {

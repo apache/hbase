@@ -30,12 +30,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The implementation of {@link AsyncBufferedMutator}. Simply wrap an {@link AsyncTableBase}.
+ * The implementation of {@link AsyncBufferedMutator}. Simply wrap an {@link AsyncTable}.
  */
 @InterfaceAudience.Private
 class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
-  private final AsyncTableBase table;
+  private final AsyncTable<?> table;
 
   private final long writeBufferSize;
 
@@ -47,7 +47,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
 
   private boolean closed;
 
-  AsyncBufferedMutatorImpl(AsyncTableBase table, long writeBufferSize) {
+  AsyncBufferedMutatorImpl(AsyncTable<?> table, long writeBufferSize) {
     this.table = table;
     this.writeBufferSize = writeBufferSize;
   }

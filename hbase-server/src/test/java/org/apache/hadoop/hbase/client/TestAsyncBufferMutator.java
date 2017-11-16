@@ -96,7 +96,7 @@ public class TestAsyncBufferMutator {
     }
     // mutator.close will call mutator.flush automatically so all tasks should have been done.
     futures.forEach(f -> f.join());
-    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
+    AsyncTable<?> table = CONN.getTable(TABLE_NAME);
     IntStream.range(0, COUNT).mapToObj(i -> new Get(Bytes.toBytes(i))).map(g -> table.get(g).join())
         .forEach(r -> {
           assertArrayEquals(VALUE, r.getValue(CF, CQ));

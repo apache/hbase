@@ -20,21 +20,26 @@ package org.apache.hadoop.hbase.client;
 import java.util.Optional;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
 /**
- * Receives {@link Result} for an asynchronous scan.
+ * This is the low level API for asynchronous scan.
  * <p>
- * Notice that, the {@link #onNext(Result[], ScanController)} method will be called in the thread
- * which we send request to HBase service. So if you want the asynchronous scanner fetch data from
- * HBase in background while you process the returned data, you need to move the processing work to
- * another thread to make the {@code onNext} call return immediately. And please do NOT do any time
- * consuming tasks in all methods below unless you know what you are doing.
+ * All results that match the given scan object will be passed to this class by calling
+ * {@link #onNext(Result[], ScanController)}. {@link #onComplete()} means the scan is finished, and
+ * {@link #onError(Throwable)} means we hit an unrecoverable error and the scan is terminated.
+ * {@link #onHeartbeat(ScanController)} means the RS is still working but we can not get a valid
+ * result to call {@link #onNext(Result[], ScanController)}. This is usually because the matched
+ * results are too sparse, for example, a filter which almost filters out everything is specified.
+ * <p>
+ * Notice that, all the methods here will be called directly in the thread which we send request to
+ * HBase service. So if you want the asynchronous scanner fetch data from HBase in background while
+ * you process the returned data, you need to move the processing work to another thread to make the
+ * {@link #onNext(Result[], ScanController)} call return immediately. And please do NOT do any time
+ * consuming tasks in these methods unless you know what you are doing.
  * @since 2.0.0
  */
 @InterfaceAudience.Public
-public interface RawScanResultConsumer {
+public interface AdvancedScanResultConsumer extends ScanResultConsumerBase {
 
   /**
    * Used to resume a scan.
@@ -112,26 +117,5 @@ public interface RawScanResultConsumer {
    *          method in onHeartbeat, do NOT store it and call it later outside onHeartbeat.
    */
   default void onHeartbeat(ScanController controller) {
-  }
-
-  /**
-   * Indicate that we hit an unrecoverable error and the scan operation is terminated.
-   * <p>
-   * We will not call {@link #onComplete()} after calling {@link #onError(Throwable)}.
-   */
-  void onError(Throwable error);
-
-  /**
-   * Indicate that the scan operation is completed normally.
-   */
-  void onComplete();
-
-  /**
-   * If {@code scan.isScanMetricsEnabled()} returns true, then this method will be called prior to
-   * all other methods in this interface to give you the {@link ScanMetrics} instance for this scan
-   * operation. The {@link ScanMetrics} instance will be updated on-the-fly during the scan, you can
-   * store it somewhere to get the metrics at any time if you want.
-   */
-  default void onScanMetricsCreated(ScanMetrics scanMetrics) {
   }
 }

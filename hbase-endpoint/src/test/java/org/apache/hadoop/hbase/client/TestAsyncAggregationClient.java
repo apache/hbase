@@ -55,7 +55,7 @@ public class TestAsyncAggregationClient {
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<AdvancedScanResultConsumer> TABLE;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -69,7 +69,7 @@ public class TestAsyncAggregationClient {
     }
     UTIL.createTable(TABLE_NAME, CF, splitKeys);
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTable(TABLE_NAME);
+    TABLE = CONN.getTable(TABLE_NAME);
     TABLE.putAll(LongStream.range(0, COUNT)
         .mapToObj(l -> new Put(Bytes.toBytes(String.format("%03d", l)))
             .addColumn(CF, CQ, Bytes.toBytes(l)).addColumn(CF, CQ2, Bytes.toBytes(l * l)))

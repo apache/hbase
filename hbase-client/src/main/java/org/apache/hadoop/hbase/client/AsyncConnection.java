@@ -49,32 +49,37 @@ public interface AsyncConnection extends Closeable {
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
 
   /**
-   * Retrieve an {@link RawAsyncTable} implementation for accessing a table.
+   * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
-   * The returned instance will use default configs. Use {@link #getRawTableBuilder(TableName)} if you
-   * want to customize some configs.
+   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if
+   * you want to customize some configs.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
+   * <p>
+   * The returned {@code CompletableFuture} will be finished directly in the rpc framework's
+   * callback thread, so typically you should not do any time consuming work inside these methods.
+   * And also the observer style scan API will use {@link AdvancedScanResultConsumer} which is
+   * designed for experts only. Only use it when you know what you are doing.
    * @param tableName the name of the table
-   * @return an RawAsyncTable to use for interactions with this table
-   * @see #getRawTableBuilder(TableName)
+   * @return an AsyncTable to use for interactions with this table
+   * @see #getTableBuilder(TableName)
    */
-  default RawAsyncTable getRawTable(TableName tableName) {
-    return getRawTableBuilder(tableName).build();
+  default AsyncTable<AdvancedScanResultConsumer> getTable(TableName tableName) {
+    return getTableBuilder(tableName).build();
   }
 
   /**
-   * Returns an {@link AsyncTableBuilder} for creating {@link RawAsyncTable}.
+   * Returns an {@link AsyncTableBuilder} for creating {@link AsyncTable}.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
    */
-  AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName);
+  AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName);
 
   /**
-   * Retrieve an AsyncTable implementation for accessing a table.
+   * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
@@ -82,7 +87,7 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    * @return an AsyncTable to use for interactions with this table
    */
-  default AsyncTable getTable(TableName tableName, ExecutorService pool) {
+  default AsyncTable<ScanResultConsumer> getTable(TableName tableName, ExecutorService pool) {
     return getTableBuilder(tableName, pool).build();
   }
 
@@ -94,7 +99,7 @@ public interface AsyncConnection extends Closeable {
    * @param tableName the name of the table
    * @param pool the thread pool to use for executing callback
    */
-  AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool);
+  AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName, ExecutorService pool);
 
   /**
    * Retrieve an {@link AsyncAdmin} implementation to administer an HBase cluster.

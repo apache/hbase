@@ -58,14 +58,14 @@ public class TestRawAsyncTableLimitedScanWithFilter {
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<?> TABLE;
 
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.createTable(TABLE_NAME, FAMILY);
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTable(TABLE_NAME);
+    TABLE = CONN.getTable(TABLE_NAME);
     TABLE.putAll(IntStream.range(0, ROW_COUNT).mapToObj(i -> {
       Put put = new Put(Bytes.toBytes(i));
       IntStream.range(0, CQS.length)
