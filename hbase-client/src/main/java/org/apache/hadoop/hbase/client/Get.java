@@ -243,6 +243,7 @@ public class Get extends Query
     return this;
   }
 
+  @Override
   public Get setLoadColumnFamiliesOnDemand(boolean value) {
     return (Get) super.setLoadColumnFamiliesOnDemand(value);
   }

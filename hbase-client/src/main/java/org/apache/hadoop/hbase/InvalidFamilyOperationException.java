@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class InvalidFamilyOperationException extends DoNotRetryIOException {
-  private static final long serialVersionUID = 1L << 22 - 1L;
+  private static final long serialVersionUID = (1L << 22) - 1L;
   /** default constructor */
   public InvalidFamilyOperationException() {
     super();

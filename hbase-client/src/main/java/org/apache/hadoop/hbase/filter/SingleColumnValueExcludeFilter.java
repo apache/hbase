@@ -97,6 +97,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   // We cleaned result row in FilterRow to be consistent with scanning process.
+  @Override
   public boolean hasFilterRow() {
    return true;
   }
@@ -132,6 +133,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.SingleColumnValueExcludeFilter.Builder builder =
       FilterProtos.SingleColumnValueExcludeFilter.newBuilder();
@@ -175,6 +177,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof SingleColumnValueExcludeFilter)) return false;

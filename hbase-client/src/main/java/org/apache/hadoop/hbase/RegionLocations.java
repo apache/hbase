@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Collection;
+import java.util.Objects;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -214,7 +215,7 @@ public class RegionLocations {
       HRegionLocation selectedLoc = selectRegionLocation(thisLoc,
         otherLoc, true, false);
 
-      if (selectedLoc != thisLoc) {
+      if (!Objects.equals(selectedLoc, thisLoc)) {
         if (newLocations == null) {
           newLocations = new HRegionLocation[max];
           System.arraycopy(locations, 0, newLocations, 0, i);
@@ -277,7 +278,7 @@ public class RegionLocations {
     HRegionLocation selectedLoc = selectRegionLocation(oldLoc, location,
       checkForEquals, force);
 
-    if (selectedLoc == oldLoc) {
+    if (Objects.equals(selectedLoc, oldLoc)) {
       return this;
     }
     HRegionLocation[] newLocations = new HRegionLocation[Math.max(locations.length, replicaId +1)];

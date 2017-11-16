@@ -221,6 +221,7 @@ final public class FilterList extends Filter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.FilterList.Builder builder = FilterProtos.FilterList.newBuilder();
     builder.setOperator(FilterProtos.FilterList.Operator.valueOf(operator.name()));
@@ -262,6 +263,7 @@ final public class FilterList extends Filter {
    * @return true if and only if the fields of the filter that are serialized are equal to the
    *         corresponding fields in other. Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter other) {
     if (other == this) return true;
     if (!(other instanceof FilterList)) return false;

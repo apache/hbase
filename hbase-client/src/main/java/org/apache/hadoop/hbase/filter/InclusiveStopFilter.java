@@ -65,6 +65,7 @@ public class InclusiveStopFilter extends FilterBase {
     return v;
   }
 
+  @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     if (buffer == null) {
       //noinspection RedundantIfStatement
@@ -81,6 +82,7 @@ public class InclusiveStopFilter extends FilterBase {
     return done;
   }
 
+  @Override
   public boolean filterAllRemaining() {
     return done;
   }
@@ -95,6 +97,7 @@ public class InclusiveStopFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.InclusiveStopFilter.Builder builder =
       FilterProtos.InclusiveStopFilter.newBuilder();
@@ -124,6 +127,7 @@ public class InclusiveStopFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof InclusiveStopFilter)) return false;

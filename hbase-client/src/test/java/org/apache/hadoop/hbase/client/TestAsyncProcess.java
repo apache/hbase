@@ -24,8 +24,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -93,10 +95,10 @@ public class TestAsyncProcess {
   private final static Log LOG = LogFactory.getLog(TestAsyncProcess.class);
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
-  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
-  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
-  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes();
-  private static final byte[] FAILS = "FAILS".getBytes();
+  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] FAILS = "FAILS".getBytes(StandardCharsets.UTF_8);
   private static final Configuration conf = new Configuration();
 
   private static ServerName sn = ServerName.valueOf("s1:1,1");
@@ -353,7 +355,8 @@ public class TestAsyncProcess {
       return inc.getAndIncrement();
     }
   }
-  class MyAsyncProcessWithReplicas extends MyAsyncProcess {
+
+  static class MyAsyncProcessWithReplicas extends MyAsyncProcess {
     private Set<byte[]> failures = new TreeSet<byte[]>(new Bytes.ByteArrayComparator());
     private long primarySleepMs = 0, replicaSleepMs = 0;
     private Map<ServerName, Long> customPrimarySleepMs = new HashMap<ServerName, Long>();
@@ -625,7 +628,13 @@ public class TestAsyncProcess {
     Random rn = new Random();
     final long limit = 10 * 1024 * 1024;
     final int requestCount = 1 + (int) (rn.nextDouble() * 3);
-    long putsHeapSize = Math.abs(rn.nextLong()) % limit;
+    long n = rn.nextLong();
+    if (n < 0) {
+      n = -n;
+    } else if (n == 0) {
+      n = 1;
+    }
+    long putsHeapSize = n % limit;
     long maxHeapSizePerRequest = putsHeapSize / requestCount;
     LOG.info("[testSubmitRandomSizeRequest] maxHeapSizePerRequest=" + maxHeapSizePerRequest +
         ", putsHeapSize=" + putsHeapSize);
@@ -747,7 +756,7 @@ public class TestAsyncProcess {
     final AsyncRequestFuture ars = ap.submit(DUMMY_TABLE, puts, false, cb, false);
     Assert.assertTrue(puts.isEmpty());
     ars.waitUntilDone();
-    Assert.assertEquals(updateCalled.get(), 1);
+    Assert.assertEquals(1, updateCalled.get());
   }
 
   @Test
@@ -759,12 +768,12 @@ public class TestAsyncProcess {
     puts.add(createPut(1, true));
 
     for (int i = 0; i != ap.maxConcurrentTasksPerRegion; ++i) {
-      ap.incTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+      ap.incTaskCounters(Collections.singletonList(hri1.getRegionName()), sn);
     }
     ap.submit(DUMMY_TABLE, puts, false, null, false);
     Assert.assertEquals(puts.size(), 1);
 
-    ap.decTaskCounters(Arrays.asList(hri1.getRegionName()), sn);
+    ap.decTaskCounters(Collections.singletonList(hri1.getRegionName()), sn);
     ap.submit(DUMMY_TABLE, puts, false, null, false);
     Assert.assertEquals(0, puts.size());
   }
@@ -945,7 +954,7 @@ public class TestAsyncProcess {
     final AsyncProcess ap = new MyAsyncProcess(createHConnection(), conf, false);
 
     for (int i = 0; i < 1000; i++) {
-      ap.incTaskCounters(Arrays.asList("dummy".getBytes()), sn);
+      ap.incTaskCounters(Collections.singletonList("dummy".getBytes(StandardCharsets.UTF_8)), sn);
     }
 
     final Thread myThread = Thread.currentThread();
@@ -976,7 +985,7 @@ public class TestAsyncProcess {
       public void run() {
         Threads.sleep(sleepTime);
         while (ap.tasksInProgress.get() > 0) {
-          ap.decTaskCounters(Arrays.asList("dummy".getBytes()), sn);
+          ap.decTaskCounters(Collections.singletonList("dummy".getBytes(StandardCharsets.UTF_8)), sn);
         }
       }
     };
@@ -1336,13 +1345,13 @@ public class TestAsyncProcess {
     } catch (RetriesExhaustedException expected) {
     }
 
-    Assert.assertEquals(res[0], success);
-    Assert.assertEquals(res[1], success);
-    Assert.assertEquals(res[2], success);
-    Assert.assertEquals(res[3], success);
-    Assert.assertEquals(res[4], failure);
-    Assert.assertEquals(res[5], success);
-    Assert.assertEquals(res[6], failure);
+    Assert.assertEquals(success, res[0]);
+    Assert.assertEquals(success, res[1]);
+    Assert.assertEquals(success, res[2]);
+    Assert.assertEquals(success, res[3]);
+    Assert.assertEquals(failure, res[4]);
+    Assert.assertEquals(success, res[5]);
+    Assert.assertEquals(failure, res[6]);
   }
   @Test
   public void testErrorsServers() throws IOException {
@@ -1479,7 +1488,7 @@ public class TestAsyncProcess {
 
     ht.batch(gets, new Object[gets.size()]);
 
-    Assert.assertEquals(ap.nbActions.get(), NB_REGS);
+    Assert.assertEquals(NB_REGS, ap.nbActions.get());
     Assert.assertEquals("1 multi response per server", 2, ap.nbMultiResponse.get());
     Assert.assertEquals("1 thread per server", 2, con.nbThreads.get());
 
@@ -1487,7 +1496,7 @@ public class TestAsyncProcess {
     for (int i =0; i<NB_REGS; i++){
       if (con.usedRegions[i]) nbReg++;
     }
-    Assert.assertEquals("nbReg=" + nbReg, nbReg, NB_REGS);
+    Assert.assertEquals("nbReg=" + nbReg, NB_REGS, nbReg);
   }
 
   @Test

@@ -142,6 +142,7 @@ public abstract class FilterBase extends Filter {
    *
    * {@inheritDoc}
    */
+  @Override
   public Cell getNextCellHint(Cell currentKV) throws IOException {
     // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
     // Thus to maintain compatibility we need to call the old version.
@@ -154,6 +155,7 @@ public abstract class FilterBase extends Filter {
    *
    * {@inheritDoc}
    */
+  @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return true;
   }
@@ -171,6 +173,7 @@ public abstract class FilterBase extends Filter {
   /**
    * Return filter's info for debugging and logging purpose.
    */
+  @Override
   public String toString() {
     return this.getClass().getSimpleName();
   }
@@ -178,6 +181,7 @@ public abstract class FilterBase extends Filter {
   /**
    * Return length 0 byte array for Filters that don't require special serialization
    */
+  @Override
   public byte[] toByteArray() throws IOException {
     return new byte[0];
   }
@@ -189,6 +193,7 @@ public abstract class FilterBase extends Filter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter other) {
     return true;
   }

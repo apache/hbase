@@ -30,5 +30,6 @@ public class EmptyWatcher implements Watcher {
   public static final EmptyWatcher instance = new EmptyWatcher();
   private EmptyWatcher() {}
 
+  @Override
   public void process(WatchedEvent event) {}
 }

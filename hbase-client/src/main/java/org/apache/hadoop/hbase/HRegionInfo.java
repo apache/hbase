@@ -235,7 +235,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
-    result ^= this.regionId;
+    result = (int) (result ^ this.regionId);
     result ^= Arrays.hashCode(this.startKey);
     result ^= Arrays.hashCode(this.endKey);
     result ^= Boolean.valueOf(this.offLine).hashCode();
@@ -996,15 +996,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Convert a HRegionInfo to the protobuf RegionInfo
-   *
-   * @return the converted RegionInfo
-   */
-  RegionInfo convert() {
-    return convert(this);
-  }
-
-  /**
    * Convert a HRegionInfo to a RegionInfo
    *
    * @param info the HRegionInfo to convert
@@ -1070,7 +1061,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @see #parseFrom(byte[])
    */
   public byte [] toByteArray() {
-    byte [] bytes = convert().toByteArray();
+    byte [] bytes = convert(this).toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
   }
 
@@ -1148,7 +1139,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @see #toByteArray()
    */
   public byte [] toDelimitedByteArray() throws IOException {
-    return ProtobufUtil.toDelimitedByteArray(convert());
+    return ProtobufUtil.toDelimitedByteArray(convert(this));
   }
 
   /**

@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class RegionServerRunningException extends IOException {
-  private static final long serialVersionUID = 1L << 31 - 1L;
+  private static final long serialVersionUID = (1L << 31) - 1L;
 
   /** Default Constructor */
   public RegionServerRunningException() {

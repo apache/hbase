@@ -103,6 +103,8 @@ import org.apache.htrace.Trace;
  * </p>
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Synchronization on tasks in progress counter is intended")
 class AsyncProcess {
   private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
   protected static final AtomicLong COUNTER = new AtomicLong();
@@ -380,7 +382,7 @@ class AsyncProcess {
     // we will do more retries in aggregate, but the user will be none the wiser.
     this.serverTrackerTimeout = 0;
     for (int i = 0; i < this.numTries; ++i) {
-      serverTrackerTimeout += ConnectionUtils.getPauseTime(this.pause, i);
+      serverTrackerTimeout = (int) (serverTrackerTimeout + ConnectionUtils.getPauseTime(this.pause, i));
     }
 
     this.rpcCallerFactory = rpcCaller;
