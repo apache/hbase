@@ -72,7 +72,7 @@ public class UFIntTool {
   public static void writeBytes(int outputWidth, final long value, byte[] bytes, int offset) {
     bytes[offset + outputWidth - 1] = (byte) value;
     for (int i = outputWidth - 2; i >= 0; --i) {
-      bytes[offset + i] = (byte) (value >>> (outputWidth - i - 1) * 8);
+      bytes[offset + i] = (byte) (value >>> ((outputWidth - i - 1) * 8));
     }
   }
 

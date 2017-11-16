@@ -186,7 +186,7 @@ public class RowSectionWriter {
     ArrayList<TokenizerNode> outs = Lists.newArrayList();
     for (int i = ins.size() - 1; i >= 0; --i) {
       TokenizerNode n = ins.get(i);
-      if (n.isLeaf() && leaves || (!n.isLeaf() && !leaves)) {
+      if ((n.isLeaf() && leaves) || (!n.isLeaf() && !leaves)) {
         outs.add(ins.get(i));
       }
     }
