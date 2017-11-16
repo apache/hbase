@@ -142,6 +142,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       namePrefix = "ICV-" + poolNumber.getAndIncrement() + "-thread-";
     }
 
+    @Override
     public Thread newThread(Runnable r) {
       Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
       if (!t.isDaemon()) t.setDaemon(true);
@@ -163,7 +164,6 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   private static final Log LOG = LogFactory.getLog(FullyQualifiedRow.class);
 
-  @SuppressWarnings("deprecation")
   public IncrementCoalescer(HBaseHandler hand) {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>();
@@ -322,49 +322,72 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   }
 
   // MBean get/set methods
+  @Override
   public int getQueueSize() {
     return pool.getQueue().size();
   }
+
+  @Override
   public int getMaxQueueSize() {
     return this.maxQueueSize;
   }
+
+  @Override
   public void setMaxQueueSize(int newSize) {
     this.maxQueueSize = newSize;
   }
 
+  @Override
   public long getPoolCompletedTaskCount() {
     return pool.getCompletedTaskCount();
   }
+
+  @Override
   public long getPoolTaskCount() {
     return pool.getTaskCount();
   }
+
+  @Override
   public int getPoolLargestPoolSize() {
     return pool.getLargestPoolSize();
   }
+
+  @Override
   public int getCorePoolSize() {
     return pool.getCorePoolSize();
   }
+
+  @Override
   public void setCorePoolSize(int newCoreSize) {
     pool.setCorePoolSize(newCoreSize);
   }
+
+  @Override
   public int getMaxPoolSize() {
     return pool.getMaximumPoolSize();
   }
+
+  @Override
   public void setMaxPoolSize(int newMaxSize) {
     pool.setMaximumPoolSize(newMaxSize);
   }
+
+  @Override
   public long getFailedIncrements() {
     return failedIncrements.get();
   }
 
+  @Override
   public long getSuccessfulCoalescings() {
     return successfulCoalescings.get();
   }
 
+  @Override
   public long getTotalIncrements() {
     return totalIncrements.get();
   }
 
+  @Override
   public long getCountersMapSize() {
     return countersMap.size();
   }

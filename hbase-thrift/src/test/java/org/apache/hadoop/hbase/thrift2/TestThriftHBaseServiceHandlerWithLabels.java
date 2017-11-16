@@ -31,8 +31,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -75,8 +73,6 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestThriftHBaseServiceHandlerWithLabels {
 
-  private static final Log LOG = LogFactory
-    .getLog(TestThriftHBaseServiceHandlerWithLabels.class);
 private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
 // Static names for tables, columns, rows, and values
@@ -257,6 +253,8 @@ public void testScanWithVisibilityLabels() throws Exception {
 }
 
 @Test
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UC_USELESS_CONDITION",
+  justification="Intended")
 public void testGetScannerResultsWithAuthorizations() throws Exception {
   ThriftHBaseServiceHandler handler = createHandler();
   ByteBuffer table = wrap(tableAname);
