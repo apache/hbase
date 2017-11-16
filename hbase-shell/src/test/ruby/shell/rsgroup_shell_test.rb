@@ -50,7 +50,7 @@ module Hbase
       hostport = @rsgroup_admin.getRSGroupInfo('default').getServers.iterator.next
       @shell.command('get_rsgroup', 'default')
       hostPortStr = hostport.toString
-      @shell.command('get_server_rsgroup', [hostPortStr])
+      @shell.command('get_server_rsgroup', hostPortStr)
       @shell.command('move_servers_rsgroup',
                      group_name,
                      [hostPortStr])
@@ -62,23 +62,17 @@ module Hbase
                      [table_name])
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
 
-      count = 0
-      @hbase.rsgroup_admin().get_rsgroup(group_name) do |line|
-        case count
-        when 1
-          assert_equal(hostPortStr, line)
-        when 3
-          assert_equal(table_name, line)
-        end
-        count += 1
-      end
-      assert_equal(4, count)
+      group = @hbase.rsgroup_admin.get_rsgroup(group_name)
+      assert_not_nil(group)
+      assert_equal(1, group.getServers.count)
+      assert_equal(1, group.getTables.count)
+      assert_equal(hostPortStr, group.getServers.iterator.next.toString)
+      assert_equal(table_name, group.getTables.iterator.next.toString)
 
-      assert_equal(2,
-                   @hbase.rsgroup_admin().list_rs_groups.count)
+      assert_equal(2, @hbase.rsgroup_admin.list_rs_groups.count)
 
       # just run it to verify jruby->java api binding
-      @hbase.rsgroup_admin().balance_rs_group(group_name)
+      @hbase.rsgroup_admin.balance_rs_group(group_name)
     end
 
     # we test exceptions that could be thrown by the ruby wrappers

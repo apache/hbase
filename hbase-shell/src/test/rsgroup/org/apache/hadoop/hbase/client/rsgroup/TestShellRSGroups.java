@@ -33,7 +33,6 @@ import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -44,7 +43,6 @@ import java.util.List;
 //Separate Shell test class for Groups
 //Since we need to use a different balancer and run more than 1 RS
 @Category({ClientTests.class, LargeTests.class})
-@Ignore
 public class TestShellRSGroups {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
