@@ -37,12 +37,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -55,6 +55,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -121,12 +122,13 @@ public abstract class TestRSGroupsBase {
   }
 
   protected void deleteGroups() throws IOException {
-    RSGroupAdmin groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
-    for(RSGroupInfo group: groupAdmin.listRSGroups()) {
-      if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-        groupAdmin.moveTables(group.getTables(), RSGroupInfo.DEFAULT_GROUP);
-        groupAdmin.moveServers(group.getServers(), RSGroupInfo.DEFAULT_GROUP);
-        groupAdmin.removeRSGroup(group.getName());
+    try (RSGroupAdmin groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection())) {
+      for(RSGroupInfo group: groupAdmin.listRSGroups()) {
+        if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
+          groupAdmin.moveTables(group.getTables(), RSGroupInfo.DEFAULT_GROUP);
+          groupAdmin.moveServers(group.getServers(), RSGroupInfo.DEFAULT_GROUP);
+          groupAdmin.removeRSGroup(group.getName());
+        }
       }
     }
   }
@@ -488,6 +490,7 @@ public abstract class TestRSGroupsBase {
         break;
       }
     }
+    assertNotNull(targetServer);
 
     final AdminProtos.AdminService.BlockingInterface targetRS =
         admin.getConnection().getAdmin(targetServer);
@@ -508,10 +511,10 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return
-            getTableRegionMap().get(tableName) != null &&
-                getTableRegionMap().get(tableName).size() == 6 &&
-                admin.getClusterStatus().getRegionsInTransition().size() < 1;
+        List<String> regions = getTableRegionMap().get(tableName);
+        Set<RegionState> regionsInTransition = admin.getClusterStatus().getRegionsInTransition();
+        return (regions != null && getTableRegionMap().get(tableName).size() == 6) &&
+           ( regionsInTransition == null || regionsInTransition.size() < 1);
       }
     });
 
@@ -583,7 +586,6 @@ public abstract class TestRSGroupsBase {
         appInfo.getServers().iterator().next().toString());
     AdminProtos.AdminService.BlockingInterface targetRS =
         admin.getConnection().getAdmin(targetServer);
-    HRegionInfo targetRegion = ProtobufUtil.getOnlineRegions(targetRS).get(0);
     Assert.assertEquals(1, ProtobufUtil.getOnlineRegions(targetRS).size());
 
     try {
@@ -779,10 +781,12 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return getTableRegionMap().get(tableName) != null &&
-                getTableRegionMap().get(tableName).size() == 5 &&
-                getTableServerRegionMap().get(tableName).size() == 1 &&
-                admin.getClusterStatus().getRegionsInTransition().size() < 1;
+        List<String> regions = getTableRegionMap().get(tableName);
+        Map<ServerName, List<String>> serverMap = getTableServerRegionMap().get(tableName);
+        Set<RegionState> regionsInTransition = admin.getClusterStatus().getRegionsInTransition();
+        return (regions != null && regions.size() == 5) &&
+          (serverMap != null && serverMap.size() == 1) &&
+          (regionsInTransition == null || regionsInTransition.size() < 1);
       }
     });
 

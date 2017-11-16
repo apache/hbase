@@ -314,15 +314,15 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preRemoveRSGroup(name);
       }
-      RSGroupInfo RSGroupInfo = getRSGroupInfoManager().getRSGroup(name);
-      if(RSGroupInfo == null) {
+      RSGroupInfo groupInfo = getRSGroupInfoManager().getRSGroup(name);
+      if(groupInfo == null) {
         throw new ConstraintException("Group "+name+" does not exist");
       }
-      int tableCount = RSGroupInfo.getTables().size();
+      int tableCount = groupInfo.getTables().size();
       if (tableCount > 0) {
         throw new ConstraintException("Group "+name+" must have no associated tables: "+tableCount);
       }
-      int serverCount = RSGroupInfo.getServers().size();
+      int serverCount = groupInfo.getServers().size();
       if(serverCount > 0) {
         throw new ConstraintException(
             "Group "+name+" must have no associated servers: "+serverCount);
