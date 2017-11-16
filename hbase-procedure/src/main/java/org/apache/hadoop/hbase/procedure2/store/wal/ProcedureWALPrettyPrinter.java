@@ -149,6 +149,7 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
    * @throws IOException
    *           Thrown upon file system errors etc.
    */
+  @Override
   public int run(final String[] args) throws IOException {
     // create options
     Options options = new Options();

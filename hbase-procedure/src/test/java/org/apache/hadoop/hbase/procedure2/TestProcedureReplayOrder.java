@@ -133,8 +133,9 @@ public class TestProcedureReplayOrder {
         public void run() {
           for (int i = 0; i < nprocPerThread; ++i) {
             try {
-              procExecutor.submitProcedure((Procedure)procClazz.newInstance());
-            } catch (InstantiationException|IllegalAccessException e) {
+              procExecutor.submitProcedure((Procedure)
+                procClazz.getDeclaredConstructor().newInstance());
+            } catch (Exception e) {
               LOG.error("unable to instantiate the procedure", e);
               fail("failure during the proc.newInstance(): " + e.getMessage());
             }
