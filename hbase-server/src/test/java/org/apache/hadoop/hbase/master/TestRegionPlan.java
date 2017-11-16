@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,36 +17,82 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
+import org.junit.rules.TestName;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestRegionPlan {
-  @Test
-  public void test() {
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("table"));
-    ServerName source = ServerName.valueOf("source", 1234, 2345);
-    ServerName dest = ServerName.valueOf("dest", 1234, 2345);
-    
-    // Identiy equality
-    RegionPlan plan = new RegionPlan(hri, source, dest);
-    assertEquals(plan.hashCode(), new RegionPlan(hri, source, dest).hashCode());
-    assertEquals(plan, new RegionPlan(hri, source, dest));
+  private final ServerName SRC = ServerName.valueOf("source", 1234, 2345);
+  private final ServerName DEST = ServerName.valueOf("dest", 1234, 2345);
+  @Rule
+  public TestName name = new TestName();
 
-    // Source and destination not used for equality
-    assertEquals(plan.hashCode(), new RegionPlan(hri, dest, source).hashCode());
-    assertEquals(plan, new RegionPlan(hri, dest, source));
+  @Test
+  public void testCompareTo() {
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    RegionPlan a = new RegionPlan(hri, null, null);
+    RegionPlan b = new RegionPlan(hri, null, null);
+    assertEquals(0, a.compareTo(b));
+    a = new RegionPlan(hri, SRC, null);
+    b = new RegionPlan(hri, null, null);
+    assertEquals(1, a.compareTo(b));
+    a = new RegionPlan(hri, null, null);
+    b = new RegionPlan(hri, SRC, null);
+    assertEquals(-1, a.compareTo(b));
+    a = new RegionPlan(hri, SRC, null);
+    b = new RegionPlan(hri, SRC, null);
+    assertEquals(0, a.compareTo(b));
+    a = new RegionPlan(hri, SRC, null);
+    b = new RegionPlan(hri, SRC, DEST);
+    assertEquals(-1, a.compareTo(b));
+    a = new RegionPlan(hri, SRC, DEST);
+    b = new RegionPlan(hri, SRC, DEST);
+    assertEquals(0, a.compareTo(b));
+  }
+
+  @Test
+  public void testEqualsWithNulls() {
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+    RegionPlan a = new RegionPlan(hri, null, null);
+    RegionPlan b = new RegionPlan(hri, null, null);
+    assertTrue(a.equals(b));
+    a = new RegionPlan(hri, SRC, null);
+    b = new RegionPlan(hri, null, null);
+    assertFalse(a.equals(b));
+    a = new RegionPlan(hri, SRC, null);
+    b = new RegionPlan(hri, SRC, null);
+    assertTrue(a.equals(b));
+    a = new RegionPlan(hri, SRC, null);
+    b = new RegionPlan(hri, SRC, DEST);
+    assertFalse(a.equals(b));
+  }
+
+  @Test
+  public void testEquals() {
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
+
+    // Identity equality
+    RegionPlan plan = new RegionPlan(hri, SRC, DEST);
+    assertEquals(plan.hashCode(), new RegionPlan(hri, SRC, DEST).hashCode());
+    assertEquals(plan, new RegionPlan(hri, SRC, DEST));
 
     // HRI is used for equality
-    HRegionInfo other = new HRegionInfo(TableName.valueOf("other"));
-    assertNotEquals(plan.hashCode(), new RegionPlan(other, source, dest).hashCode());
-    assertNotEquals(plan, new RegionPlan(other, source, dest));
+    HRegionInfo other =
+        new HRegionInfo(TableName.valueOf(name.getMethodName() + "other"));
+    assertNotEquals(plan.hashCode(), new RegionPlan(other, SRC, DEST).hashCode());
+    assertNotEquals(plan, new RegionPlan(other, SRC, DEST));
   }
 }
