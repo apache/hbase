@@ -37,11 +37,11 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
  * {@code 2 * scan.getMaxResultSize()}.
  */
 @InterfaceAudience.Private
-class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
+class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsumer {
 
   private static final Log LOG = LogFactory.getLog(AsyncTableResultScanner.class);
 
-  private final RawAsyncTable rawTable;
+  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
 
   private final long maxCacheSize;
 
@@ -59,7 +59,8 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   private ScanResumer resumer;
 
-  public AsyncTableResultScanner(RawAsyncTable table, Scan scan, long maxCacheSize) {
+  public AsyncTableResultScanner(AsyncTable<AdvancedScanResultConsumer> table, Scan scan,
+      long maxCacheSize) {
     this.rawTable = table;
     this.maxCacheSize = maxCacheSize;
     this.scan = scan;
@@ -74,8 +75,8 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   private void stopPrefetch(ScanController controller) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("0x%x", System.identityHashCode(this)) +
-          " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
-          cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
+        " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
+        cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
     }
     resumer = controller.suspend();
   }

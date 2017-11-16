@@ -106,8 +106,8 @@ public class TestAsyncTableScanMetrics {
 
   private static Pair<List<Result>, ScanMetrics> doScanWithRawAsyncTable(Scan scan)
       throws IOException, InterruptedException {
-    SimpleRawScanResultConsumer consumer = new SimpleRawScanResultConsumer();
-    CONN.getRawTable(TABLE_NAME).scan(scan, consumer);
+    BufferingScanResultConsumer consumer = new BufferingScanResultConsumer();
+    CONN.getTable(TABLE_NAME).scan(scan, consumer);
     List<Result> results = new ArrayList<>();
     for (Result result; (result = consumer.take()) != null;) {
       results.add(result);

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.TABLES_ON_MASTER;
+import static org.apache.hadoop.hbase.master.LoadBalancer.TABLES_ON_MASTER;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -38,7 +38,6 @@ import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -71,7 +70,7 @@ public class TestAsyncTableGetMultiThreaded {
 
   private static AsyncConnection CONN;
 
-  private static RawAsyncTable TABLE;
+  private static AsyncTable<?> TABLE;
 
   private static byte[][] SPLIT_KEYS;
 
@@ -80,8 +79,7 @@ public class TestAsyncTableGetMultiThreaded {
     setUp(MemoryCompactionPolicy.NONE);
   }
 
-  protected static void setUp(MemoryCompactionPolicy memoryCompaction)
-      throws Exception {
+  protected static void setUp(MemoryCompactionPolicy memoryCompaction) throws Exception {
     TEST_UTIL.getConfiguration().set(TABLES_ON_MASTER, "none");
     TEST_UTIL.getConfiguration().setLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, 60000L);
     TEST_UTIL.getConfiguration().setInt(ByteBufferPool.MAX_POOL_SIZE_KEY, 100);
@@ -96,7 +94,7 @@ public class TestAsyncTableGetMultiThreaded {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    TABLE = CONN.getRawTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
+    TABLE = CONN.getTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
         .setMaxRetries(1000).build();
     TABLE.putAll(
       IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
@@ -123,8 +121,8 @@ public class TestAsyncTableGetMultiThreaded {
   public void test() throws IOException, InterruptedException, ExecutionException {
     int numThreads = 20;
     AtomicBoolean stop = new AtomicBoolean(false);
-    ExecutorService executor = Executors.newFixedThreadPool(numThreads,
-      Threads.newDaemonThreadFactory("TestAsyncGet-"));
+    ExecutorService executor =
+      Executors.newFixedThreadPool(numThreads, Threads.newDaemonThreadFactory("TestAsyncGet-"));
     List<Future<?>> futures = new ArrayList<>();
     IntStream.range(0, numThreads).forEach(i -> futures.add(executor.submit(() -> {
       run(stop);
@@ -138,13 +136,13 @@ public class TestAsyncTableGetMultiThreaded {
         region.compact(true);
       }
       Thread.sleep(5000);
-      admin.balancer(true);
+      admin.balance(true);
       Thread.sleep(5000);
       ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
       ServerName newMetaServer = TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
           .map(t -> t.getRegionServer().getServerName()).filter(s -> !s.equals(metaServer))
           .findAny().get();
-      admin.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+      admin.move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(newMetaServer.getServerName()));
       Thread.sleep(5000);
     }

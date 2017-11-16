@@ -19,34 +19,37 @@ package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
 
+import com.google.protobuf.RpcChannel;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The implementation of AsyncTable. Based on {@link RawAsyncTable}.
+ * Just a wrapper of {@link RawAsyncTableImpl}. The difference is that users need to provide a
+ * thread pool when constructing this class, and the callback methods registered to the returned
+ * {@link CompletableFuture} will be executed in this thread pool. So usually it is safe for users
+ * to do anything they want in the callbacks without breaking the rpc framework.
  */
 @InterfaceAudience.Private
-class AsyncTableImpl implements AsyncTable {
+class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
-  private final RawAsyncTable rawTable;
+  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
 
   private final ExecutorService pool;
 
-  private final long defaultScannerMaxResultSize;
-
-  AsyncTableImpl(AsyncConnectionImpl conn, RawAsyncTable rawTable, ExecutorService pool) {
+  AsyncTableImpl(AsyncConnectionImpl conn, AsyncTable<AdvancedScanResultConsumer> rawTable,
+      ExecutorService pool) {
     this.rawTable = rawTable;
     this.pool = pool;
-    this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
   }
 
   @Override
@@ -172,16 +175,9 @@ class AsyncTableImpl implements AsyncTable {
     return wrap(rawTable.scanAll(scan));
   }
 
-  private long resultSize2CacheSize(long maxResultSize) {
-    // * 2 if possible
-    return maxResultSize > Long.MAX_VALUE / 2 ? maxResultSize : maxResultSize * 2;
-  }
-
   @Override
   public ResultScanner getScanner(Scan scan) {
-    return new AsyncTableResultScanner(rawTable, ReflectionUtils.newInstance(scan.getClass(), scan),
-        resultSize2CacheSize(
-          scan.getMaxResultSize() > 0 ? scan.getMaxResultSize() : defaultScannerMaxResultSize));
+    return rawTable.getScanner(scan);
   }
 
   private void scan0(Scan scan, ScanResultConsumer consumer) {
@@ -221,5 +217,60 @@ class AsyncTableImpl implements AsyncTable {
   @Override
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
     return rawTable.<T> batch(actions).stream().map(this::wrap).collect(toList());
+  }
+
+  @Override
+  public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+      ServiceCaller<S, R> callable, byte[] row) {
+    return wrap(rawTable.coprocessorService(stubMaker, callable, row));
+  }
+
+  @Override
+  public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
+      Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+      CoprocessorCallback<R> callback) {
+    CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
+
+      @Override
+      public void onRegionComplete(RegionInfo region, R resp) {
+        pool.execute(() -> callback.onRegionComplete(region, resp));
+      }
+
+      @Override
+      public void onRegionError(RegionInfo region, Throwable error) {
+        pool.execute(() -> callback.onRegionError(region, error));
+      }
+
+      @Override
+      public void onComplete() {
+        pool.execute(() -> callback.onComplete());
+      }
+
+      @Override
+      public void onError(Throwable error) {
+        pool.execute(() -> callback.onError(error));
+      }
+    };
+    CoprocessorServiceBuilder<S, R> builder =
+      rawTable.coprocessorService(stubMaker, callable, wrappedCallback);
+    return new CoprocessorServiceBuilder<S, R>() {
+
+      @Override
+      public CoprocessorServiceBuilder<S, R> fromRow(byte[] startKey, boolean inclusive) {
+        builder.fromRow(startKey, inclusive);
+        return this;
+      }
+
+      @Override
+      public CoprocessorServiceBuilder<S, R> toRow(byte[] endKey, boolean inclusive) {
+        builder.toRow(endKey, inclusive);
+        return this;
+      }
+
+      @Override
+      public void execute() {
+        builder.execute();
+      }
+    };
   }
 }

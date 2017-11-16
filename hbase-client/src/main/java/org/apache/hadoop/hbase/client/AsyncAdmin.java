@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.RpcChannel;
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -33,7 +35,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RawAsyncTable.CoprocessorCallable;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
@@ -41,8 +42,6 @@ import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.google.protobuf.RpcChannel;
 
 /**
  * The asynchronous administrative API for HBase.
@@ -1072,14 +1071,14 @@ public interface AsyncAdmin {
    * </pre>
    * @param stubMaker a delegation to the actual {@code newStub} call.
    * @param callable a delegation to the actual protobuf rpc call. See the comment of
-   *          {@link CoprocessorCallable} for more details.
+   *          {@link ServiceCaller} for more details.
    * @param <S> the type of the asynchronous stub
    * @param <R> the type of the return value
    * @return the return value of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
-   * @see CoprocessorCallable
+   * @see ServiceCaller
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      CoprocessorCallable<S, R> callable);
+      ServiceCaller<S, R> callable);
 
   /**
    * Execute the given coprocessor call on the given region server.
@@ -1094,15 +1093,15 @@ public interface AsyncAdmin {
    * </pre>
    * @param stubMaker a delegation to the actual {@code newStub} call.
    * @param callable a delegation to the actual protobuf rpc call. See the comment of
-   *          {@link CoprocessorCallable} for more details.
+   *          {@link ServiceCaller} for more details.
    * @param serverName the given region server
    * @param <S> the type of the asynchronous stub
    * @param <R> the type of the return value
    * @return the return value of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
-   * @see CoprocessorCallable
+   * @see ServiceCaller
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-    CoprocessorCallable<S, R> callable, ServerName serverName);
+    ServiceCaller<S, R> callable, ServerName serverName);
 
   /**
    * List all the dead region servers.

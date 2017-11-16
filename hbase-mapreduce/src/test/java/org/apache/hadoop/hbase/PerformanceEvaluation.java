@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.UniformReservoir;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -61,7 +66,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -80,8 +84,6 @@ import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -105,10 +107,8 @@ import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.UniformReservoir;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -1302,7 +1302,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static abstract class AsyncTableTest extends AsyncTest {
-    protected RawAsyncTable table;
+    protected AsyncTable<?> table;
 
     AsyncTableTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1310,7 +1310,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     void onStartup() throws IOException {
-      this.table = connection.getRawTable(TableName.valueOf(opts.tableName));
+      this.table = connection.getTable(TableName.valueOf(opts.tableName));
     }
 
     @Override
@@ -1435,7 +1435,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   static class AsyncScanTest extends AsyncTableTest {
     private ResultScanner testScanner;
-    private AsyncTable asyncTable;
+    private AsyncTable<?> asyncTable;
 
     AsyncScanTest(AsyncConnection con, TestOptions options, Status status) {
       super(con, options, status);

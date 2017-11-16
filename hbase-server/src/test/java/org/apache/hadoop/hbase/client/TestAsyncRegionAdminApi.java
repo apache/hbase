@@ -69,12 +69,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
     AsyncTableRegionLocator locator = ASYNC_CONN.getRegionLocator(tableName);
     HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm")).get();
-    RegionInfo region = regionLocation.getRegionInfo();
-    byte[] regionName = regionLocation.getRegionInfo().getRegionName();
+    RegionInfo region = regionLocation.getRegion();
+    byte[] regionName = regionLocation.getRegion().getRegionName();
     HRegionLocation location = rawAdmin.getRegionLocation(regionName).get();
-    assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
+    assertTrue(Bytes.equals(regionName, location.getRegion().getRegionName()));
     location = rawAdmin.getRegionLocation(region.getEncodedNameAsBytes()).get();
-    assertTrue(Bytes.equals(regionName, location.getRegionInfo().getRegionName()));
+    assertTrue(Bytes.equals(regionName, location.getRegion().getRegionName()));
   }
 
   @Test
@@ -252,7 +252,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
             .filter(rs -> rs.getServerName().equals(serverName)).findFirst().get();
 
     // write a put into the specific region
-    ASYNC_CONN.getRawTable(tableName)
+    ASYNC_CONN.getTable(tableName)
         .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1")))
         .join();
     Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize() > 0);
@@ -268,7 +268,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     Assert.assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize(), 0);
 
     // write another put into the specific region
-    ASYNC_CONN.getRawTable(tableName)
+    ASYNC_CONN.getTable(tableName)
         .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2")))
         .join();
     Assert.assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize() > 0);
@@ -288,7 +288,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     final int rows = 10000;
     loadData(tableName, families, rows);
 
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     int originalCount = regionLocations.size();
@@ -319,7 +319,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[][] families = { FAMILY };
     loadData(tableName, families, 1000);
 
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     int originalCount = regionLocations.size();
@@ -364,7 +364,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     byte[][] splitRows = new byte[][] { Bytes.toBytes("3"), Bytes.toBytes("6") };
     createTableWithDefaultConf(tableName, splitRows);
 
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     RegionInfo regionA;
@@ -372,16 +372,16 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     // merge with full name
     assertEquals(3, regionLocations.size());
-    regionA = regionLocations.get(0).getRegionInfo();
-    regionB = regionLocations.get(1).getRegionInfo();
+    regionA = regionLocations.get(0).getRegion();
+    regionB = regionLocations.get(1).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
     regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     assertEquals(2, regionLocations.size());
     // merge with encoded name
-    regionA = regionLocations.get(0).getRegionInfo();
-    regionB = regionLocations.get(1).getRegionInfo();
+    regionA = regionLocations.get(0).getRegion();
+    regionB = regionLocations.get(1).getRegion();
     admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
 
     regionLocations =
@@ -404,12 +404,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     // create table
     createTableWithDefaultConf(tableName);
 
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regionLocations =
         AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     assertEquals(1, regionLocations.size());
 
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < rowCount; i++) {
       Put put = new Put(Bytes.toBytes(i));
@@ -420,9 +420,9 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     if (isSplitRegion) {
       if (splitPoint == null) {
-        admin.splitRegion(regionLocations.get(0).getRegionInfo().getRegionName()).get();
+        admin.splitRegion(regionLocations.get(0).getRegion().getRegionName()).get();
       } else {
-        admin.splitRegion(regionLocations.get(0).getRegionInfo().getRegionName(), splitPoint).get();
+        admin.splitRegion(regionLocations.get(0).getRegion().getRegionName(), splitPoint).get();
       }
     } else {
       if (splitPoint == null) {
@@ -585,7 +585,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   private static void loadData(final TableName tableName, final byte[][] families, final int rows,
       final int flushes) throws IOException {
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     List<Put> puts = new ArrayList<>(rows);
     byte[] qualifier = Bytes.toBytes("val");
     for (int i = 0; i < flushes; i++) {

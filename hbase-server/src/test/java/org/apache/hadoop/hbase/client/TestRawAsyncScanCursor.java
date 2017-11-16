@@ -52,9 +52,9 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
   private void doTest(boolean reversed)
       throws InterruptedException, ExecutionException, IOException {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
     table.scan(reversed ? createReversedScanWithSparseFilter() : createScanWithSparseFilter(),
-      new RawScanResultConsumer() {
+      new AdvancedScanResultConsumer() {
 
         private int count;
 
@@ -121,8 +121,8 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
   @Test
   public void testSizeLimit() throws InterruptedException, ExecutionException {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
-    table.scan(createScanWithSizeLimit(), new RawScanResultConsumer() {
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
+    table.scan(createScanWithSizeLimit(), new AdvancedScanResultConsumer() {
 
       private int count;
 

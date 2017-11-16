@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +38,6 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -61,7 +59,7 @@ import org.junit.runners.Parameterized;
  * Class to test asynchronous table admin operations.
  */
 @RunWith(Parameterized.class)
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @Test
@@ -153,25 +151,25 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   }
 
   private TableState.State getStateFromMeta(TableName table) throws Exception {
-    Optional<TableState> state = AsyncMetaTableAccessor.getTableState(
-      ASYNC_CONN.getRawTable(TableName.META_TABLE_NAME), table).get();
+    Optional<TableState> state = AsyncMetaTableAccessor
+        .getTableState(ASYNC_CONN.getTable(TableName.META_TABLE_NAME), table).get();
     assertTrue(state.isPresent());
     return state.get().getState();
   }
 
   @Test
   public void testCreateTableNumberOfRegions() throws Exception {
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
 
     createTableWithDefaultConf(tableName);
     List<HRegionLocation> regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     assertEquals("Table should have only 1 region", 1, regionLocations.size());
 
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
     createTableWithDefaultConf(tableName2, new byte[][] { new byte[] { 42 } });
     regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
     assertEquals("Table should have only 2 region", 2, regionLocations.size());
 
     final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
@@ -179,7 +177,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), "a".getBytes(), "z".getBytes(), 3).join();
     regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
     assertEquals("Table should have only 3 region", 3, regionLocations.size());
 
     final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
@@ -197,15 +195,15 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     builder.addColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), new byte[] { 1 }, new byte[] { 127 }, 16).join();
     regionLocations =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName5)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName5)).get();
     assertEquals("Table should have 16 region", 16, regionLocations.size());
   }
 
   @Test
   public void testCreateTableWithRegions() throws Exception {
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
+      new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+      new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
     int expectedRegions = splitKeys.length + 1;
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration());
     createTableWithDefaultConf(tableName, splitKeys);
@@ -213,9 +211,9 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys).get();
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regions =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     Iterator<HRegionLocation> hris = regions.iterator();
 
     assertEquals(
@@ -223,36 +221,36 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       expectedRegions, regions.size());
     System.err.println("Found " + regions.size() + " regions");
 
-    HRegionInfo hri;
+    RegionInfo hri;
     hris = regions.iterator();
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[0]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[0]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[1]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[1]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[2]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[2]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[3]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[3]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[4]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[4]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[5]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[5]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[6]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[6]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[7]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[7]));
     assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[8]));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
     assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
     if (tablesOnMaster) {
@@ -274,41 +272,41 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
     regions =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName2)).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
     System.err.println("Found " + regions.size() + " regions");
 
     hris = regions.iterator();
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
     assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
-    hri = hris.next().getRegionInfo();
+    hri = hris.next().getRegion();
     assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
     assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
     if (tablesOnMaster) {
@@ -327,7 +325,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
     regions =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName3)).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
@@ -339,8 +337,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     // Try an invalid case where there are duplicate split keys
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
-        new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
-    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");;
+      new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
+    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
     try {
       createTableWithDefaultConf(tableName4, splitKeys);
       fail("Should not be able to create this table because of " + "duplicate split keys");
@@ -353,10 +351,10 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       throws IOException {
     int numRS = ((ClusterConnection) TEST_UTIL.getConnection()).getCurrentNrHRS();
 
-    Map<ServerName, List<HRegionInfo>> server2Regions = new HashMap<>();
+    Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
     regions.stream().forEach((loc) -> {
       ServerName server = loc.getServerName();
-      server2Regions.computeIfAbsent(server, (s) -> new ArrayList<>()).add(loc.getRegionInfo());
+      server2Regions.computeIfAbsent(server, (s) -> new ArrayList<>()).add(loc.getRegion());
     });
     if (numRS >= 2) {
       // Ignore the master region server,
@@ -424,7 +422,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     // Create & Fill the table
     createTableWithDefaultConf(tableName, splitKeys);
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     int expectedRows = 10;
     for (int i = 0; i < expectedRows; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
@@ -449,7 +447,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   @Test
   public void testDisableAndEnableTable() throws Exception {
     createTableWithDefaultConf(tableName);
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
@@ -502,8 +500,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "2");
     createTableWithDefaultConf(tableName1);
     createTableWithDefaultConf(tableName2);
-    RawAsyncTable table1 = ASYNC_CONN.getRawTable(tableName1);
-    RawAsyncTable table2 = ASYNC_CONN.getRawTable(tableName1);
+    AsyncTable<?> table1 = ASYNC_CONN.getTable(tableName1);
+    AsyncTable<?> table2 = ASYNC_CONN.getTable(tableName1);
 
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
@@ -517,8 +515,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     table1.get(get).get();
     table2.get(get).get();
 
-    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
-        .get().forEach(t -> admin.disableTable(t).join());
+    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false).get()
+        .forEach(t -> admin.disableTable(t).join());
 
     // Test that tables are disabled
     get = new Get(row);
@@ -541,8 +539,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName1));
     assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName2));
 
-    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
-        .get().forEach(t -> admin.enableTable(t).join());
+    admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false).get()
+        .forEach(t -> admin.enableTable(t).join());
 
     // Test that tables are enabled
     try {
@@ -562,16 +560,15 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testEnableTableRetainAssignment() throws Exception {
-    byte[][] splitKeys =
-        { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
-            new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
-            new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
+    byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
+      new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+      new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
     createTableWithDefaultConf(tableName, splitKeys);
 
-    RawAsyncTable metaTable = ASYNC_CONN.getRawTable(META_TABLE_NAME);
+    AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
     List<HRegionLocation> regions =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
@@ -582,7 +579,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.enableTable(tableName).join();
 
     List<HRegionLocation> regions2 =
-        AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, Optional.of(tableName)).get();
     // Check the assignment.
     assertEquals(regions.size(), regions2.size());
     assertTrue(regions2.containsAll(regions));
@@ -611,8 +608,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     verifyTableDescriptor(tableName, FAMILY_0);
 
     // Modify the table removing one family and verify the descriptor
-    admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.of(FAMILY_1))
-        .join();
+    admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.of(FAMILY_1)).join();
     verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
   }
 
@@ -632,8 +628,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     try {
       // Add same column family again - expect failure
-      this.admin.addColumnFamily(tableName,
-        ColumnFamilyDescriptorBuilder.of(FAMILY_1)).join();
+      this.admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.of(FAMILY_1)).join();
       Assert.fail("Delete a non-exist column family should fail");
     } catch (Exception e) {
       // Expected.
@@ -731,8 +726,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    TableDescriptor td =
-        FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     verifyTableDescriptor(td, tableName, families);
   }
 
@@ -768,7 +762,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   @Test
   public void testCompactionTimestamps() throws Exception {
     createTableWithDefaultConf(tableName);
-    RawAsyncTable table = ASYNC_CONN.getRawTable(tableName);
+    AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     Optional<Long> ts = admin.getLastMajorCompactionTimestamp(tableName).get();
     assertFalse(ts.isPresent());
     Put p = new Put(Bytes.toBytes("row1"));
@@ -783,9 +777,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     // still 0, we flushed a file, but no major compaction happened
     assertFalse(ts.isPresent());
 
-    byte[] regionName =
-        ASYNC_CONN.getRegionLocator(tableName).getRegionLocation(Bytes.toBytes("row1")).get()
-            .getRegionInfo().getRegionName();
+    byte[] regionName = ASYNC_CONN.getRegionLocator(tableName)
+        .getRegionLocation(Bytes.toBytes("row1")).get().getRegion().getRegionName();
     Optional<Long> ts1 = admin.getLastMajorCompactionTimestampForRegion(regionName).get();
     assertFalse(ts1.isPresent());
     p = new Put(Bytes.toBytes("row2"));
@@ -823,7 +816,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
       }
     }
     // Sleep to wait region server report
-    Thread.sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
+    Thread
+        .sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
 
     ts = admin.getLastMajorCompactionTimestamp(tableName).get();
     // after a compaction our earliest timestamp will have progressed forward
