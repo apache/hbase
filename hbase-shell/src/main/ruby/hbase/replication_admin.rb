@@ -20,7 +20,7 @@
 include Java
 
 java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
-java_import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper
+java_import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil
 java_import org.apache.hadoop.hbase.replication.ReplicationPeerConfig
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.zookeeper.ZKConfig
@@ -144,7 +144,7 @@ module Hbase
     # Show the current tableCFs config for the specified peer
     def show_peer_tableCFs(id)
       rpc = @admin.getReplicationPeerConfig(id)
-      ReplicationSerDeHelper.convertToString(rpc.getTableCFsMap)
+      ReplicationPeerConfigUtil.convertToString(rpc.getTableCFsMap)
     end
 
     #----------------------------------------------------------------------------------------------
