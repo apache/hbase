@@ -334,6 +334,7 @@ public class AuthenticationTokenSecretManager
       interrupt();
     }
 
+    @Override
     public void run() {
       zkLeader.start();
       zkLeader.waitToBecomeLeader();

@@ -112,30 +112,32 @@
         <th>Shared Storefile Size</th>
         <th>Archived Storefile Size</th>
     </tr>
-    <%for (SnapshotDescription snapshotDesc : snapshots) { %>
-    <tr>
-      <td><a href="/snapshot.jsp?name=<%= snapshotDesc.getName() %>">
-        <%= snapshotDesc.getName() %></a></td>
-      <%
-        TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
-        SnapshotInfo.SnapshotStats stats = SnapshotInfo.getSnapshotStats(master.getConfiguration(),
-          snapshotDesc, filesMap);
-        totalUnsharedArchivedSize += stats.getNonSharedArchivedStoreFilesSize();
-        tableExists = admin.tableExists(snapshotTable);
-      %>
-      <td>
-      <% if (tableExists) { %>
-        <a href="/table.jsp?name=<%= snapshotTable.getNameAsString() %>">
-          <%= snapshotTable.getNameAsString() %></a>
-      <% } else { %>
-        <%= snapshotTable.getNameAsString() %>
+    <% if (snapshots != null) { %>
+      <% for (SnapshotDescription snapshotDesc : snapshots) { %>
+      <tr>
+        <td><a href="/snapshot.jsp?name=<%= snapshotDesc.getName() %>">
+          <%= snapshotDesc.getName() %></a></td>
+        <%
+          TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
+          SnapshotInfo.SnapshotStats stats = SnapshotInfo.getSnapshotStats(master.getConfiguration(),
+            snapshotDesc, filesMap);
+          totalUnsharedArchivedSize += stats.getNonSharedArchivedStoreFilesSize();
+          tableExists = admin.tableExists(snapshotTable);
+        %>
+        <td>
+        <% if (tableExists) { %>
+          <a href="/table.jsp?name=<%= snapshotTable.getNameAsString() %>">
+            <%= snapshotTable.getNameAsString() %></a>
+        <% } else { %>
+          <%= snapshotTable.getNameAsString() %>
+        <% } %>
+        </td>
+        <td><%= new Date(snapshotDesc.getCreationTime()) %></td>
+        <td><%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
+        <td><%= StringUtils.humanReadableInt(stats.getArchivedStoreFileSize()) %>
+          (<%= StringUtils.humanReadableInt(stats.getNonSharedArchivedStoreFilesSize()) %>)</td>
+      </tr>
       <% } %>
-      </td>
-      <td><%= new Date(snapshotDesc.getCreationTime()) %></td>
-      <td><%= StringUtils.humanReadableInt(stats.getSharedStoreFilesSize()) %></td>
-      <td><%= StringUtils.humanReadableInt(stats.getArchivedStoreFileSize()) %>
-        (<%= StringUtils.humanReadableInt(stats.getNonSharedArchivedStoreFilesSize()) %>)</td>
-    </tr>
     <% } %>
     <p><%= snapshots.size() %> snapshot(s) in set.</p>
     <p>Total Storefile Size: <%= StringUtils.humanReadableInt(totalSize) %></p>

@@ -39,6 +39,8 @@ import org.junit.experimental.categories.Category;
 import static org.mockito.Mockito.*;
 
 @Category(SmallTests.class)
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Use of an atomic type both as monitor and condition variable is intended")
 public class TestExecutorService {
   private static final Log LOG = LogFactory.getLog(TestExecutorService.class);
 

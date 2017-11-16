@@ -2537,6 +2537,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return info.getInfoPort();
   }
 
+  @Override
   public String getRegionServerVersion(final ServerName sn) {
     RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
     if (info != null && info.hasVersionInfo()) {
@@ -2826,6 +2827,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /**
    * @return the underlying snapshot manager
    */
+  @Override
   public SnapshotManager getSnapshotManager() {
     return this.snapshotManager;
   }
@@ -2833,6 +2835,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /**
    * @return the underlying MasterProcedureManagerHost
    */
+  @Override
   public MasterProcedureManagerHost getMasterProcedureManagerHost() {
     return mpmHost;
   }

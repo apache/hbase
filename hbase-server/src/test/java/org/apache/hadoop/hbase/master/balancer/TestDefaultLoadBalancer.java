@@ -53,7 +53,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
   }
 
   // int[testnum][servernumber] -> numregions
-  int[][] clusterStateMocks = new int[][] {
+  int[][] ourClusterStateMocks = new int[][] {
       // 1 node
       new int[] { 0 },
       new int[] { 1 },
@@ -113,7 +113,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
   @Test (timeout=60000)
   public void testBalanceCluster() throws Exception {
 
-    for (int[] mockCluster : clusterStateMocks) {
+    for (int[] mockCluster : ourClusterStateMocks) {
       Map<ServerName, List<HRegionInfo>> servers = mockClusterServers(mockCluster);
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));

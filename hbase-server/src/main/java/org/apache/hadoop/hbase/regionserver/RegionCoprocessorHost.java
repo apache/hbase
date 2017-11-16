@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
@@ -82,11 +81,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -160,6 +154,7 @@ public class RegionCoprocessorHost
       return rsServices;
     }
 
+    @Override
     public void shutdown() {
       super.shutdown();
       MetricsCoprocessor.removeRegistry(this.metricRegistry);
@@ -525,6 +520,7 @@ public class RegionCoprocessorHost
             throws IOException {
           oserver.postClose(ctx, abortRequested);
         }
+        @Override
         public void postEnvCall(RegionEnvironment env) {
           shutdown(env);
         }
@@ -1704,10 +1700,12 @@ public class RegionCoprocessorHost
     public abstract void call(RegionObserver observer,
         ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
 
+    @Override
     public boolean hasCall(Coprocessor observer) {
       return observer instanceof RegionObserver;
     }
 
+    @Override
     public void call(Coprocessor observer, ObserverContext<RegionCoprocessorEnvironment> ctx)
         throws IOException {
       call((RegionObserver)observer, ctx);
@@ -1724,10 +1722,12 @@ public class RegionCoprocessorHost
     public abstract void call(EndpointObserver observer,
         ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
 
+    @Override
     public boolean hasCall(Coprocessor observer) {
       return observer instanceof EndpointObserver;
     }
 
+    @Override
     public void call(Coprocessor observer, ObserverContext<RegionCoprocessorEnvironment> ctx)
         throws IOException {
       call((EndpointObserver)observer, ctx);

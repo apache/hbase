@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -89,9 +90,9 @@ public class TestIOFencing {
   }
 
   public abstract static class CompactionBlockerRegion extends HRegion {
-    volatile int compactCount = 0;
-    volatile CountDownLatch compactionsBlocked = new CountDownLatch(0);
-    volatile CountDownLatch compactionsWaiting = new CountDownLatch(0);
+    AtomicInteger compactCount = new AtomicInteger(0);
+    CountDownLatch compactionsBlocked = new CountDownLatch(0);
+    CountDownLatch compactionsWaiting = new CountDownLatch(0);
 
     @SuppressWarnings("deprecation")
     public CompactionBlockerRegion(Path tableDir, WAL log,
@@ -125,7 +126,7 @@ public class TestIOFencing {
       try {
         return super.compact(compaction, store, throughputController);
       } finally {
-        compactCount++;
+        compactCount.incrementAndGet();
       }
     }
 
@@ -135,7 +136,7 @@ public class TestIOFencing {
       try {
         return super.compact(compaction, store, throughputController, user);
       } finally {
-        compactCount++;
+        compactCount.incrementAndGet();
       }
     }
 
@@ -325,7 +326,7 @@ public class TestIOFencing {
       }
       LOG.info("Allowing compaction to proceed");
       compactingRegion.allowCompactions();
-      while (compactingRegion.compactCount == 0) {
+      while (compactingRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
       }
       // The server we killed stays up until the compaction that was started before it was killed completes.  In logs
@@ -337,7 +338,7 @@ public class TestIOFencing {
       TEST_UTIL.loadNumericRows(table, FAMILY, FIRST_BATCH_COUNT, FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
       ((HBaseAdmin)admin).majorCompact(TABLE_NAME.getName());
       startWaitTime = System.currentTimeMillis();
-      while (newRegion.compactCount == 0) {
+      while (newRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
         assertTrue("New region never compacted", System.currentTimeMillis() - startWaitTime < 180000);
       }
@@ -346,7 +347,9 @@ public class TestIOFencing {
       if (compactingRegion != null) {
         compactingRegion.allowCompactions();
       }
-      admin.close();
+      if (admin != null) {
+        admin.close();
+      }
       TEST_UTIL.shutdownMiniCluster();
     }
   }

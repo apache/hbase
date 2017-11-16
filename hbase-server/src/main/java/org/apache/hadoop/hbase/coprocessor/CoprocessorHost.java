@@ -263,11 +263,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     Coprocessor impl;
     Object o = null;
     try {
-      o = implClass.newInstance();
+      o = implClass.getDeclaredConstructor().newInstance();
       impl = (Coprocessor)o;
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+    } catch (Exception e) {
       throw new IOException(e);
     }
     // create the environment
@@ -402,7 +400,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     /** Current coprocessor state */
     Coprocessor.State state = Coprocessor.State.UNINSTALLED;
     /** Accounting for tables opened by the coprocessor */
-    protected List<HTableInterface> openTables =
+    protected final List<HTableInterface> openTables =
       Collections.synchronizedList(new ArrayList<HTableInterface>());
     private int seq;
     private Configuration conf;

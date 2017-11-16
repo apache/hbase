@@ -178,8 +178,7 @@ public class TestCatalogJanitorInMemoryStates {
         }
         Threads.sleep(100);
       }
-
-      if (pair.getFirst() == null || pair.getSecond() == null) {
+      if (pair == null || pair.getFirst() == null || pair.getSecond() == null) {
         throw new IOException("Failed to get daughters, for parent region: " + r);
       }
       return pair;

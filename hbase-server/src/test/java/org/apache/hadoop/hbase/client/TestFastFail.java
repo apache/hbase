@@ -170,9 +170,15 @@ public class TestFastFail {
          */
         public Boolean call() throws Exception {
           try (Table table = connection.getTable(TableName.valueOf(tableName))) {
-            Thread.sleep(Math.abs(random.nextInt()) % 250); // Add some jitter here
-            byte[] row = longToByteArrayKey(Math.abs(random.nextLong())
-                % numRows);
+            // Add some jitter here
+            int sleep = random.nextInt(250);
+            Thread.sleep(sleep);
+            long key = random.nextLong();
+            if (key < 0) {
+              key = -key;
+            }
+            key %= numRows;
+            byte[] row = longToByteArrayKey(key);
             Get g = new Get(row);
             g.addColumn(FAMILY, QUALIFIER);
             try {

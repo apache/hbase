@@ -109,6 +109,7 @@ class RingBufferTruck {
    * Factory for making a bunch of these.  Needed by the ringbuffer/disruptor.
    */
   final static EventFactory<RingBufferTruck> EVENT_FACTORY = new EventFactory<RingBufferTruck>() {
+    @Override
     public RingBufferTruck newInstance() {
       return new RingBufferTruck();
     }

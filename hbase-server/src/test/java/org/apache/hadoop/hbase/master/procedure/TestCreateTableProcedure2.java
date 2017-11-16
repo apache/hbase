@@ -58,7 +58,7 @@ public class TestCreateTableProcedure2 {
     builder.setState(ZooKeeperProtos.Table.State.ENABLED);
     byte [] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
     ZKUtil.createSetData(zkw, znode, data);
-    LOG.info("Create an orphaned Znode " + znode + " with data " + data);
+    LOG.info("Create an orphaned Znode " + znode);
     // Step 3: link the zk cluster to hbase cluster
     TEST_UTIL.setZkCluster(zkCluster);
     // Step 4: start hbase cluster and expect master to start successfully.

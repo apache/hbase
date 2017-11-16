@@ -109,8 +109,8 @@ public class SecureTestCluster {
   public static void tearDown() throws Exception {
     if (CLUSTER != null) {
       CLUSTER.shutdown();
+      CLUSTER.join();
     }
-    CLUSTER.join();
     if (KDC != null) {
       KDC.stop();
     }

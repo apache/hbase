@@ -885,9 +885,9 @@ public class TestHCM {
     Thread t = new Thread() {
       @Override
       public void run() {
-        synchronized (syncBlockingFilter) {
+        synchronized (lock) {
           try {
-            syncBlockingFilter.wait();
+            lock.wait();
           } catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
@@ -914,6 +914,7 @@ public class TestHCM {
     table.close();
   }
 
+  protected static final Object lock = new Object();
   protected static final AtomicBoolean syncBlockingFilter = new AtomicBoolean(false);
 
   public static class BlockingFilter extends FilterBase {
@@ -921,8 +922,8 @@ public class TestHCM {
     public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
       int i = 0;
       while (i++ < 1000 && !syncBlockingFilter.get()) {
-        synchronized (syncBlockingFilter) {
-          syncBlockingFilter.notifyAll();
+        synchronized (lock) {
+          lock.notifyAll();
         }
         Threads.sleep(100);
       }

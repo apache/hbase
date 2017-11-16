@@ -132,6 +132,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     return htd;
   }
 
+  @Override
   public TakeSnapshotHandler prepare() throws Exception {
     super.prepare();
     this.tableLock.acquire(); // after this, you should ensure to release this lock in

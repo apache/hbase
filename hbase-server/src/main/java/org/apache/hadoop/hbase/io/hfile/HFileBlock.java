@@ -224,6 +224,7 @@ public class HFileBlock implements Cacheable {
    */
   static final CacheableDeserializer<Cacheable> BLOCK_DESERIALIZER =
       new CacheableDeserializer<Cacheable>() {
+        @Override
         public HFileBlock deserialize(ByteBuffer buf, boolean reuse) throws IOException{
           // The buf has the file block followed by block metadata.
           // Set limit to just before the BLOCK_METADATA_SPACE then rewind.
@@ -411,6 +412,7 @@ public class HFileBlock implements Cacheable {
     return nextBlockOnDiskSize;
   }
 
+  @Override
   public BlockType getBlockType() {
     return blockType;
   }
@@ -1928,6 +1930,22 @@ public class HFileBlock implements Cacheable {
   @Override
   public CacheableDeserializer<Cacheable> getDeserializer() {
     return HFileBlock.BLOCK_DESERIALIZER;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((blockType == null) ? 0 : blockType.hashCode());
+    result = prime * result + ((buf == null) ? 0 : buf.hashCode());
+    result = prime * result + ((fileContext == null) ? 0 : fileContext.hashCode());
+    result = prime * result + nextBlockOnDiskSize;
+    result = prime * result + (int) (offset ^ (offset >>> 32));
+    result = prime * result + onDiskDataSizeWithHeader;
+    result = prime * result + onDiskSizeWithoutHeader;
+    result = prime * result + (int) (prevBlockOffset ^ (prevBlockOffset >>> 32));
+    result = prime * result + uncompressedSizeWithoutHeader;
+    return result;
   }
 
   @Override

@@ -106,6 +106,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
+  @Override
   public abstract boolean shouldPerformMajorCompaction(final Collection<StoreFile> filesToCompact)
     throws IOException;
 
@@ -148,6 +149,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @param compactionSize Total size of some compaction
    * @return whether this should be a large or small compaction
    */
+  @Override
   public boolean throttleCompaction(long compactionSize) {
     return compactionSize > comConf.getThrottlePoint();
   }

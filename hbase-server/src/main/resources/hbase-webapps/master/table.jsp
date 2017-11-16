@@ -22,6 +22,7 @@
   import="com.google.protobuf.ByteString"
   import="java.net.URLEncoder"
   import="java.util.ArrayList"
+  import="java.util.HashMap"
   import="java.util.TreeMap"
   import="java.util.List"
   import="java.util.LinkedHashMap"
@@ -252,8 +253,14 @@ if ( fqtn != null ) {
       }
 %>
 <tr>
+  <%
+  String metaLocationString = metaLocation != null ?
+      StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString())
+        + ":" + master.getRegionServerInfoPort(metaLocation) :
+      "(null)";
+  %>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td><a href="<%= url %>"><%= metaLocationString %></a></td>
     <td><%= readReq%></td>
     <td><%= writeReq%></td>
     <td><%= fileSize%></td>
@@ -355,8 +362,11 @@ if ( fqtn != null ) {
   String urlRegionServer = null;
   Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
   Map<ServerName, Integer> primaryRegDistribution = new TreeMap<ServerName, Integer>();
-  Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
   Map<HRegionInfo, RegionLoad> regionsToLoad = new LinkedHashMap<HRegionInfo, RegionLoad>();
+  Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
+  if (regions == null) {
+    regions = new HashMap<HRegionInfo, ServerName>();
+  }
   for (Map.Entry<HRegionInfo, ServerName> hriEntry : regions.entrySet()) {
     HRegionInfo regionInfo = hriEntry.getKey();
     ServerName addr = hriEntry.getValue();
@@ -811,7 +821,7 @@ var showWhole='<%= showWhole %>';
 if(showWhole=='true')document.getElementById("showWhole").checked=true;
 
 function reloadAsSort(){
-  var url="?name="+'<%= URLEncoder.encode(fqtn) %>';
+  var url="?name="+'<%= fqtn != null ? URLEncoder.encode(fqtn) : "" %>';
   if(document.getElementById("sel").selectedIndex>0){
     url=url+"&sort="+document.getElementById("sel").value;
   }

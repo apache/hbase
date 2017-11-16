@@ -483,11 +483,14 @@ public class ProcessBasedLocalHBaseCluster {
       dirList.clear();
       dirList.addAll(logTailDirs);
       for (String d : dirList) {
-        for (File f : new File(d).listFiles(LOG_FILES)) {
-          String filePath = f.getAbsolutePath();
-          if (!tailedFiles.contains(filePath)) {
-            tailedFiles.add(filePath);
-            startTailingFile(filePath);
+        File[] files = new File(d).listFiles(LOG_FILES);
+        if (files != null) {
+          for (File f : files) {
+            String filePath = f.getAbsolutePath();
+            if (!tailedFiles.contains(filePath)) {
+              tailedFiles.add(filePath);
+              startTailingFile(filePath);
+            }
           }
         }
       }

@@ -110,7 +110,7 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
       monitor.receive(e);
     }
     // return the first value for testing
-    return returnData.values().iterator().next();
+    return returnData != null ? returnData.values().iterator().next() : null;
   }
 
   @Override

@@ -121,10 +121,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
     this.master = master;
     this.messagePeriod = conf.getInt(STATUS_PUBLISH_PERIOD, DEFAULT_STATUS_PUBLISH_PERIOD);
     try {
-      this.publisher = publisherClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IOException("Can't create publisher " + publisherClass.getName(), e);
-    } catch (IllegalAccessException e) {
+      this.publisher = publisherClass.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IOException("Can't create publisher " + publisherClass.getName(), e);
     }
     this.publisher.connect(conf);
@@ -175,7 +173,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
     publisher.publish(cs);
   }
 
-  protected void cleanup() {
+  @Override
+  protected synchronized void cleanup() {
     connected = false;
     publisher.close();
   }

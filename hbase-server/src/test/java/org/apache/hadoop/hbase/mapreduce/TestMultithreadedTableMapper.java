@@ -156,7 +156,7 @@ public class TestMultithreadedTableMapper {
           Bytes.toString(table.getTableName()),
           IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
-      LOG.info("Started " + table.getTableName());
+      LOG.info("Started " + table.getName().getNameAsString());
       assertTrue(job.waitForCompletion(true));
       LOG.info("After map/reduce completion");
       // verify map-reduce results

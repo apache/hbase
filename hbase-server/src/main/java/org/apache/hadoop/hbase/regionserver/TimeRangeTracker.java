@@ -157,11 +157,13 @@ public class TimeRangeTracker implements Writable {
     return maximumTimestamp.get();
   }
 
+  @Override
   public void write(final DataOutput out) throws IOException {
     out.writeLong(minimumTimestamp.get());
     out.writeLong(maximumTimestamp.get());
   }
 
+  @Override
   public void readFields(final DataInput in) throws IOException {
 
     this.minimumTimestamp.set(in.readLong());

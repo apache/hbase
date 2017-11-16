@@ -315,7 +315,7 @@ public final class BucketAllocator {
     this.bucketSizes = bucketSizes == null ? DEFAULT_BUCKET_SIZES : bucketSizes;
     Arrays.sort(this.bucketSizes);
     this.bigItemSize = Ints.max(this.bucketSizes);
-    this.bucketCapacity = FEWEST_ITEMS_IN_BUCKET * bigItemSize;
+    this.bucketCapacity = (long) FEWEST_ITEMS_IN_BUCKET * bigItemSize;
     buckets = new Bucket[(int) (availableSpace / bucketCapacity)];
     if (buckets.length < this.bucketSizes.length)
       throw new BucketAllocatorException("Bucket allocator size too small (" + buckets.length +
@@ -413,6 +413,7 @@ public final class BucketAllocator {
     }
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     for (int i = 0; i < buckets.length; ++i) {

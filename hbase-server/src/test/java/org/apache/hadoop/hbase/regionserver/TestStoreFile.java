@@ -1043,9 +1043,6 @@ public class TestStoreFile extends HBaseTestCase {
 
     DataBlockEncoding dataBlockEncoderAlgo =
         DataBlockEncoding.FAST_DIFF;
-    HFileDataBlockEncoder dataBlockEncoder =
-        new HFileDataBlockEncoderImpl(
-            dataBlockEncoderAlgo);
     cacheConf = new CacheConfig(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
         .withChecksumType(CKTYPE)

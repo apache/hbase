@@ -295,6 +295,7 @@ public class HFileSystem extends FilterFileSystem {
         (cp.getClass().getClassLoader(),
             new Class[]{ClientProtocol.class, Closeable.class},
             new InvocationHandler() {
+              @Override
               public Object invoke(Object proxy, Method method,
                                    Object[] args) throws Throwable {
                 try {
@@ -354,6 +355,7 @@ public class HFileSystem extends FilterFileSystem {
    * datanode is actually dead, so if we use it it will timeout.
    */
   static class ReorderWALBlocks implements ReorderBlocks {
+    @Override
     public void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src)
         throws IOException {
 

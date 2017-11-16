@@ -714,6 +714,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private void assignRegionsOnSSHCompletion() {
     LOG.info("Meta is rebuild by OfflineMetaRepair tool, assigning all user regions.");
     Thread regionAssignerThread = new Thread("RegionAssignerOnMetaRebuild") {
+      @Override
       public void run() {
         // Wait until all dead server processing finish
         while (serverManager.areDeadServersInProgress()) {
@@ -1975,7 +1976,7 @@ public class AssignmentManager extends ZooKeeperListener {
             || t instanceof ServerNotRunningYetException) {
           // RS is aborting or stopping, we cannot offline the region since the region may need
           // to do WAL recovery. Until we see  the RS expiration, we should retry.
-          sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+          sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
             RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
 
         } else if (t instanceof NotServingRegionException) {
@@ -1990,8 +1991,8 @@ public class AssignmentManager extends ZooKeeperListener {
           return;
         } else if ((t instanceof FailedServerException) || (state != null &&
             t instanceof RegionAlreadyInTransitionException)) {
-          if(t instanceof FailedServerException) {
-            sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+          if (t instanceof FailedServerException) {
+            sleepTime = 1L + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
                   RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
           } else {
             // RS is already processing this region, only need to update the timestamp
@@ -2359,7 +2360,8 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
 
-          if (plan != newPlan && !plan.getDestination().equals(newPlan.getDestination())) {
+          if (!plan.equals(newPlan) &&
+                !plan.getDestination().equals(newPlan.getDestination())) {
             // Clean out plan we failed execute and one that doesn't look like it'll
             // succeed anyways; we need a new plan!
             // Transition back to OFFLINE

@@ -124,7 +124,8 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
           }
           if (isMultiPut) {
             if (verbose) {
-              LOG.debug("Preparing put for key = [" + rowKey + "], " + columnCount + " columns");
+              LOG.debug("Preparing put for key = [" + Bytes.toString(rowKey) + "], " + columnCount
+                + " columns");
             }
             insert(table, put, rowKeyBase);
             numCols.addAndGet(columnCount);

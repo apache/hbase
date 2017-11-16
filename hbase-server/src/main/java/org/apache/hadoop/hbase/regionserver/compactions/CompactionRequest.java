@@ -26,9 +26,8 @@ import com.google.common.collect.Collections2;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -43,7 +42,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.LimitedPrivate({ "coprocessor" })
 @InterfaceStability.Evolving
 public class CompactionRequest implements Comparable<CompactionRequest> {
-  private static final Log LOG = LogFactory.getLog(CompactionRequest.class);
+
   // was this compaction promoted to an off-peak
   private boolean isOffPeak = false;
   private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }
@@ -142,8 +141,13 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
   }
 
   @Override
+  public int hashCode() {
+    return System.identityHashCode(this);
+  }
+
+  @Override
   public boolean equals(Object obj) {
-    return (this == obj);
+    return Objects.equals(this, obj);
   }
 
   public Collection<StoreFile> getFiles() {

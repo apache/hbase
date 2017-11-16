@@ -171,7 +171,6 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
       // 5. restore acl of snapshot into the table.
       if (restoreAcl && snapshot.hasUsersAndPermissions()
-          && snapshot.getUsersAndPermissions() != null
           && SnapshotDescriptionUtils.isSecurityAvailable(server.getConfiguration())) {
         RestoreSnapshotHelper.restoreSnapshotACL(snapshot, tableName, server.getConfiguration());
       }

@@ -150,14 +150,17 @@ public class StoreFileScanner implements KeyValueScanner {
       matcher, readPt, true);
   }
 
+  @Override
   public String toString() {
     return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
   }
 
+  @Override
   public Cell peek() {
     return cur;
   }
 
+  @Override
   public Cell next() throws IOException {
     Cell retKey = cur;
 
@@ -178,6 +181,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return retKey;
   }
 
+  @Override
   public boolean seek(Cell key) throws IOException {
     if (seekCount != null) seekCount.incrementAndGet();
 
@@ -205,6 +209,7 @@ public class StoreFileScanner implements KeyValueScanner {
     }
   }
 
+  @Override
   public boolean reseek(Cell key) throws IOException {
     if (seekCount != null) seekCount.incrementAndGet();
 
@@ -263,6 +268,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
+  @Override
   public void close() {
     cur = null;
     if (closed) return;    

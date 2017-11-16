@@ -67,7 +67,7 @@ public class FSDataInputStreamWrapper {
    */
   private volatile FSDataInputStream stream = null;
   private volatile FSDataInputStream streamNoFsChecksum = null;
-  private Object streamNoFsChecksumFirstCreateLock = new Object();
+  private final Object streamNoFsChecksumFirstCreateLock = new Object();
 
   // The configuration states that we should validate hbase checksums
   private boolean useHBaseChecksumConfigured;

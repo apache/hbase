@@ -477,6 +477,7 @@ public class TestCompaction {
         try {
           isInCompact = true;
           synchronized (this) {
+            // FIXME: This wait may spuriously wake up, so this test is likely to be flaky
             this.wait();
           }
         } catch (InterruptedException e) {

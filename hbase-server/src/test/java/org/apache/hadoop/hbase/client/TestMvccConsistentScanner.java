@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 
@@ -93,6 +94,7 @@ public class TestMvccConsistentScanner {
         break;
       }
     }
+    assertNotNull(rs);
     UTIL.getHBaseAdmin().move(region.getEncodedNameAsBytes(),
       Bytes.toBytes(rs.getServerName().getServerName()));
     while (UTIL.getRSForFirstRegionInTable(tableName) != rs) {

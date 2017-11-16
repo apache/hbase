@@ -155,6 +155,7 @@ public class DeadServer {
     }
   }
 
+  @Override
   public synchronized String toString() {
     StringBuilder sb = new StringBuilder();
     for (ServerName sn : deadServers.keySet()) {

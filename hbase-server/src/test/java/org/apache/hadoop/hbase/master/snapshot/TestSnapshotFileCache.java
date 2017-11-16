@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -56,7 +57,6 @@ public class TestSnapshotFileCache {
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotFileCache.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static long sequenceId = 0;
   private static FileSystem fs;
   private static Path rootDir;
 
@@ -80,6 +80,7 @@ public class TestSnapshotFileCache {
   }
 
   @Test(timeout = 10000000)
+  @Ignore("See HBASE-19275")
   public void testLoadAndDelete() throws IOException {
     // don't refresh the cache unless we tell it to
     long period = Long.MAX_VALUE;
@@ -94,6 +95,7 @@ public class TestSnapshotFileCache {
   }
 
   @Test
+  @Ignore("See HBASE-19275")
   public void testReloadModifiedDirectory() throws IOException {
     // don't refresh the cache unless we tell it to
     long period = Long.MAX_VALUE;
@@ -149,9 +151,6 @@ public class TestSnapshotFileCache {
 
     SnapshotMock.SnapshotBuilder complete =
         createAndTestSnapshotV1(cache, "snapshot", false, false);
-
-    SnapshotMock.SnapshotBuilder inProgress =
-        createAndTestSnapshotV1(cache, "snapshotInProgress", true, false);
 
     int countBeforeCheck = count.get();
 
@@ -224,12 +223,11 @@ public class TestSnapshotFileCache {
     List<Path> files = new ArrayList<Path>();
     for (int i = 0; i < 3; ++i) {
       for (Path filePath: builder.addRegion()) {
-        String fileName = filePath.getName();
         if (tmp) {
           // We should be able to find all the files while the snapshot creation is in-progress
           FSUtils.logFileSystemState(fs, rootDir, LOG);
-          Iterable<FileStatus> nonSnapshot = getNonSnapshotFiles(cache, filePath);
-          assertFalse("Cache didn't find " + fileName, Iterables.contains(nonSnapshot, fileName));
+          assertFalse("Cache didn't find " + filePath,
+            contains(getNonSnapshotFiles(cache, filePath), filePath));
         }
         files.add(filePath);
       }
@@ -242,9 +240,7 @@ public class TestSnapshotFileCache {
 
     // Make sure that all files are still present
     for (Path path: files) {
-      Iterable<FileStatus> nonSnapshotFiles = getNonSnapshotFiles(cache, path);
-      assertFalse("Cache didn't find " + path.getName(),
-          Iterables.contains(nonSnapshotFiles, path.getName()));
+      assertFalse("Cache didn't find " + path, contains(getNonSnapshotFiles(cache, path), path));
     }
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -255,23 +251,31 @@ public class TestSnapshotFileCache {
 
       // The files should be in cache until next refresh
       for (Path filePath: files) {
-        Iterable<FileStatus> nonSnapshotFiles = getNonSnapshotFiles(cache, filePath);
-        assertFalse("Cache didn't find " + filePath.getName(), Iterables.contains(nonSnapshotFiles,
-            filePath.getName()));
+        assertFalse("Cache didn't find " + filePath,
+          contains(getNonSnapshotFiles(cache, filePath), filePath));
       }
 
       // then trigger a refresh
       cache.triggerCacheRefreshForTesting();
+
       // and not it shouldn't find those files
       for (Path filePath: files) {
-        Iterable<FileStatus> nonSnapshotFiles = getNonSnapshotFiles(cache, filePath);
-        assertTrue("Cache found '" + filePath.getName() + "', but it shouldn't have.",
-            !Iterables.contains(nonSnapshotFiles, filePath.getName()));
+        assertFalse("Cache found '" + filePath + "', but it shouldn't have.",
+            contains(getNonSnapshotFiles(cache, filePath), filePath));
       }
     }
   }
 
-  private Iterable<FileStatus> getNonSnapshotFiles(SnapshotFileCache cache, Path storeFile)
+  private static boolean contains(Iterable<FileStatus> files, Path filePath) {
+    for (FileStatus status: files) {
+      if (filePath.equals(status.getPath())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Iterable<FileStatus> getNonSnapshotFiles(SnapshotFileCache cache, Path storeFile)
       throws IOException {
     return cache.getUnreferencedFiles(
         Arrays.asList(FSUtils.listStatus(fs, storeFile.getParent()))

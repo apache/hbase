@@ -166,7 +166,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-      synchronized (outer) {
+      synchronized (this) {
         if (!outer.nextKeyValue()) {
           return false;
         }
@@ -177,6 +177,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
       }
     }
 
+    @Override
     public ImmutableBytesWritable getCurrentKey() {
       return key;
     }
@@ -197,7 +198,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
     @Override
     public void write(K2 key, V2 value) throws IOException,
     InterruptedException {
-      synchronized (outer) {
+      synchronized (this) {
         outer.write(key, value);
       }
     }
@@ -225,6 +226,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
       outer.setStatus(status);
     }
 
+    @Override
     public float getProgress() {
       return 0;
     }
@@ -281,7 +283,9 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
             outer.getInputSplit());
           Class<?> wrappedMapperClass = Class.forName("org.apache.hadoop.mapreduce.lib.map.WrappedMapper");
           Method getMapContext = wrappedMapperClass.getMethod("getMapContext", MapContext.class);
-          subcontext = (Context) getMapContext.invoke(wrappedMapperClass.newInstance(), mc);
+          subcontext = (Context) getMapContext.invoke(
+            wrappedMapperClass.getDeclaredConstructor().newInstance(),
+            mc);
         } catch (Exception ee) { // FindBugs: REC_CATCH_EXCEPTION
           // rethrow as IOE
           throw new IOException(e);

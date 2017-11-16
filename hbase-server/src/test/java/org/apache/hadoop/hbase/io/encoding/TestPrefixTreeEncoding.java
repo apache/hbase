@@ -271,7 +271,7 @@ public class TestPrefixTreeEncoding {
       int batchId, boolean partial, boolean useTags, PrefixTreeCodec encoder,
       HFileBlockEncodingContext blkEncodingCtx, DataOutputStream userDataStream) throws Exception {
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
-      if (partial && i / 10 % 2 == 1)
+      if (partial && i / 10 % 2 != 0)
         continue;
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         if (!useTags) {

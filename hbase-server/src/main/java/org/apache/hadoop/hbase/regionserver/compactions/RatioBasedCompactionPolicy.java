@@ -207,6 +207,7 @@ public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
    * @param filesCompacting files being scheduled to compact.
    * @return true to schedule a request.
    */
+  @Override
   public boolean needsCompaction(final Collection<StoreFile> storeFiles,
       final List<StoreFile> filesCompacting) {
     int numCandidates = storeFiles.size() - filesCompacting.size();

@@ -94,6 +94,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
     this.recordReaderImpl.setRowFilter(rowFilter);
   }
 
+  @Override
   public void close() {
     this.recordReaderImpl.close();
   }
@@ -103,6 +104,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
    *
    * @see org.apache.hadoop.mapred.RecordReader#createKey()
    */
+  @Override
   public ImmutableBytesWritable createKey() {
     return this.recordReaderImpl.createKey();
   }
@@ -112,10 +114,12 @@ implements RecordReader<ImmutableBytesWritable, Result> {
    *
    * @see org.apache.hadoop.mapred.RecordReader#createValue()
    */
+  @Override
   public Result createValue() {
     return this.recordReaderImpl.createValue();
   }
 
+  @Override
   public long getPos() {
 
     // This should be the ordinal tuple in the range;
@@ -123,6 +127,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
     return this.recordReaderImpl.getPos();
   }
 
+  @Override
   public float getProgress() {
     // Depends on the total number of tuples and getPos
     return this.recordReaderImpl.getPos();
@@ -134,6 +139,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
    * @return true if there was more data
    * @throws IOException
    */
+  @Override
   public boolean next(ImmutableBytesWritable key, Result value)
   throws IOException {
     return this.recordReaderImpl.next(key, value);

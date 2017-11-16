@@ -39,6 +39,11 @@ public class LauncherSecurityManager extends SecurityManager {
   private SecurityManager securityManager;
 
   public LauncherSecurityManager() {
+    this(null);
+  }
+
+  public LauncherSecurityManager(SecurityManager securityManager) {
+    this.securityManager = securityManager;
     reset();
   }
 

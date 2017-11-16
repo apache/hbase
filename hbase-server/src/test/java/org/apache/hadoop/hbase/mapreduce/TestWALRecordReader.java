@@ -185,7 +185,6 @@ public class TestWALRecordReader {
     final WALFactory walfactory = new WALFactory(conf, null, getName());
     WAL log = walfactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
     byte [] value = Bytes.toBytes("value");
-    final AtomicLong sequenceId = new AtomicLong(0);
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));

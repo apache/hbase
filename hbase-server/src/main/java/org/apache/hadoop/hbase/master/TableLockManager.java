@@ -369,11 +369,13 @@ public abstract class TableLockManager {
           serverName, writeLockTimeoutMs, false, purpose);
     }
 
+    @Override
     public TableLock readLock(TableName tableName, String purpose) {
       return new TableLockImpl(tableName, zkWatcher,
           serverName, readLockTimeoutMs, true, purpose);
     }
 
+    @Override
     public void visitAllLocks(MetadataHandler handler) throws IOException {
       for (String tableName : getTableNames()) {
         String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);

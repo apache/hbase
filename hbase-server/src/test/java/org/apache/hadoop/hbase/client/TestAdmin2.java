@@ -772,7 +772,7 @@ public class TestAdmin2 {
   @Test(timeout = 300000)
   public void testListProcedures() throws Exception {
     ProcedureInfo[] procList = admin.listProcedures();
-    assertTrue(procList.length >= 0);
+    assertTrue(procList.length > 0);
   }
 
   @Test(timeout = 30000)

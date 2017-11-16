@@ -37,7 +37,7 @@
   Configuration conf = rs.getConfiguration();
 
   Region region = rs.getFromOnlineRegions(regionName);
-  String displayName = region.getRegionInfo().getRegionNameAsString();
+  String displayName = region != null ? region.getRegionInfo().getRegionNameAsString() : "(null)";
 %>
 <!--[if IE]>
 <!DOCTYPE html>

@@ -1045,6 +1045,7 @@ public class StoreFile {
       }
     }
 
+    @Override
     public void append(final Cell cell) throws IOException {
       appendGeneralBloomfilter(cell);
       appendDeleteFamilyBloomFilter(cell);

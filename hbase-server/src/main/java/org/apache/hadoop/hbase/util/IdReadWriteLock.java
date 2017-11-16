@@ -80,6 +80,9 @@ public class IdReadWriteLock {
   }
 
   @VisibleForTesting
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+    justification="Synchronization on rwlock is intentional")
   public void waitForWaiters(long id, int numWaiters) throws InterruptedException {
     for (ReentrantReadWriteLock readWriteLock;;) {
       readWriteLock = lockPool.get(id);

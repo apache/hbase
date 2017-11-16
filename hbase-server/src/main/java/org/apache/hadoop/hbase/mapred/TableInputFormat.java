@@ -49,6 +49,7 @@ public class TableInputFormat extends TableInputFormatBase implements
    */
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
 
+  @Override
   public void configure(JobConf job) {
     try {
       initialize(job);

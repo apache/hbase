@@ -23,8 +23,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -51,8 +49,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithAbort {
-  private static final Log LOG = LogFactory.getLog(
-    TestRegionServerCoprocessorExceptionWithAbort.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 
@@ -138,8 +135,10 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   }
 
   public static class FailedInitializationObserver extends SimpleRegionObserver {
-    @SuppressWarnings("null")
     @Override
+    @SuppressWarnings("null")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Preconditions checks insure we are not going to dereference a null value")
     public void start(CoprocessorEnvironment e) throws IOException {
       // Trigger a NPE to fail the coprocessor
       Integer i = null;
@@ -148,8 +147,10 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   }
 
   public static class BuggyRegionObserver extends SimpleRegionObserver {
-    @SuppressWarnings("null")
     @Override
+    @SuppressWarnings("null")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Preconditions checks insure we are not going to dereference a null value")
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
                        final Durability durability) {

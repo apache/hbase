@@ -502,37 +502,49 @@ public class StoreFileInfo {
   }
 
   @Override
-  public boolean equals(Object that) {
-    if (this == that) return true;
-    if (that == null) return false;
-
-    if (!(that instanceof StoreFileInfo)) return false;
-
-    StoreFileInfo o = (StoreFileInfo)that;
-    if (initialPath != null && o.initialPath == null) return false;
-    if (initialPath == null && o.initialPath != null) return false;
-    if (initialPath != o.initialPath && initialPath != null
-            && !initialPath.equals(o.initialPath)) return false;
-
-    if (reference != null && o.reference == null) return false;
-    if (reference == null && o.reference != null) return false;
-    if (reference != o.reference && reference != null
-            && !reference.equals(o.reference)) return false;
-
-    if (link != null && o.link == null) return false;
-    if (link == null && o.link != null) return false;
-    if (link != o.link && link != null && !link.equals(o.link)) return false;
-
-    return true;
-  };
-
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((initialPath == null) ? 0 : initialPath.hashCode());
+    result = prime * result + ((link == null) ? 0 : link.hashCode());
+    result = prime * result + ((reference == null) ? 0 : reference.hashCode());
+    return result;
+  }
 
   @Override
-  public int hashCode() {
-    int hash = 17;
-    hash = hash * 31 + ((reference == null) ? 0 : reference.hashCode());
-    hash = hash * 31 + ((initialPath ==  null) ? 0 : initialPath.hashCode());
-    hash = hash * 31 + ((link == null) ? 0 : link.hashCode());
-    return  hash;
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    StoreFileInfo other = (StoreFileInfo) obj;
+    if (initialPath == null) {
+      if (other.initialPath != null) {
+        return false;
+      }
+    } else if (!initialPath.equals(other.initialPath)) {
+      return false;
+    }
+    if (link == null) {
+      if (other.link != null) {
+        return false;
+      }
+    } else if (!link.equals(other.link)) {
+      return false;
+    }
+    if (reference == null) {
+      if (other.reference != null) {
+        return false;
+      }
+    } else if (!reference.equals(other.reference)) {
+      return false;
+    }
+    return true;
   }
+
 }

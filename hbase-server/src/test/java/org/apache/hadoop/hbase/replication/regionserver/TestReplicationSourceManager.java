@@ -456,6 +456,8 @@ public class TestReplicationSourceManager {
   }
 
   @Test
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RU_INVOKE_RUN",
+    justification="Intended")
   public void testCleanupUnknownPeerZNode() throws Exception {
     final Server server = new DummyServer("hostname2.example.org");
     ReplicationQueues rq =

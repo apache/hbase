@@ -56,6 +56,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * and HRegion.close();
  */
 @Category({RegionServerTests.class, MediumTests.class})
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Use of an atomic type both as monitor and condition variable is intended")
 public class TestCompactionArchiveConcurrentClose {
   public HBaseTestingUtility testUtil;
 

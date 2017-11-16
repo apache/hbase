@@ -1086,6 +1086,8 @@ public class RegionSplitter {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Preconditions checks insure we are not going to dereference a null value")
     public byte[][] split(int numRegions) {
       Preconditions.checkArgument(
           Bytes.compareTo(lastRowBytes, firstRowBytes) > 0,

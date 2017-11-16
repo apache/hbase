@@ -50,8 +50,10 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithRemove {
   public static class BuggyRegionObserver extends SimpleRegionObserver {
-    @SuppressWarnings("null")
     @Override
+    @SuppressWarnings("null")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Preconditions checks insure we are not going to dereference a null value")
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
                        final Durability durability) {

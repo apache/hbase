@@ -37,6 +37,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -76,7 +77,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.lang.RandomStringUtils;
@@ -206,6 +206,8 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+  justification="Synchronization on concurrent map is intended")
 public class HRegion implements HeapSize, PropagatingConfigurationObserver, Region {
   private static final Log LOG = LogFactory.getLog(HRegion.class);
 
@@ -1012,7 +1014,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.stores.put(store.getFamily().getName(), store);
 
           long storeMaxSequenceId = store.getMaxSequenceId();
-          maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
+          maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(StandardCharsets.UTF_8),
               storeMaxSequenceId);
           if (maxSeqId == -1 || storeMaxSequenceId > maxSeqId) {
             maxSeqId = storeMaxSequenceId;
@@ -5393,7 +5395,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         Store store = this.stores.get(column);
         if (store == null) {
           throw new IllegalArgumentException("No column family : " +
-              new String(column) + " available");
+              new String(column, StandardCharsets.UTF_8) + " available");
         }
         Collection<StoreFile> storeFiles = store.getStorefiles();
         if (storeFiles == null) continue;

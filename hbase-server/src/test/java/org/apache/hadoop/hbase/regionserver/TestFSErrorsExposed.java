@@ -247,7 +247,10 @@ public class TestFSErrorsExposed {
      */
     public void startFaults() {
       for (SoftReference<FaultyInputStream> is: inStreams) {
-        is.get().startFaults();
+        FaultyInputStream fis = is.get();
+        if (fis != null) {
+          fis.startFaults();
+        }
       }
     }
   }

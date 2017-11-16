@@ -224,52 +224,48 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
-      try {
-        if (cmd.equals("-threads")) {
-          numThreads = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-iterations")) {
-          numIterations = Long.parseLong(args[++i]);
-        } else if (cmd.equals("-path")) {
-          rootRegionDir = new Path(args[++i]);
-        } else if (cmd.equals("-families")) {
-          numFamilies = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-qualifiers")) {
-          numQualifiers = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-keySize")) {
-          keySize = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-valueSize")) {
-          valueSize = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-syncInterval")) {
-          syncInterval = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-nosync")) {
-          noSync = true;
-        } else if (cmd.equals("-verify")) {
-          verify = true;
-        } else if (cmd.equals("-verbose")) {
-          verbose = true;
-        } else if (cmd.equals("-nocleanup")) {
-          cleanup = false;
-        } else if (cmd.equals("-noclosefs")) {
-          noclosefs = true;
-        } else if (cmd.equals("-roll")) {
-          roll = Long.parseLong(args[++i]);
-        } else if (cmd.equals("-compress")) {
-          compress = true;
-        } else if (cmd.equals("-encryption")) {
-          cipher = args[++i];
-        } else if (cmd.equals("-regions")) {
-          numRegions = Integer.parseInt(args[++i]);
-        } else if (cmd.equals("-traceFreq")) {
-          traceFreq = Double.parseDouble(args[++i]);
-        } else if (cmd.equals("-h")) {
-          printUsageAndExit();
-        } else if (cmd.equals("--help")) {
-          printUsageAndExit();
-        } else {
-          System.err.println("UNEXPECTED: " + cmd);
-          printUsageAndExit();
-        }
-      } catch (Exception e) {
+      if (cmd.equals("-threads")) {
+        numThreads = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-iterations")) {
+        numIterations = Long.parseLong(args[++i]);
+      } else if (cmd.equals("-path")) {
+        rootRegionDir = new Path(args[++i]);
+      } else if (cmd.equals("-families")) {
+        numFamilies = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-qualifiers")) {
+        numQualifiers = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-keySize")) {
+        keySize = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-valueSize")) {
+        valueSize = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-syncInterval")) {
+        syncInterval = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-nosync")) {
+        noSync = true;
+      } else if (cmd.equals("-verify")) {
+        verify = true;
+      } else if (cmd.equals("-verbose")) {
+        verbose = true;
+      } else if (cmd.equals("-nocleanup")) {
+        cleanup = false;
+      } else if (cmd.equals("-noclosefs")) {
+        noclosefs = true;
+      } else if (cmd.equals("-roll")) {
+        roll = Long.parseLong(args[++i]);
+      } else if (cmd.equals("-compress")) {
+        compress = true;
+      } else if (cmd.equals("-encryption")) {
+        cipher = args[++i];
+      } else if (cmd.equals("-regions")) {
+        numRegions = Integer.parseInt(args[++i]);
+      } else if (cmd.equals("-traceFreq")) {
+        traceFreq = Double.parseDouble(args[++i]);
+      } else if (cmd.equals("-h")) {
+        printUsageAndExit();
+      } else if (cmd.equals("--help")) {
+        printUsageAndExit();
+      } else {
+        System.err.println("UNEXPECTED: " + cmd);
         printUsageAndExit();
       }
     }

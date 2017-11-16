@@ -102,6 +102,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
    *      JobConf, Reporter)
    */
+  @Override
   public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
       InputSplit split, JobConf job, Reporter reporter)
   throws IOException {
@@ -182,6 +183,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    *
    * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
    */
+  @Override
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     if (this.table == null) {
       initialize(job);

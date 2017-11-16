@@ -91,7 +91,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
       }
     }
 
-    return foundABigStore | force;
+    return foundABigStore || force;
   }
 
   /**

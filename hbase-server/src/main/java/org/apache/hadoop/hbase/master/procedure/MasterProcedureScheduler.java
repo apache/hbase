@@ -573,6 +573,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       super(serverName);
     }
 
+    @Override
     public boolean requireExclusiveLock(Procedure proc) {
       ServerProcedureInterface spi = (ServerProcedureInterface)proc;
       switch (spi.getServerOperationType()) {
@@ -617,6 +618,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       }
     }
 
+    @Override
     public boolean requireExclusiveLock(Procedure proc) {
       TableProcedureInterface tpi = (TableProcedureInterface)proc;
       switch (tpi.getTableOperationType()) {
@@ -1045,6 +1047,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     /**
      * True if the queue is not in the run-queue and it is owned by an event.
      */
+    @Override
     public boolean isSuspended() {
       return suspended;
     }
@@ -1093,6 +1096,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
     // This should go away when we have the new AM and its events
     // and we move xlock to the lock-event-queue.
+    @Override
     public synchronized boolean isAvailable() {
       return !hasExclusiveLock() && !isEmpty();
     }
@@ -1128,6 +1132,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       super(key, priority);
     }
 
+    @Override
     public void add(final Procedure proc, final boolean addToFront) {
       if (addToFront) {
         addFront(proc);
@@ -1144,6 +1149,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       runnables.addLast(proc);
     }
 
+    @Override
     public Procedure peek() {
       return runnables.peek();
     }
@@ -1158,6 +1164,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return runnables.isEmpty();
     }
 
+    @Override
     public int size() {
       return runnables.size();
     }

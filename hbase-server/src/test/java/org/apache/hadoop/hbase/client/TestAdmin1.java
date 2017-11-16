@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -220,6 +221,7 @@ public class TestAdmin1 {
       } catch (IOException e) {
         exception = e;
       }
+      assertNotNull(exception);
       assertTrue("found=" + exception.getClass().getName(),
           exception instanceof InvalidFamilyOperationException);
 
@@ -229,6 +231,7 @@ public class TestAdmin1 {
       } catch (IOException e) {
         exception = e;
       }
+      assertNotNull(exception);
       assertTrue("found=" + exception.getClass().getName(),
           exception instanceof InvalidFamilyOperationException);
     } finally {
@@ -608,32 +611,6 @@ public class TestAdmin1 {
     // Reset the value for the other tests
     TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
         "hbase.online.schema.update.enable", true);
-  }
-
-  /**
-   * Listens for when an event is done in Master.
-   */
-  static class DoneListener implements EventHandler.EventHandlerListener {
-    private final AtomicBoolean done;
-
-    DoneListener(final AtomicBoolean done) {
-      super();
-      this.done = done;
-    }
-
-    @Override
-    public void afterProcess(EventHandler event) {
-      this.done.set(true);
-      synchronized (this.done) {
-        // Wake anyone waiting on this value to change.
-        this.done.notifyAll();
-      }
-    }
-
-    @Override
-    public void beforeProcess(EventHandler event) {
-      // continue
-    }
   }
 
   @SuppressWarnings("deprecation")
@@ -1129,6 +1106,7 @@ public class TestAdmin1 {
     } catch (IOException e) {
       e.printStackTrace();
     }
+    assertNotNull(regions);
     assertEquals(2, regions.size());
     Set<HRegionInfo> hRegionInfos = regions.keySet();
     HRegionInfo[] r = hRegionInfos.toArray(new HRegionInfo[hRegionInfos.size()]);

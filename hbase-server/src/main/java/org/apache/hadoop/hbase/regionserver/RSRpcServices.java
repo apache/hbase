@@ -1057,10 +1057,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       Class<?> rpcSchedulerFactoryClass = rs.conf.getClass(
           REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
           SimpleRpcSchedulerFactory.class);
-      rpcSchedulerFactory = ((RpcSchedulerFactory) rpcSchedulerFactoryClass.newInstance());
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(e);
-    } catch (IllegalAccessException e) {
+      rpcSchedulerFactory = (RpcSchedulerFactory)
+          rpcSchedulerFactoryClass.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IllegalArgumentException(e);
     }
     // Server to handle client requests.
@@ -1651,6 +1650,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="JLM_JSR166_UTILCONCURRENT_MONITORENTER",
+    justification="We double up use of an atomic both as monitor and condition variable")
   public OpenRegionResponse openRegion(final RpcController controller,
       final OpenRegionRequest request) throws ServiceException {
     requestCount.increment();
@@ -2581,7 +2583,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private static final long serialVersionUID = -4305297078988180130L;
 
     @Override
-    public Throwable fillInStackTrace() {
+    public synchronized Throwable fillInStackTrace() {
       return this;
     }
   };

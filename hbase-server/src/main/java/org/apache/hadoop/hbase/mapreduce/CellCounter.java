@@ -126,12 +126,13 @@ public class CellCounter {
      */
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Preconditions checks insure we are not going to dereference a null value")
     public void map(ImmutableBytesWritable row, Result values,
                     Context context)
         throws IOException {
       Preconditions.checkState(values != null,
           "values passed to the map is null");
-
       try {
         byte[] currentRow = values.getRow();
         if (lastRow == null || !Bytes.equals(lastRow, currentRow)) {
@@ -179,10 +180,10 @@ public class CellCounter {
 
   static class IntSumReducer<Key> extends Reducer<Key, IntWritable,
       Key, IntWritable> {
-
     private IntWritable result = new IntWritable();
-    public void reduce(Key key, Iterable<IntWritable> values,
-      Context context)
+
+    @Override
+    public void reduce(Key key, Iterable<IntWritable> values, Context context)
     throws IOException, InterruptedException {
       int sum = 0;
       for (IntWritable val : values) {

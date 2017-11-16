@@ -129,7 +129,7 @@ public class TestJoinedScanners {
           puts.clear();
         }
       }
-      if (puts.size() >= 0) {
+      if (puts.size() > 0) {
         ht.put(puts);
         puts.clear();
       }

@@ -1323,7 +1323,7 @@ public class FSHLog implements WAL {
       rollWriterLock.unlock();
     }
     try {
-      if (lowReplication || writer != null && writer.getLength() > logrollsize) {
+      if (lowReplication || (writer != null && writer.getLength() > logrollsize)) {
         requestLogRoll(lowReplication);
       }
     } catch (IOException e) {

@@ -94,6 +94,7 @@ implements TableMap<ImmutableBytesWritable,Result> {
    * @param reporter
    * @throws IOException
    */
+  @Override
   public void map(ImmutableBytesWritable key, Result value,
       OutputCollector<ImmutableBytesWritable,Result> output,
       Reporter reporter) throws IOException {

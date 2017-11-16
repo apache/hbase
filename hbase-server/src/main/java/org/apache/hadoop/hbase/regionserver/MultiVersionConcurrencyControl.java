@@ -76,7 +76,7 @@ public class MultiVersionConcurrencyControl {
     while (true) {
       long seqId = this.getWritePoint();
       if (seqId >= newStartPoint) break;
-      if (this.tryAdvanceTo(/* newSeqId = */ newStartPoint, /* expected = */ seqId)) break;
+      if (this.tryAdvanceTo(newStartPoint, seqId)) break;
     }
   }
 
@@ -245,6 +245,7 @@ public class MultiVersionConcurrencyControl {
   }
 
   @VisibleForTesting
+  @Override
   public String toString() {
     return Objects.toStringHelper(this)
         .add("readPoint", readPoint)
