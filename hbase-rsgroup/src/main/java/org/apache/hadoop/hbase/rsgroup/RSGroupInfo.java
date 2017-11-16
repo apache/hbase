@@ -86,8 +86,8 @@ public class RSGroupInfo {
    *
    * @param servers the servers
    */
-  public void addAllServers(Collection<Address> servers){
-    servers.addAll(servers);
+  public void addAllServers(Collection<Address> addresses){
+    this.servers.addAll(addresses);
   }
 
   /**

@@ -163,33 +163,6 @@ public class TestRSGroupBasedLoadBalancer {
   }
 
   /**
-   * All regions have an assignment.
-   *
-   * @param regions
-   * @param servers
-   * @param assignments
-   * @throws java.io.IOException
-   * @throws java.io.FileNotFoundException
-   */
-  private void assertImmediateAssignment(List<HRegionInfo> regions,
-                                         List<ServerName> servers,
-                                         Map<HRegionInfo, ServerName> assignments)
-      throws IOException {
-    for (HRegionInfo region : regions) {
-      assertTrue(assignments.containsKey(region));
-      ServerName server = assignments.get(region);
-      TableName tableName = region.getTable();
-
-      String groupName =
-          getMockedGroupInfoManager().getRSGroupOfTable(tableName);
-      assertTrue(StringUtils.isNotEmpty(groupName));
-      RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
-      assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(server.getAddress()));
-    }
-  }
-
-  /**
    * Tests the bulk assignment used during cluster startup.
    *
    * Round-robin. Should yield a balanced cluster so same invariant as the
