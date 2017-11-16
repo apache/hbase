@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
@@ -285,6 +286,23 @@ public class FavoredNodesManager {
         globalFavoredNodesAssignmentPlan.removeFavoredNodes(hri);
       }
     }
+  }
+
+  @VisibleForTesting
+  public synchronized Set<RegionInfo> getRegionsOfFavoredNode(ServerName serverName) {
+    Set<RegionInfo> regionInfos = Sets.newHashSet();
+
+    ServerName serverToUse = ServerName.valueOf(serverName.getHostAndPort(), NON_STARTCODE);
+    if (primaryRSToRegionMap.containsKey(serverToUse)) {
+      regionInfos.addAll(primaryRSToRegionMap.get(serverToUse));
+    }
+    if (secondaryRSToRegionMap.containsKey(serverToUse)) {
+      regionInfos.addAll(secondaryRSToRegionMap.get(serverToUse));
+    }
+    if (teritiaryRSToRegionMap.containsKey(serverToUse)) {
+      regionInfos.addAll(teritiaryRSToRegionMap.get(serverToUse));
+    }
+    return regionInfos;
   }
 
   public RackManager getRackManager() {
