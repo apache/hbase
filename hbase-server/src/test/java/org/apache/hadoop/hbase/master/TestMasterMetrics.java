@@ -54,13 +54,11 @@ public class TestMasterMetrics {
     public MyMaster(Configuration conf) throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
-/*
     @Override
     protected void tryRegionServerReport(
         long reportStartTime, long reportEndTime) {
       // do nothing
     }
-*/
   }
 
   @BeforeClass
