@@ -312,7 +312,7 @@ public class TokenizerNode{
 
   public void appendNodesToExternalList(List<TokenizerNode> appendTo, boolean includeNonLeaves,
       boolean includeLeaves) {
-    if (includeNonLeaves && !isLeaf() || includeLeaves && isLeaf()) {
+    if ((includeNonLeaves && !isLeaf()) || (includeLeaves && isLeaf())) {
       appendTo.add(this);
     }
     for (int i = 0; i < children.size(); ++i) {
