@@ -236,11 +236,11 @@ There are several differences for scan:
 * There is a `scanAll` method which will return all the results at once. It aims to provide a simpler way for small scans which you want to get the whole results at once usually.
 * The Observer Pattern. There is a scan method which accepts a `ScanResultConsumer` as a parameter. It will pass the results to the consumer.
 
-Notice that there are two types of asynchronous table, one is `AsyncTable` and the other is `RawAsyncTable`.
+Notice that `AsyncTable` interface is templatized. The template parameter specifies the type of `ScanResultConsumerBase` used by scans, which means the observer style scan APIs are different. The two types of scan consumers are - `ScanResultConsumer` and `AdvancedScanResultConsumer`.
 
-For `AsyncTable`, you need to provide a thread pool when getting it. The callbacks registered to the returned CompletableFuture will be executed in that thread pool. It is designed for normal users. You are free to do anything in the callbacks.
+`ScanResultConsumer` needs a separate thread pool which is used to execute the callbacks registered to the returned CompletableFuture. Because the use of separate thread pool frees up RPC threads, callbacks are free to do anything. Use this if the callbacks are not quick, or when in doubt.
 
-For `RawAsyncTable`, all the callbacks are executed inside the framework thread so it is not allowed to do time consuming works in the callbacks otherwise you may block the framework thread and cause very bad performance impact. It is designed for advanced users who want to write high performance code. You can see the `org.apache.hadoop.hbase.client.example.HttpProxyExample` to see how to write fully asynchronous code with `RawAsyncTable`. And coprocessor related methods are only in `RawAsyncTable`.
+`AdvancedScanResultConsumer` executes callbacks inside the framework thread. It is not allowed to do time consuming work in the callbacks else it will likely block the framework threads and cause very bad performance impact. As its name, it is designed for advanced users who want to write high performance code. See `org.apache.hadoop.hbase.client.example.HttpProxyExample` for how to write fully asynchronous code with it.
 
 [[async.admin]]
 === Asynchronous Admin ===
