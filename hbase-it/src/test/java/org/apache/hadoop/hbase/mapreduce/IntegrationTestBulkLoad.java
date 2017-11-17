@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -56,6 +55,8 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -211,9 +212,10 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     TableName t = getTablename();
     Admin admin = util.getAdmin();
-    HTableDescriptor desc = admin.getTableDescriptor(t);
-    desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
-    HBaseTestingUtility.modifyTableSync(admin, desc);
+    TableDescriptor desc = admin.getDescriptor(t);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(desc);
+    builder.addCoprocessor(SlowMeCoproScanOperations.class.getName());
+    HBaseTestingUtility.modifyTableSync(admin, builder.build());
   }
 
   @Test
