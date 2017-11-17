@@ -228,6 +228,14 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
     return gauges.get(cName).longValue();
   }
 
+  @Override
+  public String toDebugString(BaseSource source) {
+    getMetrics(source);
+    StringBuilder sb = new StringBuilder();
+    sb.append("Tags=").append(tags).append(", Counters=").append(counters);
+    return sb.append(", Gauges=").append(gauges).toString();
+  }
+
   private void reset() {
     tags.clear();
     gauges.clear();
