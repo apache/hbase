@@ -5958,7 +5958,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               storeFilesSizes.put(commitedStoreFile.getName(), fs.getFileStatus(commitedStoreFile)
                   .getLen());
             } catch (IOException e) {
-              LOG.warn("Failed to find the size of hfile " + commitedStoreFile);
+              LOG.warn("Failed to find the size of hfile " + commitedStoreFile, e);
               storeFilesSizes.put(commitedStoreFile.getName(), 0L);
             }
 
