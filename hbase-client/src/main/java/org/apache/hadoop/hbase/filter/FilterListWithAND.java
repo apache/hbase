@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -37,6 +38,10 @@ public class FilterListWithAND extends FilterListBase {
 
   public FilterListWithAND(List<Filter> filters) {
     super(filters);
+    // For FilterList with AND, when call FL's transformCell(), we should transform cell for all
+    // sub-filters (because all sub-filters return INCLUDE*). So here, fill this array with true. we
+    // keep this in FilterListWithAND for abstracting the transformCell() in FilterListBase.
+    subFiltersIncludedCell = new ArrayList<>(Collections.nCopies(filters.size(), true));
   }
 
   @Override
@@ -45,6 +50,7 @@ public class FilterListWithAND extends FilterListBase {
       throw new IllegalArgumentException("Filters in the list must have the same reversed flag");
     }
     this.filters.addAll(filters);
+    this.subFiltersIncludedCell.addAll(Collections.nCopies(filters.size(), true));
   }
 
   @Override
@@ -149,37 +155,23 @@ public class FilterListWithAND extends FilterListBase {
   }
 
   @Override
-  ReturnCode internalFilterKeyValue(Cell c, Cell transformedCell) throws IOException {
+  public ReturnCode filterKeyValue(Cell c) throws IOException {
     if (isEmpty()) {
       return ReturnCode.INCLUDE;
     }
     ReturnCode rc = ReturnCode.INCLUDE;
-    Cell transformed = transformedCell;
-    this.referenceCell = c;
     this.seekHintFilters.clear();
     for (int i = 0, n = filters.size(); i < n; i++) {
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         return ReturnCode.NEXT_ROW;
       }
-      ReturnCode localRC;
-      if (filter instanceof FilterList) {
-        localRC = ((FilterList) filter).internalFilterKeyValue(c, transformed);
-      } else {
-        localRC = filter.filterKeyValue(c);
-      }
+      ReturnCode localRC = filter.filterKeyValue(c);
       rc = mergeReturnCode(rc, localRC);
-
-      // For INCLUDE* case, we need to update the transformed cell.
-      if (isInReturnCodes(localRC, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
-        ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        transformed = filter.transformCell(transformed);
-      }
       if (localRC == ReturnCode.SEEK_NEXT_USING_HINT) {
         seekHintFilters.add(filter);
       }
     }
-    this.transformedCell = transformed;
     if (!seekHintFilters.isEmpty()) {
       return ReturnCode.SEEK_NEXT_USING_HINT;
     }
