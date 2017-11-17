@@ -741,7 +741,6 @@ public class TestMobCompactor {
           candidates.remove(0);
         }
         c.bypass();
-        c.complete();
       }
     }
   }
