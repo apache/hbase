@@ -44,6 +44,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -629,9 +630,13 @@ class ConnectionManager {
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
-     Registry registry;
+    Registry registry;
 
     private final ClientBackoffPolicy backoffPolicy;
+
+    /** lock guards against multiple threads trying to query the meta region at the same time */
+    private final ReentrantLock userRegionLock = new ReentrantLock();
+
 
      HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
        this(conf, managed, null, null);
@@ -1284,9 +1289,8 @@ class ConnectionManager {
 
       for (int tries = 0; true; tries++) {
         if (tries >= localNumRetries) {
-          throw new NoServerForRegionException("Unable to find region for "
-              + Bytes.toStringBinary(row) + " in " + tableName +
-              " after " + localNumRetries + " tries.");
+          throw new NoServerForRegionException("Unable to find region for " +
+            Bytes.toStringBinary(row) + " in " + tableName + " after " + tries + " tries.");
         }
         if (useCache) {
           RegionLocations locations = getCachedLocation(tableName, row);
@@ -1302,7 +1306,14 @@ class ConnectionManager {
 
         // Query the meta region
         long pauseBase = this.pause;
+        userRegionLock.lock();
         try {
+          if (useCache) {// re-check cache after get lock
+            RegionLocations locations = getCachedLocation(tableName, row);
+            if (locations != null && locations.getRegionLocation(replicaId) != null) {
+              return locations;
+            }
+          }
           Result regionInfoRow = null;
           s.resetMvccReadPoint();
           s.setOneRowLimit();
@@ -1336,23 +1347,20 @@ class ConnectionManager {
                   regionInfo.getTable() + ".");
           }
           if (regionInfo.isSplit()) {
-            throw new RegionOfflineException("the only available region for" +
-              " the required row is a split parent," +
-              " the daughters should be online soon: " +
-              regionInfo.getRegionNameAsString());
+            throw new RegionOfflineException(
+                "the only available region for the required row is a split parent," +
+                " the daughters should be online soon: " + regionInfo.getRegionNameAsString());
           }
           if (regionInfo.isOffline()) {
             throw new RegionOfflineException("the region is offline, could" +
-              " be caused by a disable table call: " +
-              regionInfo.getRegionNameAsString());
+              " be caused by a disable table call: " + regionInfo.getRegionNameAsString());
           }
 
           ServerName serverName = locations.getRegionLocation(replicaId).getServerName();
           if (serverName == null) {
-            throw new NoServerForRegionException("No server address listed " +
-              "in " + TableName.META_TABLE_NAME + " for region " +
-              regionInfo.getRegionNameAsString() + " containing row " +
-              Bytes.toStringBinary(row));
+            throw new NoServerForRegionException("No server address listed in " +
+              TableName.META_TABLE_NAME + " for region " + regionInfo.getRegionNameAsString() +
+              " containing row " + Bytes.toStringBinary(row));
           }
 
           if (isDeadServer(serverName)){
@@ -1380,11 +1388,10 @@ class ConnectionManager {
           }
           if (tries < localNumRetries - 1) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("locateRegionInMeta parentTable=" +
-                  TableName.META_TABLE_NAME + ", metaLocation=" +
-                ", attempt=" + tries + " of " +
-                localNumRetries + " failed; retrying after sleep of " +
-                ConnectionUtils.getPauseTime(pauseBase, tries) + " because: " + e.getMessage());
+              LOG.debug("locateRegionInMeta parentTable=" + TableName.META_TABLE_NAME +
+                  ", metaLocation=" + ", attempt=" + tries + " of " + localNumRetries +
+                  " failed; retrying after sleep of " +
+                  ConnectionUtils.getPauseTime(pauseBase, tries) + " because: " + e.getMessage());
             }
           } else {
             throw e;
@@ -1394,6 +1401,8 @@ class ConnectionManager {
               e instanceof NoServerForRegionException)) {
             relocateRegion(TableName.META_TABLE_NAME, metaKey, replicaId);
           }
+        } finally {
+          userRegionLock.unlock();
         }
         try{
           Thread.sleep(ConnectionUtils.getPauseTime(pauseBase, tries));
