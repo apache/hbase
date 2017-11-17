@@ -660,6 +660,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (regionServer.metricsRegionServer != null) {
       regionServer.metricsRegionServer.updateAppend(
+          region.getTableDescriptor().getTableName(),
         EnvironmentEdgeManager.currentTime() - before);
     }
     return r;
@@ -711,7 +712,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (regionServer.metricsRegionServer != null) {
       regionServer.metricsRegionServer.updateIncrement(
-        EnvironmentEdgeManager.currentTime() - before);
+          region.getTableDescriptor().getTableName(),
+          EnvironmentEdgeManager.currentTime() - before);
     }
     return r;
   }
@@ -795,7 +797,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } finally {
             if (regionServer.metricsRegionServer != null) {
               regionServer.metricsRegionServer.updateGet(
-                EnvironmentEdgeManager.currentTime() - before);
+                  region.getTableDescriptor().getTableName(),
+                  EnvironmentEdgeManager.currentTime() - before);
             }
           }
         } else if (action.hasServiceCall()) {
@@ -1005,10 +1008,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (regionServer.metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
       if (batchContainsPuts) {
-        regionServer.metricsRegionServer.updatePutBatch(after - before);
+        regionServer.metricsRegionServer.updatePutBatch(
+            region.getTableDescriptor().getTableName(), after - before);
       }
       if (batchContainsDelete) {
-        regionServer.metricsRegionServer.updateDeleteBatch(after - before);
+        regionServer.metricsRegionServer.updateDeleteBatch(
+            region.getTableDescriptor().getTableName(), after - before);
       }
     }
   }
@@ -1079,11 +1084,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } finally {
       if (regionServer.metricsRegionServer != null) {
         long after = EnvironmentEdgeManager.currentTime();
-          if (batchContainsPuts) {
-          regionServer.metricsRegionServer.updatePutBatch(after - before);
+        if (batchContainsPuts) {
+          regionServer.metricsRegionServer.updatePutBatch(
+              region.getTableDescriptor().getTableName(), after - before);
         }
         if (batchContainsDelete) {
-          regionServer.metricsRegionServer.updateDeleteBatch(after - before);
+          regionServer.metricsRegionServer.updateDeleteBatch(
+              region.getTableDescriptor().getTableName(), after - before);
         }
       }
     }
@@ -2341,11 +2348,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final GetRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
     OperationQuota quota = null;
+    HRegion region = null;
     try {
       checkOpen();
       requestCount.increment();
       rpcGetRequestCount.increment();
-      HRegion region = getRegion(request.getRegion());
+      region = getRegion(request.getRegion());
 
       GetResponse.Builder builder = GetResponse.newBuilder();
       ClientProtos.Get get = request.getGet();
@@ -2398,7 +2406,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new ServiceException(ie);
     } finally {
       if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTime() - before);
+        regionServer.metricsRegionServer.updateGet(
+            region.getTableDescriptor().getTableName(), EnvironmentEdgeManager.currentTime() - before);
       }
       if (quota != null) {
         quota.close();
@@ -2637,6 +2646,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
     ActivePolicyEnforcement spaceQuotaEnforcement = null;
     MutationType type = null;
+    HRegion region = null;
     long before = EnvironmentEdgeManager.currentTime();
     // Clear scanner so we are not holding on to reference across call.
     if (controller != null) {
@@ -2646,7 +2656,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       rpcMutateRequestCount.increment();
-      HRegion region = getRegion(request.getRegion());
+      region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
       if (!region.getRegionInfo().isMetaRegion()) {
@@ -2759,14 +2769,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (request.hasCondition()) {
             regionServer.metricsRegionServer.updateCheckAndDelete(after - before);
           } else {
-            regionServer.metricsRegionServer.updateDelete(after - before);
+            regionServer.metricsRegionServer.updateDelete(
+                region == null ? null : region.getRegionInfo().getTable(), after - before);
           }
           break;
         case PUT:
           if (request.hasCondition()) {
             regionServer.metricsRegionServer.updateCheckAndPut(after - before);
           } else {
-            regionServer.metricsRegionServer.updatePut(after - before);
+            regionServer.metricsRegionServer.updatePut(
+                region == null ? null : region.getRegionInfo().getTable(),after - before);
           }
           break;
         default:
@@ -3094,8 +3106,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       long responseCellSize = context != null ? context.getResponseCellSize() : 0;
       region.getMetrics().updateScanTime(end - before);
       if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateScanSize(responseCellSize);
-        regionServer.metricsRegionServer.updateScanTime(end - before);
+        regionServer.metricsRegionServer.updateScanSize(
+            region.getTableDescriptor().getTableName(), responseCellSize);
+        regionServer.metricsRegionServer.updateScanTime(
+            region.getTableDescriptor().getTableName(), end - before);
       }
     } finally {
       region.closeRegionOperation();
