@@ -21,11 +21,9 @@ import java.util.Optional;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * This is the only implementation of {@link ObserverContext}, which serves as the interface for
@@ -39,21 +37,15 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
    * Is this operation bypassable?
    */
   private final boolean bypassable;
-  /**
-   * Is this operation completable?
-   */
-  private boolean complete;
-  private final boolean completable;
   private final User caller;
 
   public ObserverContextImpl(User caller) {
-    this(caller, false, false);
+    this(caller, false);
   }
 
-  public ObserverContextImpl(User caller, boolean bypassable, boolean completable) {
+  public ObserverContextImpl(User caller, boolean bypassable) {
     this.caller = caller;
     this.bypassable = bypassable;
-    this.completable = completable;
   }
 
   public E getEnvironment() {
@@ -75,17 +67,6 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
     bypass = true;
   }
 
-  public boolean isCompleable() {
-    return this.completable;
-  };
-
-  public void complete() {
-    if (!this.completable) {
-      throw new UnsupportedOperationException("This method does not support 'complete'.");
-    }
-    complete = true;
-  }
-
   /**
    * @return {@code true}, if {@link ObserverContext#bypass()} was called by one of the loaded
    * coprocessors, {@code false} otherwise.
@@ -96,21 +77,6 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
     }
     if (bypass) {
       bypass = false;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * @return {@code true}, if {@link ObserverContext#complete()} was called by one of the loaded
-   * coprocessors, {@code false} otherwise.
-   */
-  public boolean shouldComplete() {
-    if (!isCompleable()) {
-      return false;
-    }
-    if (complete) {
-      complete = false;
       return true;
     }
     return false;

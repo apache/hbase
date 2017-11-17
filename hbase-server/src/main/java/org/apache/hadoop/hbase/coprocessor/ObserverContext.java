@@ -62,20 +62,8 @@ public interface ObserverContext<E extends CoprocessorEnvironment> {
    * that the replacement for the bypassed code takes care of all necessary
    * skipped concerns. Because those concerns can change at any point, such an
    * assumption is never safe.</p>
-   * @see #complete()
    */
   void bypass();
-
-  /**
-   * Call to skip out on calling remaining coprocessors in current execution chain (there may be
-   * more than one coprocessor chained to a method call). Implies that this coprocessor's response
-   * is definitive.
-   * <p>Since hbase-2.0.0, only <code>complete</code> of 'bypassable' methods has an effect. See
-   * javadoc on the Coprocessor Observer method as to whether bypass (and thereby 'complete') is
-   * supported. This behavior of honoring only a subset of methods is new since hbase-2.0.0.
-   * @see #bypass()
-   */
-  void complete();
 
   /**
    * Returns the active user for the coprocessor call. If an explicit {@code User} instance was
