@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.test;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
-import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -226,6 +225,14 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
     String cName = canonicalizeMetricName(name);
     assertNotNull("Should get gauge " + cName + " but did not", gauges.get(cName));
     return gauges.get(cName).longValue();
+  }
+
+  @Override
+  public String toDebugString(BaseSource source) {
+    getMetrics(source);
+    StringBuilder sb = new StringBuilder();
+    sb.append("Tags=").append(tags).append(", Counters=").append(counters);
+    return sb.append(", Gauges=").append(gauges).toString();
   }
 
   private void reset() {
