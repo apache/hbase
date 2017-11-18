@@ -132,6 +132,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private final FsDelegationToken fsDelegationToken;
   private final UserProvider userProvider;
   private final int nrThreads;
+  private AtomicInteger numRetries;
   private final RpcControllerFactory rpcControllerFactory;
 
   private String bulkToken;
@@ -178,6 +179,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
     nrThreads = conf.getInt("hbase.loadincremental.threads.max",
       Runtime.getRuntime().availableProcessors());
+    numRetries = new AtomicInteger(0);
     rpcControllerFactory = new RpcControllerFactory(conf);
   }
 
@@ -784,8 +786,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
       final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
       throws IOException {
+    List<LoadQueueItem> toRetry = new ArrayList<>();
     try {
-      List<LoadQueueItem> toRetry = new ArrayList<>();
       Configuration conf = getConf();
       byte[] region = RpcRetryingCallerFactory.instantiate(conf, null).<byte[]> newCaller()
           .callWithRetries(serviceCallable, Integer.MAX_VALUE);
@@ -799,8 +801,22 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return toRetry;
     } catch (IOException e) {
       LOG.error("Encountered unrecoverable error from region server, additional details: " +
-          serviceCallable.getExceptionMessageAdditionalDetail(),
-        e);
+                      serviceCallable.getExceptionMessageAdditionalDetail(),
+              e);
+      LOG.warn(
+              "Received a " + e.getClass().getSimpleName()
+                      + " from region server: "
+                      + serviceCallable.getExceptionMessageAdditionalDetail(), e);
+      if (getConf().getBoolean(RETRY_ON_IO_EXCEPTION, false)
+              && numRetries.get() < getConf().getInt(
+              HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+              HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+        LOG.warn("Will attempt to retry loading failed HFiles. Retry #"
+                + numRetries.incrementAndGet());
+        toRetry.addAll(lqis);
+        return toRetry;
+      }
+      LOG.error(RETRY_ON_IO_EXCEPTION + " is disabled. Unable to recover");
       throw e;
     }
   }
