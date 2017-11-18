@@ -65,6 +65,7 @@ module Hbase
         data = args.fetch(DATA, nil)
         table_cfs = args.fetch(TABLE_CFS, nil)
         namespaces = args.fetch(NAMESPACES, nil)
+        peer_state = args.fetch(STATE, nil)
 
         # Create and populate a ReplicationPeerConfig
         replication_peer_config = ReplicationPeerConfig.new
@@ -102,7 +103,12 @@ module Hbase
           end
           replication_peer_config.set_table_cfs_map(map)
         end
-        @admin.addReplicationPeer(id, replication_peer_config)
+
+        enabled = true
+        unless peer_state.nil?
+          enabled = false if peer_state == 'DISABLED'
+        end
+        @admin.addReplicationPeer(id, replication_peer_config, enabled)
       else
         raise(ArgumentError, 'args must be a Hash')
       end

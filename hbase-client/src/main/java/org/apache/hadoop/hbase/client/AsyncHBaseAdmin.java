@@ -375,9 +375,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void>
-      addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig) {
-    return wrap(rawAdmin.addReplicationPeer(peerId, peerConfig));
+  public CompletableFuture<Void> addReplicationPeer(String peerId,
+      ReplicationPeerConfig peerConfig, boolean enabled) {
+    return wrap(rawAdmin.addReplicationPeer(peerId, peerConfig, enabled));
   }
 
   @Override

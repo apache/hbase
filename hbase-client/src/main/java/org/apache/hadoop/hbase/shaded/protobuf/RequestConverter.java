@@ -1618,10 +1618,15 @@ public final class RequestConverter {
   }
 
   public static ReplicationProtos.AddReplicationPeerRequest buildAddReplicationPeerRequest(
-      String peerId, ReplicationPeerConfig peerConfig) {
+      String peerId, ReplicationPeerConfig peerConfig, boolean enabled) {
     AddReplicationPeerRequest.Builder builder = AddReplicationPeerRequest.newBuilder();
     builder.setPeerId(peerId);
     builder.setPeerConfig(ReplicationPeerConfigUtil.convert(peerConfig));
+    ReplicationProtos.ReplicationState.Builder stateBuilder =
+        ReplicationProtos.ReplicationState.newBuilder();
+    stateBuilder.setState(enabled ? ReplicationProtos.ReplicationState.State.ENABLED
+        : ReplicationProtos.ReplicationState.State.DISABLED);
+    builder.setPeerState(stateBuilder.build());
     return builder.build();
   }
 

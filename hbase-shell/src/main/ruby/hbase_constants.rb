@@ -79,6 +79,7 @@ module HBaseConstants
   CLUSTER_KEY = 'CLUSTER_KEY'.freeze
   TABLE_CFS = 'TABLE_CFS'.freeze
   NAMESPACES = 'NAMESPACES'.freeze
+  STATE = 'STATE'.freeze
   CONFIG = 'CONFIG'.freeze
   DATA = 'DATA'.freeze
   SERVER_NAME = 'SERVER_NAME'.freeze

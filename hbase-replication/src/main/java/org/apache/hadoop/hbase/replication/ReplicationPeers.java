@@ -51,7 +51,18 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
    */
-  void registerPeer(String peerId, ReplicationPeerConfig peerConfig)
+  default void registerPeer(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException {
+    registerPeer(peerId, peerConfig, true);
+  }
+
+  /**
+   * Add a new remote slave cluster for replication.
+   * @param peerId a short that identifies the cluster
+   * @param peerConfig configuration for the replication slave cluster
+   * @param enabled peer state, true if ENABLED and false if DISABLED
+   */
+  void registerPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException;
 
   /**

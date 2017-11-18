@@ -499,8 +499,19 @@ public interface AsyncAdmin {
    * @param peerId a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
    */
+  default CompletableFuture<Void> addReplicationPeer(String peerId,
+      ReplicationPeerConfig peerConfig) {
+    return addReplicationPeer(peerId, peerConfig, true);
+  }
+
+  /**
+   * Add a new replication peer for replicating data to slave cluster
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication slave cluster
+   * @param enabled peer state, true if ENABLED and false if DISABLED
+   */
   CompletableFuture<Void> addReplicationPeer(String peerId,
-      ReplicationPeerConfig peerConfig);
+      ReplicationPeerConfig peerConfig, boolean enabled);
 
   /**
    * Remove a peer and stop the replication

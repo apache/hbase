@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -2466,111 +2465,97 @@ public interface Admin extends Abortable, Closeable {
    * Add a new replication peer for replicating data to slave cluster.
    * @param peerId a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   default void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
       throws IOException {
+    addReplicationPeer(peerId, peerConfig, true);
   }
+
+  /**
+   * Add a new replication peer for replicating data to slave cluster.
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication slave cluster
+   * @param enabled peer state, true if ENABLED and false if DISABLED
+   * @throws IOException if a remote or network exception occurs
+   */
+  void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
+      throws IOException;
 
   /**
    * Remove a peer and stop the replication.
    * @param peerId a short name that identifies the peer
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default void removeReplicationPeer(String peerId) throws IOException {
-  }
+  void removeReplicationPeer(String peerId) throws IOException;
 
   /**
    * Restart the replication stream to the specified peer.
    * @param peerId a short name that identifies the peer
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default void enableReplicationPeer(String peerId) throws IOException {
-  }
+  void enableReplicationPeer(String peerId) throws IOException;
 
   /**
    * Stop the replication stream to the specified peer.
    * @param peerId a short name that identifies the peer
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default void disableReplicationPeer(String peerId) throws IOException {
-  }
+  void disableReplicationPeer(String peerId) throws IOException;
 
   /**
    * Returns the configured ReplicationPeerConfig for the specified peer.
    * @param peerId a short name that identifies the peer
    * @return ReplicationPeerConfig for the peer
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws IOException {
-    return new ReplicationPeerConfig();
-  }
+  ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws IOException;
 
   /**
    * Update the peerConfig for the specified peer.
    * @param peerId a short name that identifies the peer
    * @param peerConfig new config for the peer
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default void updateReplicationPeerConfig(String peerId,
-      ReplicationPeerConfig peerConfig) throws IOException {
-  }
+  void updateReplicationPeerConfig(String peerId,
+      ReplicationPeerConfig peerConfig) throws IOException;
 
   /**
    * Append the replicable table column family config from the specified peer.
    * @param id a short that identifies the cluster
    * @param tableCfs A map from tableName to column family names
-   * @throws ReplicationException
-   * @throws IOException
+   * @throws ReplicationException if tableCfs has conflict with existing config
+   * @throws IOException if a remote or network exception occurs
    */
-  default void appendReplicationPeerTableCFs(String id,
-      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException,
-      IOException {
-  }
+  void appendReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs)
+      throws ReplicationException, IOException;
 
   /**
    * Remove some table-cfs from config of the specified peer.
    * @param id a short name that identifies the cluster
    * @param tableCfs A map from tableName to column family names
-   * @throws ReplicationException
-   * @throws IOException
+   * @throws ReplicationException if tableCfs has conflict with existing config
+   * @throws IOException if a remote or network exception occurs
    */
-  default void removeReplicationPeerTableCFs(String id,
-      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException,
-      IOException {
-  }
+  void removeReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs)
+      throws ReplicationException, IOException;
 
   /**
    * Return a list of replication peers.
    * @return a list of replication peers description
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default List<ReplicationPeerDescription> listReplicationPeers() throws IOException {
-    return new ArrayList<>();
-  }
-
-  /**
-   * Return a list of replication peers.
-   * @param regex The regular expression to match peer id
-   * @return a list of replication peers description
-   * @throws IOException
-   * @deprecated since 2.0 version and will be removed in 3.0 version. Use
-   *             {@link #listReplicationPeers(Pattern)} instead.
-   */
-  @Deprecated
-  default List<ReplicationPeerDescription> listReplicationPeers(String regex) throws IOException {
-    return new ArrayList<>();
-  }
+  List<ReplicationPeerDescription> listReplicationPeers() throws IOException;
 
   /**
    * Return a list of replication peers.
    * @param pattern The compiled regular expression to match peer id
    * @return a list of replication peers description
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
-  default List<ReplicationPeerDescription> listReplicationPeers(Pattern pattern) throws IOException {
-    return new ArrayList<>();
-  }
+  List<ReplicationPeerDescription> listReplicationPeers(Pattern pattern) throws IOException;
 
   /**
    * Mark region server(s) as decommissioned to prevent additional regions from getting
