@@ -1501,14 +1501,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> addReplicationPeer(String peerId,
-      ReplicationPeerConfig peerConfig) {
+      ReplicationPeerConfig peerConfig, boolean enabled) {
     return this
         .<Void> newMasterCaller()
         .action(
           (controller, stub) -> this
               .<AddReplicationPeerRequest, AddReplicationPeerResponse, Void> call(controller, stub,
-                RequestConverter.buildAddReplicationPeerRequest(peerId, peerConfig), (s, c, req,
-                    done) -> s.addReplicationPeer(c, req, done), (resp) -> null)).call();
+                RequestConverter.buildAddReplicationPeerRequest(peerId, peerConfig, enabled), (s,
+                    c, req, done) -> s.addReplicationPeer(c, req, done), (resp) -> null)).call();
   }
 
   @Override

@@ -103,7 +103,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -3850,13 +3849,13 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
       protected Void rpcCall() throws Exception {
         master.addReplicationPeer(getRpcController(),
-          RequestConverter.buildAddReplicationPeerRequest(peerId, peerConfig));
+          RequestConverter.buildAddReplicationPeerRequest(peerId, peerConfig, enabled));
         return null;
       }
     });
@@ -3951,11 +3950,6 @@ public class HBaseAdmin implements Admin {
   @Override
   public List<ReplicationPeerDescription> listReplicationPeers() throws IOException {
     return listReplicationPeers((Pattern)null);
-  }
-
-  @Override
-  public List<ReplicationPeerDescription> listReplicationPeers(String regex) throws IOException {
-    return listReplicationPeers(Pattern.compile(regex));
   }
 
   @Override

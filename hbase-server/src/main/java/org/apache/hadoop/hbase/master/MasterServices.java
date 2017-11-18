@@ -428,8 +428,9 @@ public interface MasterServices extends Server {
    * Add a new replication peer for replicating data to slave cluster
    * @param peerId a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
+   * @param enabled peer state, true if ENABLED and false if DISABLED
    */
-  void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+  void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException, IOException;
 
   /**

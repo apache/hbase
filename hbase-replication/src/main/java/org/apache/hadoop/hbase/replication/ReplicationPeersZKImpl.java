@@ -105,7 +105,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public void registerPeer(String id, ReplicationPeerConfig peerConfig)
+  public void registerPeer(String id, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException {
     try {
       if (peerExists(id)) {
@@ -130,19 +130,18 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
       List<ZKUtilOp> listOfOps = new ArrayList<>(2);
-      ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(getPeerNode(id),
-        ReplicationPeerConfigUtil.toByteArray(peerConfig));
-      // b/w PeerWatcher and ReplicationZookeeper#add method to create the
-      // peer-state znode. This happens while adding a peer
-      // The peer state data is set as "ENABLED" by default.
-      ZKUtilOp op2 = ZKUtilOp.createAndFailSilent(getPeerStateNode(id), ENABLED_ZNODE_BYTES);
+      ZKUtilOp op1 =
+          ZKUtilOp.createAndFailSilent(getPeerNode(id),
+            ReplicationPeerConfigUtil.toByteArray(peerConfig));
+      ZKUtilOp op2 =
+          ZKUtilOp.createAndFailSilent(getPeerStateNode(id), enabled ? ENABLED_ZNODE_BYTES
+              : DISABLED_ZNODE_BYTES);
       listOfOps.add(op1);
       listOfOps.add(op2);
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
-      // A peer is enabled by default
     } catch (KeeperException e) {
-      throw new ReplicationException("Could not add peer with id=" + id
-          + ", peerConfif=>" + peerConfig, e);
+      throw new ReplicationException("Could not add peer with id=" + id + ", peerConfif=>"
+          + peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED"), e);
     }
   }
 

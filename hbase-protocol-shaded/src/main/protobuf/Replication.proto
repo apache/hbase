@@ -77,6 +77,7 @@ message ReplicationHLogPosition {
 message AddReplicationPeerRequest {
   required string peer_id = 1;
   required ReplicationPeer peer_config = 2;
+  required ReplicationState peer_state = 3;
 }
 
 message AddReplicationPeerResponse {

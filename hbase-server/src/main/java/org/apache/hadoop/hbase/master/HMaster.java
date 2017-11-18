@@ -3322,14 +3322,14 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException, IOException {
     if (cpHost != null) {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
     }
     LOG.info(getClientIdAuditPrefix() + " creating replication peer, id=" + peerId + ", config="
-        + peerConfig);
-    this.replicationManager.addReplicationPeer(peerId, peerConfig);
+        + peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED"));
+    this.replicationManager.addReplicationPeer(peerId, peerConfig, enabled);
     if (cpHost != null) {
       cpHost.postAddReplicationPeer(peerId, peerConfig);
     }

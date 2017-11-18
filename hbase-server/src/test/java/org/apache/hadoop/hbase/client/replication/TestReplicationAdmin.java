@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -139,6 +140,21 @@ public class TestReplicationAdmin {
     assertEquals(1, admin.getPeersCount());
     admin.removePeer(ID_SECOND);
     assertEquals(0, admin.getPeersCount());
+  }
+
+  @Test
+  public void testAddPeerWithState() throws Exception {
+    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    rpc1.setClusterKey(KEY_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc1, true);
+    assertTrue(hbaseAdmin.listReplicationPeers(Pattern.compile(ID_ONE)).get(0).isEnabled());
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
+
+    ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
+    rpc2.setClusterKey(KEY_SECOND);
+    hbaseAdmin.addReplicationPeer(ID_SECOND, rpc2, false);
+    assertFalse(hbaseAdmin.listReplicationPeers(Pattern.compile(ID_SECOND)).get(0).isEnabled());
+    hbaseAdmin.removeReplicationPeer(ID_SECOND);
   }
 
   /**

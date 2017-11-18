@@ -93,7 +93,7 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
-    define_test "add_peer: single zk cluster key - peer config" do
+    define_test "add_peer: single zk cluster key with enabled/disabled state" do
       cluster_key = "server1.cie.com:2181:/hbase"
 
       args = { CLUSTER_KEY => cluster_key }
@@ -101,9 +101,26 @@ module Hbase
 
       assert_equal(1, command(:list_peers).length)
       assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
-      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
+      assert_equal(true, command(:list_peers).get(0).isEnabled)
 
-      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+
+      enable_args = { CLUSTER_KEY => cluster_key, STATE => 'ENABLED' }
+      command(:add_peer, @peer_id, enable_args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(true, command(:list_peers).get(0).isEnabled)
+
+      command(:remove_peer, @peer_id)
+
+      disable_args = { CLUSTER_KEY => cluster_key, STATE => 'DISABLED' }
+      command(:add_peer, @peer_id, disable_args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(false, command(:list_peers).get(0).isEnabled)
+
       command(:remove_peer, @peer_id)
     end
 
