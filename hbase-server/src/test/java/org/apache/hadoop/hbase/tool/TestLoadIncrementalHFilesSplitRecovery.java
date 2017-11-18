@@ -331,7 +331,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test
   public void testRetryOnIOException() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
-    final AtomicInteger calls = new AtomicInteger(1);
+    final AtomicInteger calls = new AtomicInteger(0);
     final Connection conn = ConnectionFactory.createConnection(util.getConfiguration());
     util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     util.getConfiguration().setBoolean(LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, true);
@@ -340,9 +340,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       protected List<LoadQueueItem> tryAtomicRegionLoad(
           ClientServiceCallable<byte[]> serverCallable, TableName tableName, final byte[] first,
           Collection<LoadQueueItem> lqis) throws IOException {
-        if (calls.getAndIncrement() < util.getConfiguration().getInt(
-          HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) -
-            1) {
+        if (calls.get() < util.getConfiguration().getInt(
+          HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
           ClientServiceCallable<byte[]> newServerCallable = new ClientServiceCallable<byte[]>(conn,
               tableName, first, new RpcControllerFactory(util.getConfiguration()).newController(),
               HConstants.PRIORITY_UNSET) {
@@ -351,6 +350,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
               throw new IOException("Error calling something on RegionServer");
             }
           };
+          calls.getAndIncrement();
           return super.tryAtomicRegionLoad(newServerCallable, tableName, first, lqis);
         } else {
           return super.tryAtomicRegionLoad(serverCallable, tableName, first, lqis);
@@ -360,8 +360,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     setupTable(conn, table, 10);
     Path dir = buildBulkFiles(table, 1);
     lih.doBulkLoad(dir, conn.getAdmin(), conn.getTable(table), conn.getRegionLocator(table));
+    assertEquals(calls.get(), 2);
     util.getConfiguration().setBoolean(LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, false);
-
   }
 
   private ClusterConnection getMockedConnection(final Configuration conf)
