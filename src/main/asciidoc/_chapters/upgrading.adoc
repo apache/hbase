@@ -324,6 +324,26 @@ Quitting...
 
 == Upgrade Paths
 
+[[upgrade1.4]]
+=== Upgrading to 1.4+
+
+==== Replication peer's TableCFs config
+
+Before 1.4, the table name can't include namespace for replication peer's TableCFs config. It was fixed by add TableCFs to ReplicationPeerConfig which was stored on Zookeeper. So when upgrade to 1.4, you have to update the original ReplicationPeerConfig data on Zookeeper firstly. There are four steps to upgrade when your cluster have a replication peer with TableCFs config.
+
+* Disable the replication peer.
+* If master has permission to write replication peer znode, then rolling update master directly. If not, use TableCFsUpdater tool to update the replication peer's config.
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.replication.master.TableCFsUpdater update
+----
+* Rolling update regionservers.
+* Enable the replication peer.
+
+Notes:
+
+* Can't use the old client(before 1.4) to change the replication peer's config. Because the client will write config to Zookeeper directly, the old client will miss TableCFs config. And the old client write TableCFs config to the old tablecfs znode, it will not work for new version regionserver.
+
 [[upgrade1.0]]
 === Upgrading from 0.98.x to 1.x
 
