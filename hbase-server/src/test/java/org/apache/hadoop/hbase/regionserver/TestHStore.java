@@ -1465,6 +1465,8 @@ public class TestHStore {
     int flushSize = 500;
     Configuration conf = HBaseConfiguration.create();
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStoreWithCustomCompactor.class.getName());
+    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.25);
+    MyCompactingMemStoreWithCustomCompactor.RUNNER_COUNT.set(0);
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushSize));
     // Set the lower threshold to invoke the "MERGE" policy
     conf.set(MemStoreCompactionStrategy.COMPACTING_MEMSTORE_THRESHOLD_KEY, String.valueOf(0));
@@ -1711,6 +1713,9 @@ public class TestHStore {
       boolean rval = super.shouldFlushInMemory();
       if (rval) {
         RUNNER_COUNT.incrementAndGet();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("runner count: " + RUNNER_COUNT.get());
+        }
       }
       return rval;
     }

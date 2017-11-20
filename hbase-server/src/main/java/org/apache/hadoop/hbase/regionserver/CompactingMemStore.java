@@ -429,6 +429,9 @@ public class CompactingMemStore extends AbstractMemStore {
       }
     } finally {
       inMemoryFlushInProgress.set(false);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("IN-MEMORY FLUSH: end");
+      }
     }
   }
 
