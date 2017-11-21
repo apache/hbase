@@ -1511,6 +1511,12 @@ NOTE: End-of-life releases are not included in this list.
 | 1.3
 | Mikhail Antonov
 
+| 1.4
+| Andrew Purtell
+
+| 2.0
+| Michael Stack
+
 |===
 
 [[code.standards]]
