@@ -185,12 +185,14 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
   @Test
   public void testGenerateAndLoad() throws Exception {
+    generateAndLoad(TableName.valueOf(name.getMethodName()));
+  }
+
+  void generateAndLoad(final TableName table) throws Exception {
     LOG.info("Running test testGenerateAndLoad.");
-    final TableName table = TableName.valueOf(name.getMethodName());
     String cf = "d";
     Path hfiles = new Path(
         util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
-
 
     Map<String, String> args = new HashMap<>();
     args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
@@ -226,7 +228,11 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
     // adding more test methods? Don't forget to add them here... or consider doing what
     // IntegrationTestsDriver does.
     provisionCluster();
-    testGenerateAndLoad();
+    TableName tableName = TableName.valueOf("IntegrationTestImportTsv");
+    if (util.getAdmin().tableExists(tableName)) {
+      util.deleteTable(tableName);
+    }
+    generateAndLoad(tableName);
     releaseCluster();
 
     return 0;
