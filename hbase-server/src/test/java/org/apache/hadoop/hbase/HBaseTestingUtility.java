@@ -2552,6 +2552,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException When starting the cluster fails.
    */
   public MiniMRCluster startMiniMapReduceCluster() throws IOException {
+    // Set a very high max-disk-utilization percentage to avoid the NodeManagers from failing.
+    conf.setIfUnset(
+        "yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage",
+        "99.0");
     startMiniMapReduceCluster(2);
     return mrCluster;
   }
