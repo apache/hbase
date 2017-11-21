@@ -147,25 +147,25 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   }
 
   public boolean waitInitialized(Procedure proc) {
-    return procSched.waitEvent(master.getInitializedEvent(), proc);
+    return master.getInitializedEvent().suspendIfNotReady(proc);
   }
 
   public boolean waitServerCrashProcessingEnabled(Procedure proc) {
     if (master instanceof HMaster) {
-      return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
+      return ((HMaster)master).getServerCrashProcessingEnabledEvent().suspendIfNotReady(proc);
     }
     return false;
   }
 
   public boolean waitFailoverCleanup(Procedure proc) {
-    return procSched.waitEvent(master.getAssignmentManager().getFailoverCleanupEvent(), proc);
+    return master.getAssignmentManager().getFailoverCleanupEvent().suspendIfNotReady(proc);
   }
 
   public void setEventReady(ProcedureEvent event, boolean isReady) {
     if (isReady) {
-      procSched.wakeEvent(event);
+      event.wake(procSched);
     } else {
-      procSched.suspendEvent(event);
+      event.suspend();
     }
   }
 

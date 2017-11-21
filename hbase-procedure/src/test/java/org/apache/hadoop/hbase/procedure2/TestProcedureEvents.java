@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int32Value;
@@ -107,6 +106,25 @@ public class TestProcedureEvents {
     ProcedureTestingUtility.assertIsAbortException(procExecutor.getResult(proc.getProcId()));
   }
 
+  /**
+   * This Event+Procedure exhibits following behavior:
+   * <ul>
+   *   <li>On procedure execute()
+   *     <ul>
+   *       <li>If had enough timeouts, abort the procedure. Else....</li>
+   *       <li>Suspend the event and add self to its suspend queue</li>
+   *       <li>Go into waiting state</li>
+   *     </ul>
+   *   </li>
+   *   <li>
+   *     On waiting timeout
+   *     <ul>
+   *       <li>Wake the event (which adds this procedure back into scheduler queue), and set own's
+   *       state to RUNNABLE (so can be executed again).</li>
+   *     </ul>
+   *   </li>
+   * </ul>
+   */
   public static class TestTimeoutEventProcedure extends NoopProcedure<TestProcEnv> {
     private final ProcedureEvent event = new ProcedureEvent("timeout-event");
 
@@ -132,8 +150,8 @@ public class TestProcedureEvents {
         return null;
       }
 
-      env.getProcedureScheduler().suspendEvent(event);
-      if (env.getProcedureScheduler().waitEvent(event, this)) {
+      event.suspend();
+      if (event.suspendIfNotReady(this)) {
         setState(ProcedureState.WAITING_TIMEOUT);
         throw new ProcedureSuspendedException();
       }
@@ -146,15 +164,15 @@ public class TestProcedureEvents {
       int n = ntimeouts.incrementAndGet();
       LOG.info("HANDLE TIMEOUT " + this + " ntimeouts=" + n);
       setState(ProcedureState.RUNNABLE);
-      env.getProcedureScheduler().wakeEvent(event);
+      event.wake((AbstractProcedureScheduler) env.getProcedureScheduler());
       return false;
     }
 
     @Override
     protected void afterReplay(final TestProcEnv env) {
       if (getState() == ProcedureState.WAITING_TIMEOUT) {
-        env.getProcedureScheduler().suspendEvent(event);
-        env.getProcedureScheduler().waitEvent(event, this);
+        event.suspend();
+        event.suspendIfNotReady(this);
       }
     }
 

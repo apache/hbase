@@ -190,7 +190,7 @@ public abstract class RegionTransitionProcedure
       // NOTE: This call to wakeEvent puts this Procedure back on the scheduler.
       // Thereafter, another Worker can be in here so DO NOT MESS WITH STATE beyond
       // this method. Just get out of this current processing quickly.
-      env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
+      regionNode.getProcedureEvent().wake(env.getProcedureScheduler());
     }
     // else leave the procedure in suspended state; it is waiting on another call to this callback
   }
@@ -214,7 +214,7 @@ public abstract class RegionTransitionProcedure
 
     // Put this procedure into suspended mode to wait on report of state change
     // from remote regionserver. Means Procedure associated ProcedureEvent is marked not 'ready'.
-    env.getProcedureScheduler().suspendEvent(getRegionState(env).getProcedureEvent());
+    getRegionState(env).getProcedureEvent().suspend();
 
     // Tricky because the below call to addOperationToNode can fail. If it fails, we need to
     // backtrack on stuff like the 'suspend' done above -- tricky as the 'wake' requeues us -- and
@@ -253,7 +253,7 @@ public abstract class RegionTransitionProcedure
     // processing to the next stage. At an extreme, the other worker may run in
     // parallel so DO  NOT CHANGE any state hereafter! This should be last thing
     // done in this processing step.
-    env.getProcedureScheduler().wakeEvent(regionNode.getProcedureEvent());
+    regionNode.getProcedureEvent().wake(env.getProcedureScheduler());
   }
 
   protected boolean isServerOnline(final MasterProcedureEnv env, final RegionStateNode regionNode) {
@@ -298,7 +298,7 @@ public abstract class RegionTransitionProcedure
               return null;
             }
             transitionState = RegionTransitionState.REGION_TRANSITION_DISPATCH;
-            if (env.getProcedureScheduler().waitEvent(regionNode.getProcedureEvent(), this)) {
+            if (regionNode.getProcedureEvent().suspendIfNotReady(this)) {
               // Why this suspend? Because we want to ensure Store happens before proceed?
               throw new ProcedureSuspendedException();
             }
@@ -315,7 +315,7 @@ public abstract class RegionTransitionProcedure
               retry = true;
               break;
             }
-            if (env.getProcedureScheduler().waitEvent(regionNode.getProcedureEvent(), this)) {
+            if (regionNode.getProcedureEvent().suspendIfNotReady(this)) {
               throw new ProcedureSuspendedException();
             }
             break;

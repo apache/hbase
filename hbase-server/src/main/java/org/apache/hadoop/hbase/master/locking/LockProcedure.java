@@ -209,7 +209,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
       if (!event.isReady()) {  // Maybe unlock() awakened the event.
         setState(ProcedureProtos.ProcedureState.RUNNABLE);
         if (LOG.isDebugEnabled()) LOG.debug("Calling wake on " + this.event);
-        env.getProcedureScheduler().wakeEvent(event);
+        event.wake(env.getProcedureScheduler());
       }
     }
     return false;  // false: do not mark the procedure as failed.
@@ -224,7 +224,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     synchronized (event) {
       if (!event.isReady()) {
         setState(ProcedureProtos.ProcedureState.RUNNABLE);
-        env.getProcedureScheduler().wakeEvent(event);
+        event.wake(env.getProcedureScheduler());
       }
     }
   }
@@ -244,8 +244,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
       return null;
     }
     synchronized (event) {
-      env.getProcedureScheduler().suspendEvent(event);
-      env.getProcedureScheduler().waitEvent(event, this);
+      event.suspend();
+      event.suspendIfNotReady(this);
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
     }
     throw new ProcedureSuspendedException();

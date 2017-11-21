@@ -168,7 +168,7 @@ public class TestMasterProcedureEvents {
 
     // wake the event
     LOG.debug("wake " + event);
-    procSched.wakeEvent(event);
+    event.wake(procSched);
     assertEquals(true, event.isReady());
 
     // wait until proc completes
