@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership. The ASF
@@ -226,6 +226,14 @@ public abstract class AbstractHBaseTool implements Tool, Configurable {
   public int getOptionAsInt(CommandLine cmd, String opt, int defaultValue) {
     if (cmd.hasOption(opt)) {
       return Integer.parseInt(cmd.getOptionValue(opt));
+    } else {
+      return defaultValue;
+    }
+  }
+
+  public long getOptionAsLong(CommandLine cmd, String opt, int defaultValue) {
+    if (cmd.hasOption(opt)) {
+      return Long.parseLong(cmd.getOptionValue(opt));
     } else {
       return defaultValue;
     }
