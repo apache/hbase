@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Iterator;
 
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -856,6 +858,11 @@ public class TestHeapMemoryManager {
     @Override
     public boolean isStopping() {
       return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return null;
     }
   }
 

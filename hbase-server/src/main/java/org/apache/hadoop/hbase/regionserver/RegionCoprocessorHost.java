@@ -114,9 +114,7 @@ public class RegionCoprocessorHost
     private Region region;
     ConcurrentMap<String, Object> sharedData;
     private final MetricRegistry metricRegistry;
-    private final Connection connection;
-    private final ServerName serverName;
-    private final OnlineRegions onlineRegions;
+    private final RegionServerServices services;
 
     /**
      * Constructor
@@ -128,11 +126,8 @@ public class RegionCoprocessorHost
         final RegionServerServices services, final ConcurrentMap<String, Object> sharedData) {
       super(impl, priority, seq, conf);
       this.region = region;
-      // Mocks may have services as null at test time.
-      this.connection = services != null? services.getConnection(): null;
-      this.serverName = services != null? services.getServerName(): null;
       this.sharedData = sharedData;
-      this.onlineRegions = services;
+      this.services = services;
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
     }
@@ -144,17 +139,23 @@ public class RegionCoprocessorHost
     }
 
     public OnlineRegions getOnlineRegions() {
-      return this.onlineRegions;
+      return this.services;
     }
 
     @Override
     public Connection getConnection() {
-      return this.connection;
+      // Mocks may have services as null at test time.
+      return services != null ? services.getConnection() : null;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return services != null ? this.services.createConnection(conf) : null;
     }
 
     @Override
     public ServerName getServerName() {
-      return this.serverName;
+      return services != null? services.getServerName(): null;
     }
 
     @Override

@@ -127,6 +127,7 @@ public final class ConnectionUtils {
    * localhost if the invocation target is 'this' server; save on network and protobuf
    * invocations.
    */
+  // TODO This has to still do PB marshalling/unmarshalling stuff. Check how/whether we can avoid.
   @VisibleForTesting // Class is visible so can assert we are short-circuiting when expected.
   public static class ShortCircuitingClusterConnection extends ConnectionImplementation {
     private final ServerName serverName;

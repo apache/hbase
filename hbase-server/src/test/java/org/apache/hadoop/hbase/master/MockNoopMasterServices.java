@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -458,6 +459,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
 
   @Override
   public FileSystem getFileSystem() {
+    return null;
+  }
+
+  @Override
+  public Connection createConnection(Configuration conf) throws IOException {
     return null;
   }
 }

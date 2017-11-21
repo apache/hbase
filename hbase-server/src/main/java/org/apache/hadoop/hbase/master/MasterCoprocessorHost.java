@@ -78,16 +78,14 @@ public class MasterCoprocessorHost
    */
   private static class MasterEnvironment extends BaseEnvironment<MasterCoprocessor>
       implements MasterCoprocessorEnvironment {
-    private final Connection connection;
-    private final ServerName serverName;
     private final boolean supportGroupCPs;
     private final MetricRegistry metricRegistry;
+    private final MasterServices services;
 
     public MasterEnvironment(final MasterCoprocessor impl, final int priority, final int seq,
         final Configuration conf, final MasterServices services) {
       super(impl, priority, seq, conf);
-      this.connection = services.getConnection();
-      this.serverName = services.getServerName();
+      this.services = services;
       supportGroupCPs = !useLegacyMethod(impl.getClass(),
           "preBalanceRSGroup", ObserverContext.class, String.class);
       this.metricRegistry =
@@ -96,12 +94,17 @@ public class MasterCoprocessorHost
 
     @Override
     public ServerName getServerName() {
-      return this.serverName;
+      return this.services.getServerName();
     }
 
     @Override
     public Connection getConnection() {
-      return this.connection;
+      return this.services.getConnection();
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return this.services.createConnection(conf);
     }
 
     @Override

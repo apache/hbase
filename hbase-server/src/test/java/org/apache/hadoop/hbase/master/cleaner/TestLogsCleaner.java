@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
@@ -318,6 +319,11 @@ public class TestLogsCleaner {
     @Override
     public boolean isStopping() {
       return false;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return null;
     }
   }
 

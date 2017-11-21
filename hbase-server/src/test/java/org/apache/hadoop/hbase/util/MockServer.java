@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 
@@ -143,5 +144,10 @@ public class MockServer implements Server {
   @Override
   public boolean isStopping() {
     return false;
+  }
+
+  @Override
+  public Connection createConnection(Configuration conf) throws IOException {
+    return null;
   }
 }
