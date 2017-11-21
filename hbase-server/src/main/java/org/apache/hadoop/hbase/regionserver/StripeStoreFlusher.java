@@ -64,9 +64,6 @@ public class StripeStoreFlusher extends StoreFlusher {
 
     long smallestReadPoint = store.getSmallestReadPoint();
     InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
-    if (scanner == null) {
-      return result; // NULL scanner returned from coprocessor hooks means skip normal processing
-    }
 
     // Let policy select flush method.
     StripeFlushRequest req = this.policy.selectFlush(store.getComparator(), this.stripes,

@@ -110,9 +110,6 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     // Use a store scanner to find which rows to flush.
     long smallestReadPoint = store.getSmallestReadPoint();
     InternalScanner scanner = createScanner(snapshot.getScanners(), smallestReadPoint, tracker);
-    if (scanner == null) {
-      return result; // NULL scanner returned from coprocessor hooks means skip normal processing
-    }
     StoreFileWriter writer;
     try {
       // TODO: We can fail in the below block before we complete adding this flush to
