@@ -79,6 +79,12 @@ class ZKAsyncRegistry implements AsyncRegistry {
           Threads.newDaemonThreadFactory(String.format("ZKClusterRegistry-0x%08x", hashCode())))
         .build();
     this.zk.start();
+    // TODO: temporary workaround for HBASE-19312, must be removed before 2.0.0 release!
+    try {
+      this.zk.blockUntilConnected();
+    } catch (InterruptedException e) {
+      return;
+    }
   }
 
   private interface CuratorEventProcessor<T> {
