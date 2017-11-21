@@ -320,10 +320,6 @@ public abstract class Compactor<T extends CellSink> {
       ScanInfo scanInfo = preCompactScannerOpen(request, scanType, user);
       scanner = postCompactScannerOpen(request, scanType,
         scannerFactory.createScanner(scanInfo, scanners, scanType, fd, smallestReadPoint), user);
-      if (scanner == null) {
-        // NULL scanner returned from coprocessor hooks means skip normal processing.
-        return new ArrayList<>();
-      }
       boolean cleanSeqId = false;
       if (fd.minSeqIdToKeep > 0 && !store.getColumnFamilyDescriptor().isNewVersionBehavior()) {
         // For mvcc-sensitive family, we never set mvcc to 0.

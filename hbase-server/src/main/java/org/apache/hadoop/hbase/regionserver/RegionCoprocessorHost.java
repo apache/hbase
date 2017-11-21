@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorServiceBackwardCompatiblity;
@@ -655,9 +656,9 @@ public class RegionCoprocessorHost
    * @param tracker used to track the life cycle of a compaction
    * @param request the compaction request
    * @param user the user
+   * @return Scanner to use (cannot be null!)
    * @throws IOException
    */
-  // A Coprocessor can return null to cancel Compact. Leaving for now but this is form of 'bypass'.
   public InternalScanner preCompact(final HStore store, final InternalScanner scanner,
       final ScanType scanType, final CompactionLifeCycleTracker tracker,
       final CompactionRequest request, final User user) throws IOException {
@@ -670,7 +671,12 @@ public class RegionCoprocessorHost
             defaultResult, user) {
           @Override
           public InternalScanner call(RegionObserver observer) throws IOException {
-            return observer.preCompact(this, store, getResult(), scanType, tracker, request);
+            InternalScanner scanner =
+                observer.preCompact(this, store, getResult(), scanType, tracker, request);
+            if (scanner == null) {
+              throw new CoprocessorException("Null Scanner return disallowed!");
+            }
+            return scanner;
           }
         });
   }
@@ -715,9 +721,9 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked before a memstore flush
+   * @return Scanner to use (cannot be null!)
    * @throws IOException
    */
-  // A Coprocessor can return null to cancel Flush. Leaving for now but this is a form of 'bypass'.
   public InternalScanner preFlush(HStore store, InternalScanner scanner,
       FlushLifeCycleTracker tracker) throws IOException {
     if (coprocEnvironments.isEmpty()) {
@@ -727,7 +733,11 @@ public class RegionCoprocessorHost
         new ObserverOperationWithResult<RegionObserver, InternalScanner>(regionObserverGetter, scanner) {
           @Override
           public InternalScanner call(RegionObserver observer) throws IOException {
-            return observer.preFlush(this, store, getResult(), tracker);
+            InternalScanner scanner = observer.preFlush(this, store, getResult(), tracker);
+            if (scanner == null) {
+              throw new CoprocessorException("Null Scanner return disallowed!");
+            }
+            return scanner;
           }
         });
   }
