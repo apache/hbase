@@ -898,7 +898,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public KeepDeletedCells getKeepDeletedCells() {
-      return getStringOrDefault(KEEP_DELETED_CELLS_BYTES, KeepDeletedCells::valueOf, DEFAULT_KEEP_DELETED);
+      return getStringOrDefault(KEEP_DELETED_CELLS_BYTES,
+          KeepDeletedCells::getValue, DEFAULT_KEEP_DELETED);
     }
 
     /**
