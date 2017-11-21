@@ -572,14 +572,14 @@ public class TestMasterProcedureScheduler {
 
     // suspend
     ProcedureEvent event = new ProcedureEvent("testSuspendedProcedureEvent");
-    assertEquals(true, queue.waitEvent(event, proc));
+    assertEquals(true, event.suspendIfNotReady(proc));
 
     proc = queue.poll();
     assertEquals(2, proc.getProcId());
     assertEquals(null, queue.poll(0));
 
     // resume
-    queue.wakeEvent(event);
+    event.wake(queue);
 
     proc = queue.poll();
     assertEquals(1, proc.getProcId());

@@ -467,21 +467,14 @@ public class TestRegionMergeTransactionOnCluster {
     verifyRowCount(table, ROWSIZE);
     LOG.info("Verified " + table.getName());
 
-    // Sleep here is an ugly hack to allow region transitions to finish
-    long timeout = System.currentTimeMillis() + waitTime;
     List<Pair<RegionInfo, ServerName>> tableRegions;
-    while (System.currentTimeMillis() < timeout) {
-      tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-          TEST_UTIL.getConnection(), tablename);
-      LOG.info("Found " + tableRegions.size() + ", expecting " + numRegions * replication);
-      if (tableRegions.size() == numRegions * replication)
-        break;
-      Thread.sleep(250);
-    }
-    LOG.info("Getting regions of " + table.getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(tablename);
+    LOG.info("All regions assigned for table - " + table.getName());
     tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
         TEST_UTIL.getConnection(), tablename);
-    LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
+    assertEquals("Wrong number of regions in table " + tablename,
+        numRegions * replication, tableRegions.size());
+    LOG.info(tableRegions.size() + "Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(numRegions * replication, tableRegions.size());
     return table;
   }

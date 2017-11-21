@@ -252,7 +252,7 @@ public class AssignmentManager implements ServerListener {
 
     // Update meta events (for testing)
     if (hasProcExecutor) {
-      getProcedureScheduler().suspendEvent(metaLoadEvent);
+      metaLoadEvent.suspend();
       setFailoverCleanupDone(false);
       for (RegionInfo hri: getMetaRegionSet()) {
         setMetaInitialized(hri, false);
@@ -413,17 +413,16 @@ public class AssignmentManager implements ServerListener {
   }
 
   public boolean waitMetaInitialized(final Procedure proc, final RegionInfo regionInfo) {
-    return getProcedureScheduler().waitEvent(
-      getMetaInitializedEvent(getMetaForRegion(regionInfo)), proc);
+    return getMetaInitializedEvent(getMetaForRegion(regionInfo)).suspendIfNotReady(proc);
   }
 
   private void setMetaInitialized(final RegionInfo metaRegionInfo, final boolean isInitialized) {
     assert isMetaRegion(metaRegionInfo) : "unexpected non-meta region " + metaRegionInfo;
     final ProcedureEvent metaInitEvent = getMetaInitializedEvent(metaRegionInfo);
     if (isInitialized) {
-      getProcedureScheduler().wakeEvent(metaInitEvent);
+      metaInitEvent.wake(getProcedureScheduler());
     } else {
-      getProcedureScheduler().suspendEvent(metaInitEvent);
+      metaInitEvent.suspend();
     }
   }
 
@@ -434,11 +433,11 @@ public class AssignmentManager implements ServerListener {
   }
 
   public boolean waitMetaLoaded(final Procedure proc) {
-    return getProcedureScheduler().waitEvent(metaLoadEvent, proc);
+    return metaLoadEvent.suspendIfNotReady(proc);
   }
 
   protected void wakeMetaLoadedEvent() {
-    getProcedureScheduler().wakeEvent(metaLoadEvent);
+    metaLoadEvent.wake(getProcedureScheduler());
     assert isMetaLoaded() : "expected meta to be loaded";
   }
 
@@ -1011,11 +1010,11 @@ public class AssignmentManager implements ServerListener {
 
   protected boolean waitServerReportEvent(final ServerName serverName, final Procedure proc) {
     final ServerStateNode serverNode = regionStates.getOrCreateServer(serverName);
-    return getProcedureScheduler().waitEvent(serverNode.getReportEvent(), proc);
+    return serverNode.getReportEvent().suspendIfNotReady(proc);
   }
 
   protected void wakeServerReportEvent(final ServerStateNode serverNode) {
-    getProcedureScheduler().wakeEvent(serverNode.getReportEvent());
+    serverNode.getReportEvent().wake(getProcedureScheduler());
   }
 
   // ============================================================================================
@@ -1588,7 +1587,7 @@ public class AssignmentManager implements ServerListener {
    * and each region will be assigned by a server using the balancer.
    */
   protected void queueAssign(final RegionStateNode regionNode) {
-    getProcedureScheduler().suspendEvent(regionNode.getProcedureEvent());
+    regionNode.getProcedureEvent().suspend();
 
     // TODO: quick-start for meta and the other sys-tables?
     assignQueueLock.lock();
@@ -1787,7 +1786,7 @@ public class AssignmentManager implements ServerListener {
         events[evcount++] = regionNode.getProcedureEvent();
       }
     }
-    getProcedureScheduler().wakeEvents(evcount, events);
+    ProcedureEvent.wakeEvents(getProcedureScheduler(), events);
 
     final long et = System.currentTimeMillis();
     if (LOG.isTraceEnabled()) {

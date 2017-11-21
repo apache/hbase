@@ -92,13 +92,13 @@ public class TestProcedureSchedulerConcurrency {
               ev[i] = waitQueue.pollFirst().getEvent();
               LOG.debug("WAKE BATCH " + ev[i] + " total=" + wakeCount.get());
             }
-            sched.wakeEvents(ev.length, ev);
+            ProcedureEvent.wakeEvents((AbstractProcedureScheduler) sched, ev);
             wakeCount.addAndGet(ev.length);
           } else {
             int size = waitQueue.size();
             while (size-- > 0) {
               ProcedureEvent ev = waitQueue.pollFirst().getEvent();
-              sched.wakeEvent(ev);
+              ev.wake(procSched);
               LOG.debug("WAKE " + ev + " total=" + wakeCount.get());
               wakeCount.incrementAndGet();
             }
@@ -122,9 +122,9 @@ public class TestProcedureSchedulerConcurrency {
             TestProcedureWithEvent proc = (TestProcedureWithEvent)sched.poll();
             if (proc == null) continue;
 
-            sched.suspendEvent(proc.getEvent());
+            proc.getEvent().suspend();
             waitQueue.add(proc);
-            sched.waitEvent(proc.getEvent(), proc);
+            proc.getEvent().suspendIfNotReady(proc);
             LOG.debug("WAIT " + proc.getEvent());
             if (waitCount.incrementAndGet() >= NRUNS) {
               break;
