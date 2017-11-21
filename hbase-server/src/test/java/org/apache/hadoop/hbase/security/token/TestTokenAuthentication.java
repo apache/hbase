@@ -323,6 +323,11 @@ public class TestTokenAuthentication {
         public Connection getConnection() {
           return null;
         }
+
+        @Override
+        public Connection createConnection(Configuration conf) throws IOException {
+          return null;
+        }
       });
 
       started = true;
@@ -408,6 +413,11 @@ public class TestTokenAuthentication {
     @Override
     public ClusterConnection getClusterConnection() {
       // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
       return null;
     }
   }

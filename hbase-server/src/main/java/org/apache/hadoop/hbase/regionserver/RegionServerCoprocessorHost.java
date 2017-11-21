@@ -210,9 +210,7 @@ public class RegionServerCoprocessorHost extends
   private static class RegionServerEnvironment extends BaseEnvironment<RegionServerCoprocessor>
       implements RegionServerCoprocessorEnvironment {
     private final MetricRegistry metricRegistry;
-    private final Connection connection;
-    private final ServerName serverName;
-    private final OnlineRegions onlineRegions;
+    private final RegionServerServices services;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
         justification="Intentional; FB has trouble detecting isAssignableFrom")
@@ -223,26 +221,29 @@ public class RegionServerCoprocessorHost extends
       for (Service service : impl.getServices()) {
         services.registerService(service);
       }
-      this.onlineRegions = services;
-      this.connection = services.getConnection();
-      this.serverName = services.getServerName();
+      this.services = services;
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
     }
 
     @Override
     public OnlineRegions getOnlineRegions() {
-      return this.onlineRegions;
+      return this.services;
     }
 
     @Override
     public ServerName getServerName() {
-      return this.serverName;
+      return this.services.getServerName();
     }
 
     @Override
     public Connection getConnection() {
-      return this.connection;
+      return this.services.getConnection();
+    }
+
+    @Override
+    public Connection createConnection(Configuration conf) throws IOException {
+      return this.services.createConnection(conf);
     }
 
     @Override

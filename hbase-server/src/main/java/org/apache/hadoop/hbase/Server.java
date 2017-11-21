@@ -53,6 +53,8 @@ public interface Server extends Abortable, Stoppable {
    */
   Connection getConnection();
 
+  Connection createConnection(Configuration conf) throws IOException;
+
   /**
    * Returns a reference to the servers' cluster connection. Prefer {@link #getConnection()}.
    *

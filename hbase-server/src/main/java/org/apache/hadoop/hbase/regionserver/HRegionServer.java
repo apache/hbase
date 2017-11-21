@@ -3715,4 +3715,11 @@ public class HRegionServer extends HasThread implements
   public NettyEventLoopGroupConfig getEventLoopGroupConfig() {
     return eventLoopGroupConfig;
   }
+
+  @Override
+  public Connection createConnection(Configuration conf) throws IOException {
+    User user = UserProvider.instantiate(conf).getCurrent();
+    return ConnectionUtils.createShortCircuitConnection(conf, null, user, this.serverName,
+        this.rpcServices, this.rpcServices);
+  }
 }

@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
@@ -49,12 +52,28 @@ public interface RegionServerCoprocessorEnvironment
    *
    * <p>Using a Connection to get at a local resource -- say a Region that is on the local
    * Server or using Admin Interface from a Coprocessor hosted on the Master -- will result in a
-   * short-circuit of the RPC framework to make a direct invocation avoiding RPC (and
-   * protobuf marshalling/unmarshalling).
-   *
+   * short-circuit of the RPC framework to make a direct invocation avoiding RPC.
+   *<p>
+   * Note: If you want to create Connection with your own Configuration and NOT use the RegionServer
+   * Connection (though its cache of locations will be warm, and its life-cycle is not the concern
+   * of the CP), see {@link #createConnection(Configuration)}.
    * @return The host's Connection to the Cluster.
    */
   Connection getConnection();
+
+  /**
+   * Creates a cluster connection using the passed configuration.
+   * <p>Using this Connection to get at a local resource -- say a Region that is on the local
+   * Server or using Admin Interface from a Coprocessor hosted on the Master -- will result in a
+   * short-circuit of the RPC framework to make a direct invocation avoiding RPC.
+   * <p>
+   * Note: HBase will NOT cache/maintain this Connection. If Coprocessors need to cache and reuse
+   * this connection, it has to be done by Coprocessors. Also make sure to close it after use.
+   *
+   * @param conf configuration
+   * @return Connection created using the passed conf.
+   */
+  Connection createConnection(Configuration conf) throws IOException;
 
   /**
    * Returns a MetricRegistry that can be used to track metrics at the region server level.

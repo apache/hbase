@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
@@ -670,6 +671,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(
       RpcController controller, GetSpaceQuotaSnapshotsRequest request)
       throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public Connection createConnection(Configuration conf) throws IOException {
     return null;
   }
 }
