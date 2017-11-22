@@ -28,6 +28,7 @@ import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.logging.Log;
@@ -81,7 +82,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
     this.zk.start();
     // TODO: temporary workaround for HBASE-19312, must be removed before 2.0.0 release!
     try {
-      this.zk.blockUntilConnected();
+      this.zk.blockUntilConnected(2, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
       return;
     }
