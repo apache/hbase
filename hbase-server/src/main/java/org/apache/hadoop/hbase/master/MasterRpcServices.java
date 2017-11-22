@@ -2163,7 +2163,9 @@ public class MasterRpcServices extends RSRpcServices
       }
 
       if (master.cpHost != null) {
-        master.cpHost.postClearDeadServers();
+        master.cpHost.postClearDeadServers(
+            ProtobufUtil.toServerNameList(request.getServerNameList()),
+            ProtobufUtil.toServerNameList(response.getServerNameList()));
       }
     } catch (IOException io) {
       throw new ServiceException(io);
