@@ -390,7 +390,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
    *  return total size in bytes from a list of WALs
    */
   private long getTotalWALSize(FileSystem fs, List<String> wals, String server) throws IOException {
-    int size = 0;
+    long size = 0;
     FileStatus fileStatus;
 
     for (String wal : wals) {
