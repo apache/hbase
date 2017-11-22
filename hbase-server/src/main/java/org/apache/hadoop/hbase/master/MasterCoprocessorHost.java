@@ -1596,11 +1596,12 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postClearDeadServers() throws IOException {
+  public void postClearDeadServers(List<ServerName> servers,
+      List<ServerName> notClearedServers) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postClearDeadServers(this);
+        observer.postClearDeadServers(this, servers, notClearedServers);
       }
     });
   }

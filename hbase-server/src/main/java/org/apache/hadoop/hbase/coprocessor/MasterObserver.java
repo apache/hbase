@@ -1263,7 +1263,8 @@ public interface MasterObserver {
   /**
    * Called after clear dead region servers.
    */
-  default void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  default void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, List<ServerName> notClearedServers)
       throws IOException {}
 
   /**
