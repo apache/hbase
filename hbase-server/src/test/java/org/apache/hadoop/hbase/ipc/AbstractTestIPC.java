@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
@@ -75,6 +76,10 @@ public abstract class AbstractTestIPC {
   private static final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
 
   protected static final Configuration CONF = HBaseConfiguration.create();
+  static {
+    // Set the default to be the old SimpleRpcServer. Subclasses test it and netty.
+    CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, SimpleRpcServer.class.getName());
+  }
 
   protected abstract RpcServer createRpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
