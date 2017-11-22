@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -64,6 +65,8 @@ import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
@@ -1768,9 +1771,9 @@ public class MasterRpcServices extends RSRpcServices
       } else {
         capabilities.add(SecurityCapabilitiesResponse.Capability.SIMPLE_AUTHENTICATION);
       }
-      // The AccessController can provide AUTHORIZATION and CELL_AUTHORIZATION
-      if (master.cpHost != null &&
-            master.cpHost.findCoprocessor(AccessController.class.getName()) != null) {
+      // A coprocessor that implements AccessControlService can provide AUTHORIZATION and
+      // CELL_AUTHORIZATION
+      if (master.cpHost != null && hasAccessControlServiceCoprocessor(master.cpHost)) {
         if (AccessController.isAuthorizationSupported(master.getConfiguration())) {
           capabilities.add(SecurityCapabilitiesResponse.Capability.AUTHORIZATION);
         }
@@ -1778,9 +1781,8 @@ public class MasterRpcServices extends RSRpcServices
           capabilities.add(SecurityCapabilitiesResponse.Capability.CELL_AUTHORIZATION);
         }
       }
-      // The VisibilityController can provide CELL_VISIBILITY
-      if (master.cpHost != null &&
-            master.cpHost.findCoprocessor(VisibilityController.class.getName()) != null) {
+      // A coprocessor that implements VisibilityLabelsService can provide CELL_VISIBILITY.
+      if (master.cpHost != null && hasVisibilityLabelsServiceCoprocessor(master.cpHost)) {
         if (VisibilityController.isCellAuthorizationSupported(master.getConfiguration())) {
           capabilities.add(SecurityCapabilitiesResponse.Capability.CELL_VISIBILITY);
         }
@@ -1790,6 +1792,42 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
     return response.build();
+  }
+
+  /**
+   * Determines if there is a MasterCoprocessor deployed which implements
+   * {@link org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.Interface}.
+   */
+  boolean hasAccessControlServiceCoprocessor(MasterCoprocessorHost cpHost) {
+    return checkCoprocessorWithService(
+        cpHost.findCoprocessors(MasterCoprocessor.class), AccessControlService.Interface.class);
+  }
+
+  /**
+   * Determines if there is a MasterCoprocessor deployed which implements
+   * {@link org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService.Interface}.
+   */
+  boolean hasVisibilityLabelsServiceCoprocessor(MasterCoprocessorHost cpHost) {
+    return checkCoprocessorWithService(
+        cpHost.findCoprocessors(MasterCoprocessor.class),
+        VisibilityLabelsService.Interface.class);
+  }
+
+  /**
+   * Determines if there is a coprocessor implementation in the provided argument which extends
+   * or implements the provided {@code service}.
+   */
+  boolean checkCoprocessorWithService(
+      List<MasterCoprocessor> coprocessorsToCheck, Class<?> service) {
+    if (coprocessorsToCheck == null || coprocessorsToCheck.isEmpty()) {
+      return false;
+    }
+    for (MasterCoprocessor cp : coprocessorsToCheck) {
+      if (service.isAssignableFrom(cp.getClass())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private MasterSwitchType convert(MasterProtos.MasterSwitchType switchType) {
