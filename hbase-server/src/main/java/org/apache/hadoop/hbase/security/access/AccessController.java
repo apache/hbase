@@ -2613,8 +2613,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException { }
+  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, List<ServerName> notClearedServers) throws IOException { }
 
   @Override
   public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
