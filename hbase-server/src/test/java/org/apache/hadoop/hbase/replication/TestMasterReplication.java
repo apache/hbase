@@ -524,10 +524,12 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
       throws Exception {
-    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
-        .getAdmin()) {
-      admin.addReplicationPeer(id,
+    try (Admin admin =
+        ConnectionFactory.createConnection(configurations[masterClusterNumber]).getAdmin()) {
+      admin.addReplicationPeer(
+        id,
         new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
+            .setReplicateAllUserTables(false)
             .setTableCFsMap(ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs)));
     }
   }

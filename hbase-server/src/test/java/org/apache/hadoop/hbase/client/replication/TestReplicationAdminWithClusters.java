@@ -194,7 +194,13 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
       admin2.disableTable(TestReplicationBase.tableName);
       admin2.deleteTable(TestReplicationBase.tableName);
     }
-    assertFalse("Table should not exists in the peer cluster", admin2.isTableAvailable(TestReplicationBase.tableName));
+    assertFalse("Table should not exists in the peer cluster",
+      admin2.isTableAvailable(TestReplicationBase.tableName));
+
+    // update peer config
+    ReplicationPeerConfig rpc = admin1.getReplicationPeerConfig(peerId);
+    rpc.setReplicateAllUserTables(false);
+    admin1.updateReplicationPeerConfig(peerId, rpc);
 
     Map<TableName, ? extends Collection<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
@@ -214,6 +220,10 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     } finally {
       adminExt.removePeerTableCFs(peerId, adminExt.getPeerTableCFs(peerId));
       admin1.disableTableReplication(TestReplicationBase.tableName);
+
+      rpc = admin1.getReplicationPeerConfig(peerId);
+      rpc.setReplicateAllUserTables(true);
+      admin1.updateReplicationPeerConfig(peerId, rpc);
     }
   }
 

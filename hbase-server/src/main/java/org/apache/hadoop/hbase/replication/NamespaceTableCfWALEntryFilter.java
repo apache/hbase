@@ -58,69 +58,74 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
   public Entry filter(Entry entry) {
     TableName tabName = entry.getKey().getTablename();
     String namespace = tabName.getNamespaceAsString();
-    Set<String> namespaces = this.peer.getNamespaces();
-    Map<TableName, List<String>> tableCFs = getTableCfs();
+    ReplicationPeerConfig peerConfig = this.peer.getPeerConfig();
 
-    // If null means user has explicitly not configured any namespaces and table CFs
-    // so all the tables data are applicable for replication
-    if (namespaces == null && tableCFs == null) {
+    if (peerConfig.replicateAllUserTables()) {
+      // replicate all user tables, so return entry directly
+      return entry;
+    } else {
+      // Not replicate all user tables, so filter by namespaces and table-cfs config
+      Set<String> namespaces = peerConfig.getNamespaces();
+      Map<TableName, List<String>> tableCFs = peerConfig.getTableCFsMap();
+
+      if (namespaces == null && tableCFs == null) {
+        return null;
+      }
+
+      // First filter by namespaces config
+      // If table's namespace in peer config, all the tables data are applicable for replication
+      if (namespaces != null && namespaces.contains(namespace)) {
+        return entry;
+      }
+
+      // Then filter by table-cfs config
+      // return null(prevent replicating) if logKey's table isn't in this peer's
+      // replicaable namespace list and table list
+      if (tableCFs == null || !tableCFs.containsKey(tabName)) {
+        return null;
+      }
+
       return entry;
     }
-
-    // First filter by namespaces config
-    // If table's namespace in peer config, all the tables data are applicable for replication
-    if (namespaces != null && namespaces.contains(namespace)) {
-      return entry;
-    }
-
-    // Then filter by table-cfs config
-    // return null(prevent replicating) if logKey's table isn't in this peer's
-    // replicaable namespace list and table list
-    if (tableCFs == null || !tableCFs.containsKey(tabName)) {
-      return null;
-    }
-
-    return entry;
   }
 
   @Override
   public Cell filterCell(final Entry entry, Cell cell) {
-    final Map<TableName, List<String>> tableCfs = getTableCfs();
-    if (tableCfs == null) return cell;
-    TableName tabName = entry.getKey().getTablename();
-    List<String> cfs = tableCfs.get(tabName);
-    // ignore(remove) kv if its cf isn't in the replicable cf list
-    // (empty cfs means all cfs of this table are replicable)
-    if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
-      cell = bulkLoadFilter.filterCell(cell, new Predicate<byte[]>() {
-        @Override
-        public boolean apply(byte[] fam) {
-          if (tableCfs != null) {
-            List<String> cfs = tableCfs.get(entry.getKey().getTablename());
-            if (cfs != null && !cfs.contains(Bytes.toString(fam))) {
-              return true;
-            }
-          }
-          return false;
-        }
-      });
+    ReplicationPeerConfig peerConfig = this.peer.getPeerConfig();
+    if (peerConfig.replicateAllUserTables()) {
+      // replicate all user tables, so return cell directly
+      return cell;
     } else {
-      if ((cfs != null) && !cfs.contains(
-        Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))) {
-        return null;
+      final Map<TableName, List<String>> tableCfs = peerConfig.getTableCFsMap();
+      if (tableCfs == null) {
+        return cell;
       }
-    }
-    return cell;
-  }
+      TableName tabName = entry.getKey().getTablename();
+      List<String> cfs = tableCfs.get(tabName);
+      // ignore(remove) kv if its cf isn't in the replicable cf list
+      // (empty cfs means all cfs of this table are replicable)
+      if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
+        cell = bulkLoadFilter.filterCell(cell, new Predicate<byte[]>() {
+          @Override
+          public boolean apply(byte[] fam) {
+            if (tableCfs != null) {
+              List<String> cfs = tableCfs.get(entry.getKey().getTablename());
+              if (cfs != null && !cfs.contains(Bytes.toString(fam))) {
+                return true;
+              }
+            }
+            return false;
+          }
+        });
+      } else {
+        if ((cfs != null)
+            && !cfs.contains(Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(),
+              cell.getFamilyLength()))) {
+          return null;
+        }
+      }
 
-  Map<TableName, List<String>> getTableCfs() {
-    Map<TableName, List<String>> tableCFs = null;
-    try {
-      tableCFs = this.peer.getTableCFs();
-    } catch (IllegalArgumentException e) {
-      LOG.error("should not happen: can't get tableCFs for peer " + peer.getId() +
-          ", degenerate as if it's not configured by keeping tableCFs==null");
+      return cell;
     }
-    return tableCFs;
   }
 }

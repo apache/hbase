@@ -45,6 +45,7 @@ message ReplicationPeer {
   repeated TableCF table_cfs = 5;
   repeated bytes namespaces = 6;
   optional int64 bandwidth = 7;
+  optional bool replicate_all = 8;
 }
 
 /**

@@ -140,8 +140,12 @@ public class TestNamespaceReplication extends TestReplicationBase {
     Table htab1B = connection1.getTable(tabBName);
     Table htab2B = connection2.getTable(tabBName);
 
-    // add ns1 to peer config which replicate to cluster2
     ReplicationPeerConfig rpc = admin.getPeerConfig("2");
+    rpc.setReplicateAllUserTables(false);
+    admin.updatePeerConfig("2", rpc);
+
+    // add ns1 to peer config which replicate to cluster2
+    rpc = admin.getPeerConfig("2");
     Set<String> namespaces = new HashSet<>();
     namespaces.add(ns1);
     rpc.setNamespaces(namespaces);

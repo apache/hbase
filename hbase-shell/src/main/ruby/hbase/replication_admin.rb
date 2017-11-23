@@ -92,6 +92,7 @@ module Hbase
           namespaces.each do |n|
             ns_set.add(n)
           end
+          replication_peer_config.setReplicateAllUserTables(false)
           replication_peer_config.set_namespaces(ns_set)
         end
 
@@ -101,6 +102,7 @@ module Hbase
           table_cfs.each do |key, val|
             map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
           end
+          replication_peer_config.setReplicateAllUserTables(false)
           replication_peer_config.set_table_cfs_map(map)
         end
 
@@ -263,6 +265,13 @@ module Hbase
         rpc.setBandwidth(bandwidth)
         @admin.updateReplicationPeerConfig(id, rpc)
       end
+    end
+
+    def set_peer_replicate_all(id, replicate_all)
+      rpc = @replication_admin.getPeerConfig(id)
+      return if rpc.nil?
+      rpc.setReplicateAllUserTables(replicate_all)
+      @replication_admin.updatePeerConfig(id, rpc)
     end
 
     #----------------------------------------------------------------------------------------------

@@ -286,6 +286,7 @@ public final class ReplicationPeerConfigUtil {
     if (tableCFsMap != null) {
       peerConfig.setTableCFsMap(tableCFsMap);
     }
+
     List<ByteString> namespacesList = peer.getNamespacesList();
     if (namespacesList != null && namespacesList.size() != 0) {
       Set<String> namespaces = new HashSet<>();
@@ -294,9 +295,15 @@ public final class ReplicationPeerConfigUtil {
       }
       peerConfig.setNamespaces(namespaces);
     }
+
     if (peer.hasBandwidth()) {
       peerConfig.setBandwidth(peer.getBandwidth());
     }
+
+    if (peer.hasReplicateAll()) {
+      peerConfig.setReplicateAllUserTables(peer.getReplicateAll());
+    }
+
     return peerConfig;
   }
 
@@ -338,6 +345,7 @@ public final class ReplicationPeerConfigUtil {
     }
 
     builder.setBandwidth(peerConfig.getBandwidth());
+    builder.setReplicateAll(peerConfig.replicateAllUserTables());
     return builder.build();
   }
 

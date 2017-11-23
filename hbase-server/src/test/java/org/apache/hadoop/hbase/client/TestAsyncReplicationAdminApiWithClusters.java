@@ -218,6 +218,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     Map<TableName, ? extends Collection<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
     ReplicationPeerConfig rpc = admin.getReplicationPeerConfig(ID_SECOND).get();
+    rpc.setReplicateAllUserTables(false);
     rpc.setTableCFsMap(tableCfs);
     try {
       // Only add tableName to replication peer config
@@ -236,6 +237,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
         admin2.tableExists(tableName2).get());
     } finally {
       rpc.setTableCFsMap(null);
+      rpc.setReplicateAllUserTables(true);
       admin.updateReplicationPeerConfig(ID_SECOND, rpc).join();
     }
   }

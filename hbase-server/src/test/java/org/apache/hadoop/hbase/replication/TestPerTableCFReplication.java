@@ -404,6 +404,7 @@ public class TestPerTableCFReplication {
       // A. add cluster2/cluster3 as peers to cluster1
       ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
       rpc2.setClusterKey(utility2.getClusterKey());
+      rpc2.setReplicateAllUserTables(false);
       Map<TableName, List<String>> tableCFs = new HashMap<>();
       tableCFs.put(tabCName, null);
       tableCFs.put(tabBName, new ArrayList<>());
@@ -413,6 +414,7 @@ public class TestPerTableCFReplication {
 
       ReplicationPeerConfig rpc3 = new ReplicationPeerConfig();
       rpc3.setClusterKey(utility3.getClusterKey());
+      rpc3.setReplicateAllUserTables(false);
       tableCFs.clear();
       tableCFs.put(tabAName, null);
       tableCFs.put(tabBName, new ArrayList<>());
@@ -518,7 +520,7 @@ public class TestPerTableCFReplication {
       connection2.close();
       connection3.close();
     }
- }
+  }
 
   private void ensureRowNotReplicated(byte[] row, byte[] fam, Table... tables) throws IOException {
     Get get = new Get(row);
