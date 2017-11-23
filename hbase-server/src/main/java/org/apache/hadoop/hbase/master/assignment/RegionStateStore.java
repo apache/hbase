@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
@@ -317,12 +318,14 @@ public class RegionStateStore {
    * @param r Result to pull the region state from
    * @return the region state, or null if unknown.
    */
-  protected State getRegionState(final Result r, int replicaId) {
+  @VisibleForTesting
+  public static State getRegionState(final Result r, int replicaId) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getStateColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) {
       return null;
     }
-    return State.valueOf(Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+    return State.valueOf(Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength()));
   }
 
   private static byte[] getStateColumn(int replicaId) {

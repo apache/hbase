@@ -129,6 +129,15 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   public abstract void killRegionServer(ServerName serverName) throws IOException;
 
   /**
+   * Keeping track of killed servers and being able to check if a particular server was killed makes
+   * it possible to do fault tolerance testing for dead servers in a deterministic way. A concrete
+   * example of such case is - killing servers and waiting for all regions of a particular table
+   * to be assigned. We can check for server column in META table and that its value is not one
+   * of the killed servers.
+   */
+  public abstract boolean isKilledRS(ServerName serverName);
+
+  /**
    * Stops the given region server, by attempting a gradual stop.
    * @return whether the operation finished with success
    * @throws IOException if something goes wrong

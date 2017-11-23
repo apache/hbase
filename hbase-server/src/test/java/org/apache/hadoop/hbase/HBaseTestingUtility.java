@@ -67,6 +67,8 @@ import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -3418,8 +3420,27 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
               byte[] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
               HRegionInfo info = HRegionInfo.parseFromOrNull(b);
               if (info != null && info.getTable().equals(tableName)) {
-                b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-                allRegionsAssigned &= (b != null);
+                // Get server hosting this region from catalog family. Return false if no server
+                // hosting this region, or if the server hosting this region was recently killed
+                // (for fault tolerance testing).
+                byte[] server =
+                    r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+                if (server == null) {
+                  return false;
+                } else {
+                  byte[] startCode =
+                      r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
+                  ServerName serverName =
+                      ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + "," +
+                          Bytes.toLong(startCode));
+                  if (getHBaseCluster().isKilledRS(serverName)) {
+                    return false;
+                  }
+                }
+                if (RegionStateStore.getRegionState(r, info.getReplicaId())
+                    != RegionState.State.OPEN) {
+                  return false;
+                }
               }
             }
           } finally {

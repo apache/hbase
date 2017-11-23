@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -108,6 +110,12 @@ public class MiniHBaseCluster extends HBaseCluster {
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
     private Thread shutdownThread = null;
     private User user = null;
+    /**
+     * List of RegionServers killed so far. ServerName also comprises startCode of a server,
+     * so any restarted instances of the same server will have different ServerName and will not
+     * coincide with past dead ones. So there's no need to cleanup this list.
+     */
+    static Set<ServerName> killedServers = new HashSet<>();
 
     public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException, InterruptedException {
@@ -156,7 +164,8 @@ public class MiniHBaseCluster extends HBaseCluster {
     }
 
     @Override
-    public void kill() {
+    protected void kill() {
+      killedServers.add(getServerName());
       super.kill();
     }
 
@@ -247,6 +256,11 @@ public class MiniHBaseCluster extends HBaseCluster {
     } else {
       abortRegionServer(getRegionServerIndex(serverName));
     }
+  }
+
+  @Override
+  public boolean isKilledRS(ServerName serverName) {
+    return MiniHBaseClusterRegionServer.killedServers.contains(serverName);
   }
 
   @Override
