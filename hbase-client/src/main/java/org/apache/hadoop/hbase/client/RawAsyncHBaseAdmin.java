@@ -842,15 +842,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName) {
-    return compact(tableName, null, false, CompactType.NORMAL);
+  public CompletableFuture<Void> compact(TableName tableName, CompactType compactType) {
+    return compact(tableName, null, false, compactType);
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
-    Preconditions.checkNotNull(columnFamily,
-      "columnFamily is null. If you don't specify a columnFamily, use compact(TableName) instead");
-    return compact(tableName, columnFamily, false, CompactType.NORMAL);
+  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily,
+      CompactType compactType) {
+    Preconditions.checkNotNull(columnFamily, "columnFamily is null. "
+        + "If you don't specify a columnFamily, use compact(TableName) instead");
+    return compact(tableName, columnFamily, false, compactType);
   }
 
   @Override
@@ -866,15 +867,16 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName) {
-    return compact(tableName, null, true, CompactType.NORMAL);
+  public CompletableFuture<Void> majorCompact(TableName tableName, CompactType compactType) {
+    return compact(tableName, null, true, compactType);
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
+  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily,
+      CompactType compactType) {
     Preconditions.checkNotNull(columnFamily, "columnFamily is null."
-        + " If you don't specify a columnFamily, use majorCompact(TableName) instead");
-    return compact(tableName, columnFamily, true, CompactType.NORMAL);
+        + "If you don't specify a columnFamily, use compact(TableName) instead");
+    return compact(tableName, columnFamily, true, compactType);
   }
 
   @Override
@@ -926,6 +928,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily,
       boolean major) {
     CompletableFuture<Void> future = new CompletableFuture<>();
+
     getRegionLocation(regionName).whenComplete(
       (location, err) -> {
         if (err != null) {
@@ -981,31 +984,51 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   /**
    * Compact column family of a table, Asynchronous operation even if CompletableFuture.get()
    */
-  private CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily, boolean major,
-      CompactType compactType) {
-    if (CompactType.MOB.equals(compactType)) {
-      // TODO support MOB compact.
-      return failedFuture(new UnsupportedOperationException("MOB compact does not support"));
-    }
+  private CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily,
+      boolean major, CompactType compactType) {
     CompletableFuture<Void> future = new CompletableFuture<>();
-    getTableHRegionLocations(tableName).whenComplete((locations, err) -> {
-      if (err != null) {
-        future.completeExceptionally(err);
-        return;
-      }
-      CompletableFuture<?>[] compactFutures = locations.stream().filter(l -> l.getRegion() != null)
-          .filter(l -> !l.getRegion().isOffline()).filter(l -> l.getServerName() != null)
-          .map(l -> compact(l.getServerName(), l.getRegion(), major, columnFamily))
-          .toArray(CompletableFuture<?>[]::new);
-      // future complete unless all of the compact futures are completed.
-      CompletableFuture.allOf(compactFutures).whenComplete((ret, err2) -> {
-        if (err2 != null) {
-          future.completeExceptionally(err2);
-        } else {
-          future.complete(ret);
-        }
-      });
-    });
+
+    switch (compactType) {
+      case MOB:
+        connection.registry.getMasterAddress().whenComplete((serverName, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
+          }
+          RegionInfo regionInfo = RegionInfo.createMobRegionInfo(tableName);
+          compact(serverName, regionInfo, major, columnFamily)
+              .whenComplete((ret, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                } else {
+                  future.complete(ret);
+                }
+              });
+        });
+        break;
+      case NORMAL:
+        getTableHRegionLocations(tableName).whenComplete((locations, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
+          }
+          CompletableFuture<?>[] compactFutures = locations.stream().filter(l -> l.getRegion() != null)
+              .filter(l -> !l.getRegion().isOffline()).filter(l -> l.getServerName() != null)
+              .map(l -> compact(l.getServerName(), l.getRegion(), major, columnFamily))
+              .toArray(CompletableFuture<?>[]::new);
+          // future complete unless all of the compact futures are completed.
+          CompletableFuture.allOf(compactFutures).whenComplete((ret, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              future.complete(ret);
+            }
+          });
+        });
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown compactType: " + compactType);
+    }
     return future;
   }
 
@@ -2741,64 +2764,99 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<CompactionState> getCompactionState(TableName tableName) {
+  public CompletableFuture<CompactionState> getCompactionState(TableName tableName,
+      CompactType compactType) {
     CompletableFuture<CompactionState> future = new CompletableFuture<>();
-    getTableHRegionLocations(tableName).whenComplete(
-      (locations, err) -> {
-        if (err != null) {
-          future.completeExceptionally(err);
-          return;
-        }
-        List<CompactionState> regionStates = new ArrayList<>();
-        List<CompletableFuture<CompactionState>> futures = new ArrayList<>();
-        locations.stream().filter(loc -> loc.getServerName() != null)
-            .filter(loc -> loc.getRegion() != null)
-            .filter(loc -> !loc.getRegion().isOffline())
-            .map(loc -> loc.getRegion().getRegionName()).forEach(region -> {
-              futures.add(getCompactionStateForRegion(region).whenComplete((regionState, err2) -> {
-                // If any region compaction state is MAJOR_AND_MINOR
-                // the table compaction state is MAJOR_AND_MINOR, too.
-                if (err2 != null) {
-                  future.completeExceptionally(err2);
-                } else if (regionState == CompactionState.MAJOR_AND_MINOR) {
 
-                  future.complete(regionState);
-                } else {
-                  regionStates.add(regionState);
-                }
-              }));
-            });
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
-            .whenComplete((ret, err3) -> {
-              // If future not completed, check all regions's compaction state
-              if (!future.isCompletedExceptionally() && !future.isDone()) {
-                CompactionState state = CompactionState.NONE;
-                for (CompactionState regionState : regionStates) {
-                  switch (regionState) {
-                  case MAJOR:
-                    if (state == CompactionState.MINOR) {
-                      future.complete(CompactionState.MAJOR_AND_MINOR);
-                    } else {
-                      state = CompactionState.MAJOR;
-                    }
-                    break;
-                  case MINOR:
-                    if (state == CompactionState.MAJOR) {
-                      future.complete(CompactionState.MAJOR_AND_MINOR);
-                    } else {
-                      state = CompactionState.MINOR;
-                    }
-                    break;
-                  case NONE:
-                  default:
-                  }
-                  if (!future.isDone()) {
-                    future.complete(state);
-                  }
-                }
+    switch (compactType) {
+      case MOB:
+        connection.registry.getMasterAddress().whenComplete((serverName, err) -> {
+          if (err != null) {
+            future.completeExceptionally(err);
+            return;
+          }
+          RegionInfo regionInfo = RegionInfo.createMobRegionInfo(tableName);
+
+          this.<GetRegionInfoResponse> newAdminCaller().serverName(serverName).action(
+            (controller, stub) -> this
+            .<GetRegionInfoRequest, GetRegionInfoResponse, GetRegionInfoResponse> adminCall(
+                controller, stub,
+                RequestConverter.buildGetRegionInfoRequest(regionInfo.getRegionName(), true),
+                (s, c, req, done) -> s.getRegionInfo(controller, req, done), resp -> resp)
+          ).call().whenComplete((resp2, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            } else {
+              if (resp2.hasCompactionState()) {
+                future.complete(ProtobufUtil.createCompactionState(resp2.getCompactionState()));
+              } else {
+                future.complete(CompactionState.NONE);
               }
-            });
-      });
+            }
+          });
+        });
+        break;
+      case NORMAL:
+        getTableHRegionLocations(tableName).whenComplete(
+          (locations, err) -> {
+            if (err != null) {
+              future.completeExceptionally(err);
+              return;
+            }
+            List<CompactionState> regionStates = new ArrayList<>();
+            List<CompletableFuture<CompactionState>> futures = new ArrayList<>();
+            locations.stream().filter(loc -> loc.getServerName() != null)
+                .filter(loc -> loc.getRegion() != null)
+                .filter(loc -> !loc.getRegion().isOffline())
+                .map(loc -> loc.getRegion().getRegionName()).forEach(region -> {
+                  futures.add(getCompactionStateForRegion(region).whenComplete((regionState, err2) -> {
+                    // If any region compaction state is MAJOR_AND_MINOR
+                    // the table compaction state is MAJOR_AND_MINOR, too.
+                    if (err2 != null) {
+                      future.completeExceptionally(err2);
+                    } else if (regionState == CompactionState.MAJOR_AND_MINOR) {
+                      future.complete(regionState);
+                    } else {
+                      regionStates.add(regionState);
+                    }
+                  }));
+                });
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()]))
+                .whenComplete((ret, err3) -> {
+                  // If future not completed, check all regions's compaction state
+                  if (!future.isCompletedExceptionally() && !future.isDone()) {
+                    CompactionState state = CompactionState.NONE;
+                    for (CompactionState regionState : regionStates) {
+                      switch (regionState) {
+                        case MAJOR:
+                          if (state == CompactionState.MINOR) {
+                            future.complete(CompactionState.MAJOR_AND_MINOR);
+                          } else {
+                            state = CompactionState.MAJOR;
+                          }
+                          break;
+                        case MINOR:
+                          if (state == CompactionState.MAJOR) {
+                            future.complete(CompactionState.MAJOR_AND_MINOR);
+                          } else {
+                            state = CompactionState.MINOR;
+                          }
+                          break;
+                        case NONE:
+                        default:
+                      }
+                      if (!future.isDone()) {
+                        future.complete(state);
+                      }
+                    }
+                  }
+                });
+          });
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown compactType: " + compactType);
+    }
+
     return future;
   }
 

@@ -1282,8 +1282,8 @@ public class HBaseAdmin implements Admin {
                        CompactType compactType) throws IOException {
     switch (compactType) {
       case MOB:
-        compact(this.connection.getAdminForMaster(), getMobRegionInfo(tableName), major,
-          columnFamily);
+        compact(this.connection.getAdminForMaster(), RegionInfo.createMobRegionInfo(tableName),
+            major, columnFamily);
         break;
       case NORMAL:
         checkTableExists(tableName);
@@ -3240,7 +3240,7 @@ public class HBaseAdmin implements Admin {
           new Callable<AdminProtos.GetRegionInfoResponse.CompactionState>() {
             @Override
             public AdminProtos.GetRegionInfoResponse.CompactionState call() throws Exception {
-              RegionInfo info = getMobRegionInfo(tableName);
+              RegionInfo info = RegionInfo.createMobRegionInfo(tableName);
               GetRegionInfoRequest request =
                 RequestConverter.buildGetRegionInfoRequest(info.getRegionName(), true);
               GetRegionInfoResponse response = masterAdmin.getRegionInfo(rpcController, request);
@@ -3304,7 +3304,7 @@ public class HBaseAdmin implements Admin {
         }
         break;
       default:
-        throw new IllegalArgumentException("Unknowne compactType: " + compactType);
+        throw new IllegalArgumentException("Unknown compactType: " + compactType);
     }
     if (state != null) {
       return ProtobufUtil.createCompactionState(state);
@@ -3837,11 +3837,6 @@ public class HBaseAdmin implements Admin {
           RequestConverter.buildIsSplitOrMergeEnabledRequest(MasterSwitchType.MERGE)).getEnabled();
       }
     });
-  }
-
-  private RegionInfo getMobRegionInfo(TableName tableName) {
-    return RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes(".mob")).setRegionId(0)
-        .build();
   }
 
   private RpcControllerFactory getRpcControllerFactory() {

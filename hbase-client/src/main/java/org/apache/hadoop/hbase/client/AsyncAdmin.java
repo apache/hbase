@@ -299,7 +299,9 @@ public interface AsyncAdmin {
    * was sent to HBase and may need some time to finish the compact operation.
    * @param tableName table to compact
    */
-  CompletableFuture<Void> compact(TableName tableName);
+  default CompletableFuture<Void> compact(TableName tableName) {
+    return compact(tableName, CompactType.NORMAL);
+  }
 
   /**
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
@@ -309,7 +311,28 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a table. If not present, compact the table's all
    *          column families.
    */
-  CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily);
+  default CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
+    return compact(tableName, columnFamily, CompactType.NORMAL);
+  }
+
+  /**
+   * Compact a table. When the returned CompletableFuture is done, it only means the compact request
+   * was sent to HBase and may need some time to finish the compact operation.
+   * @param tableName table to compact
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   */
+  CompletableFuture<Void> compact(TableName tableName, CompactType compactType);
+
+  /**
+   * Compact a column family within a table. When the returned CompletableFuture is done, it only
+   * means the compact request was sent to HBase and may need some time to finish the compact
+   * operation.
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   */
+  CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily,
+      CompactType compactType);
 
   /**
    * Compact an individual region. When the returned CompletableFuture is done, it only means the
@@ -333,7 +356,9 @@ public interface AsyncAdmin {
    * request was sent to HBase and may need some time to finish the compact operation.
    * @param tableName table to major compact
    */
-  CompletableFuture<Void> majorCompact(TableName tableName);
+  default CompletableFuture<Void> majorCompact(TableName tableName) {
+    return majorCompact(tableName, CompactType.NORMAL);
+  }
 
   /**
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
@@ -343,7 +368,29 @@ public interface AsyncAdmin {
    * @param columnFamily column family within a table. If not present, major compact the table's all
    *          column families.
    */
-  CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily);
+  default CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
+    return majorCompact(tableName, columnFamily, CompactType.NORMAL);
+  }
+
+  /**
+   * Major compact a table. When the returned CompletableFuture is done, it only means the compact
+   * request was sent to HBase and may need some time to finish the compact operation.
+   * @param tableName table to major compact
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   */
+  CompletableFuture<Void> majorCompact(TableName tableName, CompactType compactType);
+
+  /**
+   * Major compact a column family within a table. When the returned CompletableFuture is done, it
+   * only means the compact request was sent to HBase and may need some time to finish the compact
+   * operation.
+   * @param tableName table to major compact
+   * @param columnFamily column family within a table. If not present, major compact the table's all
+   *          column families.
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   */
+  CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily,
+      CompactType compactType);
 
   /**
    * Major compact a region. When the returned CompletableFuture is done, it only means the compact
@@ -960,7 +1007,19 @@ public interface AsyncAdmin {
    * @param tableName table to examine
    * @return the current compaction state wrapped by a {@link CompletableFuture}
    */
-  CompletableFuture<CompactionState> getCompactionState(TableName tableName);
+  default CompletableFuture<CompactionState> getCompactionState(TableName tableName) {
+    return getCompactionState(tableName, CompactType.NORMAL);
+  }
+
+  /**
+   * Get the current compaction state of a table. It could be in a major compaction, a minor
+   * compaction, both, or none.
+   * @param tableName table to examine
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @return the current compaction state wrapped by a {@link CompletableFuture}
+   */
+  CompletableFuture<CompactionState> getCompactionState(TableName tableName,
+      CompactType compactType);
 
   /**
    * Get the current compaction state of region. It could be in a major compaction, a minor

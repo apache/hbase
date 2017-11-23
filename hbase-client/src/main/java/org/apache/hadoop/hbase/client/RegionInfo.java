@@ -573,6 +573,17 @@ public interface RegionInfo {
   }
 
   /**
+   * Creates a RegionInfo object for MOB data.
+   *
+   * @param tableName the name of the table
+   * @return the MOB {@link RegionInfo}.
+   */
+  static RegionInfo createMobRegionInfo(TableName tableName) {
+    return RegionInfoBuilder.newBuilder(tableName)
+        .setStartKey(Bytes.toBytes(".mob")).setRegionId(0).build();
+  }
+
+  /**
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id

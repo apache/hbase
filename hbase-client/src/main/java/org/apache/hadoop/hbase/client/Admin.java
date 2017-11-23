@@ -872,6 +872,33 @@ public interface Admin extends Abortable, Closeable {
     throws IOException;
 
   /**
+   * Compact a table.  Asynchronous operation in that this method requests that a
+   * Compaction run and then it returns. It does not wait on the completion of Compaction
+   * (it can take a while).
+   *
+   * @param tableName table to compact
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void compact(TableName tableName, CompactType compactType)
+    throws IOException, InterruptedException;
+
+  /**
+   * Compact a column family within a table.  Asynchronous operation in that this method
+   * requests that a Compaction run and then it returns. It does not wait on the
+   * completion of Compaction (it can take a while).
+   *
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @throws IOException if not a mob column family or if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void compact(TableName tableName, byte[] columnFamily, CompactType compactType)
+    throws IOException, InterruptedException;
+
+  /**
    * Major compact a table. Asynchronous operation in that this method requests
    * that a Compaction run and then it returns. It does not wait on the completion of Compaction
    * (it can take a while).
@@ -914,6 +941,33 @@ public interface Admin extends Abortable, Closeable {
    */
   void majorCompactRegion(byte[] regionName, byte[] columnFamily)
     throws IOException;
+
+  /**
+   * Major compact a table.  Asynchronous operation in that this method requests that a
+   * Compaction run and then it returns. It does not wait on the completion of Compaction
+   * (it can take a while).
+   *
+   * @param tableName table to compact
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void majorCompact(TableName tableName, CompactType compactType)
+    throws IOException, InterruptedException;
+
+  /**
+   * Major compact a column family within a table.  Asynchronous operation in that this method requests that a
+   * Compaction run and then it returns. It does not wait on the completion of Compaction
+   * (it can take a while).
+   *
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @throws IOException if not a mob column family or if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void majorCompact(TableName tableName, byte[] columnFamily, CompactType compactType)
+    throws IOException, InterruptedException;
 
   /**
    * Compact all regions on the region server. Asynchronous operation in that this method requests
@@ -1736,6 +1790,17 @@ public interface Admin extends Abortable, Closeable {
   CompactionState getCompactionState(TableName tableName) throws IOException;
 
   /**
+   * Get the current compaction state of a table. It could be in a compaction, or none.
+   *
+   * @param tableName table to examine
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @return the current compaction state
+   * @throws IOException if a remote or network exception occurs
+   */
+  CompactionState getCompactionState(TableName tableName,
+    CompactType compactType) throws IOException;
+
+  /**
    * Get the current compaction state of region. It could be in a major compaction, a minor
    * compaction, both, or none.
    *
@@ -2309,71 +2374,6 @@ public interface Admin extends Abortable, Closeable {
   default int getMasterInfoPort() throws IOException {
     return getClusterStatus(EnumSet.of(Option.MASTER_INFO_PORT)).getMasterInfoPort();
   }
-
-  /**
-   * Compact a table.  Asynchronous operation in that this method requests that a
-   * Compaction run and then it returns. It does not wait on the completion of Compaction
-   * (it can take a while).
-   *
-   * @param tableName table to compact
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  void compact(TableName tableName, CompactType compactType)
-    throws IOException, InterruptedException;
-
-  /**
-   * Compact a column family within a table.  Asynchronous operation in that this method requests that a
-   * Compaction run and then it returns. It does not wait on the completion of Compaction
-   * (it can take a while).
-   *
-   * @param tableName table to compact
-   * @param columnFamily column family within a table
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException if not a mob column family or if a remote or network exception occurs
-   * @throws InterruptedException
-   */
-  void compact(TableName tableName, byte[] columnFamily, CompactType compactType)
-    throws IOException, InterruptedException;
-
-  /**
-   * Major compact a table.  Asynchronous operation in that this method requests that a
-   * Compaction run and then it returns. It does not wait on the completion of Compaction
-   * (it can take a while).
-   *
-   * @param tableName table to compact
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  void majorCompact(TableName tableName, CompactType compactType)
-    throws IOException, InterruptedException;
-
-  /**
-   * Major compact a column family within a table.  Asynchronous operation in that this method requests that a
-   * Compaction run and then it returns. It does not wait on the completion of Compaction
-   * (it can take a while).
-   *
-   * @param tableName table to compact
-   * @param columnFamily column family within a table
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException if not a mob column family or if a remote or network exception occurs
-   * @throws InterruptedException
-   */
-  void majorCompact(TableName tableName, byte[] columnFamily, CompactType compactType)
-    throws IOException, InterruptedException;
-
-  /**
-   * Get the current compaction state of a table. It could be in a compaction, or none.
-   *
-   * @param tableName table to examine
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @return the current compaction state
-   * @throws IOException if a remote or network exception occurs
-   */
-  CompactionState getCompactionState(TableName tableName,
-    CompactType compactType) throws IOException;
 
   /**
    * Return the set of supported security capabilities.
