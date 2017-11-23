@@ -95,8 +95,8 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
-  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
-    throws IOException {
+  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, List<ServerName> notClearedServers) throws IOException {
   }
 
   @Override

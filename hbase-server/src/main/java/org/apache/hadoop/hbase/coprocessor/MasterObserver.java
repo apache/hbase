@@ -1067,7 +1067,8 @@ public interface MasterObserver extends Coprocessor {
   /**
    * Called after clear dead region servers.
    */
-  void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+  void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, List<ServerName> notClearedServers) throws IOException;
 
   /**
    * Called before servers are moved to target region server group

@@ -1208,12 +1208,13 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postClearDeadServers() throws IOException {
+  public void postClearDeadServers(final List<ServerName> servers,
+      final List<ServerName> notClearedServers) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
               throws IOException {
-        oserver.postClearDeadServers(ctx);
+        oserver.postClearDeadServers(ctx, servers, notClearedServers);
       }
     });
   }
