@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -50,6 +51,12 @@ public class DistributedHBaseCluster extends HBaseCluster {
   private final Connection connection;
 
   private ClusterManager clusterManager;
+  /**
+   * List of RegionServers killed so far. ServerName also comprises startCode of a server,
+   * so any restarted instances of the same server will have different ServerName and will not
+   * coincide with past dead ones. So there's no need to cleanup this list.
+   */
+  private Set<ServerName> killedRegionServers = new HashSet<>();
 
   public DistributedHBaseCluster(Configuration conf, ClusterManager clusterManager)
       throws IOException {
@@ -113,8 +120,14 @@ public class DistributedHBaseCluster extends HBaseCluster {
   @Override
   public void killRegionServer(ServerName serverName) throws IOException {
     LOG.info("Aborting RS: " + serverName.getServerName());
+    killedRegionServers.add(serverName);
     clusterManager.kill(ServiceType.HBASE_REGIONSERVER,
       serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public boolean isKilledRS(ServerName serverName) {
+    return killedRegionServers.contains(serverName);
   }
 
   @Override

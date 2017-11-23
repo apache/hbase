@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -88,12 +89,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionObserverInterface {
   private static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
+  @Rule
+  public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
   public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
   public final static byte[] A = Bytes.toBytes("a");
@@ -124,7 +129,7 @@ public class TestRegionObserverInterface {
     util.shutdownMiniCluster();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRegionObserver() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     // recreate table every time in order to reset the status of the
@@ -184,7 +189,7 @@ public class TestRegionObserverInterface {
       tableName, new Integer[] { 1, 1, 1, 1 });
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRowMutation() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -216,7 +221,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testIncrementHook() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -239,7 +244,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCheckAndPutHooks() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     try (Table table = util.createTable(tableName, new byte[][] { A, B, C })) {
@@ -260,7 +265,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCheckAndDeleteHooks() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -285,7 +290,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testAppendHook() throws IOException {
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A, B, C });
@@ -308,7 +313,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   // HBase-3583
   public void testHBase3583() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -351,7 +356,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testHBASE14489() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     Table table = util.createTable(tableName, new byte[][] { A });
@@ -476,7 +481,7 @@ public class TestRegionObserverInterface {
    * Tests overriding compaction handling via coprocessor hooks
    * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCompactionOverride() throws Exception {
     final TableName compactTable = TableName.valueOf(name.getMethodName());
     Admin admin = util.getAdmin();
@@ -546,7 +551,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void bulkLoadHFileTest() throws Exception {
     final String testName = TestRegionObserverInterface.class.getName() + "." + name.getMethodName();
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
@@ -575,7 +580,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
     final TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + "." + name.getMethodName());
@@ -625,7 +630,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testPreWALRestoreSkip() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + "." + name.getMethodName());
     TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
