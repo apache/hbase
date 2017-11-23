@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
@@ -420,6 +422,42 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       }
     }
     assertEquals(count, 2);
+  }
+
+  private void waitUntilMobCompactionFinished(TableName tableName)
+      throws ExecutionException, InterruptedException {
+    long finished = EnvironmentEdgeManager.currentTime() + 60000;
+    CompactionState state = admin.getCompactionState(tableName, CompactType.MOB).get();
+    while (EnvironmentEdgeManager.currentTime() < finished) {
+      if (state == CompactionState.NONE) {
+        break;
+      }
+      Thread.sleep(10);
+      state = admin.getCompactionState(tableName, CompactType.MOB).get();
+    }
+    assertEquals(CompactionState.NONE, state);
+  }
+
+  @Test
+  public void testCompactMob() throws Exception {
+    ColumnFamilyDescriptor columnDescriptor =
+        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("mob"))
+            .setMobEnabled(true).setMobThreshold(0).build();
+
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+        .addColumnFamily(columnDescriptor).build();
+
+    admin.createTable(tableDescriptor).get();
+
+    byte[][] families = { Bytes.toBytes("mob") };
+    loadData(tableName, families, 3000, 8);
+
+    admin.majorCompact(tableName, CompactType.MOB).get();
+
+    CompactionState state = admin.getCompactionState(tableName, CompactType.MOB).get();
+    assertNotEquals(CompactionState.NONE, state);
+
+    waitUntilMobCompactionFinished(tableName);
   }
 
   @Test

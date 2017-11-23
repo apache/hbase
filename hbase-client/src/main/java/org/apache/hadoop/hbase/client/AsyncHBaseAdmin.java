@@ -244,13 +244,15 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName) {
-    return wrap(rawAdmin.compact(tableName));
+  public CompletableFuture<Void> compact(TableName tableName,
+      CompactType compactType) {
+    return wrap(rawAdmin.compact(tableName, compactType));
   }
 
   @Override
-  public CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
-    return wrap(rawAdmin.compact(tableName, columnFamily));
+  public CompletableFuture<Void> compact(TableName tableName,
+      byte[] columnFamily, CompactType compactType) {
+    return wrap(rawAdmin.compact(tableName, columnFamily, compactType));
   }
 
   @Override
@@ -264,13 +266,14 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName) {
-    return wrap(rawAdmin.majorCompact(tableName));
+  public CompletableFuture<Void> majorCompact(TableName tableName, CompactType compactType) {
+    return wrap(rawAdmin.majorCompact(tableName, compactType));
   }
 
   @Override
-  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
-    return wrap(rawAdmin.majorCompact(tableName, columnFamily));
+  public CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily,
+      CompactType compactType) {
+    return wrap(rawAdmin.majorCompact(tableName, columnFamily, compactType));
   }
 
   @Override
@@ -632,8 +635,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<CompactionState> getCompactionState(TableName tableName) {
-    return wrap(rawAdmin.getCompactionState(tableName));
+  public CompletableFuture<CompactionState> getCompactionState(
+      TableName tableName, CompactType compactType) {
+    return wrap(rawAdmin.getCompactionState(tableName, compactType));
   }
 
   @Override
