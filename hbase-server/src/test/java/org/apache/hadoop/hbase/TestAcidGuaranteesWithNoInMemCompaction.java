@@ -23,24 +23,19 @@ import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.TABLE_NAME;
 
 import java.util.List;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.apache.hadoop.hbase.testclassification.FlakeyTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -49,21 +44,16 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  * that reads never see partially-complete writes. This can run as a junit test, or with a main()
  * function which runs against a real cluster (eg for testing with failures, region movement, etc)
  */
-@Category({ FlakeyTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
-public class TestAcidGuarantees {
+@Category({ MediumTests.class })
+public class TestAcidGuaranteesWithNoInMemCompaction {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @Parameterized.Parameters(name = "{index}: compType={0}")
-  public static Object[] data() {
-    return new Object[] { "NONE", "BASIC", "EAGER" };
-  }
-
-  @Parameter
-  public String compType;
-
   private AcidGuaranteesTestTool tool = new AcidGuaranteesTestTool();
+
+  protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
+    return MemoryCompactionPolicy.NONE;
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -84,9 +74,10 @@ public class TestAcidGuarantees {
 
   @Before
   public void setUp() throws Exception {
+    MemoryCompactionPolicy policy = getMemoryCompactionPolicy();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, compType);
-    if (MemoryCompactionPolicy.valueOf(compType) == MemoryCompactionPolicy.EAGER) {
+        .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, policy.name());
+    if (policy == MemoryCompactionPolicy.EAGER) {
       builder.setValue(MemStoreLAB.USEMSLAB_KEY, "false");
       builder.setValue(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, "0.9");
     }

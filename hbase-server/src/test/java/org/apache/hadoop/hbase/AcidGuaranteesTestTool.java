@@ -27,7 +27,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class AcidGuaranteesTestTool extends AbstractHBaseTool {
 
-  private static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
+  private static final Log LOG = LogFactory.getLog(AcidGuaranteesTestTool.class);
 
   public static final TableName TABLE_NAME = TableName.valueOf("TestAcidGuarantees");
   public static final byte[] FAMILY_A = Bytes.toBytes("A");
