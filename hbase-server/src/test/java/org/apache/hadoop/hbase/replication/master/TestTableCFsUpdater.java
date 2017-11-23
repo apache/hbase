@@ -50,7 +50,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @Category({ReplicationTests.class, SmallTests.class})
-public class TestTableCFsUpdater extends TableCFsUpdater {
+public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
 
   private static final Log LOG = LogFactory.getLog(TestTableCFsUpdater.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -164,7 +164,7 @@ public class TestTableCFsUpdater extends TableCFsUpdater {
     assertNull(actualRpc.getTableCFsMap());
     assertNull(actualTableCfs);
 
-    update();
+    copyTableCFs();
 
     peerId = "1";
     peerNode = getPeerNode(peerId);

@@ -33,7 +33,7 @@ EOF
         peers = replication_admin.list_peers
 
         formatter.header(%w[PEER_ID CLUSTER_KEY ENDPOINT_CLASSNAME
-                            STATE NAMESPACES TABLE_CFS BANDWIDTH])
+                            STATE REPLICATE_ALL NAMESPACES TABLE_CFS BANDWIDTH])
 
         peers.each do |peer|
           id = peer.getPeerId
@@ -42,7 +42,8 @@ EOF
           namespaces = replication_admin.show_peer_namespaces(config)
           tableCFs = replication_admin.show_peer_tableCFs(id)
           formatter.row([id, config.getClusterKey,
-                         config.getReplicationEndpointImpl, state, namespaces, tableCFs,
+                         config.getReplicationEndpointImpl, state,
+                         config.replicateAllUserTables, namespaces, tableCFs,
                          config.getBandwidth])
         end
 

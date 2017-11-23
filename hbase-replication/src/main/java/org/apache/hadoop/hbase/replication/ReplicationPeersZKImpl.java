@@ -368,6 +368,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     existingConfig.setTableCFsMap(newConfig.getTableCFsMap());
     existingConfig.setNamespaces(newConfig.getNamespaces());
     existingConfig.setBandwidth(newConfig.getBandwidth());
+    existingConfig.setReplicateAllUserTables(newConfig.replicateAllUserTables());
 
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),

@@ -71,9 +71,7 @@ public class ReplicationManager {
 
   public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
       throws ReplicationException, IOException {
-    checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
-      peerConfig.getTableCFsMap());
-    checkConfiguredWALEntryFilters(peerConfig);
+    checkPeerConfig(peerConfig);
     replicationPeers.registerPeer(peerId, peerConfig, enabled);
     replicationPeers.peerConnected(peerId);
   }
@@ -102,9 +100,7 @@ public class ReplicationManager {
 
   public void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
       throws ReplicationException, IOException {
-    checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
-      peerConfig.getTableCFsMap());
-    checkConfiguredWALEntryFilters(peerConfig);
+    checkPeerConfig(peerConfig);
     this.replicationPeers.updatePeerConfig(peerId, peerConfig);
   }
 
@@ -120,6 +116,21 @@ public class ReplicationManager {
       }
     }
     return peers;
+  }
+
+  private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws ReplicationException,
+      IOException {
+    if (peerConfig.replicateAllUserTables()) {
+      if ((peerConfig.getNamespaces() != null && !peerConfig.getNamespaces().isEmpty())
+          || (peerConfig.getTableCFsMap() != null && !peerConfig.getTableCFsMap().isEmpty())) {
+        throw new ReplicationException(
+          "Need clean namespaces or table-cfs config fisrtly when you want replicate all cluster");
+      }
+    } else {
+      checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
+        peerConfig.getTableCFsMap());
+    }
+    checkConfiguredWALEntryFilters(peerConfig);
   }
 
   /**
@@ -150,8 +161,6 @@ public class ReplicationManager {
             "Table-cfs config conflict with namespaces config in peer");
       }
     }
-
-
   }
 
   private void checkConfiguredWALEntryFilters(ReplicationPeerConfig peerConfig)

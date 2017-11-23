@@ -85,10 +85,9 @@ public class TestReplicationAdmin {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     TEST_UTIL.startMiniCluster();
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    admin = new ReplicationAdmin(conf);
+    admin = new ReplicationAdmin(TEST_UTIL.getConfiguration());
     hbaseAdmin = TEST_UTIL.getAdmin();
   }
 
@@ -238,8 +237,8 @@ public class TestReplicationAdmin {
 
   @Test
   public void testAppendPeerTableCFs() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
-    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
     final TableName tableName1 = TableName.valueOf(name.getMethodName() + "t1");
     final TableName tableName2 = TableName.valueOf(name.getMethodName() + "t2");
     final TableName tableName3 = TableName.valueOf(name.getMethodName() + "t3");
@@ -248,10 +247,14 @@ public class TestReplicationAdmin {
     final TableName tableName6 = TableName.valueOf(name.getMethodName() + "t6");
 
     // Add a valid peer
-    admin.addPeer(ID_ONE, rpc1, null);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
+
+    // Update peer config, not replicate all user tables
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
+    rpc.setReplicateAllUserTables(false);
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
 
     Map<TableName, List<String>> tableCFs = new HashMap<>();
-
     tableCFs.put(tableName1, null);
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     Map<TableName, List<String>> result =
@@ -338,14 +341,21 @@ public class TestReplicationAdmin {
 
   @Test
   public void testRemovePeerTableCFs() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
-    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
     final TableName tableName1 = TableName.valueOf(name.getMethodName() + "t1");
     final TableName tableName2 = TableName.valueOf(name.getMethodName() + "t2");
     final TableName tableName3 = TableName.valueOf(name.getMethodName() + "t3");
     final TableName tableName4 = TableName.valueOf(name.getMethodName() + "t4");
+
     // Add a valid peer
-    admin.addPeer(ID_ONE, rpc1, null);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
+
+    // Update peer config, not replicate all user tables
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
+    rpc.setReplicateAllUserTables(false);
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
+
     Map<TableName, List<String>> tableCFs = new HashMap<>();
     try {
       tableCFs.put(tableName3, null);
@@ -423,27 +433,98 @@ public class TestReplicationAdmin {
     rpc.setClusterKey(KEY_ONE);
     hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
-    rpc = admin.getPeerConfig(ID_ONE);
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
+    rpc.setReplicateAllUserTables(false);
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
+
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
     Set<String> namespaces = new HashSet<>();
     namespaces.add(ns1);
     namespaces.add(ns2);
     rpc.setNamespaces(namespaces);
-    admin.updatePeerConfig(ID_ONE, rpc);
-    namespaces = admin.getPeerConfig(ID_ONE).getNamespaces();
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
+    namespaces = hbaseAdmin.getReplicationPeerConfig(ID_ONE).getNamespaces();
     assertEquals(2, namespaces.size());
     assertTrue(namespaces.contains(ns1));
     assertTrue(namespaces.contains(ns2));
 
-    rpc = admin.getPeerConfig(ID_ONE);
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
     namespaces.clear();
     namespaces.add(ns1);
     rpc.setNamespaces(namespaces);
-    admin.updatePeerConfig(ID_ONE, rpc);
-    namespaces = admin.getPeerConfig(ID_ONE).getNamespaces();
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
+    namespaces = hbaseAdmin.getReplicationPeerConfig(ID_ONE).getNamespaces();
     assertEquals(1, namespaces.size());
     assertTrue(namespaces.contains(ns1));
 
-    admin.removePeer(ID_ONE);
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
+  }
+
+  @Test
+  public void testSetReplicateAllUserTables() throws Exception {
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
+
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
+    assertTrue(rpc.replicateAllUserTables());
+
+    rpc.setReplicateAllUserTables(false);
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
+    assertFalse(rpc.replicateAllUserTables());
+
+    rpc.setReplicateAllUserTables(true);
+    hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
+    rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
+    assertTrue(rpc.replicateAllUserTables());
+
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
+  }
+
+  @Test
+  public void testPeerConfigConflict() throws Exception {
+    // Default replicate all flag is true
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
+
+    String ns1 = "ns1";
+    Set<String> namespaces = new HashSet<String>();
+    namespaces.add(ns1);
+
+    TableName tab1 = TableName.valueOf("ns1:tabl");
+    Map<TableName, List<String>> tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs.put(tab1, new ArrayList<String>());
+
+    try {
+      rpc.setNamespaces(namespaces);
+      hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
+      fail("Should throw Exception. When replicate all flag is true, no need to config namespaces");
+    } catch (IOException e) {
+      // OK
+      rpc.setNamespaces(null);
+    }
+
+    try {
+      rpc.setTableCFsMap(tableCfs);
+      hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
+      fail("Should throw Exception. When replicate all flag is true, no need to config table-cfs");
+    } catch (IOException e) {
+      // OK
+      rpc.setTableCFsMap(null);
+    }
+
+    try {
+      rpc.setNamespaces(namespaces);
+      rpc.setTableCFsMap(tableCfs);
+      hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
+      fail("Should throw Exception."
+          + " When replicate all flag is true, no need to config namespaces or table-cfs");
+    } catch (IOException e) {
+      // OK
+      rpc.setNamespaces(null);
+      rpc.setTableCFsMap(null);
+    }
   }
 
   @Test
@@ -455,6 +536,7 @@ public class TestReplicationAdmin {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
+    rpc.setReplicateAllUserTables(false);
     hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
 
     rpc = admin.getPeerConfig(ID_ONE);

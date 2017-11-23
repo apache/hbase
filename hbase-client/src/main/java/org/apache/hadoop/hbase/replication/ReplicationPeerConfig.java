@@ -42,6 +42,8 @@ public class ReplicationPeerConfig {
   private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
   private Set<String> namespaces = null;
   private long bandwidth = 0;
+  // Default value is true, means replicate all user tables to peer cluster.
+  private boolean replicateAllUserTables = true;
 
   public ReplicationPeerConfig() {
     this.peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -110,10 +112,20 @@ public class ReplicationPeerConfig {
     return this;
   }
 
+  public boolean replicateAllUserTables() {
+    return this.replicateAllUserTables;
+  }
+
+  public ReplicationPeerConfig setReplicateAllUserTables(boolean replicateAllUserTables) {
+    this.replicateAllUserTables = replicateAllUserTables;
+    return this;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("clusterKey=").append(clusterKey).append(",");
     builder.append("replicationEndpointImpl=").append(replicationEndpointImpl).append(",");
+    builder.append("replicateAllUserTables=").append(replicateAllUserTables).append(",");
     if (namespaces != null) {
       builder.append("namespaces=").append(namespaces.toString()).append(",");
     }
