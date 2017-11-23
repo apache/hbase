@@ -908,6 +908,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.masterFinishedInitializationTime = System.currentTimeMillis();
     configurationManager.registerObserver(this.balancer);
     configurationManager.registerObserver(this.hfileCleaner);
+    configurationManager.registerObserver(this.logCleaner);
 
     // Set master as 'initialized'.
     setInitialized(true);

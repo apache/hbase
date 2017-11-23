@@ -32,11 +32,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.StealJobQueue;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 /**
@@ -44,8 +43,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  * folder that are deletable for each HFile cleaner in the chain.
  */
 @InterfaceAudience.Private
-public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> implements
-    ConfigurationObserver {
+public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
 
   public static final String MASTER_HFILE_CLEANER_PLUGINS = "hbase.master.hfilecleaner.plugins";
 
@@ -390,6 +388,8 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> impleme
 
   @Override
   public void onConfigurationChange(Configuration conf) {
+    super.onConfigurationChange(conf);
+
     if (!checkAndUpdateConfigurations(conf)) {
       LOG.debug("Update configuration triggered but nothing changed for this cleaner");
       return;

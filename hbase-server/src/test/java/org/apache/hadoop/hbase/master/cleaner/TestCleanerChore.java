@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,8 +54,7 @@ public class TestCleanerChore {
   public void cleanup() throws Exception {
     // delete and recreate the test directory, ensuring a clean test dir between tests
     UTIL.cleanupTestDir();
-}
-
+  }
 
   @Test
   public void testSavesFilesOnRequest() throws Exception {
@@ -276,11 +278,8 @@ public class TestCleanerChore {
       }
     }).when(spy).isFileDeletable(Mockito.any());
 
-    // attempt to delete the directory, which
-    if (chore.checkAndDeleteDirectory(parent)) {
-      throw new Exception(
-          "Reported success deleting directory, should have failed when adding file mid-iteration");
-    }
+    // run the chore
+    chore.chore();
 
     // make sure all the directories + added file exist, but the original file is deleted
     assertTrue("Added file unexpectedly deleted", fs.exists(racyFile));
@@ -353,6 +352,54 @@ public class TestCleanerChore {
     assertTrue("File got deleted with cleaner disabled", fs.exists(file));
     assertTrue("Directory got deleted", fs.exists(child));
     assertTrue("Directory got deleted", fs.exists(parent));
+  }
+
+  @Test
+  public void testOnConfigurationChange() throws Exception {
+    Stoppable stop = new StoppableImplementation();
+    Configuration conf = UTIL.getConfiguration();
+    Path testDir = UTIL.getDataTestDir();
+    FileSystem fs = UTIL.getTestFileSystem();
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, AlwaysDelete.class.getName());
+    conf.set(CleanerChore.CHORE_POOL_SIZE, "2");
+    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    chore.setEnabled(true);
+    // Create subdirs under testDir
+    int dirNums = 6;
+    Path[] subdirs = new Path[dirNums];
+    for (int i = 0; i < dirNums; i++) {
+      subdirs[i] = new Path(testDir, "subdir-" + i);
+      fs.mkdirs(subdirs[i]);
+    }
+    // Under each subdirs create 6 files
+    for (Path subdir : subdirs) {
+      createFiles(fs, subdir, 6);
+    }
+    // Start chore
+    Thread t = new Thread(() -> chore.chore());
+    t.setDaemon(true);
+    t.start();
+    // Change size of chore's pool
+    conf.set(CleanerChore.CHORE_POOL_SIZE, "4");
+    chore.onConfigurationChange(conf);
+    assertEquals(4, chore.getChorePoolSize());
+    // Stop chore
+    t.join();
+  }
+
+  private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
+    Random random = new Random();
+    for (int i = 0; i < numOfFiles; i++) {
+      int xMega = 1 + random.nextInt(3); // size of each file is between 1~3M
+      try (FSDataOutputStream fsdos = fs.create(new Path(parentDir, "file-" + i))) {
+        for (int m = 0; m < xMega; m++) {
+          byte[] M = new byte[1024 * 1024];
+          random.nextBytes(M);
+          fsdos.write(M);
+        }
+      }
+    }
   }
 
   private static class AllValidPaths extends CleanerChore<BaseHFileCleanerDelegate> {
