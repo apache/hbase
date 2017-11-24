@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
-import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIM_ARRAY;
+import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
+import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -33,17 +33,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience.Private;
-
-import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience.Private;
 
 /**
  * Utility methods helpful for slinging {@link Cell} instances. Some methods below are for internal
@@ -129,6 +128,7 @@ public final class CellUtil {
 
   /**
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
+   *             Use {@link RawCell#cloneTags()}
    */
   @Deprecated
   public static byte[] cloneTags(Cell cell) {
@@ -145,7 +145,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static byte[] getTagArray(Cell cell) {
-    return PrivateCellUtil.getTagsArray(cell);
+    return PrivateCellUtil.cloneTags(cell);
   }
 
   /**
@@ -560,15 +560,24 @@ public final class CellUtil {
   }
 
   /**
+   * Note : Now only CPs can create cell with tags using the CP environment
    * @return A new cell which is having the extra tags also added to it.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
+   *        
    */
+  @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
-    return createCell(cell, TagUtil.fromList(tags));
+    return createCell(cell, Tag.fromList(tags));
   }
 
   /**
+   * Now only CPs can create cell with tags using the CP environment
    * @return A new cell which is having the extra tags also added to it.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *            Use CP environment to build Cell using {@link ExtendedCellBuilder}
    */
+  @Deprecated
   public static Cell createCell(Cell cell, byte[] tags) {
     if (cell instanceof ByteBufferCell) {
       return new PrivateCellUtil.TagRewriteByteBufferCell((ByteBufferCell) cell, tags);
@@ -576,6 +585,12 @@ public final class CellUtil {
     return new PrivateCellUtil.TagRewriteCell(cell, tags);
   }
 
+  /**
+   * Now only CPs can create cell with tags using the CP environment
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
+   */
+  @Deprecated
   public static Cell createCell(Cell cell, byte[] value, byte[] tags) {
     if (cell instanceof ByteBufferCell) {
       return new PrivateCellUtil.ValueAndTagRewriteByteBufferCell((ByteBufferCell) cell, value,
@@ -1054,6 +1069,7 @@ public final class CellUtil {
    * @param cell The Cell
    * @return Tags in the given Cell as a List
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link RawCell#getTags()}
    */
   @Deprecated
   public static List<Tag> getTags(Cell cell) {
@@ -1067,10 +1083,16 @@ public final class CellUtil {
    * @param type Type of the Tag to retrieve
    * @return null if there is no tag of the passed in tag type
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link RawCell#getTag(byte)}
    */
   @Deprecated
-  public static Tag getTag(Cell cell, byte type){
-    return PrivateCellUtil.getTag(cell, type);
+  public static Tag getTag(Cell cell, byte type) {
+    Optional<Tag> tag = PrivateCellUtil.getTag(cell, type);
+    if (tag.isPresent()) {
+      return tag.get();
+    } else {
+      return null;
+    }
   }
 
   /**

@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -103,4 +104,11 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
   // so we do not want to allow coprocessors to export metrics at the region level. We can allow
   // getMetricRegistryForTable() to allow coprocessors to track metrics per-table, per-regionserver.
   MetricRegistry getMetricRegistryForRegionServer();
+
+  /**
+   * Returns a CellBuilder so that coprocessors can build cells. These cells can also include tags.
+   * Note that this builder does not support updating seqId of the cells
+   * @return the ExtendedCellBuilder
+   */
+  ExtendedCellBuilder getCellBuilder();
 }

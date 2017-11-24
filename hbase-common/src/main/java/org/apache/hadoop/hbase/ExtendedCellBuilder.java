@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Use {@link ExtendedCellBuilderFactory} to get ExtendedCellBuilder instance.
  * TODO: ditto for ByteBufferCell?
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface ExtendedCellBuilder extends CellBuilder {
   @Override
   ExtendedCellBuilder setRow(final byte[] row);
@@ -62,8 +62,15 @@ public interface ExtendedCellBuilder extends CellBuilder {
   @Override
   ExtendedCellBuilder clear();
 
+  // TODO : While creating RawCellBuilder allow 'Tag' to be passed instead of byte[]
   ExtendedCellBuilder setTags(final byte[] tags);
+  // TODO : While creating RawCellBuilder allow 'Tag' to be passed instead of byte[]
   ExtendedCellBuilder setTags(final byte[] tags, int tagsOffset, int tagsLength);
 
+  /**
+   * Internal usage. Be careful before you use this while building a cell
+   * @param seqId set the seqId
+   * @return the current ExternalCellBuilder
+   */
   ExtendedCellBuilder setSequenceId(final long seqId);
 }

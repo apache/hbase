@@ -606,7 +606,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       for (Tag tag : deleteVisTags) {
         matchFound = false;
         for (Tag givenTag : putVisTags) {
-          if (TagUtil.matchingValue(tag, givenTag)) {
+          if (Tag.matchingValue(tag, givenTag)) {
             matchFound = true;
             break;
           }

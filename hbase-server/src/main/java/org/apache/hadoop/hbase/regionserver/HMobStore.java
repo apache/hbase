@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -121,7 +120,7 @@ public class HMobStore extends HStore {
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
         getTableName().getName());
     tags.add(tableNameTag);
-    this.refCellTags = TagUtil.fromList(tags);
+    this.refCellTags = Tag.fromList(tags);
   }
 
   /**
@@ -332,7 +331,7 @@ public class HMobStore extends HStore {
       String fileName = MobUtils.getMobFileName(reference);
       Tag tableNameTag = MobUtils.getTableNameTag(reference);
       if (tableNameTag != null) {
-        String tableNameString = TagUtil.getValueAsString(tableNameTag);
+        String tableNameString = Tag.getValueAsString(tableNameTag);
         List<Path> locations = map.get(tableNameString);
         if (locations == null) {
           IdLock.Entry lockEntry = keyLock.getLockEntry(tableNameString.hashCode());
@@ -359,12 +358,15 @@ public class HMobStore extends HStore {
           + "qualifier,timestamp,type and tags but with an empty value to return.");
       result = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
               .setRow(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength())
-              .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(), reference.getFamilyLength())
-              .setQualifier(reference.getQualifierArray(), reference.getQualifierOffset(), reference.getQualifierLength())
+              .setFamily(reference.getFamilyArray(), reference.getFamilyOffset(),
+                reference.getFamilyLength())
+              .setQualifier(reference.getQualifierArray(),
+                reference.getQualifierOffset(), reference.getQualifierLength())
               .setTimestamp(reference.getTimestamp())
               .setType(reference.getTypeByte())
               .setValue(HConstants.EMPTY_BYTE_ARRAY)
-              .setTags(reference.getTagsArray(), reference.getTagsOffset(), reference.getTagsLength())
+              .setTags(reference.getTagsArray(), reference.getTagsOffset(),
+                reference.getTagsLength())
               .build();
     }
     return result;

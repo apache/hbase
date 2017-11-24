@@ -25,14 +25,12 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -43,6 +41,7 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityNewVersionBehaivorT
 import org.apache.hadoop.hbase.security.visibility.VisibilityScanDeleteTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A query matcher that is specifically designed for the scan case.
@@ -157,7 +156,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
         // to convert
         long ts = cell.getTimestamp();
         assert t.getValueLength() == Bytes.SIZEOF_LONG;
-        long ttl = TagUtil.getValueAsLong(t);
+        long ttl = Tag.getValueAsLong(t);
         if (ts + ttl < now) {
           return true;
         }

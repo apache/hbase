@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -49,14 +50,12 @@ import com.google.common.annotations.VisibleForTesting;
  * rich set of APIs than those in {@link CellUtil} for internal usage.
  */
 @InterfaceAudience.Private
-// TODO : Make Tag IA.LimitedPrivate and move some of the Util methods to CP exposed Util class
-public class PrivateCellUtil {
+public final class PrivateCellUtil {
 
   /**
    * Private constructor to keep this class from being instantiated.
    */
   private PrivateCellUtil() {
-
   }
 
   /******************* ByteRange *******************************/
@@ -80,64 +79,6 @@ public class PrivateCellUtil {
 
   public static ByteRange fillTagRange(Cell cell, ByteRange range) {
     return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
-  }
-
-  /**
-   * Returns tag value in a new byte array. If server-side, use {@link Tag#getValueArray()} with
-   * appropriate {@link Tag#getValueOffset()} and {@link Tag#getValueLength()} instead to save on
-   * allocations.
-   * @param cell
-   * @return tag value in a new byte array.
-   */
-  public static byte[] getTagsArray(Cell cell) {
-    byte[] output = new byte[cell.getTagsLength()];
-    copyTagsTo(cell, output, 0);
-    return output;
-  }
-
-  public static byte[] cloneTags(Cell cell) {
-    byte[] output = new byte[cell.getTagsLength()];
-    copyTagsTo(cell, output, 0);
-    return output;
-  }
-
-  /**
-   * Copies the tags info into the tag portion of the cell
-   * @param cell
-   * @param destination
-   * @param destinationOffset
-   * @return position after tags
-   */
-  public static int copyTagsTo(Cell cell, byte[] destination, int destinationOffset) {
-    int tlen = cell.getTagsLength();
-    if (cell instanceof ByteBufferCell) {
-      ByteBufferUtils.copyFromBufferToArray(destination,
-        ((ByteBufferCell) cell).getTagsByteBuffer(), ((ByteBufferCell) cell).getTagsPosition(),
-        destinationOffset, tlen);
-    } else {
-      System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
-        tlen);
-    }
-    return destinationOffset + tlen;
-  }
-
-  /**
-   * Copies the tags info into the tag portion of the cell
-   * @param cell
-   * @param destination
-   * @param destinationOffset
-   * @return the position after tags
-   */
-  public static int copyTagsTo(Cell cell, ByteBuffer destination, int destinationOffset) {
-    int tlen = cell.getTagsLength();
-    if (cell instanceof ByteBufferCell) {
-      ByteBufferUtils.copyFromBufferToBuffer(((ByteBufferCell) cell).getTagsByteBuffer(),
-        destination, ((ByteBufferCell) cell).getTagsPosition(), destinationOffset, tlen);
-    } else {
-      ByteBufferUtils.copyFromArrayToBuffer(destination, destinationOffset, cell.getTagsArray(),
-        cell.getTagsOffset(), tlen);
-    }
-    return destinationOffset + tlen;
   }
 
   /********************* misc *************************************/
@@ -168,7 +109,7 @@ public class PrivateCellUtil {
    * @return A new cell which is having the extra tags also added to it.
    */
   public static Cell createCell(Cell cell, List<Tag> tags) {
-    return createCell(cell, TagUtil.fromList(tags));
+    return createCell(cell, Tag.fromList(tags));
   }
 
   /**
@@ -653,7 +594,9 @@ public class PrivateCellUtil {
       ByteBufferUtils.putInt(out, valLen);// Value length
       int len = 2 * Bytes.SIZEOF_INT;
       len += writeFlatKey(cell, out);// Key
-      if (valLen > 0) out.write(value);// Value
+      if (valLen > 0) {
+        out.write(value);// Value
+      }
       len += valLen;
       if (withTags && tags != null) {
         // Write the tagsLength 2 bytes
@@ -787,7 +730,7 @@ public class PrivateCellUtil {
 
   /**
    * Finds if the qualifier part of the cell and the KV serialized byte[] are equal
-   * @param left
+   * @param left the cell with which we need to match the qualifier
    * @param buf the serialized keyvalue format byte[]
    * @param offset the offset of the qualifier in the byte[]
    * @param length the length of the qualifier in the byte[]
@@ -809,7 +752,9 @@ public class PrivateCellUtil {
 
   public static boolean matchingColumn(final Cell left, final byte[] fam, final int foffset,
       final int flength, final byte[] qual, final int qoffset, final int qlength) {
-    if (!matchingFamily(left, fam, foffset, flength)) return false;
+    if (!matchingFamily(left, fam, foffset, flength)) {
+      return false;
+    }
     return matchingQualifier(left, qual, qoffset, qlength);
   }
 
@@ -878,6 +823,113 @@ public class PrivateCellUtil {
     return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
   }
 
+  public static byte[] cloneTags(Cell cell) {
+    byte[] output = new byte[cell.getTagsLength()];
+    copyTagsTo(cell, output, 0);
+    return output;
+  }
+
+  /**
+   * Copies the tags info into the tag portion of the cell
+   * @param cell
+   * @param destination
+   * @param destinationOffset
+   * @return position after tags
+   */
+  public static int copyTagsTo(Cell cell, byte[] destination, int destinationOffset) {
+    int tlen = cell.getTagsLength();
+    if (cell instanceof ByteBufferCell) {
+      ByteBufferUtils.copyFromBufferToArray(destination,
+        ((ByteBufferCell) cell).getTagsByteBuffer(), ((ByteBufferCell) cell).getTagsPosition(),
+        destinationOffset, tlen);
+    } else {
+      System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
+        tlen);
+    }
+    return destinationOffset + tlen;
+  }
+
+  /**
+   * Copies the tags info into the tag portion of the cell
+   * @param cell
+   * @param destination
+   * @param destinationOffset
+   * @return the position after tags
+   */
+  public static int copyTagsTo(Cell cell, ByteBuffer destination, int destinationOffset) {
+    int tlen = cell.getTagsLength();
+    if (cell instanceof ByteBufferCell) {
+      ByteBufferUtils.copyFromBufferToBuffer(((ByteBufferCell) cell).getTagsByteBuffer(),
+        destination, ((ByteBufferCell) cell).getTagsPosition(), destinationOffset, tlen);
+    } else {
+      ByteBufferUtils.copyFromArrayToBuffer(destination, destinationOffset, cell.getTagsArray(),
+        cell.getTagsOffset(), tlen);
+    }
+    return destinationOffset + tlen;
+  }
+
+  /**
+   * @param cell The Cell
+   * @return Tags in the given Cell as a List
+   */
+  public static List<Tag> getTags(Cell cell) {
+    List<Tag> tags = new ArrayList<>();
+    Iterator<Tag> tagsItr = tagsIterator(cell);
+    while (tagsItr.hasNext()) {
+      tags.add(tagsItr.next());
+    }
+    return tags;
+  }
+
+  /**
+   * Retrieve Cell's first tag, matching the passed in type
+   * @param cell The Cell
+   * @param type Type of the Tag to retrieve
+   * @return null if there is no tag of the passed in tag type
+   */
+  public static Optional<Tag> getTag(Cell cell, byte type) {
+    boolean bufferBacked = cell instanceof ByteBufferCell;
+    int length = cell.getTagsLength();
+    int offset = bufferBacked ? ((ByteBufferCell) cell).getTagsPosition() : cell.getTagsOffset();
+    int pos = offset;
+    while (pos < offset + length) {
+      int tagLen;
+      if (bufferBacked) {
+        ByteBuffer tagsBuffer = ((ByteBufferCell) cell).getTagsByteBuffer();
+        tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
+        if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
+          return Optional.ofNullable(new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE));
+        }
+      } else {
+        tagLen = Bytes.readAsInt(cell.getTagsArray(), pos, TAG_LENGTH_SIZE);
+        if (cell.getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
+          return Optional
+              .ofNullable(new ArrayBackedTag(cell.getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
+        }
+      }
+      pos += TAG_LENGTH_SIZE + tagLen;
+    }
+    return Optional.ofNullable(null);
+  }
+
+  /**
+   * Util method to iterate through the tags in the given cell.
+   * @param cell The Cell over which tags iterator is needed.
+   * @return iterator for the tags
+   */
+  public static Iterator<Tag> tagsIterator(final Cell cell) {
+    final int tagsLength = cell.getTagsLength();
+    // Save an object allocation where we can
+    if (tagsLength == 0) {
+      return TagUtil.EMPTY_TAGS_ITR;
+    }
+    if (cell instanceof ByteBufferCell) {
+      return tagsIterator(((ByteBufferCell) cell).getTagsByteBuffer(),
+        ((ByteBufferCell) cell).getTagsPosition(), tagsLength);
+    }
+    return CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+  }
+
   private static Iterator<Tag> tagsIterator(final ByteBuffer tags, final int offset,
       final int length) {
     return new Iterator<Tag>() {
@@ -905,95 +957,6 @@ public class PrivateCellUtil {
         throw new UnsupportedOperationException();
       }
     };
-  }
-
-  /**
-   * Util method to iterate through the tags in the given cell.
-   * @param cell The Cell over which tags iterator is needed.
-   * @return iterator for the tags
-   */
-  public static Iterator<Tag> tagsIterator(final Cell cell) {
-    final int tagsLength = cell.getTagsLength();
-    // Save an object allocation where we can
-    if (tagsLength == 0) {
-      return TagUtil.EMPTY_TAGS_ITR;
-    }
-    if (cell instanceof ByteBufferCell) {
-      return tagsIterator(((ByteBufferCell) cell).getTagsByteBuffer(),
-        ((ByteBufferCell) cell).getTagsPosition(), tagsLength);
-    }
-    return tagsIterator(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
-  }
-
-  private static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final int length) {
-    return new Iterator<Tag>() {
-      private int pos = offset;
-      private int endOffset = offset + length - 1;
-
-      @Override
-      public boolean hasNext() {
-        return this.pos < endOffset;
-      }
-
-      @Override
-      public Tag next() {
-        if (hasNext()) {
-          int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
-          Tag tag = new ArrayBackedTag(tags, pos, curTagLen + TAG_LENGTH_SIZE);
-          this.pos += Bytes.SIZEOF_SHORT + curTagLen;
-          return tag;
-        }
-        return null;
-      }
-
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException();
-      }
-    };
-  }
-
-  /**
-   * @param cell The Cell
-   * @return Tags in the given Cell as a List
-   */
-  public static List<Tag> getTags(Cell cell) {
-    List<Tag> tags = new ArrayList<>();
-    Iterator<Tag> tagsItr = tagsIterator(cell);
-    while (tagsItr.hasNext()) {
-      tags.add(tagsItr.next());
-    }
-    return tags;
-  }
-
-  /**
-   * Retrieve Cell's first tag, matching the passed in type
-   * @param cell The Cell
-   * @param type Type of the Tag to retrieve
-   * @return null if there is no tag of the passed in tag type
-   */
-  public static Tag getTag(Cell cell, byte type) {
-    boolean bufferBacked = cell instanceof ByteBufferCell;
-    int length = cell.getTagsLength();
-    int offset = bufferBacked ? ((ByteBufferCell) cell).getTagsPosition() : cell.getTagsOffset();
-    int pos = offset;
-    while (pos < offset + length) {
-      int tagLen;
-      if (bufferBacked) {
-        ByteBuffer tagsBuffer = ((ByteBufferCell) cell).getTagsByteBuffer();
-        tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
-        if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
-          return new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE);
-        }
-      } else {
-        tagLen = Bytes.readAsInt(cell.getTagsArray(), pos, TAG_LENGTH_SIZE);
-        if (cell.getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-          return new ArrayBackedTag(cell.getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE);
-        }
-      }
-      pos += TAG_LENGTH_SIZE + tagLen;
-    }
-    return null;
   }
 
   /**

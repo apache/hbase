@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -90,7 +89,7 @@ public class TestStoreFileScannerWithTagCompression {
           kv.getRowLength()));
       List<Tag> tags = KeyValueUtil.ensureKeyValue(kv).getTags();
       assertEquals(1, tags.size());
-      assertEquals("tag3", Bytes.toString(TagUtil.cloneValue(tags.get(0))));
+      assertEquals("tag3", Bytes.toString(Tag.cloneValue(tags.get(0))));
     } finally {
       s.close();
     }

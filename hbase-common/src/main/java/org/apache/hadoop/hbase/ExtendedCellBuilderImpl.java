@@ -40,6 +40,12 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   protected byte[] tags = null;
   protected int tagsOffset = 0;
   protected int tagsLength = 0;
+  // Will go away once we do with RawCellBuilder
+  protected boolean allowSeqIdUpdate = false;
+
+  public ExtendedCellBuilderImpl(boolean allowSeqIdUpdate) {
+    this.allowSeqIdUpdate = allowSeqIdUpdate;
+  }
 
   @Override
   public ExtendedCellBuilder setRow(final byte[] row) {
@@ -126,8 +132,11 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setSequenceId(final long seqId) {
-    this.seqId = seqId;
-    return this;
+    if (allowSeqIdUpdate) {
+      this.seqId = seqId;
+      return this;
+    }
+    throw new UnsupportedOperationException("SeqId cannot be set on this cell");
   }
 
   private void checkBeforeBuild() {

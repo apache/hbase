@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -326,6 +327,11 @@ public class TestTokenAuthentication {
 
         @Override
         public Connection createConnection(Configuration conf) throws IOException {
+          return null;
+        }
+
+        @Override
+        public ExtendedCellBuilder getCellBuilder() {
           return null;
         }
       });

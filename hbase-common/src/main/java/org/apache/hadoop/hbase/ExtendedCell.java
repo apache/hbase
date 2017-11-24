@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Extension to {@link Cell} with server side required functions. Server side Cell implementations
@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.io.HeapSize;
  * @see SettableSequenceId
  * @see SettableTimestamp
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestamp, HeapSize,
+@InterfaceAudience.Private
+public interface ExtendedCell extends RawCell, SettableSequenceId, SettableTimestamp, HeapSize,
     Cloneable {
 
   public static int CELL_NOT_BASED_ON_CHUNK = -1;
