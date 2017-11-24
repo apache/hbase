@@ -463,12 +463,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
       return;
     }
-    // we have some unsynced data but haven't reached the batch size yet
-    if (!syncFutures.isEmpty()
-        && syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync) {
-      // we have at least one sync request
-      sync(writer);
-    }
+    // reach here means that we have some unsynced data but haven't reached the batch size yet
+    // but we will not issue a sync directly here even if there are sync requests because we may
+    // have some new data in the ringbuffer, so let's just return here and delay the decision of
+    // whether to issue a sync in the caller method.
   }
 
   private void consume() {
@@ -526,6 +524,12 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         // give up scheduling the consumer task.
         // 3. we set consumerScheduled to false and also give up scheduling consumer task.
         if (waitingConsumePayloadsGatingSequence.get() == waitingConsumePayloads.getCursor()) {
+          // we will give up consuming so if there are some unsynced data we need to issue a sync.
+          if (writer.getLength() > fileLengthAtLastSync && !syncFutures.isEmpty() &&
+              syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync) {
+            // no new data in the ringbuffer and we have at least one sync request
+            sync(writer);
+          }
           return;
         } else {
           // maybe someone has grabbed this before us
