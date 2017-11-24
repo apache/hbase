@@ -37,13 +37,13 @@ public class TestTagUtil {
     assertEquals(1, tags.size());
     Tag ttlTag = tags.get(0);
     assertEquals(TagType.TTL_TAG_TYPE, ttlTag.getType());
-    assertEquals(ttl, TagUtil.getValueAsLong(ttlTag));
+    assertEquals(ttl, Tag.getValueAsLong(ttlTag));
     // Already having a TTL tag in the list. So the call must remove the old tag
     long ttl2 = 30 * 1000;
     tags = TagUtil.carryForwardTTLTag(tags, ttl2);
     assertEquals(1, tags.size());
     ttlTag = tags.get(0);
     assertEquals(TagType.TTL_TAG_TYPE, ttlTag.getType());
-    assertEquals(ttl2, TagUtil.getValueAsLong(ttlTag));
+    assertEquals(ttl2, Tag.getValueAsLong(ttlTag));
   }
 }

@@ -459,11 +459,11 @@ public class TestKeyValue extends TestCase {
     boolean meta1Ok = false, meta2Ok = false;
     for (Tag tag : tags) {
       if (tag.getType() == (byte) 1) {
-        if (Bytes.equals(TagUtil.cloneValue(tag), metaValue1)) {
+        if (Bytes.equals(Tag.cloneValue(tag), metaValue1)) {
           meta1Ok = true;
         }
       } else {
-        if (Bytes.equals(TagUtil.cloneValue(tag), metaValue2)) {
+        if (Bytes.equals(Tag.cloneValue(tag), metaValue2)) {
           meta2Ok = true;
         }
       }
@@ -476,12 +476,12 @@ public class TestKeyValue extends TestCase {
     Tag next = tagItr.next();
     assertEquals(10, next.getValueLength());
     assertEquals((byte) 1, next.getType());
-    Bytes.equals(TagUtil.cloneValue(next), metaValue1);
+    Bytes.equals(Tag.cloneValue(next), metaValue1);
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
     assertEquals(10, next.getValueLength());
     assertEquals((byte) 2, next.getType());
-    Bytes.equals(TagUtil.cloneValue(next), metaValue2);
+    Bytes.equals(Tag.cloneValue(next), metaValue2);
     assertFalse(tagItr.hasNext());
 
     tagItr = PrivateCellUtil.tagsIterator(kv);
@@ -489,12 +489,12 @@ public class TestKeyValue extends TestCase {
     next = tagItr.next();
     assertEquals(10, next.getValueLength());
     assertEquals((byte) 1, next.getType());
-    Bytes.equals(TagUtil.cloneValue(next), metaValue1);
+    Bytes.equals(Tag.cloneValue(next), metaValue1);
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
     assertEquals(10, next.getValueLength());
     assertEquals((byte) 2, next.getType());
-    Bytes.equals(TagUtil.cloneValue(next), metaValue2);
+    Bytes.equals(Tag.cloneValue(next), metaValue2);
     assertFalse(tagItr.hasNext());
   }
 

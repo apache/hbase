@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
-import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIM_ARRAY;
+import static org.apache.hadoop.hbase.KeyValue.getDelimiter;
+import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -33,17 +33,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience.Private;
-
-import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience.Private;
 
 /**
  * Utility methods helpful for slinging {@link Cell} instances. Some methods below are for internal
@@ -130,6 +129,7 @@ public final class CellUtil {
 
   /**
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
+   *             Use {@link RawCell#cloneTags()}
    */
   @Deprecated
   public static byte[] cloneTags(Cell cell) {
@@ -588,17 +588,21 @@ public final class CellUtil {
   }
 
   /**
+   * Note : Now only CPs can create cell with tags using the CP environment
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
+   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
    */
   @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
-    return createCell(cell, TagUtil.fromList(tags));
+    return createCell(cell, Tag.fromList(tags));
   }
 
   /**
+   * Now only CPs can create cell with tags using the CP environment
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
+   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
    */
   @Deprecated
   public static Cell createCell(Cell cell, byte[] tags) {
@@ -609,7 +613,9 @@ public final class CellUtil {
   }
 
   /**
+   * Now only CPs can create cell with tags using the CP environment
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
+   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
    */
   @Deprecated
   public static Cell createCell(Cell cell, byte[] value, byte[] tags) {
@@ -1063,6 +1069,7 @@ public final class CellUtil {
    * @param cell
    * @return estimate of the heap space
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link RawCell#getTags()}
    */
   @Deprecated
   public static long estimatedHeapSizeOf(final Cell cell) {
@@ -1133,30 +1140,16 @@ public final class CellUtil {
    * @param type Type of the Tag to retrieve
    * @return null if there is no tag of the passed in tag type
    * @deprecated As of 2.0.0 and will be removed in HBase-3.0.0
+   *             Use {@link RawCell#getTag(byte)}
    */
   @Deprecated
   public static Tag getTag(Cell cell, byte type) {
-    boolean bufferBacked = cell instanceof ByteBufferCell;
-    int length = cell.getTagsLength();
-    int offset = bufferBacked ? ((ByteBufferCell) cell).getTagsPosition() : cell.getTagsOffset();
-    int pos = offset;
-    while (pos < offset + length) {
-      int tagLen;
-      if (bufferBacked) {
-        ByteBuffer tagsBuffer = ((ByteBufferCell) cell).getTagsByteBuffer();
-        tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
-        if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
-          return new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE);
-        }
-      } else {
-        tagLen = Bytes.readAsInt(cell.getTagsArray(), pos, TAG_LENGTH_SIZE);
-        if (cell.getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-          return new ArrayBackedTag(cell.getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE);
-        }
-      }
-      pos += TAG_LENGTH_SIZE + tagLen;
+    Optional<Tag> tag = PrivateCellUtil.getTag(cell, type);
+    if (tag.isPresent()) {
+      return tag.get();
+    } else {
+      return null;
     }
-    return null;
   }
 
   /**

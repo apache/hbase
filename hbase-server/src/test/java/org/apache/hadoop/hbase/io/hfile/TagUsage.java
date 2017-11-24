@@ -17,9 +17,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Used in testcases only.  
  */
+@InterfaceAudience.Private
 public enum TagUsage {
   // No tags would be added
   NO_TAG, 

@@ -38,8 +38,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -80,14 +83,13 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -178,6 +180,13 @@ public class RegionCoprocessorHost
     @Override
     public MetricRegistry getMetricRegistryForRegionServer() {
       return metricRegistry;
+    }
+
+    @Override
+    public ExtendedCellBuilder getCellBuilder() {
+      // do not allow seqId update.
+      // We always do a DEEP_COPY only
+      return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY, false);
     }
   }
 

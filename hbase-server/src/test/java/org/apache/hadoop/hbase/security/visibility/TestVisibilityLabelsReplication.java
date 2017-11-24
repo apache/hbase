@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -40,14 +41,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
-import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
@@ -73,6 +72,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.Assert;
@@ -285,11 +285,10 @@ public class TestVisibilityLabelsReplication {
     for (Cell cell : cells) {
       if ((Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row, 0,
           row.length))) {
-        List<Tag> tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
-            cell.getTagsLength());
+        List<Tag> tags = ((RawCell)cell).getTags();
         for (Tag tag : tags) {
           if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
-            assertEquals(visTag, TagUtil.getValueAsString(tag));
+            assertEquals(visTag, Tag.getValueAsString(tag));
             tagFound = true;
             break;
           }
@@ -331,7 +330,7 @@ public class TestVisibilityLabelsReplication {
           boolean foundNonVisTag = false;
           for (Tag t : TestCoprocessorForTagsAtSink.tags) {
             if (t.getType() == NON_VIS_TAG_TYPE) {
-              assertEquals(TEMP, TagUtil.getValueAsString(t));
+              assertEquals(TEMP, Tag.getValueAsString(t));
               foundNonVisTag = true;
               break;
             }
@@ -443,7 +442,7 @@ public class TestVisibilityLabelsReplication {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+          tags = ((RawCell)cell).getTags();
         }
       }
     }

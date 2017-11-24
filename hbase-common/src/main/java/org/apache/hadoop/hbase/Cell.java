@@ -184,9 +184,10 @@ public interface Cell {
   /**
    * HBase internally uses 2 bytes to store tags length in Cell.
    * As the tags length is always a non-negative number, to make good use of the sign bit,
-   * the max of tags length is defined as {@link TagUtil#MAX_TAGS_LENGTH}, which is 2 * Short.MAX_VALUE + 1 = 65535.
+   * the max of tags length is defined 2 * Short.MAX_VALUE + 1 = 65535.
    * As a result, the return type is int, because a short is not capable of handling that.
-   * Please note that even if the return type is int, the max tags length is far less than Integer.MAX_VALUE.
+   * Please note that even if the return type is int, the max tags length is far
+   * less than Integer.MAX_VALUE.
    *
    * @return the total length of the tags in the Cell.
    */

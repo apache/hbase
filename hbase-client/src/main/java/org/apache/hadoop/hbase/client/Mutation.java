@@ -34,11 +34,9 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -48,14 +46,14 @@ import org.apache.hadoop.hbase.security.access.AccessControlUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataInput;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataOutput;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteStreams;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
@@ -230,7 +228,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     if (tags != null) {
       List<String> tagsString = new ArrayList<>(tags.size());
       for (Tag t : tags) {
-        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(t)));
+        tagsString
+            .add((t.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(t)));
       }
       stringMap.put("tag", tagsString);
     }

@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -43,12 +42,13 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * WALPrettyPrinter prints the contents of a given WAL with a variety of
@@ -343,7 +343,8 @@ public class WALPrettyPrinter {
       Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
       while (tagsIterator.hasNext()) {
         Tag tag = tagsIterator.next();
-        tagsString.add((tag.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(tag)));
+        tagsString
+            .add((tag.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(tag)));
       }
       stringMap.put("tag", tagsString);
     }

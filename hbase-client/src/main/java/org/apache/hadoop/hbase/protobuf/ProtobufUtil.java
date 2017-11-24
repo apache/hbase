@@ -30,7 +30,6 @@ import java.util.NavigableSet;
 import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -92,6 +90,7 @@ import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
@@ -539,7 +538,8 @@ public final class ProtobufUtil {
                       .setTags(allTagsBytes)
                       .build());
             } else {
-              List<Tag> tags = TagUtil.asList(allTagsBytes, 0, (short)allTagsBytes.length);
+              List<Tag> tags =
+                  TagUtil.asList(allTagsBytes, 0, (short) allTagsBytes.length);
               Tag[] tagsArray = new Tag[tags.size()];
               put.addImmutable(family, qualifier, ts, value, tags.toArray(tagsArray));
             }

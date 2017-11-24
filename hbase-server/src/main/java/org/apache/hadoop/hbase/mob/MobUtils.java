@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -101,7 +102,7 @@ public final class MobUtils {
   static {
     List<Tag> tags = new ArrayList<>();
     tags.add(MobConstants.MOB_REF_TAG);
-    REF_DELETE_MARKER_TAG_BYTES = TagUtil.fromList(tags);
+    REF_DELETE_MARKER_TAG_BYTES = Tag.fromList(tags);
   }
 
   /**
@@ -175,8 +176,10 @@ public final class MobUtils {
    */
   public static boolean isMobReferenceCell(Cell cell) {
     if (cell.getTagsLength() > 0) {
-      Tag tag = PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
-      return tag != null;
+      Optional<Tag> tag = PrivateCellUtil.getTag(cell, TagType.MOB_REFERENCE_TAG_TYPE);
+      if (tag.isPresent()) {
+        return true;
+      }
     }
     return false;
   }
@@ -188,7 +191,10 @@ public final class MobUtils {
    */
   public static Tag getTableNameTag(Cell cell) {
     if (cell.getTagsLength() > 0) {
-      return PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
+      Optional<Tag> tag = PrivateCellUtil.getTag(cell, TagType.MOB_TABLE_NAME_TAG_TYPE);
+      if (tag.isPresent()) {
+        return tag.get();
+      }
     }
     return null;
   }
@@ -496,7 +502,7 @@ public final class MobUtils {
     // find the original mob files by this table name. For details please see cloning
     // snapshot for mob files.
     tags.add(tableNameTag);
-    return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
+    return createMobRefCell(cell, fileName, Tag.fromList(tags));
   }
 
   public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {

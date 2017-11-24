@@ -55,22 +55,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
-import org.apache.hadoop.hbase.regionserver.HStoreFile;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -80,6 +78,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Counter;
@@ -399,8 +399,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
                   cell.getValueLength()));
           int i = 0;
-          List<Tag> tags = TagUtil.asList(cell.getTagsArray(), cell.getTagsOffset(),
-              cell.getTagsLength());
+          List<Tag> tags = ((RawCell)cell).getTags();
           for (Tag tag : tags) {
             out.print(String.format(" T[%d]: %s", i++, tag.toString()));
           }
@@ -442,7 +441,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
           System.err.println("ERROR, wrong value format in mob reference cell "
             + CellUtil.getCellKeyAsString(cell));
         } else {
-          TableName tn = TableName.valueOf(TagUtil.cloneValue(tnTag));
+          TableName tn = TableName.valueOf(Tag.cloneValue(tnTag));
           String mobFileName = MobUtils.getMobFileName(cell);
           boolean exist = mobFileExists(fs, tn, mobFileName,
             Bytes.toString(CellUtil.cloneFamily(cell)), foundMobFiles, missingMobFiles);

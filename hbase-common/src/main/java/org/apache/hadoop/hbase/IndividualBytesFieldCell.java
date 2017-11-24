@@ -94,7 +94,7 @@ public class IndividualBytesFieldCell implements ExtendedCell {
     }
 
     // Check tags
-    TagUtil.checkForTagsLength(tagsLength);
+    RawCell.checkForTagsLength(tagsLength);
     checkArrayBounds(row, rOffset, rLength);
     checkArrayBounds(family, fOffset, fLength);
     checkArrayBounds(qualifier, qOffset, qLength);

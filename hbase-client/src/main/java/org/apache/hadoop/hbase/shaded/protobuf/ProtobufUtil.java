@@ -673,7 +673,8 @@ public final class ProtobufUtil {
                       .setTags(allTagsBytes)
                       .build());
             } else {
-              List<Tag> tags = TagUtil.asList(allTagsBytes, 0, (short)allTagsBytes.length);
+              List<Tag> tags =
+                  TagUtil.asList(allTagsBytes, 0, (short) allTagsBytes.length);
               Tag[] tagsArray = new Tag[tags.size()];
               put.addImmutable(family, qualifier, ts, value, tags.toArray(tagsArray));
             }

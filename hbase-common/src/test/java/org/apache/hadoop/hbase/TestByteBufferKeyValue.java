@@ -17,7 +17,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -56,7 +56,7 @@ public class TestByteBufferKeyValue {
     KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    ByteBufferCell offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0l);
+    ByteBufferCell offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
@@ -138,7 +138,7 @@ public class TestByteBufferKeyValue {
     KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1, tags);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    ByteBufferCell offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0l);
+    ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0l);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
@@ -158,18 +158,19 @@ public class TestByteBufferKeyValue {
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
     // change tags to handle both onheap and offheap stuff
-    List<Tag> resTags = TagUtil.asList(offheapKV.getTagsArray(), offheapKV.getTagsOffset(),
-        offheapKV.getTagsLength());
+    List<Tag> resTags = offheapKV.getTags();
     Tag tag1 = resTags.get(0);
     assertEquals(t1.getType(), tag1.getType());
-    assertEquals(TagUtil.getValueAsString(t1), TagUtil.getValueAsString(tag1));
+    assertEquals(Tag.getValueAsString(t1),
+      Tag.getValueAsString(tag1));
     Tag tag2 = resTags.get(1);
     assertEquals(tag2.getType(), tag2.getType());
-    assertEquals(TagUtil.getValueAsString(t2), TagUtil.getValueAsString(tag2));
-    Tag res = PrivateCellUtil.getTag(offheapKV, (byte) 2);
-    assertEquals(TagUtil.getValueAsString(t2), TagUtil.getValueAsString(tag2));
-    res = PrivateCellUtil.getTag(offheapKV, (byte) 3);
-    assertNull(res);
+    assertEquals(Tag.getValueAsString(t2),
+      Tag.getValueAsString(tag2));
+    Tag res = PrivateCellUtil.getTag(offheapKV, (byte) 2).get();
+    assertEquals(Tag.getValueAsString(t2),
+      Tag.getValueAsString(tag2));
+    assertFalse(PrivateCellUtil.getTag(offheapKV, (byte) 3).isPresent());
   }
 
   @Test

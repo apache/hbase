@@ -25,19 +25,18 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -137,8 +136,8 @@ public class HFileTestUtil {
           kv = MobUtils.createMobRefCell(kv, key, tableNameTag);
 
           // verify that the kv has the tag.
-          Tag t = PrivateCellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
-          if (t == null) {
+          Optional<Tag> tag = PrivateCellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);
+          if (!tag.isPresent()) {
             throw new IllegalStateException("Tag didn't stick to KV " + kv.toString());
           }
         }
@@ -161,12 +160,13 @@ public class HFileTestUtil {
     ResultScanner s = table.getScanner(new Scan());
     for (Result r : s) {
       for (Cell c : r.listCells()) {
-        Tag t = PrivateCellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
-        if (t == null) {
+        Optional<Tag> tag = PrivateCellUtil.getTag(c, TagType.MOB_TABLE_NAME_TAG_TYPE);
+        if (!tag.isPresent()) {
           fail(c.toString() + " has null tag");
           continue;
         }
-        byte[] tval = TagUtil.cloneValue(t);
+        Tag t = tag.get();
+        byte[] tval = Tag.cloneValue(t);
         assertArrayEquals(c.toString() + " has tag" + Bytes.toString(tval),
             r.getRow(), tval);
       }
