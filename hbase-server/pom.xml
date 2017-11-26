@@ -536,6 +536,7 @@
     <dependency>
       <groupId>tomcat</groupId>
       <artifactId>jasper-runtime</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.jamon</groupId>
