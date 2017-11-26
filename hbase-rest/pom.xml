@@ -243,6 +243,7 @@
     <dependency>
       <groupId>tomcat</groupId>
       <artifactId>jasper-runtime</artifactId>
+      <scope>compile</scope>
     </dependency>
     <!-- REST dependencies -->
     <dependency>
