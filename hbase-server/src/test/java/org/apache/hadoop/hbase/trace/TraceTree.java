@@ -22,12 +22,12 @@ import org.apache.htrace.core.SpanId;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Used to create the graph formed by spans.
@@ -35,18 +35,23 @@ import java.util.Set;
 public class TraceTree {
 
   public static class SpansByParent {
-    private final Set<Span> set;
+    private static Comparator<Span> COMPARATOR =
+        new Comparator<Span>() {
+          @Override
+          public int compare(Span a, Span b) {
+            return a.getSpanId().compareTo(b.getSpanId());
+          }
+        };
+
+    private final TreeSet<Span> treeSet;
 
     private final HashMap<SpanId, LinkedList<Span>> parentToSpans;
 
     SpansByParent(Collection<Span> spans) {
-      set = new LinkedHashSet<Span>();
+      TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
       parentToSpans = new HashMap<SpanId, LinkedList<Span>>();
-      if(spans == null) {
-        return;
-      }
       for (Span span : spans) {
-        set.add(span);
+        treeSet.add(span);
         for (SpanId parent : span.getParents()) {
           LinkedList<Span> list = parentToSpans.get(parent);
           if (list == null) {
@@ -56,15 +61,15 @@ public class TraceTree {
           list.add(span);
         }
         if (span.getParents().length == 0) {
-          LinkedList<Span> list = parentToSpans.get(Long.valueOf(0L));
+          LinkedList<Span> list = parentToSpans.get(SpanId.INVALID);
           if (list == null) {
             list = new LinkedList<Span>();
-            parentToSpans.put(new SpanId(Long.MIN_VALUE, Long.MIN_VALUE), list);
+            parentToSpans.put(SpanId.INVALID, list);
           }
           list.add(span);
         }
       }
-
+      this.treeSet = treeSet;
     }
 
     public List<Span> find(SpanId parentId) {
@@ -76,25 +81,31 @@ public class TraceTree {
     }
 
     public Iterator<Span> iterator() {
-      return Collections.unmodifiableSet(set).iterator();
+      return Collections.unmodifiableSortedSet(treeSet).iterator();
     }
   }
 
   public static class SpansByProcessId {
-    private final Set<Span> set;
+    private static Comparator<Span> COMPARATOR =
+        new Comparator<Span>() {
+          @Override
+          public int compare(Span a, Span b) {
+            return a.getSpanId().compareTo(b.getSpanId());
+          }
+        };
+
+    private final TreeSet<Span> treeSet;
 
     SpansByProcessId(Collection<Span> spans) {
-      set = new LinkedHashSet<Span>();
-      if(spans == null) {
-        return;
-      }
+      TreeSet<Span> treeSet = new TreeSet<Span>(COMPARATOR);
       for (Span span : spans) {
-        set.add(span);
+        treeSet.add(span);
       }
+      this.treeSet = treeSet;
     }
 
     public Iterator<Span> iterator() {
-      return Collections.unmodifiableSet(set).iterator();
+      return Collections.unmodifiableSortedSet(treeSet).iterator();
     }
   }
 
@@ -108,6 +119,9 @@ public class TraceTree {
    *              have at least one root span.
    */
   public TraceTree(Collection<Span> spans) {
+    if (spans == null) {
+      spans = Collections.emptySet();
+    }
     this.spansByParent = new SpansByParent(spans);
     this.spansByProcessId = new SpansByProcessId(spans);
   }
