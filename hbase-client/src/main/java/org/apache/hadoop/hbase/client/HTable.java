@@ -233,6 +233,7 @@ public class HTable implements Table {
    * {@inheritDoc}
    */
   @Override
+  @Deprecated
   public HTableDescriptor getTableDescriptor() throws IOException {
     HTableDescriptor htd = HBaseAdmin.getHTableDescriptor(tableName, connection, rpcCallerFactory,
       rpcControllerFactory, operationTimeoutMs, readRpcTimeoutMs);
@@ -745,7 +746,7 @@ public class HTable implements Table {
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException {
-    return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
+    return checkAndPut(row, family, qualifier, CompareOperator.EQUAL, value, put);
   }
 
   private boolean doCheckAndPut(final byte [] row, final byte [] family,
@@ -773,6 +774,7 @@ public class HTable implements Table {
    * {@inheritDoc}
    */
   @Override
+  @Deprecated
   public boolean checkAndPut(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp, final byte [] value,
       final Put put)
@@ -799,7 +801,7 @@ public class HTable implements Table {
   @Override
   public boolean checkAndDelete(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Delete delete) throws IOException {
-    return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
+    return checkAndDelete(row, family, qualifier, CompareOperator.EQUAL, value, delete);
   }
 
   private boolean doCheckAndDelete(final byte [] row, final byte [] family,
@@ -845,6 +847,7 @@ public class HTable implements Table {
    * {@inheritDoc}
    */
   @Override
+  @Deprecated
   public boolean checkAndDelete(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp, final byte [] value,
       final Delete delete)
@@ -919,6 +922,7 @@ public class HTable implements Table {
    * {@inheritDoc}
    */
   @Override
+  @Deprecated
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
     final CompareOp compareOp, final byte [] value, final RowMutations rm)
   throws IOException {

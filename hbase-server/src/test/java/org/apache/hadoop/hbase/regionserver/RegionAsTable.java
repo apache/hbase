@@ -84,6 +84,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public HTableDescriptor getTableDescriptor() throws IOException {
     return new HTableDescriptor(this.region.getTableDescriptor());
   }
@@ -219,6 +220,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
       byte[] value, Put put)
   throws IOException {
@@ -250,6 +252,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete)
   throws IOException {
@@ -333,6 +336,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
       byte[] value, RowMutations mutation)
   throws IOException {
@@ -348,6 +352,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setOperationTimeout(int operationTimeout) {
     throw new UnsupportedOperationException();
   }
@@ -370,6 +375,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setWriteRpcTimeout(int writeRpcTimeout) {throw new UnsupportedOperationException(); }
 
   @Override
@@ -378,6 +384,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setReadRpcTimeout(int readRpcTimeout) {throw new UnsupportedOperationException(); }
 
   @Override
