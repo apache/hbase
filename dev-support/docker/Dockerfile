@@ -63,29 +63,43 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     rsync \
     snappy \
     zlib1g-dev \
-    wget \
-    openjdk-7-jdk
-
-#######
-# OpenJDK 8
-#######
-
-RUN echo "dot_style = mega" > "/root/.wgetrc"
-RUN echo "quiet = on" >> "/root/.wgetrc"
-
-RUN apt-get -q update && apt-get -q install --no-install-recommends -y software-properties-common
-RUN add-apt-repository -y ppa:openjdk-r/ppa
-RUN apt-get -q update
-RUN apt-get -q install --no-install-recommends -y openjdk-8-jdk
-RUN update-alternatives --config java
-RUN update-alternatives --config javac
+    wget
 
 ####
-# Apps that require Java
+# Apps that require Java.
+# Maven and ant depend on ubuntu trusty's headless jdk7. The install of
+# maven and ant will pull down this jdk even though we don't want it.
+# Do the maven and ant install here rather than later where the jdk7
+# will overwrite the jdk7 we actually want to use. See next section on jdks.
 ###
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     ant \
     maven
+
+#######
+# Install jdk7 and jdk8.
+#######
+# The jdks in ubuntu trusty don't work. HDFS hangs on openjdk-7 151.
+# See HBASE-19204. So, we use the azul jdks because they are available, and
+# later versions of openjdk (openjdk-7 161). Below we add the azul repo and
+# then install its jdks. We then move aside the headless jdk7 added above
+# when we added maven and ant and rename the azul jvms as
+# though they were from openjdk (otherwise yetus won't set JAVA_HOME;
+# it does find /usr/lib/jvm/ -name java-* -type d so a symlink to the zulu jvms
+# won't work).
+RUN echo "dot_style = mega" > "/root/.wgetrc"
+RUN echo "quiet = on" >> "/root/.wgetrc"
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0x219BD9C9
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y software-properties-common python-software-properties
+RUN apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main'
+RUN apt-get -q update
+RUN apt-get -q install --no-install-recommends -y zulu-8 zulu-7
+RUN update-alternatives --config java
+RUN update-alternatives --config javac
+RUN mv /usr/lib/jvm/java-7-openjdk-amd64 /usr/lib/jvm/moved.java-7-openjdk-amd64
+RUN mv /usr/lib/jvm/zulu-7-amd64 /usr/lib/jvm/java-7-openjdk-amd64 
+RUN mv /usr/lib/jvm/zulu-8-amd64 /usr/lib/jvm/java-8-openjdk-amd64 
+
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
