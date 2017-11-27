@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.htrace.core.POJOSpanReceiver;
 import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.Span;
-import org.apache.htrace.core.SpanId;
 import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -50,7 +49,6 @@ public class TestHTraceHooks {
   private static final byte[] FAMILY_BYTES = "family".getBytes();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static POJOSpanReceiver rcvr;
-  private static SpanId ROOT_SPAN_ID = new SpanId(0, 0);
 
   @Rule
   public TestName name = new TestName();
