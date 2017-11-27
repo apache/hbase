@@ -251,6 +251,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public HTableDescriptor getTableDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
@@ -702,6 +703,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Put put) throws IOException {
     throw new IOException("checkAndPut for non-equal comparison not implemented");
@@ -752,6 +754,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete) throws IOException {
     throw new IOException("checkAndDelete for non-equal comparison not implemented");
@@ -835,17 +838,21 @@ public class RemoteHTable implements Table {
     throw new UnsupportedOperationException("batchCoprocessorService not implemented");
   }
 
-  @Override public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+  @Override
+  @Deprecated
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
     throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
 
-  @Override public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-                                          CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
+  @Override
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
     throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
 
   @Override
+  @Deprecated
   public void setOperationTimeout(int operationTimeout) {
     throw new UnsupportedOperationException();
   }
@@ -885,6 +892,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setReadRpcTimeout(int readRpcTimeout) {
     throw new UnsupportedOperationException();
   }
@@ -901,6 +909,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setWriteRpcTimeout(int writeRpcTimeout) {
     throw new UnsupportedOperationException();
   }
