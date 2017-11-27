@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -232,7 +233,7 @@ public class TestMasterOperationsForRegionReplicas {
     }
   }
 
-  //@Test (TODO: enable when we have support for alter_table- HBASE-10361).
+  @Test
   public void testIncompleteMetaTableReplicaInformation() throws Exception {
     final TableName table = TableName.valueOf("fooTableTest1");
     final int numRegions = 3;

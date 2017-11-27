@@ -183,8 +183,8 @@ implements ServerProcedureInterface {
       LOG.trace(state);
     }
     // Keep running count of cycles
-    if (state.ordinal() != this.previousState) {
-      this.previousState = state.ordinal();
+    if (state.getNumber() != this.previousState) {
+      this.previousState = state.getNumber();
       this.cycles = 0;
     } else {
       this.cycles++;

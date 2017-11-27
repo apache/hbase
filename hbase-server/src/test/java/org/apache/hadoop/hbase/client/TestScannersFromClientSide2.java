@@ -217,6 +217,7 @@ public class TestScannersFromClientSide2 {
     testScan(456, false, 678, false, 200);
   }
 
+  @Test
   public void testReversedScanWithLimit() throws Exception {
     testReversedScan(998, true, 1, false, 900); // from last region to first region
     testReversedScan(543, true, 321, true, 100);

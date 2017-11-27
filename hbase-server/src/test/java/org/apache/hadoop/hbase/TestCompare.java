@@ -33,6 +33,7 @@ public class TestCompare extends TestCase {
   /**
    * Sort of HRegionInfo.
    */
+  @SuppressWarnings({"SelfComparison"})
   public void testHRegionInfo() {
     HRegionInfo a = new HRegionInfo(TableName.valueOf("a"), null, null);
     HRegionInfo b = new HRegionInfo(TableName.valueOf("b"), null, null);

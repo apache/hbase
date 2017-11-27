@@ -488,6 +488,8 @@ public class TestMasterProcedureScheduler {
         case READ:
           queue.releaseTableSharedLock(proc, getTableName(proc));
           break;
+        default:
+          break;
       }
     }
 

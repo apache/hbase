@@ -69,6 +69,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -141,7 +142,8 @@ public class TestZooKeeper {
    * @throws InterruptedException
    */
   // fails frequently, disabled for now, see HBASE-6406
-  //@Test
+  @Ignore
+  @Test
   public void testClientSessionExpired() throws Exception {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 

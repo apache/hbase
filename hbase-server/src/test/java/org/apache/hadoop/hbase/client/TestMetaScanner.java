@@ -54,6 +54,7 @@ public class TestMetaScanner {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;
 
+  @SuppressWarnings("JUnit4SetUpNotRun")
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     this.connection = TEST_UTIL.getConnection();
