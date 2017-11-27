@@ -70,12 +70,10 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
       RegionServerStatusProtos.ReportRegionStateTransitionRequest
           tRequest = (RegionServerStatusProtos.ReportRegionStateTransitionRequest) param;
       for (RegionServerStatusProtos.RegionStateTransition rst : tRequest.getTransitionList()) {
-        if (rst.getRegionInfoList() != null) {
-          for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {
-            TableName tn = ProtobufUtil.toTableName(info.getTableName());
-            if (tn.isSystemTable()) {
-              return HConstants.SYSTEMTABLE_QOS;
-            }
+        for (HBaseProtos.RegionInfo info : rst.getRegionInfoList()) {
+          TableName tn = ProtobufUtil.toTableName(info.getTableName());
+          if (tn.isSystemTable()) {
+            return HConstants.SYSTEMTABLE_QOS;
           }
         }
       }

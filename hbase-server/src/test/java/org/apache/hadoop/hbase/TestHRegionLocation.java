@@ -62,6 +62,7 @@ public class TestHRegionLocation {
     System.out.println(hrl1.toString());
   }
 
+  @SuppressWarnings("SelfComparison")
   @Test
   public void testCompareTo() {
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);

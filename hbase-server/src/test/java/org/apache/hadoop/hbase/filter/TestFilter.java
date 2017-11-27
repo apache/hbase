@@ -2049,6 +2049,7 @@ public class TestFilter {
     }
   }
 
+  @Test
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));

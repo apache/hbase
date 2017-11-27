@@ -123,7 +123,6 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
 
       // Clone acl of snapshot into newly created table.
       if (restoreAcl && snapshot.hasUsersAndPermissions()
-          && snapshot.getUsersAndPermissions() != null
           && SnapshotDescriptionUtils.isSecurityAvailable(conf)) {
         RestoreSnapshotHelper.restoreSnapshotACL(snapshot, tableName, conf);
       }
