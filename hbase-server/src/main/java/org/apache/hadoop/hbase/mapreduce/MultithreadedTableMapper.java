@@ -166,7 +166,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-      synchronized (this) {
+      synchronized (outer) {
         if (!outer.nextKeyValue()) {
           return false;
         }
@@ -198,7 +198,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
     @Override
     public void write(K2 key, V2 value) throws IOException,
     InterruptedException {
-      synchronized (this) {
+      synchronized (outer) {
         outer.write(key, value);
       }
     }
