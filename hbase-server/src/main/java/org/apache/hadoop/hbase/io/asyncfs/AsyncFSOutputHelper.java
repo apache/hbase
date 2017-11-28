@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -35,12 +29,17 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
 
 /**
  * Helper class for creating AsyncFSOutput.
@@ -56,12 +55,12 @@ public final class AsyncFSOutputHelper {
    * implementation for other {@link FileSystem} which wraps around a {@link FSDataOutputStream}.
    */
   public static AsyncFSOutput createOutput(FileSystem fs, Path f, boolean overwrite,
-      boolean createParent, short replication, long blockSize, EventLoop eventLoop,
+      boolean createParent, short replication, long blockSize, EventLoopGroup eventLoopGroup,
       Class<? extends Channel> channelClass)
-          throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+      throws IOException, CommonFSUtils.StreamLacksCapabilityException {
     if (fs instanceof DistributedFileSystem) {
       return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f,
-        overwrite, createParent, replication, blockSize, eventLoop, channelClass);
+        overwrite, createParent, replication, blockSize, eventLoopGroup, channelClass);
     }
     final FSDataOutputStream fsOut;
     int bufferSize = fs.getConf().getInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
@@ -75,28 +74,34 @@ public final class AsyncFSOutputHelper {
     // ensure that we can provide the level of data safety we're configured
     // to provide.
     if (!(CommonFSUtils.hasCapability(fsOut, "hflush") &&
-        CommonFSUtils.hasCapability(fsOut, "hsync"))) {
+      CommonFSUtils.hasCapability(fsOut, "hsync"))) {
       throw new CommonFSUtils.StreamLacksCapabilityException("hflush and hsync");
     }
     final ExecutorService flushExecutor =
-        Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true)
-            .setNameFormat("AsyncFSOutputFlusher-" + f.toString().replace("%", "%%")).build());
+      Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true)
+          .setNameFormat("AsyncFSOutputFlusher-" + f.toString().replace("%", "%%")).build());
     return new AsyncFSOutput() {
 
       private final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
       @Override
-      public void write(final byte[] b, final int off, final int len) {
-        if (eventLoop.inEventLoop()) {
-          out.write(b, off, len);
-        } else {
-          eventLoop.submit(() -> out.write(b, off, len)).syncUninterruptibly();
-        }
+      public void write(byte[] b, int off, int len) {
+        out.write(b, off, len);
       }
 
       @Override
       public void write(byte[] b) {
         write(b, 0, b.length);
+      }
+
+      @Override
+      public void writeInt(int i) {
+        out.writeInt(i);
+      }
+
+      @Override
+      public void write(ByteBuffer bb) {
+        out.write(bb, bb.position(), bb.remaining());
       }
 
       @Override
@@ -116,7 +121,7 @@ public final class AsyncFSOutputHelper {
             out.reset();
           }
         } catch (IOException e) {
-          eventLoop.execute(() -> future.completeExceptionally(e));
+          eventLoopGroup.next().execute(() -> future.completeExceptionally(e));
           return;
         }
         try {
@@ -126,9 +131,9 @@ public final class AsyncFSOutputHelper {
             fsOut.hflush();
           }
           long pos = fsOut.getPos();
-          eventLoop.execute(() -> future.complete(pos));
+          eventLoopGroup.next().execute(() -> future.complete(pos));
         } catch (IOException e) {
-          eventLoop.execute(() -> future.completeExceptionally(e));
+          eventLoopGroup.next().execute(() -> future.completeExceptionally(e));
         }
       }
 
@@ -163,16 +168,6 @@ public final class AsyncFSOutputHelper {
       @Override
       public int buffered() {
         return out.size();
-      }
-
-      @Override
-      public void writeInt(int i) {
-        out.writeInt(i);
-      }
-
-      @Override
-      public void write(ByteBuffer bb) {
-        out.write(bb, bb.position(), bb.remaining());
       }
     };
   }

@@ -28,6 +28,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
 /**
  * Interface for asynchronous filesystem output stream.
+ * <p>
+ * The implementation is not required to be thread safe.
  */
 @InterfaceAudience.Private
 public interface AsyncFSOutput extends Closeable {
