@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZK_SESSION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.ZK_SESSION_TIMEOUT;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
