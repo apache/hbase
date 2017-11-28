@@ -31,12 +31,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChannel;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -75,6 +69,12 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChannel;
+
 @RunWith(Parameterized.class)
 @Category({ MiscTests.class, LargeTests.class })
 public class TestSaslFanOutOneBlockAsyncDFSOutput {
@@ -90,7 +90,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   private static int READ_TIMEOUT_MS = 200000;
 
   private static final File KEYTAB_FILE =
-      new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
+    new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
 
@@ -104,8 +104,6 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private static String TEST_KEY_NAME = "test_key";
 
-  private static boolean TEST_TRANSPARENT_ENCRYPTION = true;
-
   @Rule
   public TestName name = new TestName();
 
@@ -118,20 +116,13 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   @Parameter(2)
   public String cipherSuite;
 
-  @Parameter(3)
-  public boolean useTransparentEncryption;
-
-  @Parameters(
-      name = "{index}: protection={0}, encryption={1}, cipherSuite={2}, transparent_enc={3}")
+  @Parameters(name = "{index}: protection={0}, encryption={1}, cipherSuite={2}")
   public static Iterable<Object[]> data() {
     List<Object[]> params = new ArrayList<>();
     for (String protection : Arrays.asList("authentication", "integrity", "privacy")) {
       for (String encryptionAlgorithm : Arrays.asList("", "3des", "rc4")) {
         for (String cipherSuite : Arrays.asList("", CipherSuite.AES_CTR_NOPADDING.getName())) {
-          for (boolean useTransparentEncryption : Arrays.asList(false, true)) {
-            params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite,
-                useTransparentEncryption });
-          }
+          params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite });
         }
       }
     }
@@ -159,7 +150,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private static void setUpKeyProvider(Configuration conf) throws Exception {
     URI keyProviderUri =
-        new URI("jceks://file" + TEST_UTIL.getDataTestDir("test.jks").toUri().toString());
+      new URI("jceks://file" + TEST_UTIL.getDataTestDir("test.jks").toUri().toString());
     conf.set("dfs.encryption.key.provider.uri", keyProviderUri.toString());
     KeyProvider keyProvider = KeyProviderFactory.get(keyProviderUri, conf);
     keyProvider.createKey(TEST_KEY_NAME, KeyProvider.options(conf));
@@ -197,13 +188,12 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
 
   private Path testDirOnTestFs;
 
+  private Path entryptionTestDirOnTestFs;
+
   private void createEncryptionZone() throws Exception {
-    if (!TEST_TRANSPARENT_ENCRYPTION) {
-      return;
-    }
     Method method =
-        DistributedFileSystem.class.getMethod("createEncryptionZone", Path.class, String.class);
-    method.invoke(FS, testDirOnTestFs, TEST_KEY_NAME);
+      DistributedFileSystem.class.getMethod("createEncryptionZone", Path.class, String.class);
+    method.invoke(FS, entryptionTestDirOnTestFs, TEST_KEY_NAME);
   }
 
   @Before
@@ -225,13 +215,13 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
       TEST_UTIL.getConfiguration().set(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuite);
     }
 
-    TEST_UTIL.startMiniDFSCluster(1);
+    TEST_UTIL.startMiniDFSCluster(3);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
     testDirOnTestFs = new Path("/" + name.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
     FS.mkdirs(testDirOnTestFs);
-    if (useTransparentEncryption) {
-      createEncryptionZone();
-    }
+    entryptionTestDirOnTestFs = new Path("/" + testDirOnTestFs.getName() + "_enc");
+    FS.mkdirs(entryptionTestDirOnTestFs);
+    createEncryptionZone();
   }
 
   @After
@@ -243,12 +233,20 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     return new Path(testDirOnTestFs, "test");
   }
 
+  private Path getEncryptionTestFile() {
+    return new Path(entryptionTestDirOnTestFs, "test");
+  }
+
+  private void test(Path file) throws IOException, InterruptedException, ExecutionException {
+    EventLoop eventLoop = EVENT_LOOP_GROUP.next();
+    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
+      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
+    TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(eventLoop, FS, file, out);
+  }
+
   @Test
   public void test() throws IOException, InterruptedException, ExecutionException {
-    Path f = getTestFile();
-    EventLoop eventLoop = EVENT_LOOP_GROUP.next();
-    FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
-      false, (short) 1, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
-    TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(eventLoop, FS, f, out);
+    test(getTestFile());
+    test(getEncryptionTestFile());
   }
 }
