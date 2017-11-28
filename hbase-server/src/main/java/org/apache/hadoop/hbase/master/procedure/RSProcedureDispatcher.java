@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -64,7 +66,8 @@ public class RSProcedureDispatcher
   private static final int RS_VERSION_WITH_EXEC_PROCS = 0x0200000; // 2.0
 
   protected final MasterServices master;
-  protected final long rsStartupWaitTime;
+  private final long rsStartupWaitTime;
+  private MasterProcedureEnv procedureEnv;
 
   public RSProcedureDispatcher(final MasterServices master) {
     super(master.getConfiguration());
@@ -81,6 +84,7 @@ public class RSProcedureDispatcher
     }
 
     master.getServerManager().registerListener(this);
+    procedureEnv = master.getMasterProcedureExecutor().getEnvironment();
     for (ServerName serverName: master.getServerManager().getOnlineServersList()) {
       addNode(serverName);
     }
@@ -99,18 +103,18 @@ public class RSProcedureDispatcher
 
   @Override
   protected void remoteDispatch(final ServerName serverName,
-      final Set<RemoteProcedure> operations) {
+      final Set<RemoteProcedure> remoteProcedures) {
     final int rsVersion = master.getAssignmentManager().getServerVersion(serverName);
     if (rsVersion >= RS_VERSION_WITH_EXEC_PROCS) {
       LOG.info(String.format(
         "Using procedure batch rpc execution for serverName=%s version=%s",
         serverName, rsVersion));
-      submitTask(new ExecuteProceduresRemoteCall(serverName, operations));
+      submitTask(new ExecuteProceduresRemoteCall(serverName, remoteProcedures));
     } else {
       LOG.info(String.format(
         "Fallback to compat rpc execution for serverName=%s version=%s",
         serverName, rsVersion));
-      submitTask(new CompatRemoteProcedureResolver(serverName, operations));
+      submitTask(new CompatRemoteProcedureResolver(serverName, remoteProcedures));
     }
   }
 
@@ -118,9 +122,8 @@ public class RSProcedureDispatcher
       final Set<RemoteProcedure> operations) {
     // TODO: Replace with a ServerNotOnlineException()
     final IOException e = new DoNotRetryIOException("server not online " + serverName);
-    final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
     for (RemoteProcedure proc: operations) {
-      proc.remoteCallFailed(env, serverName, e);
+      proc.remoteCallFailed(procedureEnv, serverName, e);
     }
   }
 
@@ -136,6 +139,8 @@ public class RSProcedureDispatcher
    * Base remote call
    */
   protected abstract class AbstractRSRemoteCall implements Callable<Void> {
+    public abstract Void call();
+
     private final ServerName serverName;
 
     private int numberOfAttemptsSoFar = 0;
@@ -144,8 +149,6 @@ public class RSProcedureDispatcher
     public AbstractRSRemoteCall(final ServerName serverName) {
       this.serverName = serverName;
     }
-
-    public abstract Void call();
 
     protected AdminService.BlockingInterface getRsAdmin() throws IOException {
       final AdminService.BlockingInterface admin = master.getServerManager().getRsAdmin(serverName);
@@ -223,17 +226,29 @@ public class RSProcedureDispatcher
     void dispatchCloseRequests(MasterProcedureEnv env, List<RegionCloseOperation> operations);
   }
 
+  /**
+   * Fetches {@link org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation}s
+   * from the given {@code remoteProcedures} and groups them by class of the returned operation.
+   * Then {@code resolver} is used to dispatch {@link RegionOpenOperation}s and
+   * {@link RegionCloseOperation}s.
+   * @param serverName RegionServer to which the remote operations are sent
+   * @param remoteProcedures Remote procedures which are dispatched to the given server
+   * @param resolver Used to dispatch remote procedures to given server.
+   */
   public void splitAndResolveOperation(final ServerName serverName,
-      final Set<RemoteProcedure> operations, final RemoteProcedureResolver resolver) {
-    final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
+      final Set<RemoteProcedure> remoteProcedures, final RemoteProcedureResolver resolver) {
     final ArrayListMultimap<Class<?>, RemoteOperation> reqsByType =
-      buildAndGroupRequestByType(env, serverName, operations);
+      buildAndGroupRequestByType(procedureEnv, serverName, remoteProcedures);
 
     final List<RegionOpenOperation> openOps = fetchType(reqsByType, RegionOpenOperation.class);
-    if (!openOps.isEmpty()) resolver.dispatchOpenRequests(env, openOps);
+    if (!openOps.isEmpty()) {
+      resolver.dispatchOpenRequests(procedureEnv, openOps);
+    }
 
     final List<RegionCloseOperation> closeOps = fetchType(reqsByType, RegionCloseOperation.class);
-    if (!closeOps.isEmpty()) resolver.dispatchCloseRequests(env, closeOps);
+    if (!closeOps.isEmpty()) {
+      resolver.dispatchCloseRequests(procedureEnv, closeOps);
+    }
 
     if (!reqsByType.isEmpty()) {
       LOG.warn("unknown request type in the queue: " + reqsByType);
@@ -245,34 +260,32 @@ public class RSProcedureDispatcher
   // ==========================================================================
   protected class ExecuteProceduresRemoteCall extends AbstractRSRemoteCall
       implements RemoteProcedureResolver {
-    private final Set<RemoteProcedure> operations;
+    private final Set<RemoteProcedure> remoteProcedures;
 
     private ExecuteProceduresRequest.Builder request = null;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
-        final Set<RemoteProcedure> operations) {
+        final Set<RemoteProcedure> remoteProcedures) {
       super(serverName);
-      this.operations = operations;
+      this.remoteProcedures = remoteProcedures;
     }
 
     public Void call() {
-      final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
-
       request = ExecuteProceduresRequest.newBuilder();
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Building request with operations count=" + operations.size());
+        LOG.trace("Building request with operations count=" + remoteProcedures.size());
       }
-      splitAndResolveOperation(getServerName(), operations, this);
+      splitAndResolveOperation(getServerName(), remoteProcedures, this);
 
       try {
         final ExecuteProceduresResponse response = sendRequest(getServerName(), request.build());
-        remoteCallCompleted(env, response);
+        remoteCallCompleted(procedureEnv, response);
       } catch (IOException e) {
         e = unwrapException(e);
         // TODO: In the future some operation may want to bail out early.
         // TODO: How many times should we retry (use numberOfAttemptsSoFar)
         if (!scheduleForRetry(e)) {
-          remoteCallFailed(env, e);
+          remoteCallFailed(procedureEnv, e);
         }
       }
       return null;
@@ -309,17 +322,12 @@ public class RSProcedureDispatcher
     }
 
     private void remoteCallFailed(final MasterProcedureEnv env, final IOException e) {
-      for (RemoteProcedure proc: operations) {
+      for (RemoteProcedure proc: remoteProcedures) {
         proc.remoteCallFailed(env, getServerName(), e);
       }
     }
   }
 
-  // ==========================================================================
-  //  Compatibility calls
-  //  Since we don't have a "batch proc-exec" request on the target RS
-  //  we have to chunk the requests by type and dispatch the specific request.
-  // ==========================================================================
   private static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
       final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
@@ -331,6 +339,15 @@ public class RSProcedureDispatcher
     return builder.build();
   }
 
+  // ==========================================================================
+  //  Compatibility calls
+  //  Since we don't have a "batch proc-exec" request on the target RS
+  //  we have to chunk the requests by type and dispatch the specific request.
+  // ==========================================================================
+  /**
+   * Compatibility class used by {@link CompatRemoteProcedureResolver} to open regions using old
+   * {@link AdminService#openRegion(RpcController, OpenRegionRequest, RpcCallback)} rpc.
+   */
   private final class OpenRegionRemoteCall extends AbstractRSRemoteCall {
     private final List<RegionOpenOperation> operations;
 
@@ -342,18 +359,18 @@ public class RSProcedureDispatcher
 
     @Override
     public Void call() {
-      final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
-      final OpenRegionRequest request = buildOpenRegionRequest(env, getServerName(), operations);
+      final OpenRegionRequest request =
+          buildOpenRegionRequest(procedureEnv, getServerName(), operations);
 
       try {
         OpenRegionResponse response = sendRequest(getServerName(), request);
-        remoteCallCompleted(env, response);
+        remoteCallCompleted(procedureEnv, response);
       } catch (IOException e) {
         e = unwrapException(e);
         // TODO: In the future some operation may want to bail out early.
         // TODO: How many times should we retry (use numberOfAttemptsSoFar)
         if (!scheduleForRetry(e)) {
-          remoteCallFailed(env, e);
+          remoteCallFailed(procedureEnv, e);
         }
       }
       return null;
@@ -385,6 +402,10 @@ public class RSProcedureDispatcher
     }
   }
 
+  /**
+   * Compatibility class used by {@link CompatRemoteProcedureResolver} to close regions using old
+   * {@link AdminService#closeRegion(RpcController, CloseRegionRequest, RpcCallback)} rpc.
+   */
   private final class CloseRegionRemoteCall extends AbstractRSRemoteCall {
     private final RegionCloseOperation operation;
 
@@ -396,17 +417,16 @@ public class RSProcedureDispatcher
 
     @Override
     public Void call() {
-      final MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
       final CloseRegionRequest request = operation.buildCloseRegionRequest(getServerName());
       try {
         CloseRegionResponse response = sendRequest(getServerName(), request);
-        remoteCallCompleted(env, response);
+        remoteCallCompleted(procedureEnv, response);
       } catch (IOException e) {
         e = unwrapException(e);
         // TODO: In the future some operation may want to bail out early.
         // TODO: How many times should we retry (use numberOfAttemptsSoFar)
         if (!scheduleForRetry(e)) {
-          remoteCallFailed(env, e);
+          remoteCallFailed(procedureEnv, e);
         }
       }
       return null;
@@ -432,6 +452,10 @@ public class RSProcedureDispatcher
     }
   }
 
+  /**
+   * Compatibility class to open and close regions using old endpoints (openRegion/closeRegion) in
+   * {@link AdminService}.
+   */
   protected class CompatRemoteProcedureResolver implements Callable<Void>, RemoteProcedureResolver {
     private final Set<RemoteProcedure> operations;
     private final ServerName serverName;
@@ -463,14 +487,16 @@ public class RSProcedureDispatcher
 
   // ==========================================================================
   //  RPC Messages
-  //  - ServerOperation: refreshConfig, grant, revoke, ...
+  //  - ServerOperation: refreshConfig, grant, revoke, ... (TODO)
   //  - RegionOperation: open, close, flush, snapshot, ...
   // ==========================================================================
+  /* Currently unused
   public static abstract class ServerOperation extends RemoteOperation {
     protected ServerOperation(final RemoteProcedure remoteProcedure) {
       super(remoteProcedure);
     }
   }
+  */
 
   public static abstract class RegionOperation extends RemoteOperation {
     private final RegionInfo regionInfo;

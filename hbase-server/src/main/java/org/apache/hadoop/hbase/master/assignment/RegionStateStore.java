@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -138,21 +137,17 @@ public class RegionStateStore {
     }
   }
 
-  public void updateRegionLocation(final RegionInfo regionInfo, final State state,
-      final ServerName regionLocation, final ServerName lastHost, final long openSeqNum,
-      final long pid)
+  public void updateRegionLocation(RegionStates.RegionStateNode regionStateNode)
       throws IOException {
-    if (regionInfo.isMetaRegion()) {
-      updateMetaLocation(regionInfo, regionLocation);
+    if (regionStateNode.getRegionInfo().isMetaRegion()) {
+      updateMetaLocation(regionStateNode.getRegionInfo(), regionStateNode.getRegionLocation());
     } else {
-      updateUserRegionLocation(regionInfo, state, regionLocation, lastHost, openSeqNum, pid);
+      long openSeqNum = regionStateNode.getState() == State.OPEN ?
+          regionStateNode.getOpenSeqNum() : HConstants.NO_SEQNUM;
+      updateUserRegionLocation(regionStateNode.getRegionInfo(), regionStateNode.getState(),
+          regionStateNode.getRegionLocation(), regionStateNode.getLastHost(), openSeqNum,
+          regionStateNode.getProcedure().getProcId());
     }
-  }
-
-  public void updateRegionState(final long openSeqNum, final long pid,
-      final RegionState newState, final RegionState oldState) throws IOException {
-    updateRegionLocation(newState.getRegion(), newState.getState(), newState.getServerName(),
-        oldState != null ? oldState.getServerName() : null, openSeqNum, pid);
   }
 
   protected void updateMetaLocation(final RegionInfo regionInfo, final ServerName serverName)

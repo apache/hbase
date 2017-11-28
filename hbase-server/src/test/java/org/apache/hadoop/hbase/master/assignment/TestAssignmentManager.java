@@ -349,7 +349,7 @@ public class TestAssignmentManager {
       fail("unexpected assign completion");
     } catch (RetriesExhaustedException e) {
       // expected exception
-      LOG.info("REGION STATE " + am.getRegionStates().getRegionNode(hri));
+      LOG.info("REGION STATE " + am.getRegionStates().getRegionStateNode(hri));
       LOG.info("expected exception from assign operation: " + e.getMessage(), e);
       assertEquals(true, am.getRegionStates().getRegionState(hri).isFailedOpen());
     }
@@ -780,8 +780,8 @@ public class TestAssignmentManager {
     }
 
     @Override
-    protected void remoteDispatch(ServerName serverName, Set<RemoteProcedure> operations) {
-      submitTask(new MockRemoteCall(serverName, operations));
+    protected void remoteDispatch(ServerName serverName, Set<RemoteProcedure> remoteProcedures) {
+      submitTask(new MockRemoteCall(serverName, remoteProcedures));
     }
 
     private class MockRemoteCall extends ExecuteProceduresRemoteCall {

@@ -123,8 +123,7 @@ public class TestMasterBalanceThrottling {
       public void run() {
         while (!stop.get()) {
           maxCount.set(Math.max(maxCount.get(),
-              master.getAssignmentManager().getRegionStates()
-              .getRegionsInTransition().size()));
+              master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount()));
           try {
             Thread.sleep(10);
           } catch (InterruptedException e) {
@@ -139,7 +138,7 @@ public class TestMasterBalanceThrottling {
   }
 
   private void unbalance(HMaster master, TableName tableName) throws Exception {
-    while (master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() > 0) {
+    while (master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() > 0) {
       Thread.sleep(100);
     }
     HRegionServer biasedServer = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
@@ -147,7 +146,7 @@ public class TestMasterBalanceThrottling {
       master.move(regionInfo.getEncodedNameAsBytes(),
         Bytes.toBytes(biasedServer.getServerName().getServerName()));
     }
-    while (master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() > 0) {
+    while (master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() > 0) {
       Thread.sleep(100);
     }
   }

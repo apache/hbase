@@ -144,7 +144,7 @@ public class TestRegionStates {
     executorService.submit(new Callable<Object>() {
       @Override
       public Object call() {
-        return stateMap.getOrCreateRegionNode(RegionInfoBuilder.newBuilder(tableName)
+        return stateMap.getOrCreateRegionStateNode(RegionInfoBuilder.newBuilder(tableName)
             .setStartKey(Bytes.toBytes(regionId))
             .setEndKey(Bytes.toBytes(regionId + 1))
             .setSplit(false)
@@ -156,7 +156,7 @@ public class TestRegionStates {
 
   private Object createRegionNode(final RegionStates stateMap,
       final TableName tableName, final long regionId) {
-    return stateMap.getOrCreateRegionNode(createRegionInfo(tableName, regionId));
+    return stateMap.getOrCreateRegionStateNode(createRegionInfo(tableName, regionId));
   }
 
   private RegionInfo createRegionInfo(final TableName tableName, final long regionId) {
@@ -181,7 +181,7 @@ public class TestRegionStates {
         @Override
         public Object call() {
           RegionInfo hri = createRegionInfo(TABLE_NAME, regionId);
-          return stateMap.getOrCreateRegionNode(hri);
+          return stateMap.getOrCreateRegionStateNode(hri);
         }
       });
     }
@@ -218,7 +218,7 @@ public class TestRegionStates {
     final RegionStates stateMap = new RegionStates();
     long st = System.currentTimeMillis();
     for (int i = 0; i < NRUNS; ++i) {
-      stateMap.createRegionNode(createRegionInfo(TABLE_NAME, i));
+      stateMap.createRegionStateNode(createRegionInfo(TABLE_NAME, i));
     }
     long et = System.currentTimeMillis();
     LOG.info(String.format("PERF SingleThread: %s %s/sec",
