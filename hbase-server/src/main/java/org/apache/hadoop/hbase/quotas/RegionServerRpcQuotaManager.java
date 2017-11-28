@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +34,6 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -176,7 +176,13 @@ public class RegionServerRpcQuotaManager {
   private OperationQuota checkQuota(final Region region,
       final int numWrites, final int numReads, final int numScans)
       throws IOException, ThrottlingException {
-    UserGroupInformation ugi = RpcServer.getRequestUser().orElse(User.getCurrent()).getUGI();
+    Optional<User> user = RpcServer.getRequestUser();
+    UserGroupInformation ugi;
+    if (user.isPresent()) {
+      ugi = user.get().getUGI();
+    } else {
+      ugi = User.getCurrent().getUGI();
+    }
     TableName table = region.getTableDescriptor().getTableName();
 
     OperationQuota quota = getQuota(ugi, table);

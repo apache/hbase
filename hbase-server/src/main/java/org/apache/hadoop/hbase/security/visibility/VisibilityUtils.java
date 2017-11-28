@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -282,7 +283,13 @@ public class VisibilityUtils {
    * @throws IOException When there is IOE in getting the system user (During non-RPC handling).
    */
   public static User getActiveUser() throws IOException {
-    User user = RpcServer.getRequestUser().orElse(User.getCurrent());
+    Optional<User> optionalUser = RpcServer.getRequestUser();
+    User user;
+    if (optionalUser.isPresent()) {
+      user = optionalUser.get();
+    } else {
+      user = User.getCurrent();
+    }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Current active user name is " + user.getShortName());
     }
