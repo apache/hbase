@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -63,6 +64,7 @@ public class TestMultiParallel {
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static final String FAMILY = "family";
   private static final TableName TEST_TABLE = TableName.valueOf("multi_test_table");
+  private static final TableName TEST_TABLE2 = TableName.valueOf("multi_test_table2");
   private static final byte[] BYTES_FAMILY = Bytes.toBytes(FAMILY);
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
   private static final byte [][] KEYS = makeKeys();
@@ -727,5 +729,144 @@ public class TestMultiParallel {
     for (Object result : results) {
       validateEmpty(result);
     }
+  }
+
+  private static class MultiThread extends Thread {
+    public Throwable throwable = null;
+    private CountDownLatch endLatch;
+    private CountDownLatch beginLatch;
+    List<Put> puts;
+    public MultiThread(List<Put> puts, CountDownLatch beginLatch, CountDownLatch endLatch) {
+      this.puts = puts;
+      this.beginLatch = beginLatch;
+      this.endLatch = endLatch;
+    }
+    @Override
+    public void run() {
+      HTable table = null;
+      try {
+        table = new HTable(UTIL.getConfiguration(), TEST_TABLE2);
+        table.setAutoFlush(false);
+        beginLatch.await();
+        for (int i = 0; i < 100; i++) {
+          for(Put put : puts) {
+            table.put(put);
+          }
+          table.flushCommits();
+        }
+      } catch (Throwable t) {
+        throwable = t;
+        LOG.warn("Error when put:", t);
+      } finally {
+        endLatch.countDown();
+        if(table != null) {
+          try {
+            table.close();
+          } catch (IOException ioe) {
+            LOG.error("Error when close table", ioe);
+          }
+        }
+      }
+    }
+  }
+
+
+  private static class IncrementThread extends Thread {
+    public Throwable throwable = null;
+    private CountDownLatch endLatch;
+    private CountDownLatch beginLatch;
+    List<Put> puts;
+    public IncrementThread(List<Put> puts, CountDownLatch beginLatch, CountDownLatch endLatch) {
+      this.puts = puts;
+      this.beginLatch = beginLatch;
+      this.endLatch = endLatch;
+    }
+    @Override
+    public void run() {
+      HTable table = null;
+      try {
+        table = new HTable(UTIL.getConfiguration(), TEST_TABLE2);
+        beginLatch.await();
+        for (int i = 0; i < 100; i++) {
+          for(Put put : puts) {
+            Increment inc = new Increment(put.getRow());
+            inc.addColumn(BYTES_FAMILY, BYTES_FAMILY, 1);
+            table.increment(inc);
+          }
+        }
+      } catch (Throwable t) {
+        throwable = t;
+        LOG.warn("Error when incr:", t);
+      } finally {
+        endLatch.countDown();
+        if(table != null) {
+          try {
+            table.close();
+          } catch (IOException ioe) {
+            LOG.error("Error when close table", ioe);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * UT for HBASE-18233, test for disordered batch mutation thread and
+   * increment won't lock each other
+   * @throws Exception if any error occurred
+   */
+  @Test(timeout=300000)
+  public void testMultiThreadWithRowLocks() throws Exception {
+    //set a short timeout to get timeout exception when getting row lock fail
+    UTIL.getConfiguration().setInt("hbase.rpc.timeout", 2000);
+    UTIL.getConfiguration().setInt("hbase.client.operation.timeout", 4000);
+    UTIL.getConfiguration().setInt("hbase.client.retries.number", 10);
+
+    UTIL.createTable(TEST_TABLE2, BYTES_FAMILY);
+    List<Put> puts = new ArrayList<>();
+    for(int i = 0; i < 10; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.add(BYTES_FAMILY, BYTES_FAMILY, Bytes.toBytes((long)0));
+      puts.add(put);
+    }
+    List<Put> reversePuts = new ArrayList<>(puts);
+    Collections.reverse(reversePuts);
+    int NUM_OF_THREAD = 12;
+    CountDownLatch latch = new CountDownLatch(NUM_OF_THREAD);
+    CountDownLatch beginLatch = new CountDownLatch(1);
+    int threadNum = NUM_OF_THREAD / 4;
+    List<MultiThread> multiThreads = new ArrayList<>();
+    List<IncrementThread> incThreads = new ArrayList<>();
+    for(int i = 0; i < threadNum; i ++) {
+      MultiThread thread = new MultiThread(reversePuts, beginLatch, latch);
+      thread.start();
+      multiThreads.add(thread);
+    }
+    for(int i = 0; i < threadNum; i++) {
+      MultiThread thread = new MultiThread(puts, beginLatch, latch);
+      thread.start();
+      multiThreads.add(thread);
+    }
+    for(int i = 0; i < threadNum; i ++) {
+      IncrementThread thread = new IncrementThread(reversePuts, beginLatch, latch);
+      thread.start();
+      incThreads.add(thread);
+    }
+    for(int i = 0; i < threadNum; i++) {
+      IncrementThread thread = new IncrementThread(puts, beginLatch, latch);
+      thread.start();
+      incThreads.add(thread);
+    }
+    long timeBegin = System.currentTimeMillis();
+    beginLatch.countDown();
+    latch.await();
+    LOG.error("Time took:" + (System.currentTimeMillis() - timeBegin));
+    for(MultiThread thread : multiThreads) {
+      Assert.assertTrue(thread.throwable == null);
+    }
+    for(IncrementThread thread : incThreads) {
+      Assert.assertTrue(thread.throwable == null);
+    }
+
   }
 }

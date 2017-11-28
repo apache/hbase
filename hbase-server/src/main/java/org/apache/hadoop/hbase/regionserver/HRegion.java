@@ -3051,18 +3051,29 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           continue;
         }
 
+
+        //HBASE-18233
         // If we haven't got any rows in our batch, we should block to
-        // get the next one.
+        // get the next one's read lock. We need at least one row to mutate.
+        // If we have got rows, do not block when lock is not available,
+        // so that we can fail fast and go on with the rows with locks in
+        // the batch. By doing this, we can reduce contention and prevent
+        // possible deadlocks.
+        // The unfinished rows in the batch will be detected in batchMutate,
+        // and it wil try to finish them by calling doMiniBatchMutation again.
+        boolean shouldBlock = numReadyToWrite == 0;
         RowLock rowLock = null;
         try {
-          rowLock = getRowLock(mutation.getRow(), true);
+          rowLock = getRowLock(mutation.getRow(), true, shouldBlock);
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
             + Bytes.toStringBinary(mutation.getRow()), ioe);
         }
         if (rowLock == null) {
-          // We failed to grab another lock
-          break; // stop acquiring more rows for this batch
+          // We failed to grab another lock. Stop acquiring more rows for this
+          // batch and go on with the gotten ones
+          break;
+
         } else {
           acquiredRowLocks.add(rowLock);
         }
@@ -5138,7 +5149,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Get an exclusive ( write lock ) lock on a given row.
    * @param row Which row to lock.
    * @return A locked RowLock. The lock is exclusive and already aqquired.
-   * @throws IOException
+   * @throws IOException if any error occurred
    */
   public RowLock getRowLock(byte[] row) throws IOException {
     return getRowLock(row, false);
@@ -5152,9 +5163,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * started (the calling thread has already acquired the region-close-guard lock).
    * @param row The row actions will be performed against
    * @param readLock is the lock reader or writer. True indicates that a non-exlcusive
-   *                 lock is requested
+   *          lock is requested
+   * @return A locked RowLock.
+   * @throws IOException if any error occurred
    */
   public RowLock getRowLock(byte[] row, boolean readLock) throws IOException {
+    return getRowLock(row, readLock, true);
+  }
+
+  /**
+   *
+   * Get a row lock for the specified row. All locks are reentrant.
+   *
+   * Before calling this function make sure that a region operation has already been
+   * started (the calling thread has already acquired the region-close-guard lock).
+   * @param row The row actions will be performed against
+   * @param readLock is the lock reader or writer. True indicates that a non-exlcusive
+   *          lock is requested
+   * @param waitForLock whether should wait for this lock
+   * @return A locked RowLock, or null if {@code waitForLock} set to false and tryLock failed
+   * @throws IOException if any error occurred
+   */
+  public RowLock getRowLock(byte[] row, boolean readLock, boolean waitForLock) throws IOException {
     // Make sure the row is inside of this region before getting the lock for it.
     checkRow(row, "row lock");
     // create an object to use a a key in the row lock map
@@ -5195,12 +5225,25 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           result = rowLockContext.newWriteLock();
         }
       }
-      if (!result.getLock().tryLock(this.rowLockWaitDuration, TimeUnit.MILLISECONDS)) {
+      boolean lockAvailable = false;
+      if(waitForLock) {
+        //if waiting for lock, wait for rowLockWaitDuration milliseconds
+        lockAvailable = result.getLock().tryLock(this.rowLockWaitDuration, TimeUnit.MILLISECONDS);
+      } else {
+        //if we are not waiting for lock, tryLock() will return immediately whether we have got
+        //this lock or not
+        lockAvailable = result.getLock().tryLock();
+      }
+      if(!lockAvailable) {
         if (traceScope != null) {
           traceScope.getSpan().addTimelineAnnotation("Failed to get row lock");
         }
         result = null;
-        throw new IOException("Timed out waiting for lock for row: " + rowKey);
+        if(waitForLock) {
+          throw new IOException("Timed out waiting for lock for row: " + rowKey);
+        } else {
+          return null;
+        }
       }
       rowLockContext.setThreadName(Thread.currentThread().getName());
       success = true;
