@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -123,13 +122,18 @@ public class RegionStates {
       this.event = new AssignmentProcedureEvent(regionInfo);
     }
 
+    /**
+     * @param update new region state this node should be assigned.
+     * @param expected current state should be in this given list of expected states
+     * @return true, if current state is in expected list; otherwise false.
+     */
     public boolean setState(final State update, final State... expected) {
-      final boolean expectedState = isInState(expected);
-      if (expectedState) {
-        this.state = update;
-        this.lastUpdate = EnvironmentEdgeManager.currentTime();
+      if (!isInState(expected)) {
+        return false;
       }
-      return expectedState;
+      this.state = update;
+      this.lastUpdate = EnvironmentEdgeManager.currentTime();
+      return true;
     }
 
     /**
@@ -145,13 +149,12 @@ public class RegionStates {
      * Set new {@link State} but only if currently in <code>expected</code> State
      * (if not, throw {@link UnexpectedStateException}.
      */
-    public State transitionState(final State update, final State... expected)
+    public void transitionState(final State update, final State... expected)
     throws UnexpectedStateException {
       if (!setState(update, expected)) {
         throw new UnexpectedStateException("Expected " + Arrays.toString(expected) +
           " so could move to " + update + " but current state=" + getState());
       }
-      return update;
     }
 
     public boolean isInState(final State... expected) {
@@ -253,6 +256,10 @@ public class RegionStates {
       return 0;
     }
 
+    public RegionState toRegionState() {
+      return new RegionState(getRegionInfo(), getState(), getLastUpdate(), getRegionLocation());
+    }
+
     @Override
     public int compareTo(final RegionStateNode other) {
       // NOTE: RegionInfo sort by table first, so we are relying on that.
@@ -311,7 +318,7 @@ public class RegionStates {
 
     public ServerStateNode(final ServerName serverName) {
       this.serverName = serverName;
-      this.regions = new HashSet<RegionStateNode>();
+      this.regions = ConcurrentHashMap.newKeySet();
       this.reportEvent = new ServerReportEvent(serverName);
     }
 
@@ -440,33 +447,23 @@ public class RegionStates {
   // ==========================================================================
   //  RegionStateNode helpers
   // ==========================================================================
-  protected RegionStateNode createRegionNode(final RegionInfo regionInfo) {
+  protected RegionStateNode createRegionStateNode(final RegionInfo regionInfo) {
     RegionStateNode newNode = new RegionStateNode(regionInfo);
     RegionStateNode oldNode = regionsMap.putIfAbsent(regionInfo.getRegionName(), newNode);
     return oldNode != null ? oldNode : newNode;
   }
 
-  protected RegionStateNode getOrCreateRegionNode(final RegionInfo regionInfo) {
+  protected RegionStateNode getOrCreateRegionStateNode(final RegionInfo regionInfo) {
     RegionStateNode node = regionsMap.get(regionInfo.getRegionName());
-    return node != null ? node : createRegionNode(regionInfo);
+    return node != null ? node : createRegionStateNode(regionInfo);
   }
 
-  RegionStateNode getRegionNodeFromName(final byte[] regionName) {
+  RegionStateNode getRegionStateNodeFromName(final byte[] regionName) {
     return regionsMap.get(regionName);
   }
 
-  protected RegionStateNode getRegionNode(final RegionInfo regionInfo) {
-    return getRegionNodeFromName(regionInfo.getRegionName());
-  }
-
-  RegionStateNode getRegionNodeFromEncodedName(final String encodedRegionName) {
-    // TODO: Need a map <encodedName, ...> but it is just dispatch merge...
-    for (RegionStateNode node: regionsMap.values()) {
-      if (node.getRegionInfo().getEncodedName().equals(encodedRegionName)) {
-        return node;
-      }
-    }
-    return null;
+  protected RegionStateNode getRegionStateNode(final RegionInfo regionInfo) {
+    return getRegionStateNodeFromName(regionInfo.getRegionName());
   }
 
   public void deleteRegion(final RegionInfo regionInfo) {
@@ -491,7 +488,7 @@ public class RegionStates {
     final ArrayList<RegionState> regions = new ArrayList<RegionState>();
     for (RegionStateNode node: regionsMap.tailMap(tableName.getName()).values()) {
       if (!node.getTable().equals(tableName)) break;
-      regions.add(createRegionState(node));
+      regions.add(node.toRegionState());
     }
     return regions;
   }
@@ -505,14 +502,14 @@ public class RegionStates {
     return regions;
   }
 
-  Collection<RegionStateNode> getRegionNodes() {
+  Collection<RegionStateNode> getRegionStateNodes() {
     return regionsMap.values();
   }
 
   public ArrayList<RegionState> getRegionStates() {
     final ArrayList<RegionState> regions = new ArrayList<RegionState>(regionsMap.size());
     for (RegionStateNode node: regionsMap.values()) {
-      regions.add(createRegionState(node));
+      regions.add(node.toRegionState());
     }
     return regions;
   }
@@ -521,17 +518,18 @@ public class RegionStates {
   //  RegionState helpers
   // ==========================================================================
   public RegionState getRegionState(final RegionInfo regionInfo) {
-    return createRegionState(getRegionNode(regionInfo));
+    RegionStateNode regionStateNode = getRegionStateNode(regionInfo);
+    return regionStateNode == null ? null : regionStateNode.toRegionState();
   }
 
   public RegionState getRegionState(final String encodedRegionName) {
-    return createRegionState(getRegionNodeFromEncodedName(encodedRegionName));
-  }
-
-  private RegionState createRegionState(final RegionStateNode node) {
-    return node == null ? null :
-      new RegionState(node.getRegionInfo(), node.getState(),
-        node.getLastUpdate(), node.getRegionLocation());
+    // TODO: Need a map <encodedName, ...> but it is just dispatch merge...
+    for (RegionStateNode node: regionsMap.values()) {
+      if (node.getRegionInfo().getEncodedName().equals(encodedRegionName)) {
+        return node.toRegionState();
+      }
+    }
+    return null;
   }
 
   // ============================================================================================
@@ -612,7 +610,7 @@ public class RegionStates {
   }
 
   public void logSplit(final RegionInfo regionInfo) {
-    final RegionStateNode regionNode = getRegionNode(regionInfo);
+    final RegionStateNode regionNode = getRegionStateNode(regionInfo);
     synchronized (regionNode) {
       regionNode.setState(State.SPLIT);
     }
@@ -620,7 +618,7 @@ public class RegionStates {
 
   @VisibleForTesting
   public void updateRegionState(final RegionInfo regionInfo, final State state) {
-    final RegionStateNode regionNode = getOrCreateRegionNode(regionInfo);
+    final RegionStateNode regionNode = getOrCreateRegionStateNode(regionInfo);
     synchronized (regionNode) {
       regionNode.setState(state);
     }
@@ -640,7 +638,7 @@ public class RegionStates {
   }
 
   public boolean isRegionInState(final RegionInfo regionInfo, final State... state) {
-    final RegionStateNode region = getRegionNode(regionInfo);
+    final RegionStateNode region = getRegionStateNode(regionInfo);
     if (region != null) {
       synchronized (region) {
         return region.isInState(state);
@@ -664,7 +662,7 @@ public class RegionStates {
       final Collection<RegionInfo> regions) {
     final Map<ServerName, List<RegionInfo>> result = new HashMap<ServerName, List<RegionInfo>>();
     for (RegionInfo hri: regions) {
-      final RegionStateNode node = getRegionNode(hri);
+      final RegionStateNode node = getRegionStateNode(hri);
       if (node == null) continue;
 
       // TODO: State.OPEN
@@ -707,7 +705,7 @@ public class RegionStates {
   }
 
   public ServerName getRegionServerOfRegion(final RegionInfo regionInfo) {
-    final RegionStateNode region = getRegionNode(regionInfo);
+    final RegionStateNode region = getRegionStateNode(regionInfo);
     if (region != null) {
       synchronized (region) {
         ServerName server = region.getRegionLocation();
@@ -815,7 +813,7 @@ public class RegionStates {
     if (node == null) return null;
 
     synchronized (node) {
-      return node.isInTransition() ? createRegionState(node) : null;
+      return node.isInTransition() ? node.toRegionState() : null;
     }
   }
 
@@ -833,7 +831,7 @@ public class RegionStates {
   public List<RegionState> getRegionsStateInTransition() {
     final List<RegionState> rit = new ArrayList<RegionState>(regionInTransition.size());
     for (RegionStateNode node: regionInTransition.values()) {
-      rit.add(createRegionState(node));
+      rit.add(node.toRegionState());
     }
     return rit;
   }
@@ -841,7 +839,7 @@ public class RegionStates {
   public SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
     final SortedSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_STAMP_COMPARATOR);
     for (RegionStateNode node: regionInTransition.values()) {
-      rit.add(createRegionState(node));
+      rit.add(node.toRegionState());
     }
     return rit;
   }
@@ -873,7 +871,7 @@ public class RegionStates {
       this.regionNode = regionNode;
     }
 
-    public RegionStateNode getRegionNode() {
+    public RegionStateNode getRegionStateNode() {
       return regionNode;
     }
 
@@ -922,7 +920,7 @@ public class RegionStates {
 
     ArrayList<RegionState> regions = new ArrayList<RegionState>(regionFailedOpen.size());
     for (RegionFailedOpen r: regionFailedOpen.values()) {
-      regions.add(createRegionState(r.getRegionNode()));
+      regions.add(r.getRegionStateNode().toRegionState());
     }
     return regions;
   }
@@ -958,9 +956,8 @@ public class RegionStates {
     return numServers == 0 ? 0.0: (double)totalLoad / (double)numServers;
   }
 
-  public ServerStateNode addRegionToServer(final ServerName serverName,
-      final RegionStateNode regionNode) {
-    ServerStateNode serverNode = getOrCreateServer(serverName);
+  public ServerStateNode addRegionToServer(final RegionStateNode regionNode) {
+    ServerStateNode serverNode = getOrCreateServer(regionNode.getRegionLocation());
     serverNode.addRegion(regionNode);
     return serverNode;
   }

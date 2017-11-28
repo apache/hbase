@@ -43,7 +43,7 @@ public class TestRegionState {
   }
 
   private void testSerializeDeserialize(final TableName tableName, final RegionState.State state) {
-    RegionState state1 = new RegionState(new HRegionInfo(tableName), state);
+    RegionState state1 = RegionState.createForTesting(new HRegionInfo(tableName), state);
     ClusterStatusProtos.RegionState protobuf1 = state1.convert();
     RegionState state2 = RegionState.convert(protobuf1);
     ClusterStatusProtos.RegionState protobuf2 = state1.convert();

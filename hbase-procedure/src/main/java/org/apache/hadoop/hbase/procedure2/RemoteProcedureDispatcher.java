@@ -242,9 +242,9 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   }
 
   protected ArrayListMultimap<Class<?>, RemoteOperation> buildAndGroupRequestByType(final TEnv env,
-      final TRemote remote, final Set<RemoteProcedure> operations) {
+      final TRemote remote, final Set<RemoteProcedure> remoteProcedures) {
     final ArrayListMultimap<Class<?>, RemoteOperation> requestByType = ArrayListMultimap.create();
-    for (RemoteProcedure proc: operations) {
+    for (RemoteProcedure proc: remoteProcedures) {
       RemoteOperation operation = proc.remoteCallBuild(env, remote);
       requestByType.put(operation.getClass(), operation);
     }

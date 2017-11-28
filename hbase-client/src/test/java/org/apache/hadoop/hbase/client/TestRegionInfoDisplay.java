@@ -21,9 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionInfoDisplay;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -66,7 +63,7 @@ public class TestRegionInfoDisplay {
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
     RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
 
-    RegionState state = new RegionState(convert(ri), RegionState.State.OPEN);
+    RegionState state = RegionState.createForTesting(convert(ri), RegionState.State.OPEN);
     String descriptiveNameForDisplay =
     RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
     checkDescriptiveNameEquality(descriptiveNameForDisplay,state.toDescriptiveString(), startKey);

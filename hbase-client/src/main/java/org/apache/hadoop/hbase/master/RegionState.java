@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.Date;
 
 import org.apache.hadoop.hbase.ServerName;
@@ -169,12 +170,12 @@ public class RegionState {
   // The duration of region in transition
   private long ritDuration;
 
-  public RegionState(RegionInfo region, State state) {
-    this(region, state, System.currentTimeMillis(), null);
+  @VisibleForTesting
+  public static RegionState createForTesting(RegionInfo region, State state) {
+    return new RegionState(region, state, System.currentTimeMillis(), null);
   }
 
-  public RegionState(RegionInfo region,
-      State state, ServerName serverName) {
+  public RegionState(RegionInfo region, State state, ServerName serverName) {
     this(region, state, System.currentTimeMillis(), serverName);
   }
 

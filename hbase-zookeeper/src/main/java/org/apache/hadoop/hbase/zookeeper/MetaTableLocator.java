@@ -515,8 +515,9 @@ public class MetaTableLocator {
       state = RegionState.State.OFFLINE;
     }
     return new RegionState(
-        RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId),
-      state, serverName);
+        RegionReplicaUtil.getRegionInfoForReplica(
+            RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId),
+        state, serverName);
   }
 
   /**

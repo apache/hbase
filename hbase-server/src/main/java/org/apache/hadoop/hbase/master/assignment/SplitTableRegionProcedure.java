@@ -133,7 +133,7 @@ public class SplitTableRegionProcedure
       throw new IllegalArgumentException ("Can't invoke split on non-default regions directly");
     }
     RegionStateNode node =
-        env.getAssignmentManager().getRegionStates().getRegionNode(getParentRegion());
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
     IOException splittableCheckIOE = null;
     boolean splittable = false;
     if (node != null) {
@@ -407,7 +407,7 @@ public class SplitTableRegionProcedure
   public boolean prepareSplitRegion(final MasterProcedureEnv env) throws IOException {
     // Check whether the region is splittable
     RegionStateNode node =
-        env.getAssignmentManager().getRegionStates().getRegionNode(getParentRegion());
+        env.getAssignmentManager().getRegionStates().getRegionStateNode(getParentRegion());
 
     if (node == null) {
       throw new UnknownRegionException(getParentRegion().getRegionNameAsString());

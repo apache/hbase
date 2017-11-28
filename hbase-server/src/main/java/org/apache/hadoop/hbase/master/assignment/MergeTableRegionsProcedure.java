@@ -556,8 +556,8 @@ public class MergeTableRegionsProcedure
   public void setRegionStateToMerging(final MasterProcedureEnv env) throws IOException {
     // Set State.MERGING to regions to be merged
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    regionStates.getRegionNode(regionsToMerge[0]).setState(State.MERGING);
-    regionStates.getRegionNode(regionsToMerge[1]).setState(State.MERGING);
+    regionStates.getRegionStateNode(regionsToMerge[0]).setState(State.MERGING);
+    regionStates.getRegionStateNode(regionsToMerge[1]).setState(State.MERGING);
   }
 
   /**
@@ -569,8 +569,8 @@ public class MergeTableRegionsProcedure
   private void setRegionStateBackToOpen(final MasterProcedureEnv env) throws IOException {
     // revert region state to Open
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
-    regionStates.getRegionNode(regionsToMerge[0]).setState(State.OPEN);
-    regionStates.getRegionNode(regionsToMerge[1]).setState(State.OPEN);
+    regionStates.getRegionStateNode(regionsToMerge[0]).setState(State.OPEN);
+    regionStates.getRegionStateNode(regionsToMerge[1]).setState(State.OPEN);
   }
 
   /**
@@ -595,7 +595,7 @@ public class MergeTableRegionsProcedure
 
     //Prepare to create merged regions
     env.getAssignmentManager().getRegionStates().
-        getOrCreateRegionNode(mergedRegion).setState(State.MERGING_NEW);
+        getOrCreateRegionStateNode(mergedRegion).setState(State.MERGING_NEW);
   }
 
   /**
