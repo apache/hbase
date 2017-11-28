@@ -823,7 +823,8 @@ public class TableMapReduceUtil {
       org.apache.commons.lang3.ArrayUtils.class,
       com.fasterxml.jackson.databind.ObjectMapper.class,
       com.fasterxml.jackson.core.Versioned.class,
-      com.fasterxml.jackson.annotation.JsonView.class);
+      com.fasterxml.jackson.annotation.JsonView.class,
+      org.apache.hadoop.hbase.zookeeper.ZKWatcher.class);
   }
 
   /**
