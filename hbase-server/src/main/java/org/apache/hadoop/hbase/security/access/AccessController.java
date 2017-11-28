@@ -429,7 +429,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
    */
   private User getActiveUser(ObserverContext<?> ctx) throws IOException {
     // for non-rpc handling, fallback to system user
-    return ctx.getCaller().orElse(userProvider.getCurrent());
+    Optional<User> optionalUser = ctx.getCaller();
+    User user;
+    if (optionalUser.isPresent()) {
+      return optionalUser.get();
+    }
+    return userProvider.getCurrent();
   }
 
   /**
