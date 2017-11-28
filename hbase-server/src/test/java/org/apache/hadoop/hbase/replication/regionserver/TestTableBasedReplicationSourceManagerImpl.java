@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
@@ -50,6 +53,10 @@ public class TestTableBasedReplicationSourceManagerImpl extends TestReplicationS
       TableBasedReplicationQueuesClientImpl.class, ReplicationQueuesClient.class);
     utility = new HBaseTestingUtility(conf);
     utility.startMiniCluster();
+    Waiter.waitFor(conf, 3 * 1000,
+      () -> utility.getMiniHBaseCluster().getMaster().isInitialized());
+    utility.waitUntilAllRegionsAssigned(TableName.valueOf(
+        NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "replication"));
     setupZkAndReplication();
   }
 
