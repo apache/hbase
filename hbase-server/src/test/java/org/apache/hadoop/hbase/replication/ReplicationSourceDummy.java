@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +45,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   Path currentPath;
   MetricsSource metrics;
   WALFileLengthProvider walFileLengthProvider;
-
+  AtomicBoolean startup = new AtomicBoolean(false);
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
       ReplicationQueues rq, ReplicationPeers rp, Server server, String peerClusterId,
@@ -70,7 +70,11 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void startup() {
+    startup.set(true);
+  }
 
+  public boolean isStartup() {
+    return startup.get();
   }
 
   @Override
