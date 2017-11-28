@@ -277,14 +277,14 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Tries to acquire a lock on the given row.
-   * @param waitForLock if true, will block until the lock is available.
+   * @param readlock if true, will block until the lock is available.
    *        Otherwise, just tries to obtain the lock and returns
    *        false if unavailable.
    * @return the row lock if acquired,
    *   null if waitForLock was false and the lock was not acquired
    * @throws IOException if waitForLock was true and the lock could not be acquired after waiting
    */
-  RowLock getRowLock(byte[] row, boolean waitForLock) throws IOException;
+  RowLock getRowLock(byte[] row, boolean readlock) throws IOException;
 
   /**
    * If the given list of row locks is not null, releases all locks.
