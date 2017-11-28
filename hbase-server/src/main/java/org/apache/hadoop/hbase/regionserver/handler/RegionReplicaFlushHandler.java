@@ -96,7 +96,8 @@ public class RegionReplicaFlushHandler extends EventHandler {
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     if (numRetries > 10) {
-      int mult = conf.getInt("hbase.client.serverside.retries.multiplier", 10);
+      int mult = conf.getInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER,
+        HConstants.DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER);
       numRetries = numRetries / mult; // reset if HRS has multiplied this already
     }
     return numRetries;

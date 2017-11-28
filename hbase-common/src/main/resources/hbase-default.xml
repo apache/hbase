@@ -488,7 +488,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.client.retries.number</name>
-    <value>35</value>
+    <value>10</value>
     <description>Maximum retries.  Used as maximum for all retryable
     operations such as the getting of a cell's value, starting a row update,
     etc.  Retry interval is a rough function based on hbase.client.pause.  At

@@ -790,7 +790,12 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 35;
+  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 10;
+
+  public static final String HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER =
+      "hbase.client.serverside.retries.multiplier";
+
+  public static final int DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER = 3;
 
   /**
    * Parameter name to set the default scanner caching for all clients.

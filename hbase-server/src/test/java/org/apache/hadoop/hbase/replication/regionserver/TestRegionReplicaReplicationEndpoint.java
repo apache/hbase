@@ -101,7 +101,7 @@ public class TestRegionReplicaReplicationEndpoint {
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5); // less number of retries is needed
-    conf.setInt("hbase.client.serverside.retries.multiplier", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
 
     HTU.startMiniCluster(NB_SERVERS);
   }

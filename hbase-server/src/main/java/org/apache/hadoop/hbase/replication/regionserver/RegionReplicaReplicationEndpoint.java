@@ -119,11 +119,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     int defaultNumRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     if (defaultNumRetries > 10) {
-      int mult = conf.getInt("hbase.client.serverside.retries.multiplier", 10);
+      int mult = conf.getInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER,
+        HConstants.DEFAULT_HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER);
       defaultNumRetries = defaultNumRetries / mult; // reset if HRS has multiplied this already
     }
 
-    conf.setInt("hbase.client.serverside.retries.multiplier", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
     int numRetries = conf.getInt(CLIENT_RETRIES_NUMBER, defaultNumRetries);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
 
