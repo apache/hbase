@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,17 +45,11 @@ public class TestCheckAndMutate {
   @Rule
   public TestName name = new TestName();
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -154,36 +147,4 @@ public class TestCheckAndMutate {
     }
   }
 
-  @Test
-  public void testCheckAndMutateUsingNewComparisonOperatorInstead() throws Throwable {
-    try (Table table = createTable()) {
-      // put one row
-      putOneRow(table);
-      // get row back and assert the values
-      getOneRowAndAssertAllExist(table);
-
-      // put the same row again with C column deleted
-      RowMutations rm = makeRowMutationsWithColumnCDeleted();
-      boolean res = table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a"), rm);
-      assertTrue(res);
-
-      // get row back and assert the values
-      getOneRowAndAssertAllButCExist(table);
-
-      //Test that we get a region level exception
-      try {
-        rm = getBogusRowMutations();
-        table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-          Bytes.toBytes("a"), rm);
-        fail("Expected NoSuchColumnFamilyException");
-      } catch (RetriesExhaustedWithDetailsException e) {
-        try {
-          throw e.getCause(0);
-        } catch (NoSuchColumnFamilyException e1) {
-          // expected
-        }
-      }
-    }
-  }
 }
