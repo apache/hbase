@@ -301,6 +301,15 @@ final public class FilterList extends Filter {
     return this.reversed;
   }
 
+  /**
+   * @param maxFilters ignored
+   * @deprecated
+   */
+  @Deprecated
+  public String toString(int maxFilters) {
+    return this.filterListBase.toString();
+  }
+
   @Override
   public String toString() {
     return this.filterListBase.toString();

@@ -161,13 +161,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
     //  hbase:meta server name.
     ClusterStatus cs = new ClusterStatus(VersionInfo.getVersion(),
         master.getMasterFileSystem().getClusterId().toString(),
-        null,
         sns,
-        master.getServerName(),
-        null,
-        null,
-        null,
-        null);
+        master.getServerName());
 
 
     publisher.publish(cs);
