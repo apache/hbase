@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -232,27 +232,19 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private ClientProtos.MultiRequest buildReq(Map<byte[], RegionRequest> actionsByRegion,
-      List<CellScannable> cells) throws IOException {
+      List<CellScannable> cells, Map<Integer, Integer> rowMutationsIndexMap) throws IOException {
     ClientProtos.MultiRequest.Builder multiRequestBuilder = ClientProtos.MultiRequest.newBuilder();
     ClientProtos.RegionAction.Builder regionActionBuilder = ClientProtos.RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
     ClientProtos.MutationProto.Builder mutationBuilder = ClientProtos.MutationProto.newBuilder();
     for (Map.Entry<byte[], RegionRequest> entry : actionsByRegion.entrySet()) {
-      // TODO: remove the extra for loop as we will iterate it in mutationBuilder.
-      if (!multiRequestBuilder.hasNonceGroup()) {
-        for (Action action : entry.getValue().actions) {
-          if (action.hasNonce()) {
-            multiRequestBuilder.setNonceGroup(conn.getNonceGenerator().getNonceGroup());
-            break;
-          }
-        }
-      }
-      regionActionBuilder.clear();
-      regionActionBuilder.setRegion(
-        RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, entry.getKey()));
-      regionActionBuilder = RequestConverter.buildNoDataRegionAction(entry.getKey(),
-        entry.getValue().actions, cells, regionActionBuilder, actionBuilder, mutationBuilder);
-      multiRequestBuilder.addRegionAction(regionActionBuilder.build());
+      long nonceGroup = conn.getNonceGenerator().getNonceGroup();
+      // multiRequestBuilder will be populated with region actions.
+      // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+      // action list.
+      RequestConverter.buildNoDataRegionActions(entry.getKey(),
+        entry.getValue().actions, cells, multiRequestBuilder, regionActionBuilder, actionBuilder,
+        mutationBuilder, nonceGroup, rowMutationsIndexMap);
     }
     return multiRequestBuilder.build();
   }
@@ -337,8 +329,12 @@ class AsyncBatchRpcRetryingCaller<T> {
       }
       ClientProtos.MultiRequest req;
       List<CellScannable> cells = new ArrayList<>();
+      // Map from a created RegionAction to the original index for a RowMutations within
+      // the original list of actions. This will be used to process the results when there
+      // is RowMutations in the action list.
+      Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
       try {
-        req = buildReq(serverReq.actionsByRegion, cells);
+        req = buildReq(serverReq.actionsByRegion, cells, rowMutationsIndexMap);
       } catch (IOException e) {
         onError(serverReq.actionsByRegion, tries, e, sn);
         return;
@@ -353,8 +349,8 @@ class AsyncBatchRpcRetryingCaller<T> {
           onError(serverReq.actionsByRegion, tries, controller.getFailed(), sn);
         } else {
           try {
-            onComplete(serverReq.actionsByRegion, tries, sn,
-              ResponseConverter.getResults(req, resp, controller.cellScanner()));
+            onComplete(serverReq.actionsByRegion, tries, sn, ResponseConverter.getResults(req,
+              rowMutationsIndexMap, resp, controller.cellScanner()));
           } catch (Exception e) {
             onError(serverReq.actionsByRegion, tries, e, sn);
             return;

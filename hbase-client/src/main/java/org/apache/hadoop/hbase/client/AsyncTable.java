@@ -431,11 +431,11 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   }
 
   /**
-   * Method that does a batch call on Deletes, Gets, Puts, Increments and Appends. The ordering of
-   * execution of the actions is not defined. Meaning if you do a Put and a Get in the same
-   * {@link #batch} call, you will not necessarily be guaranteed that the Get returns what the Put
-   * had put.
-   * @param actions list of Get, Put, Delete, Increment, Append objects
+   * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends and RowMutations. The
+   * ordering of execution of the actions is not defined. Meaning if you do a Put and a Get in the
+   * same {@link #batch} call, you will not necessarily be guaranteed that the Get returns what the
+   * Put had put.
+   * @param actions list of Get, Put, Delete, Increment, Append, and RowMutations objects
    * @return A list of {@link CompletableFuture}s that represent the result for each action.
    */
   <T> List<CompletableFuture<T>> batch(List<? extends Row> actions);
@@ -443,7 +443,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   /**
    * A simple version of batch. It will fail if there are any failures and you will get the whole
    * result list at once if the operation is succeeded.
-   * @param actions list of Get, Put, Delete, Increment, Append objects
+   * @param actions list of Get, Put, Delete, Increment, Append and RowMutations objects
    * @return A list of the result for the actions. Wrapped by a {@link CompletableFuture}.
    */
   default <T> CompletableFuture<List<T>> batchAll(List<? extends Row> actions) {

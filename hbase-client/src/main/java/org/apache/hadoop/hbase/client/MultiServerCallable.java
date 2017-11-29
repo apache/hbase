@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -100,57 +98,29 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
         (this.cellBlock ? new ArrayList<CellScannable>(countOfActions) : null);
 
     long nonceGroup = multiAction.getNonceGroup();
-    if (nonceGroup != HConstants.NO_NONCE) {
-      multiRequestBuilder.setNonceGroup(nonceGroup);
-    }
-    // Index to track RegionAction within the MultiRequest
-    int regionActionIndex = -1;
+
     // Map from a created RegionAction to the original index for a RowMutations within
-    // its original list of actions
+    // the original list of actions. This will be used to process the results when there
+    // is RowMutations in the action list.
     Map<Integer, Integer> rowMutationsIndexMap = new HashMap<>();
     // The multi object is a list of Actions by region. Iterate by region.
     for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
       final List<Action> actions = e.getValue();
-      regionActionBuilder.clear();
-      regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
-          HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName));
-
-      int rowMutations = 0;
-      for (Action action : actions) {
-        Row row = action.getAction();
-        // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
-        // on the one row. We do separate RegionAction for each RowMutations.
-        // We maintain a map to keep track of this RegionAction and the original Action index.
-        if (row instanceof RowMutations) {
-          RowMutations rms = (RowMutations)row;
-          if (this.cellBlock) {
-            // Build a multi request absent its Cell payload. Send data in cellblocks.
-            regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, rms, cells,
-              regionActionBuilder, actionBuilder, mutationBuilder);
-          } else {
-            regionActionBuilder = RequestConverter.buildRegionAction(regionName, rms);
-          }
-          regionActionBuilder.setAtomic(true);
-          multiRequestBuilder.addRegionAction(regionActionBuilder.build());
-          regionActionIndex++;
-          rowMutationsIndexMap.put(regionActionIndex, action.getOriginalIndex());
-          rowMutations++;
-        }
+      if (this.cellBlock) {
+        // Send data in cellblocks.
+        // multiRequestBuilder will be populated with region actions.
+        // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+        // action list.
+        RequestConverter.buildNoDataRegionActions(regionName, actions, cells, multiRequestBuilder,
+          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, rowMutationsIndexMap);
       }
-
-      if (actions.size() > rowMutations) {
-        if (this.cellBlock) {
-          // Send data in cellblocks. The call to buildNoDataRegionAction will skip RowMutations.
-          // They have already been handled above. Guess at count of cells
-          regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,
-            regionActionBuilder, actionBuilder, mutationBuilder);
-        } else {
-          regionActionBuilder = RequestConverter.buildRegionAction(regionName, actions,
-            regionActionBuilder, actionBuilder, mutationBuilder);
-        }
-        multiRequestBuilder.addRegionAction(regionActionBuilder.build());
-        regionActionIndex++;
+      else {
+        // multiRequestBuilder will be populated with region actions.
+        // rowMutationsIndexMap will be non-empty after the call if there is RowMutations in the
+        // action list.
+        RequestConverter.buildRegionActions(regionName, actions, multiRequestBuilder,
+          regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup, rowMutationsIndexMap);
       }
     }
 

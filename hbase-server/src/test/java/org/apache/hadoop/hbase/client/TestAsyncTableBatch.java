@@ -71,6 +71,7 @@ public class TestAsyncTableBatch {
   private static byte[] FAMILY = Bytes.toBytes("cf");
 
   private static byte[] CQ = Bytes.toBytes("cq");
+  private static byte[] CQ1 = Bytes.toBytes("cq1");
 
   private static int COUNT = 1000;
 
@@ -178,9 +179,9 @@ public class TestAsyncTableBatch {
   }
 
   @Test
-  public void testMixed() throws InterruptedException, ExecutionException {
+  public void testMixed() throws InterruptedException, ExecutionException, IOException {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
-    table.putAll(IntStream.range(0, 5)
+    table.putAll(IntStream.range(0, 7)
         .mapToObj(i -> new Put(Bytes.toBytes(i)).addColumn(FAMILY, CQ, Bytes.toBytes((long) i)))
         .collect(Collectors.toList())).get();
     List<Row> actions = new ArrayList<>();
@@ -189,8 +190,14 @@ public class TestAsyncTableBatch {
     actions.add(new Delete(Bytes.toBytes(2)));
     actions.add(new Increment(Bytes.toBytes(3)).addColumn(FAMILY, CQ, 1));
     actions.add(new Append(Bytes.toBytes(4)).addColumn(FAMILY, CQ, Bytes.toBytes(4)));
+    RowMutations rm = new RowMutations(Bytes.toBytes(5));
+    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ, Bytes.toBytes((long) 100)));
+    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ1, Bytes.toBytes((long) 200)));
+    actions.add(rm);
+    actions.add(new Get(Bytes.toBytes(6)));
+
     List<Object> results = table.batchAll(actions).get();
-    assertEquals(5, results.size());
+    assertEquals(7, results.size());
     Result getResult = (Result) results.get(0);
     assertEquals(0, Bytes.toLong(getResult.getValue(FAMILY, CQ)));
     assertEquals(2, Bytes.toLong(table.get(new Get(Bytes.toBytes(1))).get().getValue(FAMILY, CQ)));
@@ -202,6 +209,12 @@ public class TestAsyncTableBatch {
     assertEquals(12, appendValue.length);
     assertEquals(4, Bytes.toLong(appendValue));
     assertEquals(4, Bytes.toInt(appendValue, 8));
+    assertEquals(100,
+      Bytes.toLong(table.get(new Get(Bytes.toBytes(5))).get().getValue(FAMILY, CQ)));
+    assertEquals(200,
+      Bytes.toLong(table.get(new Get(Bytes.toBytes(5))).get().getValue(FAMILY, CQ1)));
+    getResult = (Result) results.get(6);
+    assertEquals(6, Bytes.toLong(getResult.getValue(FAMILY, CQ)));
   }
 
   public static final class ErrorInjectObserver implements RegionCoprocessor, RegionObserver {
