@@ -869,6 +869,21 @@ public class Result implements CellScannable, CellScanner {
    * @return The complete result that is formed by combining all of the partial results together
    * @throws IOException A complete result cannot be formed because the results in the partial list
    *           come from different rows
+   * @deprecated
+   */
+  @Deprecated
+  public static Result createCompleteResult(List<Result> partialResults)
+      throws IOException {
+    return createCompleteResult((Iterable<Result>)partialResults);
+  }
+
+  /**
+   * Forms a single result from the partial results in the partialResults list. This method is
+   * useful for reconstructing partial results on the client side.
+   * @param partialResults iterable of partial results
+   * @return The complete result that is formed by combining all of the partial results together
+   * @throws IOException A complete result cannot be formed because the results in the partial list
+   *           come from different rows
    */
   public static Result createCompleteResult(Iterable<Result> partialResults)
       throws IOException {

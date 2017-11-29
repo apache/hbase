@@ -24,7 +24,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -32,7 +31,6 @@ import javax.naming.NamingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
@@ -437,6 +435,28 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
     return res;
   }
+
+  /**
+   * Calculates the number of MapReduce input splits for the map tasks. The number of
+   * MapReduce input splits depends on the average region size.
+   * Make it 'public' for testing
+   * <p>
+   * Deprecated. Former functionality has been replaced by calculateAutoBalancedSplits and
+   * will function differently. Do not use.
+   * <p>
+   * @param list  The list of input splits before balance.
+   * @param context The current job context.
+   * @param average The average size of all regions .
+   * @return The list of input splits.
+   * @throws IOException
+   * @deprecated
+   */
+  @Deprecated
+  public List<InputSplit> calculateRebalancedSplits(List<InputSplit> list, JobContext context,
+      long average) throws IOException {
+    return calculateAutoBalancedSplits(list, average);
+  }
+
   /**
    * Calculates the number of MapReduce input splits for the map tasks. The number of
    * MapReduce input splits depends on the average region size.
@@ -513,6 +533,44 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
     }
     return resultList;
+  }
+
+  /**
+   * Deprecated. Do not use.
+   * @param start Start key of the region
+   * @param end End key of the region
+   * @param isText It determines to use text key mode or binary key mode
+   * @return The split point in the region.
+   */
+  @Deprecated
+  public static byte[] getSplitKey(byte[] start, byte[] end, boolean isText) {
+    byte upperLimitByte;
+    byte lowerLimitByte;
+    //Use text mode or binary mode.
+    if (isText) {
+      //The range of text char set in ASCII is [32,126], the lower limit is space and the upper
+      // limit is '~'.
+      upperLimitByte = '~';
+      lowerLimitByte = ' ';
+    } else {
+      upperLimitByte = -1;
+      lowerLimitByte = 0;
+    }
+    // For special case
+    // Example 1 : startkey=null, endkey="hhhqqqwww", splitKey="h"
+    // Example 2 (text key mode): startKey="ffffaaa", endKey=null, splitkey="f~~~~~~"
+    if (start.length == 0 && end.length == 0){
+      return new byte[]{(byte) ((lowerLimitByte + upperLimitByte) / 2)};
+    }
+    if (start.length == 0 && end.length != 0){
+      return new byte[]{ end[0] };
+    }
+    if (start.length != 0 && end.length == 0){
+      byte[] result =new byte[start.length];
+      result[0]=start[0];
+      return result;
+    }
+    return Bytes.split(start, end, false, 1)[1];
   }
 
   /**

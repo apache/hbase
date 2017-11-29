@@ -683,7 +683,18 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   /**
    * Restore the specified snapshot
-   * @param reqSnapshot
+   * @param reqSnapshot the snapshot to restore
+   * @throws IOException
+   */
+  @Deprecated
+  public void restoreSnapshot(SnapshotDescription reqSnapshot) throws IOException {
+    restoreSnapshot(reqSnapshot, false);
+  }
+
+  /**
+   * Restore the specified snapshot
+   * @param reqSnapshot the snapshot to restore
+   * @param restoreAcl whether or not to restore ACLs on the snapshot
    * @throws IOException
    */
   public void restoreSnapshot(SnapshotDescription reqSnapshot, boolean restoreAcl)

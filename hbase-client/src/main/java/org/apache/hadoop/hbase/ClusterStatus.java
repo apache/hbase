@@ -20,12 +20,15 @@
 package org.apache.hadoop.hbase;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,7 +44,6 @@ import org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileConte
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
 
@@ -100,6 +102,26 @@ public class ClusterStatus extends VersionedWritable {
     super();
   }
 
+  @Deprecated
+  public ClusterStatus(String hbaseVersion, String clusterid, List<ServerName> deadServers,
+      ServerName master) {
+    this(hbaseVersion, clusterid, new HashMap<ServerName,ServerLoad>(), deadServers, master,
+      new ArrayList<ServerName>(), new HashSet<RegionState>(), new String[0], null);
+  }
+
+  @Deprecated
+  public ClusterStatus(final String hbaseVersion, final String clusterid,
+      final Map<ServerName,ServerLoad> servers,
+      final Collection<ServerName> deadServers,
+      final ServerName master,
+      final Collection<ServerName> backupMasters,
+      final Map<String,RegionState> rit,
+      final String[ ] masterCoprocessors,
+      final Boolean balancerOn) {
+    this(hbaseVersion, clusterid, servers, deadServers, master, backupMasters, Sets.newHashSet(rit.values()),
+      masterCoprocessors, balancerOn);
+  }
+
   public ClusterStatus(final String hbaseVersion, final String clusterid,
       final Map<ServerName, ServerLoad> servers,
       final Collection<ServerName> deadServers,
@@ -109,7 +131,6 @@ public class ClusterStatus extends VersionedWritable {
       final String[] masterCoprocessors,
       final Boolean balancerOn) {
     this.hbaseVersion = hbaseVersion;
-
     this.liveServers = servers;
     this.deadServers = deadServers;
     this.master = master;
