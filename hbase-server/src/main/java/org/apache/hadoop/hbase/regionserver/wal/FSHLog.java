@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.EventHandler;
+import com.lmax.disruptor.ExceptionHandler;
+import com.lmax.disruptor.LifecycleAware;
+import com.lmax.disruptor.TimeoutException;
+import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -55,18 +63,10 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.htrace.core.Span;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
-import com.lmax.disruptor.BlockingWaitStrategy;
-import com.lmax.disruptor.EventHandler;
-import com.lmax.disruptor.ExceptionHandler;
-import com.lmax.disruptor.LifecycleAware;
-import com.lmax.disruptor.TimeoutException;
-import com.lmax.disruptor.dsl.Disruptor;
-import com.lmax.disruptor.dsl.ProducerType;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The default implementation of FSWAL.
@@ -702,22 +702,18 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return logRollNeeded;
   }
 
-  private SyncFuture publishSyncOnRingBuffer(long sequence) {
-    return publishSyncOnRingBuffer(sequence, null);
-  }
-
   private long getSequenceOnRingBuffer() {
     return this.disruptor.getRingBuffer().next();
   }
 
-  private SyncFuture publishSyncOnRingBuffer(Span span) {
-    long sequence = this.disruptor.getRingBuffer().next();
-    return publishSyncOnRingBuffer(sequence, span);
+  private SyncFuture publishSyncOnRingBuffer() {
+    long sequence = getSequenceOnRingBuffer();
+    return publishSyncOnRingBuffer(sequence);
   }
 
-  private SyncFuture publishSyncOnRingBuffer(long sequence, Span span) {
+  private SyncFuture publishSyncOnRingBuffer(long sequence) {
     // here we use ring buffer sequence as transaction id
-    SyncFuture syncFuture = getSyncFuture(sequence, span);
+    SyncFuture syncFuture = getSyncFuture(sequence);
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       truck.load(syncFuture);
@@ -729,14 +725,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   // Sync all known transactions
   private void publishSyncThenBlockOnCompletion(TraceScope scope) throws IOException {
-    if (scope != null) {
-      SyncFuture syncFuture = publishSyncOnRingBuffer(scope.getSpan());
-      blockOnSync(syncFuture);
-    }
-    else {
-      SyncFuture syncFuture = publishSyncOnRingBuffer(null);
-      blockOnSync(syncFuture);
-    }
+    SyncFuture syncFuture = publishSyncOnRingBuffer();
+    blockOnSync(syncFuture);
   }
 
   /**
