@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue;
-import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.THBaseThreadPoolExecutor;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;

@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
