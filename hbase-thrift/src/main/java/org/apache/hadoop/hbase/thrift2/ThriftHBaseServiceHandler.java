@@ -51,7 +51,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -73,6 +72,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.thrift.TException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily

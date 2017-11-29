@@ -20,12 +20,13 @@
 package org.apache.hadoop.hbase.thrift;
 
 import java.util.Locale;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.server.TThreadedSelectorServer;
 import org.apache.thrift.transport.TNonblockingServerTransport;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A TThreadedSelectorServer.Args that reads hadoop configuration

@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -37,10 +41,6 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * Simple test coprocessor for injecting exceptions on Get requests.

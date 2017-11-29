@@ -25,10 +25,9 @@ import java.lang.reflect.Proxy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Converts a Hbase.Iface using InvocationHandler so that it reports process
