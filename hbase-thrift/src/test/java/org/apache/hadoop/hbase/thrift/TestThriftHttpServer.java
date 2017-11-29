@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.junit.Assert.assertFalse;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,10 +39,9 @@ import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertFalse;
-import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
