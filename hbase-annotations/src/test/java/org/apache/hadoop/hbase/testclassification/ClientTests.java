@@ -18,8 +18,8 @@
  */
 
 /**
- * Tag a test as related to the client, This tests the hbase-client package and all of the client tests in
- * hbase-server.
+ * Tag a test as related to the client, This tests the hbase-client package and all of the client
+ * tests in hbase-server.
  * @see org.apache.hadoop.hbase.testclassification.ClientTests
  * @see org.apache.hadoop.hbase.testclassification.CoprocessorTests
  * @see org.apache.hadoop.hbase.testclassification.FilterTests
