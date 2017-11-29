@@ -32,10 +32,10 @@ public class TestSyncFuture {
   public void testGet() throws Exception {
     long timeout = 5000;
     long txid = 100000;
-    SyncFuture syncFulture = new SyncFuture().reset(txid, null);
+    SyncFuture syncFulture = new SyncFuture().reset(txid);
     syncFulture.done(txid, null);
     assertEquals(txid, syncFulture.get(timeout));
 
-    syncFulture.reset(txid, null).get(timeout);
+    syncFulture.reset(txid).get(timeout);
   }
 }

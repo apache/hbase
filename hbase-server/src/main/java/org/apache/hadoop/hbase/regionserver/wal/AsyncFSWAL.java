@@ -565,24 +565,18 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   public void sync() throws IOException {
     try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")){
       long txid = waitingConsumePayloads.next();
-      SyncFuture future = null;
+      SyncFuture future;
       try {
-        if (scope != null) {
-          future = getSyncFuture(txid, scope.getSpan());
-          RingBufferTruck truck = waitingConsumePayloads.get(txid);
-          truck.load(future);
-        }
+        future = getSyncFuture(txid);
+        RingBufferTruck truck = waitingConsumePayloads.get(txid);
+        truck.load(future);
       } finally {
         waitingConsumePayloads.publish(txid);
       }
       if (shouldScheduleConsumer()) {
         eventLoop.execute(consumer);
       }
-      //TODO handle htrace API change, see HBASE-18895
-      //scope = Trace.continueSpan(blockOnSync(future));
-      if (future != null) {
-        blockOnSync(future);
-      }
+      blockOnSync(future);
     }
   }
 
@@ -594,24 +588,18 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     try (TraceScope scope = TraceUtil.createTrace("AsyncFSWAL.sync")) {
       // here we do not use ring buffer sequence as txid
       long sequence = waitingConsumePayloads.next();
-      SyncFuture future = null;
+      SyncFuture future;
       try {
-        if(scope!= null) {
-          future = getSyncFuture(txid, scope.getSpan());
-          RingBufferTruck truck = waitingConsumePayloads.get(sequence);
-          truck.load(future);
-        }
+        future = getSyncFuture(txid);
+        RingBufferTruck truck = waitingConsumePayloads.get(sequence);
+        truck.load(future);
       } finally {
         waitingConsumePayloads.publish(sequence);
       }
       if (shouldScheduleConsumer()) {
         eventLoop.execute(consumer);
       }
-      //TODO handle htrace API change, see HBASE-18895
-      //scope = Trace.continueSpan(blockOnSync(future));
-      if (future != null) {
-        blockOnSync(future);
-      }
+      blockOnSync(future);
     }
   }
 
