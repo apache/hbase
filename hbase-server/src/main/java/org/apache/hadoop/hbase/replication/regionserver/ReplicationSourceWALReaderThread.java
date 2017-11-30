@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,17 +35,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream.WALEntryStreamRuntimeException;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -78,9 +74,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
   private int maxRetriesMultiplier;
   private MetricsSource metrics;
 
-  private AtomicLong totalBufferUsed;
-  private long totalBufferQuota;
-
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
    * entries, and puts them on a batch queue.
@@ -109,9 +102,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
-    this.totalBufferUsed = manager.getTotalBufferUsed();
-    this.totalBufferQuota = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
-      HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
     this.maxRetriesMultiplier =
@@ -132,9 +122,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
       try (WALEntryStream entryStream =
           new WALEntryStream(logQueue, fs, conf, currentPosition, metrics)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
-          if (!checkQuota()) {
-            continue;
-          }
           WALEntryBatch batch = null;
           while (entryStream.hasNext()) {
             if (batch == null) {
@@ -148,9 +135,8 @@ public class ReplicationSourceWALReaderThread extends Thread {
                 long entrySize = getEntrySize(entry);
                 batch.addEntry(entry);
                 updateBatchStats(batch, entry, entryStream.getPosition(), entrySize);
-                boolean totalBufferTooLarge = acquireBufferQuota(entrySize);
                 // Stop if too many entries or too big
-                if (totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
+                if (batch.getHeapSize() >= replicationBatchSizeCapacity
                     || batch.getNbEntries() >= replicationBatchCountCapacity) {
                   break;
                 }
@@ -221,16 +207,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
     }
     // otherwise, we must be currently reading from the head of the log queue
     return logQueue.peek();
-  }
-
-  //returns false if we've already exceeded the global quota
-  private boolean checkQuota() {
-    // try not to go over total quota
-    if (totalBufferUsed.get() > totalBufferQuota) {
-      Threads.sleep(sleepForRetries);
-      return false;
-    }
-    return true;
   }
 
   private Entry filterEntry(Entry entry) {
@@ -334,14 +310,6 @@ public class ReplicationSourceWALReaderThread extends Thread {
       }
     }
     return totalStoreFilesSize;
-  }
-
-  /**
-   * @param size delta size for grown buffer
-   * @return true if we should clear buffer and push all
-   */
-  private boolean acquireBufferQuota(long size) {
-    return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
   }
 
   /**

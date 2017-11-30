@@ -72,10 +72,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.Service;
-
 /**
  * Class that handles the source of a replication stream.
  * Currently does not handle more than 1 slave
@@ -148,8 +144,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     FINISHED  // The worker is done processing a recovered queue
   }
 
-  private AtomicLong totalBufferUsed;
-
   /**
    * Instantiation method used by region servers
    *
@@ -195,7 +189,7 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
-    this.totalBufferUsed = manager.getTotalBufferUsed();
+
     LOG.info("peerClusterZnode=" + peerClusterZnode + ", ReplicationSource : " + peerId
         + ", currentBandwidth=" + this.currentBandwidth);
   }
@@ -555,7 +549,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
         try {
           WALEntryBatch entryBatch = entryReader.take();
           shipEdits(entryBatch);
-          releaseBufferQuota((int) entryBatch.getHeapSize());
           if (replicationQueueInfo.isQueueRecovered() && entryBatch.getWalEntries().isEmpty()
               && entryBatch.getLastSeqIds().isEmpty()) {
             LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
@@ -915,10 +908,6 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
      */
     public WorkerState getWorkerState() {
       return state;
-    }
-
-    private void releaseBufferQuota(int size) {
-      totalBufferUsed.addAndGet(-size);
     }
   }
 }
