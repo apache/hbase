@@ -296,7 +296,10 @@ public class ClusterStatus {
 
   @InterfaceAudience.Private
   public List<RegionState> getRegionsInTransition() {
-    return this.intransition;
+    if (intransition == null) {
+      return Collections.emptyList();
+    }
+    return Collections.unmodifiableList(intransition);
   }
 
   public String getClusterId() {
