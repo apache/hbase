@@ -1332,6 +1332,16 @@ public class TestMasterObserver {
     }
 
     @Override
+    public void preRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers) throws IOException {
+    }
+
+    @Override
+    public void postRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        Set<Address> servers) throws IOException {
+    }
+
+    @Override
     public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
         String groupName) throws IOException {
     }

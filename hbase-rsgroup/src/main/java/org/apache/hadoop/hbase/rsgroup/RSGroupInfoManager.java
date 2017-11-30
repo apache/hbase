@@ -117,4 +117,10 @@ public interface RSGroupInfoManager {
    */
   void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
       String srcGroup, String dstGroup) throws IOException;
+
+  /**
+   * Remove decommissioned servers from rsgroup
+   * @param servers set of servers to remove
+   */
+  void removeServers(Set<Address> servers) throws IOException;
 }

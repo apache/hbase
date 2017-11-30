@@ -1165,6 +1165,22 @@ public interface MasterObserver extends Coprocessor {
                          String name) throws IOException;
 
   /**
+   * Called before servers are removed from rsgroup
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of decommissioned servers to remove
+   */
+ void preRemoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                       Set<Address> servers) throws IOException;
+
+  /**
+   * Called after servers are removed from rsgroup
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of servers to remove
+   */
+ void postRemoveServers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                        Set<Address> servers) throws IOException;
+
+  /**
    * Called before a region server group is removed
    * @param ctx the environment to interact with the framework and master
    * @param groupName group name

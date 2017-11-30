@@ -68,12 +68,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   //Key=host:port,Value=targetGroup
   private ConcurrentMap<Address,String> serversInTransition =
       new ConcurrentHashMap<Address, String>();
-  private RSGroupInfoManager RSGroupInfoManager;
+  private RSGroupInfoManager rsGroupInfoManager;
 
   public RSGroupAdminServer(MasterServices master,
                             RSGroupInfoManager RSGroupInfoManager) throws IOException {
     this.master = master;
-    this.RSGroupInfoManager = RSGroupInfoManager;
+    this.rsGroupInfoManager = RSGroupInfoManager;
   }
 
   @Override
@@ -412,7 +412,30 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
   @InterfaceAudience.Private
   public RSGroupInfoManager getRSGroupInfoManager() throws IOException {
-    return RSGroupInfoManager;
+    return rsGroupInfoManager;
+  }
+
+  @Override
+  public void removeServers(Set<Address> servers) throws IOException {
+    {
+      if (servers == null || servers.isEmpty()) {
+        throw new ConstraintException("The set of servers to remove cannot be null or empty.");
+      }
+      // Hold a lock on the manager instance while moving servers to prevent
+      // another writer changing our state while we are working.
+      synchronized (rsGroupInfoManager) {
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().preRemoveServers(servers);
+        }
+        //check the set of servers
+        checkForDeadOrOnlineServers(servers);
+        rsGroupInfoManager.removeServers(servers);
+        if (master.getMasterCoprocessorHost() != null) {
+          master.getMasterCoprocessorHost().postRemoveServers(servers);
+        }
+        LOG.info("Remove decommissioned servers " + servers + " from rsgroup done.");
+      }
+    }
   }
 
   private Map<String, RegionState> rsGroupGetRegionsInTransition(String groupName)
@@ -519,5 +542,34 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
   @Override
   public void close() throws IOException {
+  }
+
+  /**
+   * Check if the set of servers are belong to dead servers list or online servers list.
+   * @param servers servers to remove
+   */
+  private void checkForDeadOrOnlineServers(Set<Address> servers) throws ConstraintException {
+    // This uglyness is because we only have Address, not ServerName.
+    Set<Address> onlineServers = new HashSet<>();
+    for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
+      onlineServers.add(server.getAddress());
+    }
+
+    Set<Address> deadServers = new HashSet<>();
+    for(ServerName server: master.getServerManager().getDeadServers().copyServerNames()) {
+      deadServers.add(server.getAddress());
+    }
+
+    for (Address address: servers) {
+      if (onlineServers.contains(address)) {
+        throw new ConstraintException(
+            "Server " + address + " is an online server, not allowed to remove.");
+      }
+      if (deadServers.contains(address)) {
+        throw new ConstraintException(
+            "Server " + address + " is on the dead servers list,"
+                + " Maybe it will come back again, not allowed to remove.");
+      }
+    }
   }
 }
