@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
-
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
@@ -35,15 +30,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
 /**
  * AsyncWriter for protobuf-based WAL.
@@ -54,7 +53,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   private static final Log LOG = LogFactory.getLog(AsyncProtobufLogWriter.class);
 
-  private final EventLoop eventLoop;
+  private final EventLoopGroup eventLoopGroup;
 
   private final Class<? extends Channel> channelClass;
 
@@ -103,8 +102,9 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   private OutputStream asyncOutputWrapper;
 
-  public AsyncProtobufLogWriter(EventLoop eventLoop, Class<? extends Channel> channelClass) {
-    this.eventLoop = eventLoop;
+  public AsyncProtobufLogWriter(EventLoopGroup eventLoopGroup,
+      Class<? extends Channel> channelClass) {
+    this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
   }
 
@@ -156,13 +156,13 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
       short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
     this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
-        blockSize, eventLoop, channelClass);
+        blockSize, eventLoopGroup, channelClass);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
   private long write(Consumer<CompletableFuture<Long>> action) throws IOException {
     CompletableFuture<Long> future = new CompletableFuture<>();
-    eventLoop.execute(() -> action.accept(future));
+    action.accept(future);
     try {
       return future.get().longValue();
     } catch (InterruptedException e) {

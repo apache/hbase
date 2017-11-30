@@ -34,7 +34,6 @@ import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChannel;
@@ -69,7 +68,7 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
         getWALDirectoryName(factory.factoryId),
         getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null,
-        eventLoopGroup.next(), channelClass);
+        eventLoopGroup, channelClass);
   }
 
   @Override
@@ -90,23 +89,23 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
    * public because of AsyncFSWAL. Should be package-private
    */
   public static AsyncWriter createAsyncWriter(Configuration conf, FileSystem fs, Path path,
-      boolean overwritable, EventLoop eventLoop, Class<? extends Channel> channelClass)
+      boolean overwritable, EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
       throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends AsyncWriter> logWriterClass = conf.getClass(
       "hbase.regionserver.hlog.async.writer.impl", AsyncProtobufLogWriter.class, AsyncWriter.class);
     try {
-      AsyncWriter writer = logWriterClass.getConstructor(EventLoop.class, Class.class)
-          .newInstance(eventLoop, channelClass);
+      AsyncWriter writer = logWriterClass.getConstructor(EventLoopGroup.class, Class.class)
+          .newInstance(eventLoopGroup, channelClass);
       writer.init(fs, path, conf, overwritable);
       return writer;
     } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {
         LOG.error("The RegionServer async write ahead log provider " +
-            "relies on the ability to call " + e.getMessage() + " for proper operation during " +
-            "component failures, but the current FileSystem does not support doing so. Please " +
-            "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure " +
-            "it points to a FileSystem mount that has suitable capabilities for output streams.");
+          "relies on the ability to call " + e.getMessage() + " for proper operation during " +
+          "component failures, but the current FileSystem does not support doing so. Please " +
+          "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure " +
+          "it points to a FileSystem mount that has suitable capabilities for output streams.");
       } else {
         LOG.debug("Error instantiating log writer.", e);
       }

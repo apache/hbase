@@ -969,11 +969,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     try (TraceScope scope = TraceUtil.createTrace(implClassName + ".append")) {
       FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore);
       entry.stampRegionSequenceId(we);
-      if (scope != null) {
-        ringBuffer.get(txid).load(entry, scope.getSpan());
-      } else {
-        ringBuffer.get(txid).load(entry, null);
-      }
+      ringBuffer.get(txid).load(entry);
     } finally {
       ringBuffer.publish(txid);
     }
