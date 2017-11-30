@@ -74,10 +74,10 @@ public class TestRSGroups extends TestRSGroupsBase {
         RSGroupBasedLoadBalancer.class.getName());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         RSGroupAdminEndpoint.class.getName());
-    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
-    TEST_UTIL.getConfiguration().set(
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.getConfiguration().setInt(
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-        ""+NUM_SLAVES_BASE);
+        NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
 
     admin = TEST_UTIL.getAdmin();

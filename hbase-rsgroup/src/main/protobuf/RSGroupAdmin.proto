@@ -115,6 +115,13 @@ message MoveServersAndTablesRequest {
 message MoveServersAndTablesResponse {
 }
 
+message RemoveServersRequest {
+  repeated ServerName servers = 1;
+}
+
+message RemoveServersResponse {
+}
+
 service RSGroupAdminService {
   rpc GetRSGroupInfo(GetRSGroupInfoRequest)
     returns (GetRSGroupInfoResponse);
@@ -145,4 +152,7 @@ service RSGroupAdminService {
 
   rpc MoveServersAndTables(MoveServersAndTablesRequest)
     returns (MoveServersAndTablesResponse);
+
+  rpc RemoveServers(RemoveServersRequest)
+    returns (RemoveServersResponse);
 }
