@@ -689,35 +689,6 @@ public class TestChoreService {
   }
 
   @Test (timeout=20000)
-  public void testTriggerNowFailsWhenNotScheduled() throws InterruptedException {
-    final int period = 100;
-    // Small sleep time buffer to allow CountingChore to complete
-    final int sleep = 5;
-    ChoreService service = new ChoreService("testTriggerNowFailsWhenNotScheduled");
-    CountingChore chore = new CountingChore("dn", period);
-
-    try {
-      assertFalse(chore.triggerNow());
-      assertTrue(chore.getCountOfChoreCalls() == 0);
-
-      service.scheduleChore(chore);
-      Thread.sleep(sleep);
-      assertEquals(1, chore.getCountOfChoreCalls());
-      Thread.sleep(period);
-      assertEquals(2, chore.getCountOfChoreCalls());
-      assertTrue(chore.triggerNow());
-      Thread.sleep(sleep);
-      assertTrue(chore.triggerNow());
-      Thread.sleep(sleep);
-      assertTrue(chore.triggerNow());
-      Thread.sleep(sleep);
-      assertEquals(5, chore.getCountOfChoreCalls());
-    } finally {
-      shutdownService(service);
-    }
-  }
-
-  @Test (timeout=20000)
   public void testStopperForScheduledChores() throws InterruptedException {
     ChoreService service = new ChoreService("testStopperForScheduledChores");
     Stoppable stopperForGroup1 = new SampleStopper();
