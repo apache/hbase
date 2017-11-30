@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -99,6 +100,7 @@ public class TestReplicator extends TestReplicationBase {
       Waiter.waitFor(conf1, 60000, new Waiter.ExplainingPredicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
+          LOG.info("Count=" + ReplicationEndpointForTest.getBatchCount());
           return ReplicationEndpointForTest.getBatchCount() >= NUM_ROWS;
         }
 
@@ -180,7 +182,7 @@ public class TestReplicator extends TestReplicationBase {
 
   public static class ReplicationEndpointForTest extends HBaseInterClusterReplicationEndpoint {
 
-    private static int batchCount;
+    private static AtomicInteger batchCount = new AtomicInteger(0);
     private static int entriesCount;
     private static final Object latch = new Object();
     private static AtomicBoolean useLatch = new AtomicBoolean(false);
@@ -199,17 +201,20 @@ public class TestReplicator extends TestReplicationBase {
     public static void await() throws InterruptedException {
       if (useLatch.get()) {
         LOG.info("Waiting on latch");
-        latch.wait();
+        synchronized(latch) {
+          latch.wait();
+        }
         LOG.info("Waited on latch, now proceeding");
       }
     }
 
     public static int getBatchCount() {
-      return batchCount;
+      return batchCount.get();
     }
 
     public static void setBatchCount(int i) {
-      batchCount = i;
+      LOG.info("SetBatchCount=" + i + ", old=" + getBatchCount());
+      batchCount.set(i);
     }
 
     public static int getEntriesCount() {
@@ -217,6 +222,7 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     public static void setEntriesCount(int i) {
+      LOG.info("SetEntriesCount=" + i);
       entriesCount = i;
     }
 
@@ -242,8 +248,9 @@ public class TestReplicator extends TestReplicationBase {
           super.replicateEntries(rrs, entries, replicationClusterId, baseNamespaceDir,
             hfileArchiveDir);
           entriesCount += entries.size();
-          batchCount++;
-          LOG.info("Completed replicating batch " + System.identityHashCode(entries));
+          int count = batchCount.incrementAndGet();
+          LOG.info("Completed replicating batch " + System.identityHashCode(entries) +
+              " count=" + count);
         } catch (IOException e) {
           LOG.info("Failed to replicate batch " + System.identityHashCode(entries), e);
           throw e;
