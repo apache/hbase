@@ -83,6 +83,9 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    */
   @Override
   public int hashCode() {
+    if (serverName == null) {
+      return System.identityHashCode(this);
+    }
     return this.serverName.hashCode();
   }
 
@@ -116,6 +119,13 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
 
   @Override
   public int compareTo(HRegionLocation o) {
-    return serverName.compareTo(o.getServerName());
+    if (serverName == null) {
+      if (o.serverName != null) {
+        return 1;
+      }
+      return 0;
+    } else {
+      return serverName.compareTo(o.getServerName());
+    }
   }
 }
