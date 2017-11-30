@@ -61,29 +61,71 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
         + ", hostname=" + this.serverName + ", seqNum=" + seqNum;
   }
 
-  /**
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null) {
-      return false;
-    }
-    if (!(o instanceof HRegionLocation)) {
-      return false;
-    }
-    return this.compareTo((HRegionLocation)o) == 0;
-  }
-
-  /**
-   * @see java.lang.Object#hashCode()
-   */
   @Override
   public int hashCode() {
-    return this.serverName.hashCode();
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((regionInfo == null) ? 0 : regionInfo.hashCode());
+    result = prime * result + (int) (seqNum ^ (seqNum >>> 32));
+    result = prime * result + ((serverName == null) ? 0 : serverName.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    HRegionLocation other = (HRegionLocation) obj;
+    if (regionInfo == null) {
+      if (other.regionInfo != null) {
+        return false;
+      }
+    } else if (!regionInfo.equals(other.regionInfo)) {
+      return false;
+    }
+    if (seqNum != other.seqNum) {
+      return false;
+    }
+    if (serverName == null) {
+      if (other.serverName != null) {
+        return false;
+      }
+    } else if (!serverName.equals(other.serverName)) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public int compareTo(HRegionLocation other) {
+    if (regionInfo == null) {
+      if (other.regionInfo != null) {
+        return 1;
+      }
+    } else {
+      int compare = regionInfo.compareTo(other.regionInfo);
+      if (compare != 0) {
+        return compare;
+      }
+    }
+    if (serverName == null) {
+      if (other.serverName != null) {
+        return 1;
+      }
+    } else {
+      int compare = serverName.compareTo(other.serverName);
+      if (compare != 0) {
+        return compare;
+      }
+    }
+    return Long.compare(seqNum, other.seqNum);
   }
 
   /** @return HRegionInfo */
@@ -112,10 +154,5 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
 
   public ServerName getServerName() {
     return serverName;
-  }
-
-  @Override
-  public int compareTo(HRegionLocation o) {
-    return serverName.compareTo(o.getServerName());
   }
 }
