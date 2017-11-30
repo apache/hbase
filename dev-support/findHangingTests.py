@@ -75,8 +75,9 @@ def get_bad_tests(console_url):
             if "FAILURE!" in line:
                 failed_tests_set.add(test_case)
             if test_case not in hanging_tests_set:
-                print  ("ERROR! No test '{}' found in hanging_tests. Might get wrong results "
-                        "for this test.".format(test_case))
+                print ("ERROR! No test '{}' found in hanging_tests. Might get wrong results "
+                       "for this test. This may also happen if maven is set to retry failing "
+                       "tests.".format(test_case))
             else:
                 hanging_tests_set.remove(test_case)
         result3 = re.match("^\\s+(\\w*).*\\sTestTimedOut", line)
