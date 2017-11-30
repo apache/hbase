@@ -303,7 +303,10 @@ public class ClusterStatus extends VersionedWritable {
 
   @InterfaceAudience.Private
   public Set<RegionState> getRegionsInTransition() {
-    return this.intransition;
+    if (intransition == null) {
+      return Collections.emptySet();
+    }
+    return Collections.unmodifiableSet(intransition);
   }
 
   public String getClusterId() {
