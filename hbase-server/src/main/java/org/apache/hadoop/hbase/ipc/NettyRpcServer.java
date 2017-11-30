@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.group.DefaultChannelGroup
 import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.FixedLengthFrameDecoder;
-import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.DefaultThreadFactory;
 import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.GlobalEventExecutor;
 
@@ -48,6 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
@@ -97,10 +97,8 @@ public class NettyRpcServer extends RpcServer {
             FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
             preambleDecoder.setSingleDecode(true);
             pipeline.addLast("preambleDecoder", preambleDecoder);
-            pipeline.addLast("preambleHandler",
-              new NettyRpcServerPreambleHandler(NettyRpcServer.this));
-            pipeline.addLast("frameDecoder",
-              new LengthFieldBasedFrameDecoder(maxRequestSize, 0, 4, 0, 4, true));
+            pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
+            pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
             pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
             pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
           }
@@ -113,6 +111,11 @@ public class NettyRpcServer extends RpcServer {
     }
     initReconfigurable(conf);
     this.scheduler.init(new RpcSchedulerContext(this));
+  }
+
+  @VisibleForTesting
+  protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
+    return new NettyRpcServerPreambleHandler(NettyRpcServer.this);
   }
 
   @Override
