@@ -1099,6 +1099,24 @@ public interface MasterObserver {
                           String groupName, boolean balancerRan) throws IOException {}
 
   /**
+   * Called before servers are removed from rsgroup
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of decommissioned servers to remove
+   */
+  default void preRemoveServers(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {}
+
+  /**
+   * Called after servers are removed from rsgroup
+   * @param ctx the environment to interact with the framework and master
+   * @param servers set of servers to remove
+   */
+  default void postRemoveServers(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {}
+
+  /**
    * Called before add a replication peer
    * @param ctx the environment to interact with the framework and master
    * @param peerId a short name that identifies the peer

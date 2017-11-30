@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.EnumSet;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -62,6 +64,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
@@ -862,5 +865,112 @@ public abstract class TestRSGroupsBase {
 
     //verify that all region still assgin on targetServer
     Assert.assertEquals(5, getTableServerRegionMap().get(tableName).get(targetServer).size());
+  }
+
+  @Test
+  public void testClearDeadServers() throws Exception {
+    LOG.info("testClearDeadServers");
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 3);
+
+    ServerName targetServer = ServerName.parseServerName(
+        newGroup.getServers().iterator().next().toString());
+    AdminProtos.AdminService.BlockingInterface targetRS =
+        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    try {
+      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
+          GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
+      //stopping may cause an exception
+      //due to the connection loss
+      targetRS.stopServer(null,
+          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
+    } catch(Exception e) {
+    }
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    //wait for stopped regionserver to dead server list
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return !master.getServerManager().areDeadServersInProgress()
+            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
+      }
+    });
+    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
+    assertTrue(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
+    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
+
+    //clear dead servers list
+    List<ServerName> notClearedServers = admin.clearDeadServers(Lists.newArrayList(targetServer));
+    assertEquals(0, notClearedServers.size());
+
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    assertFalse(newGroupServers.contains(targetServer.getAddress()));
+    assertEquals(2, newGroupServers.size());
+  }
+
+  @Test
+  public void testRemoveServers() throws Exception {
+    LOG.info("testRemoveServers");
+    final RSGroupInfo newGroup = addGroup(getGroupName(name.getMethodName()), 3);
+    ServerName targetServer = ServerName.parseServerName(
+        newGroup.getServers().iterator().next().toString());
+    try {
+      rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
+      fail("Online servers shouldn't have been successfully removed.");
+    } catch(IOException ex) {
+      String exp = "Server " + targetServer.getAddress()
+          + " is an online server, not allowed to remove.";
+      String msg = "Expected '" + exp + "' in exception message: ";
+      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    }
+    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
+
+    AdminProtos.AdminService.BlockingInterface targetRS =
+        ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
+    try {
+      targetServer = ProtobufUtil.toServerName(targetRS.getServerInfo(null,
+          GetServerInfoRequest.newBuilder().build()).getServerInfo().getServerName());
+      //stopping may cause an exception
+      //due to the connection loss
+      targetRS.stopServer(null,
+          AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
+    } catch(Exception e) {
+    }
+
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    //wait for stopped regionserver to dead server list
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return !master.getServerManager().areDeadServersInProgress()
+            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
+      }
+    });
+
+    try {
+      rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
+      fail("Dead servers shouldn't have been successfully removed.");
+    } catch(IOException ex) {
+      String exp = "Server " + targetServer.getAddress() + " is on the dead servers list,"
+          + " Maybe it will come back again, not allowed to remove.";
+      String msg = "Expected '" + exp + "' in exception message: ";
+      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+    }
+    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
+
+    ServerName sn = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
+    TEST_UTIL.getHBaseClusterInterface().stopMaster(sn);
+    TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(sn, 60000);
+    TEST_UTIL.getHBaseClusterInterface().startMaster(sn.getHostname(), 0);
+    TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster(60000);
+
+    assertEquals(3, cluster.getClusterStatus().getServersSize());
+    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
+    assertFalse(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
+    assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
+
+    rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));
+    Set<Address> newGroupServers = rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getServers();
+    assertFalse(newGroupServers.contains(targetServer.getAddress()));
+    assertEquals(2, newGroupServers.size());
   }
 }

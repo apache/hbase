@@ -483,5 +483,6 @@ Shell.load_command_group(
     move_servers_tables_rsgroup
     get_server_rsgroup
     get_table_rsgroup
+    remove_servers_rsgroup
   ]
 )

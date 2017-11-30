@@ -1401,6 +1401,30 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preRemoveServers(final Set<Address> servers)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
+          observer.preRemoveServers(this, servers);
+        }
+      }
+    });
+  }
+
+  public void postRemoveServers(final Set<Address> servers)
+      throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
+          observer.postRemoveServers(this, servers);
+        }
+      }
+    });
+  }
+
   public void preAddReplicationPeer(final String peerId, final ReplicationPeerConfig peerConfig)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {

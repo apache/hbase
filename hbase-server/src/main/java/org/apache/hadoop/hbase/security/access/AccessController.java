@@ -2690,6 +2690,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void preRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {
+    requirePermission(getActiveUser(ctx), "removeServers", Action.ADMIN);
+  }
+
+  @Override
   public void preAddReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       String peerId, ReplicationPeerConfig peerConfig) throws IOException {
     requirePermission(getActiveUser(ctx), "addReplicationPeer", Action.ADMIN);

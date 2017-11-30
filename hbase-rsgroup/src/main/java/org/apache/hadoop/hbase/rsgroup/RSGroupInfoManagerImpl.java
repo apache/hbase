@@ -309,6 +309,32 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     flushConfig(newGroupMap);
   }
 
+  @Override
+  public synchronized void removeServers(Set<Address> servers) throws IOException {
+    Map<String, RSGroupInfo> rsGroupInfos = new HashMap<String, RSGroupInfo>();
+    for (Address el: servers) {
+      RSGroupInfo rsGroupInfo = getRSGroupOfServer(el);
+      if (rsGroupInfo != null) {
+        RSGroupInfo newRsGroupInfo = rsGroupInfos.get(rsGroupInfo.getName());
+        if (newRsGroupInfo == null) {
+          rsGroupInfo.removeServer(el);
+          rsGroupInfos.put(rsGroupInfo.getName(), rsGroupInfo);
+        } else {
+          newRsGroupInfo.removeServer(el);
+          rsGroupInfos.put(newRsGroupInfo.getName(), newRsGroupInfo);
+        }
+      }else {
+        LOG.warn("Server " + el + " does not belong to any rsgroup.");
+      }
+    }
+
+    if (rsGroupInfos.size() > 0) {
+      Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
+      newGroupMap.putAll(rsGroupInfos);
+      flushConfig(newGroupMap);
+    }
+  }
+
   List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
     List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
     for (Result result : rsGroupTable.getScanner(new Scan())) {

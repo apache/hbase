@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.rsgroup;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -32,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -70,6 +73,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -290,6 +295,26 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
       }
       done.run(builder.build());
     }
+
+    @Override
+    public void removeServers(RpcController controller,
+        RemoveServersRequest request,
+        RpcCallback<RemoveServersResponse> done) {
+      RemoveServersResponse.Builder builder =
+          RemoveServersResponse.newBuilder();
+      try {
+        Set<Address> servers = Sets.newHashSet();
+        for (HBaseProtos.ServerName el : request.getServersList()) {
+          servers.add(Address.fromParts(el.getHostName(), el.getPort()));
+        }
+        LOG.info(master.getClientIdAuditPrefix()
+            + " remove decommissioned servers from rsgroup: " + servers);
+        groupAdminServer.removeServers(servers);
+      } catch (IOException e) {
+        CoprocessorRpcUtils.setControllerException(controller, e);
+      }
+      done.run(builder.build());
+    }
   }
 
   void assignTableToGroup(TableDescriptor desc) throws IOException {
@@ -356,6 +381,17 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
   public void preCloneSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
       SnapshotDescription snapshot, TableDescriptor desc) throws IOException {
     assignTableToGroup(desc);
+  }
+
+  @Override
+  public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ServerName> servers, List<ServerName> notClearedServers)
+      throws IOException {
+    Set<Address> clearedServer = servers.stream().
+        filter(server -> !notClearedServers.contains(server)).
+        map(ServerName::getAddress).
+        collect(Collectors.toSet());
+    groupAdminServer.removeServers(clearedServer);
   }
 
   /////////////////////////////////////////////////////////////////////////////

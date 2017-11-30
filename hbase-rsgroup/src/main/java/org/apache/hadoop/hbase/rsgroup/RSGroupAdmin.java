@@ -88,4 +88,14 @@ public interface RSGroupAdmin {
    */
   void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
                             String targetGroup) throws IOException;
+
+  /**
+   * Remove decommissioned servers from rsgroup.
+   * 1. Sometimes we may find the server aborted due to some hardware failure and we must offline
+   * the server for repairing. Or we need to move some servers to join other clusters.
+   * So we need to remove these servers from the rsgroup.
+   * 2. Dead/recovering/live servers will be disallowed.
+   * @param servers set of servers to remove
+   */
+  void removeServers(Set<Address> servers) throws IOException;
 }

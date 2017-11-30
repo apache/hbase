@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServers
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
@@ -201,6 +202,25 @@ class RSGroupAdminClient implements RSGroupAdmin {
     }
     try {
       stub.moveServersAndTables(null, builder.build());
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeServers(Set<Address> servers) throws IOException {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    for(Address el: servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder()
+          .setHostName(el.getHostname())
+          .setPort(el.getPort())
+          .build());
+    }
+    RemoveServersRequest request = RemoveServersRequest.newBuilder()
+        .addAllServers(hostPorts)
+        .build();
+    try {
+      stub.removeServers(null, request);
     } catch (ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
