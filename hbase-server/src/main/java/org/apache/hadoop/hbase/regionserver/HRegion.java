@@ -7189,8 +7189,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         stats.setHeapOccupancy((int)(occupancy * 100));
       }
     }
-    stats.setCompactionPressure((int)rsServices.getCompactionPressure()*100 > 100 ? 100 :
-                (int)rsServices.getCompactionPressure()*100);
+    stats.setCompactionPressure((int) (rsServices.getCompactionPressure() * 100 > 100 ? 100
+        : rsServices.getCompactionPressure() * 100));
     return stats.build();
   }
 
