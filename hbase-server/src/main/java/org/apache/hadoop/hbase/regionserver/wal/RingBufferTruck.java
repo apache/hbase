@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.htrace.core.Span;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -43,10 +42,9 @@ final class RingBufferTruck {
   private FSWALEntry entry;
 
   /**
-   * Load the truck with a {@link FSWALEntry} and associated {@link Span}.
+   * Load the truck with a {@link FSWALEntry}.
    */
-  void load(FSWALEntry entry, Span span) {
-    entry.attachSpan(span);
+  void load(FSWALEntry entry) {
     this.entry = entry;
     this.type = Type.APPEND;
   }

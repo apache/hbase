@@ -63,7 +63,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix) throws IOException {
     return new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, GROUP.next(), CHANNEL_CLASS);
+        suffix, GROUP, CHANNEL_CLASS);
   }
 
   @Override
@@ -72,7 +72,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
       boolean failIfWALExists, String prefix, String suffix, final Runnable action)
       throws IOException {
     return new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, GROUP.next(), CHANNEL_CLASS) {
+        suffix, GROUP, CHANNEL_CLASS) {
 
       @Override
       void atHeadOfRingBufferEventHandlerAppend() {

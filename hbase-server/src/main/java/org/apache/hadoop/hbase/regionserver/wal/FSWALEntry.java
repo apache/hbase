@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.htrace.core.Span;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -57,9 +56,6 @@ class FSWALEntry extends Entry {
   private final transient boolean inMemstore;
   private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
-
-  // The tracing span for this entry when writing WAL.
-  private transient Span span;
 
   FSWALEntry(final long txid, final WALKey key, final WALEdit edit,
       final RegionInfo regionInfo, final boolean inMemstore) {
@@ -129,15 +125,5 @@ class FSWALEntry extends Entry {
    */
   Set<byte[]> getFamilyNames() {
     return familyNames;
-  }
-
-  void attachSpan(Span span) {
-    this.span = span;
-  }
-
-  Span detachSpan() {
-    Span span = this.span;
-    this.span = null;
-    return span;
   }
 }
