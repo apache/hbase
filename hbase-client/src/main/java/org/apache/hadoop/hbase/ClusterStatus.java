@@ -276,7 +276,10 @@ public class ClusterStatus extends VersionedWritable {
 
   @InterfaceAudience.Private
   public Map<String, RegionState> getRegionsInTransition() {
-    return this.intransition;
+    if (intransition == null) {
+      return Collections.EMPTY_MAP;
+    }
+    return Collections.unmodifiableMap(intransition);
   }
 
   public String getClusterId() {
