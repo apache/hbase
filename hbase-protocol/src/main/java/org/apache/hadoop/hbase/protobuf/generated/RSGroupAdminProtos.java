@@ -12369,6 +12369,1065 @@ public final class RSGroupAdminProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.MoveServersAndTablesResponse)
   }
 
+  public interface RemoveServersRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated .hbase.pb.ServerName servers = 1;
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> 
+        getServersList();
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServers(int index);
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    int getServersCount();
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+        getServersOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServersOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.RemoveServersRequest}
+   */
+  public static final class RemoveServersRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements RemoveServersRequestOrBuilder {
+    // Use RemoveServersRequest.newBuilder() to construct.
+    private RemoveServersRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private RemoveServersRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final RemoveServersRequest defaultInstance;
+    public static RemoveServersRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public RemoveServersRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RemoveServersRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                servers_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              servers_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          servers_ = java.util.Collections.unmodifiableList(servers_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.class, org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<RemoveServersRequest> PARSER =
+        new com.google.protobuf.AbstractParser<RemoveServersRequest>() {
+      public RemoveServersRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RemoveServersRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RemoveServersRequest> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated .hbase.pb.ServerName servers = 1;
+    public static final int SERVERS_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> servers_;
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getServersList() {
+      return servers_;
+    }
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+        getServersOrBuilderList() {
+      return servers_;
+    }
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    public int getServersCount() {
+      return servers_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServers(int index) {
+      return servers_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServersOrBuilder(
+        int index) {
+      return servers_.get(index);
+    }
+
+    private void initFields() {
+      servers_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      for (int i = 0; i < getServersCount(); i++) {
+        if (!getServers(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < servers_.size(); i++) {
+        output.writeMessage(1, servers_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      for (int i = 0; i < servers_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, servers_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest other = (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest) obj;
+
+      boolean result = true;
+      result = result && getServersList()
+          .equals(other.getServersList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getServersCount() > 0) {
+        hash = (37 * hash) + SERVERS_FIELD_NUMBER;
+        hash = (53 * hash) + getServersList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.RemoveServersRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.class, org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getServersFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (serversBuilder_ == null) {
+          servers_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          serversBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest result = new org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest(this);
+        int from_bitField0_ = bitField0_;
+        if (serversBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            servers_ = java.util.Collections.unmodifiableList(servers_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.servers_ = servers_;
+        } else {
+          result.servers_ = serversBuilder_.build();
+        }
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.getDefaultInstance()) return this;
+        if (serversBuilder_ == null) {
+          if (!other.servers_.isEmpty()) {
+            if (servers_.isEmpty()) {
+              servers_ = other.servers_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+            } else {
+              ensureServersIsMutable();
+              servers_.addAll(other.servers_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.servers_.isEmpty()) {
+            if (serversBuilder_.isEmpty()) {
+              serversBuilder_.dispose();
+              serversBuilder_ = null;
+              servers_ = other.servers_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+              serversBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getServersFieldBuilder() : null;
+            } else {
+              serversBuilder_.addAllMessages(other.servers_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        for (int i = 0; i < getServersCount(); i++) {
+          if (!getServers(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated .hbase.pb.ServerName servers = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> servers_ =
+        java.util.Collections.emptyList();
+      private void ensureServersIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          servers_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName>(servers_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serversBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getServersList() {
+        if (serversBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(servers_);
+        } else {
+          return serversBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public int getServersCount() {
+        if (serversBuilder_ == null) {
+          return servers_.size();
+        } else {
+          return serversBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServers(int index) {
+        if (serversBuilder_ == null) {
+          return servers_.get(index);
+        } else {
+          return serversBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder setServers(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serversBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureServersIsMutable();
+          servers_.set(index, value);
+          onChanged();
+        } else {
+          serversBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder setServers(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (serversBuilder_ == null) {
+          ensureServersIsMutable();
+          servers_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          serversBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder addServers(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serversBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureServersIsMutable();
+          servers_.add(value);
+          onChanged();
+        } else {
+          serversBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder addServers(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serversBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureServersIsMutable();
+          servers_.add(index, value);
+          onChanged();
+        } else {
+          serversBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder addServers(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (serversBuilder_ == null) {
+          ensureServersIsMutable();
+          servers_.add(builderForValue.build());
+          onChanged();
+        } else {
+          serversBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder addServers(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (serversBuilder_ == null) {
+          ensureServersIsMutable();
+          servers_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          serversBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder addAllServers(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> values) {
+        if (serversBuilder_ == null) {
+          ensureServersIsMutable();
+          super.addAll(values, servers_);
+          onChanged();
+        } else {
+          serversBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder clearServers() {
+        if (serversBuilder_ == null) {
+          servers_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+          onChanged();
+        } else {
+          serversBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public Builder removeServers(int index) {
+        if (serversBuilder_ == null) {
+          ensureServersIsMutable();
+          servers_.remove(index);
+          onChanged();
+        } else {
+          serversBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServersBuilder(
+          int index) {
+        return getServersFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServersOrBuilder(
+          int index) {
+        if (serversBuilder_ == null) {
+          return servers_.get(index);  } else {
+          return serversBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+           getServersOrBuilderList() {
+        if (serversBuilder_ != null) {
+          return serversBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(servers_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addServersBuilder() {
+        return getServersFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addServersBuilder(
+          int index) {
+        return getServersFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.ServerName servers = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder> 
+           getServersBuilderList() {
+        return getServersFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          getServersFieldBuilder() {
+        if (serversBuilder_ == null) {
+          serversBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
+                  servers_,
+                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  getParentForChildren(),
+                  isClean());
+          servers_ = null;
+        }
+        return serversBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RemoveServersRequest)
+    }
+
+    static {
+      defaultInstance = new RemoveServersRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.RemoveServersRequest)
+  }
+
+  public interface RemoveServersResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.RemoveServersResponse}
+   */
+  public static final class RemoveServersResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements RemoveServersResponseOrBuilder {
+    // Use RemoveServersResponse.newBuilder() to construct.
+    private RemoveServersResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private RemoveServersResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final RemoveServersResponse defaultInstance;
+    public static RemoveServersResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public RemoveServersResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RemoveServersResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.class, org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<RemoveServersResponse> PARSER =
+        new com.google.protobuf.AbstractParser<RemoveServersResponse>() {
+      public RemoveServersResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RemoveServersResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RemoveServersResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse other = (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.RemoveServersResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.class, org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.internal_static_hbase_pb_RemoveServersResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse result = new org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RemoveServersResponse)
+    }
+
+    static {
+      defaultInstance = new RemoveServersResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.RemoveServersResponse)
+  }
+
   /**
    * Protobuf service {@code hbase.pb.RSGroupAdminService}
    */
@@ -12457,6 +13516,14 @@ public final class RSGroupAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse> done);
 
+      /**
+       * <code>rpc RemoveServers(.hbase.pb.RemoveServersRequest) returns (.hbase.pb.RemoveServersResponse);</code>
+       */
+      public abstract void removeServers(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -12542,6 +13609,14 @@ public final class RSGroupAdminProtos {
           impl.moveServersAndTables(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void removeServers(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse> done) {
+          impl.removeServers(controller, request, done);
+        }
+
       };
     }
 
@@ -12584,6 +13659,8 @@ public final class RSGroupAdminProtos {
               return impl.listRSGroupInfos(controller, (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest)request);
             case 9:
               return impl.moveServersAndTables(controller, (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest)request);
+            case 10:
+              return impl.removeServers(controller, (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -12618,6 +13695,8 @@ public final class RSGroupAdminProtos {
               return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest.getDefaultInstance();
             case 9:
               return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest.getDefaultInstance();
+            case 10:
+              return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -12652,6 +13731,8 @@ public final class RSGroupAdminProtos {
               return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse.getDefaultInstance();
             case 9:
               return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse.getDefaultInstance();
+            case 10:
+              return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -12740,6 +13821,14 @@ public final class RSGroupAdminProtos {
         org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse> done);
 
+    /**
+     * <code>rpc RemoveServers(.hbase.pb.RemoveServersRequest) returns (.hbase.pb.RemoveServersResponse);</code>
+     */
+    public abstract void removeServers(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -12812,6 +13901,11 @@ public final class RSGroupAdminProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse>specializeCallback(
               done));
           return;
+        case 10:
+          this.removeServers(controller, (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -12846,6 +13940,8 @@ public final class RSGroupAdminProtos {
           return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest.getDefaultInstance();
         case 9:
           return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest.getDefaultInstance();
+        case 10:
+          return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -12880,6 +13976,8 @@ public final class RSGroupAdminProtos {
           return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse.getDefaultInstance();
         case 9:
           return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse.getDefaultInstance();
+        case 10:
+          return org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -13050,6 +14148,21 @@ public final class RSGroupAdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse.getDefaultInstance()));
       }
+
+      public  void removeServers(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(10),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -13106,6 +14219,11 @@ public final class RSGroupAdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse moveServersAndTables(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse removeServers(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -13235,6 +14353,18 @@ public final class RSGroupAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse removeServers(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(10),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.RSGroupAdminService)
@@ -13350,6 +14480,16 @@ public final class RSGroupAdminProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_MoveServersAndTablesResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_RemoveServersRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_RemoveServersRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_RemoveServersResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_RemoveServersResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -13392,31 +14532,36 @@ public final class RSGroupAdminProtos {
       "quest\022\024\n\014target_group\030\001 \002(\t\022%\n\007servers\030\002" +
       " \003(\0132\024.hbase.pb.ServerName\022\'\n\ntable_name" +
       "\030\003 \003(\0132\023.hbase.pb.TableName\"\036\n\034MoveServe" +
-      "rsAndTablesResponse2\210\007\n\023RSGroupAdminServ" +
-      "ice\022S\n\016GetRSGroupInfo\022\037.hbase.pb.GetRSGr" +
-      "oupInfoRequest\032 .hbase.pb.GetRSGroupInfo" +
-      "Response\022h\n\025GetRSGroupInfoOfTable\022&.hbas" +
-      "e.pb.GetRSGroupInfoOfTableRequest\032\'.hbas" +
-      "e.pb.GetRSGroupInfoOfTableResponse\022k\n\026Ge" +
-      "tRSGroupInfoOfServer\022\'.hbase.pb.GetRSGro",
-      "upInfoOfServerRequest\032(.hbase.pb.GetRSGr" +
-      "oupInfoOfServerResponse\022J\n\013MoveServers\022\034" +
-      ".hbase.pb.MoveServersRequest\032\035.hbase.pb." +
-      "MoveServersResponse\022G\n\nMoveTables\022\033.hbas" +
-      "e.pb.MoveTablesRequest\032\034.hbase.pb.MoveTa" +
-      "blesResponse\022G\n\nAddRSGroup\022\033.hbase.pb.Ad" +
-      "dRSGroupRequest\032\034.hbase.pb.AddRSGroupRes" +
-      "ponse\022P\n\rRemoveRSGroup\022\036.hbase.pb.Remove" +
-      "RSGroupRequest\032\037.hbase.pb.RemoveRSGroupR" +
-      "esponse\022S\n\016BalanceRSGroup\022\037.hbase.pb.Bal",
-      "anceRSGroupRequest\032 .hbase.pb.BalanceRSG" +
-      "roupResponse\022Y\n\020ListRSGroupInfos\022!.hbase" +
-      ".pb.ListRSGroupInfosRequest\032\".hbase.pb.L" +
-      "istRSGroupInfosResponse\022e\n\024MoveServersAn" +
-      "dTables\022%.hbase.pb.MoveServersAndTablesR" +
-      "equest\032&.hbase.pb.MoveServersAndTablesRe" +
-      "sponseBH\n*org.apache.hadoop.hbase.protob" +
-      "uf.generatedB\022RSGroupAdminProtosH\001\210\001\001\240\001\001"
+      "rsAndTablesResponse\"=\n\024RemoveServersRequ" +
+      "est\022%\n\007servers\030\001 \003(\0132\024.hbase.pb.ServerNa" +
+      "me\"\027\n\025RemoveServersResponse2\332\007\n\023RSGroupA" +
+      "dminService\022S\n\016GetRSGroupInfo\022\037.hbase.pb" +
+      ".GetRSGroupInfoRequest\032 .hbase.pb.GetRSG" +
+      "roupInfoResponse\022h\n\025GetRSGroupInfoOfTabl" +
+      "e\022&.hbase.pb.GetRSGroupInfoOfTableReques",
+      "t\032\'.hbase.pb.GetRSGroupInfoOfTableRespon" +
+      "se\022k\n\026GetRSGroupInfoOfServer\022\'.hbase.pb." +
+      "GetRSGroupInfoOfServerRequest\032(.hbase.pb" +
+      ".GetRSGroupInfoOfServerResponse\022J\n\013MoveS" +
+      "ervers\022\034.hbase.pb.MoveServersRequest\032\035.h" +
+      "base.pb.MoveServersResponse\022G\n\nMoveTable" +
+      "s\022\033.hbase.pb.MoveTablesRequest\032\034.hbase.p" +
+      "b.MoveTablesResponse\022G\n\nAddRSGroup\022\033.hba" +
+      "se.pb.AddRSGroupRequest\032\034.hbase.pb.AddRS" +
+      "GroupResponse\022P\n\rRemoveRSGroup\022\036.hbase.p",
+      "b.RemoveRSGroupRequest\032\037.hbase.pb.Remove" +
+      "RSGroupResponse\022S\n\016BalanceRSGroup\022\037.hbas" +
+      "e.pb.BalanceRSGroupRequest\032 .hbase.pb.Ba" +
+      "lanceRSGroupResponse\022Y\n\020ListRSGroupInfos" +
+      "\022!.hbase.pb.ListRSGroupInfosRequest\032\".hb" +
+      "ase.pb.ListRSGroupInfosResponse\022e\n\024MoveS" +
+      "erversAndTables\022%.hbase.pb.MoveServersAn" +
+      "dTablesRequest\032&.hbase.pb.MoveServersAnd" +
+      "TablesResponse\022P\n\rRemoveServers\022\036.hbase." +
+      "pb.RemoveServersRequest\032\037.hbase.pb.Remov",
+      "eServersResponseBH\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\022RSGroupAdminProt" +
+      "osH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -13554,6 +14699,18 @@ public final class RSGroupAdminProtos {
           internal_static_hbase_pb_MoveServersAndTablesResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MoveServersAndTablesResponse_descriptor,
+              new java.lang.String[] { });
+          internal_static_hbase_pb_RemoveServersRequest_descriptor =
+            getDescriptor().getMessageTypes().get(22);
+          internal_static_hbase_pb_RemoveServersRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_RemoveServersRequest_descriptor,
+              new java.lang.String[] { "Servers", });
+          internal_static_hbase_pb_RemoveServersResponse_descriptor =
+            getDescriptor().getMessageTypes().get(23);
+          internal_static_hbase_pb_RemoveServersResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_RemoveServersResponse_descriptor,
               new java.lang.String[] { });
           return null;
         }

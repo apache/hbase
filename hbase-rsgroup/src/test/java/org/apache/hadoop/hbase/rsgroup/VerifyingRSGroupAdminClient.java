@@ -104,6 +104,12 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     return wrapped.getRSGroupOfServer(server);
   }
 
+  @Override
+  public void removeServers(Set<Address> servers) throws IOException {
+    wrapped.removeServers(servers);
+    verify();
+  }
+
   public void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();

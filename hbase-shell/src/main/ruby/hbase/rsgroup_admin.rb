@@ -160,5 +160,16 @@ module Hbase
       @admin.moveServersAndTables(servers, tables, dest)
     end
 
+    #--------------------------------------------------------------------------
+    # remove decommissioned server from rsgroup
+    def remove_servers(*args)
+      # Flatten params array
+      args = args.flatten.compact
+      servers = java.util.HashSet.new
+      args.each do |s|
+        servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
+      end
+      @admin.removeServers(servers)
+    end
   end
 end

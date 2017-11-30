@@ -2719,6 +2719,12 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
+  public void preRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {
+    requirePermission("removeServers", Action.ADMIN);
+  }
+
+  @Override
   public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
       String name) throws IOException {
     requirePermission("addRSGroup", Action.ADMIN);

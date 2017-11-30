@@ -1297,6 +1297,32 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preRemoveServers(final Set<Address> servers)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
+          oserver.preRemoveServers(this, servers);
+        }
+      }
+    });
+  }
+
+  public void postRemoveServers(final Set<Address> servers)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
+          oserver.postRemoveServers(this, servers);
+        }
+      }
+    });
+  }
+
   public void preAddRSGroup(final String name)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {

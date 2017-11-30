@@ -80,6 +80,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServersResponse;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
 
 public class RSGroupAdminEndpoint extends RSGroupAdminService
@@ -306,6 +308,24 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       if (RSGroupInfo != null) {
         builder.setRSGroupInfo(RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo));
       }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
+    }
+    done.run(builder.build());
+  }
+
+  @Override
+  public void removeServers(RpcController controller,
+      RemoveServersRequest request,
+      RpcCallback<RemoveServersResponse> done) {
+    RemoveServersResponse.Builder builder =
+        RemoveServersResponse.newBuilder();
+    try {
+      Set<Address> servers = Sets.newHashSet();
+      for (HBaseProtos.ServerName el : request.getServersList()) {
+        servers.add(Address.fromParts(el.getHostName(), el.getPort()));
+      }
+      groupAdminServer.removeServers(servers);
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
     }
@@ -971,8 +991,15 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   @Override
   public void postClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<ServerName> servers, List<ServerName> notClearedServers) throws IOException {
-
+      List<ServerName> servers, List<ServerName> notClearedServers)
+      throws IOException {
+    Set<Address> clearedServer = Sets.newHashSet();
+    for (ServerName server: servers) {
+      if (!notClearedServers.contains(server)) {
+        clearedServer.add(server.getAddress());
+      }
+    }
+    groupAdminServer.removeServers(clearedServer);
   }
 
   @Override
@@ -1010,6 +1037,16 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {
+  }
+
+  @Override
+  public void postRemoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      Set<Address> servers) throws IOException {
+  }
+
+  @Override
   public void preAddRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
                             String name) throws IOException {
 
@@ -1044,5 +1081,4 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
                                  String groupName, boolean balancerRan) throws IOException {
 
   }
-
 }
