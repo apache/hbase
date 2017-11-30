@@ -412,6 +412,7 @@ public class HttpServer implements FilterContainer {
           throw new HadoopIllegalArgumentException(
               "unknown scheme for endpoint:" + ep);
         }
+        listener.setHeaderBufferSize(1024*64);
         listener.setHost(ep.getHost());
         listener.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
         server.addManagedListener(listener);
@@ -638,7 +639,6 @@ public class HttpServer implements FilterContainer {
       // the same port with indeterminate routing of incoming requests to them
       ret.setReuseAddress(false);
     }
-    ret.setHeaderBufferSize(1024*64);
     return ret;
   }
 
