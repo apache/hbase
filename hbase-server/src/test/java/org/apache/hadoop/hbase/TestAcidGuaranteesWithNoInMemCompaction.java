@@ -34,8 +34,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -46,7 +48,11 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @Category({ MediumTests.class })
 public class TestAcidGuaranteesWithNoInMemCompaction {
-
+  @Rule
+  public final TestRule timeout = CategoryBasedTimeout.builder()
+          .withTimeout(this.getClass())
+          .withLookingForStuckThread(true)
+          .build();
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private AcidGuaranteesTestTool tool = new AcidGuaranteesTestTool();

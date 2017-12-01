@@ -48,7 +48,6 @@ import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -2185,12 +2184,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
      * If necessary, the lock can be added with the patch provided in HBASE-10087
      */
     @Override
-    public void prepare() {
+    public MemStoreSize prepare() {
       // passing the current sequence number of the wal - to allow bookkeeping in the memstore
       this.snapshot = memstore.snapshot();
       this.cacheFlushCount = snapshot.getCellsCount();
       this.cacheFlushSize = snapshot.getDataSize();
       committedFiles = new ArrayList<>(1);
+      return new MemStoreSize(snapshot.getDataSize(), snapshot.getHeapSize());
     }
 
     @Override

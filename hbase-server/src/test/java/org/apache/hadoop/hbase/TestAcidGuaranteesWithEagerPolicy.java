@@ -18,16 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
-@Category({ FlakeyTests.class, MediumTests.class })
-// TODO: HBASE-19266 disables this test as the eager policy causes the negative size of MemStore
-@Ignore
+@Category({ MediumTests.class })
 public class TestAcidGuaranteesWithEagerPolicy extends TestAcidGuaranteesWithNoInMemCompaction {
-
   @Override
   protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
     return MemoryCompactionPolicy.EAGER;
