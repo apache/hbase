@@ -2269,7 +2269,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      if (regionServer.metricsRegionServer != null) {
+      if (regionServer.metricsRegionServer != null && region != null) {
         regionServer.metricsRegionServer.updateGet(
             region.getTableDesc().getTableName(), EnvironmentEdgeManager.currentTime() - before);
       }
