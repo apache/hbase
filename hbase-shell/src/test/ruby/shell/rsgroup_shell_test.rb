@@ -75,6 +75,48 @@ module Hbase
       @hbase.rsgroup_admin.balance_rs_group(group_name)
     end
 
+    define_test 'Test RSGroup Move Namespace RSGroup Commands' do
+      group_name = 'test_group'
+      namespace_name = 'test_namespace'
+      ns_table_name = 'test_namespace:test_ns_table'
+
+      @shell.command('create_namespace', namespace_name)
+      @shell.command('create', ns_table_name, 'f')
+
+      @shell.command('move_namespaces_rsgroup',
+                     group_name,
+                     [namespace_name])
+      assert_equal(2, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)
+
+      group = @hbase.rsgroup_admin.get_rsgroup(group_name)
+      assert_not_nil(group)
+      assert_equal(ns_table_name, group.getTables.iterator.next.toString)
+    end
+
+    define_test 'Test RSGroup Move Server Namespace RSGroup Commands' do
+      ns_group_name = 'test_ns_group'
+      namespace_name = 'test_namespace'
+      ns_table_name = 'test_namespace:test_ns_table'
+
+      @shell.command('add_rsgroup', ns_group_name)
+      assert_not_nil(@rsgroup_admin.getRSGroupInfo(ns_group_name))
+
+      @shell.command('move_tables_rsgroup',
+                     'default',
+                     [ns_table_name])
+
+      group_servers = @rsgroup_admin.getRSGroupInfo('default').getServers
+      hostport_str = group_servers.iterator.next.toString
+      @shell.command('move_servers_namespaces_rsgroup',
+                     ns_group_name,
+                     [hostport_str],
+                     [namespace_name])
+      ns_group = @hbase.rsgroup_admin.get_rsgroup(ns_group_name)
+      assert_not_nil(ns_group)
+      assert_equal(hostport_str, ns_group.getServers.iterator.next.toString)
+      assert_equal(ns_table_name, ns_group.getTables.iterator.next.toString)
+    end
+
     # we test exceptions that could be thrown by the ruby wrappers
     define_test 'Test bogus arguments' do
       assert_raise(ArgumentError) do
