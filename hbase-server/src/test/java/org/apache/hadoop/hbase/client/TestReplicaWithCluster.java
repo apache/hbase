@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.Waiter;
 
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -193,8 +192,7 @@ public class TestReplicaWithCluster {
         if (!e.getEnvironment().getRegion().getRegionInfo().isMetaRegion() && (replicaId == 0)) {
           LOG.info("Get, throw Region Server Stopped Exceptoin for region " + e.getEnvironment()
               .getRegion().getRegionInfo());
-          throw new RegionServerStoppedException("Server " +
-            ((HasRegionServerServices)e.getEnvironment()).getRegionServerServices().getServerName()
+          throw new RegionServerStoppedException("Server " + e.getEnvironment().getServerName()
                   + " not running");
         }
       } else {
@@ -224,8 +222,7 @@ public class TestReplicaWithCluster {
           LOG.info("Scan, throw Region Server Stopped Exceptoin for replica " + e.getEnvironment()
               .getRegion().getRegionInfo());
 
-          throw new RegionServerStoppedException("Server " +
-            ((HasRegionServerServices)e.getEnvironment()).getRegionServerServices().getServerName()
+          throw new RegionServerStoppedException("Server " + e.getEnvironment().getServerName()
                + " not running");
         } else {
           LOG.info("Scan, We're replica region " + replicaId);
