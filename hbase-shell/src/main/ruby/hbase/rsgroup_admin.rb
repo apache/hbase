@@ -26,7 +26,9 @@ module Hbase
     include HBaseConstants
 
     def initialize(connection)
+      @connection = connection
       @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
+      @hb_admin = @connection.getAdmin
     end
 
     def close
@@ -76,12 +78,19 @@ module Hbase
     end
 
     #--------------------------------------------------------------------------
-    # move server to a group
+    # move tables to a group
     def move_tables(dest, *args)
       tables = java.util.HashSet.new
       args[0].each do |s|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(s))
       end
+      @admin.moveTables(tables, dest)
+    end
+
+    #--------------------------------------------------------------------------
+    # move namespaces to a group
+    def move_namespaces(dest, *args)
+      tables = get_tables(args[0])
       @admin.moveTables(tables, dest)
     end
 
@@ -108,15 +117,55 @@ module Hbase
     #--------------------------------------------------------------------------
     # move server and table to a group
     def move_servers_tables(dest, *args)
-      servers = java.util.HashSet.new
+      servers = get_servers(args[0])
       tables = java.util.HashSet.new
-      args[0].each do |s|
-        servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
-      end
       args[1].each do |t|
         tables.add(org.apache.hadoop.hbase.TableName.valueOf(t))
       end
       @admin.moveServersAndTables(servers, tables, dest)
+    end
+
+    #--------------------------------------------------------------------------
+    # move server and namespace to a group
+    def move_servers_namespaces(dest, *args)
+      servers = get_servers(args[0])
+      tables = get_tables(args[1])
+      @admin.moveServersAndTables(servers, tables, dest)
+    end
+
+    def get_servers(servers)
+      server_set = java.util.HashSet.new
+      servers.each do |s|
+        server_set.add(org.apache.hadoop.hbase.net.Address.fromString(s))
+      end
+      server_set
+    end
+
+    def get_tables(namespaces)
+      table_set = java.util.HashSet.new
+      error = "Can't find a namespace: "
+      namespaces.each do |ns|
+        raise(ArgumentError, "#{error}#{ns}") unless namespace_exists?(ns)
+        table_set.addAll(get_tables_by_namespace(ns))
+      end
+      table_set
+    end
+
+    # Get tables by namespace
+    def get_tables_by_namespace(ns)
+      tables = java.util.HashSet.new
+      tablelist = @hb_admin.listTableNamesByNamespace(ns).map(&:getNameAsString)
+      tablelist.each do |table|
+        tables.add(org.apache.hadoop.hbase.TableName.valueOf(table))
+      end
+      tables
+    end
+
+    # Does Namespace exist
+    def namespace_exists?(ns)
+      return !@hb_admin.getNamespaceDescriptor(ns).nil?
+    rescue org.apache.hadoop.hbase.NamespaceNotFoundException
+      return false
     end
 
     #--------------------------------------------------------------------------
