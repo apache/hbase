@@ -26,7 +26,6 @@ import com.google.common.collect.Collections2;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Objects;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -142,12 +141,76 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
 
   @Override
   public int hashCode() {
-    return System.identityHashCode(this);
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((filesToCompact == null) ? 0 : filesToCompact.hashCode());
+    result = prime * result + ((isMajor == null) ? 0 : isMajor.hashCode());
+    result = prime * result + (isOffPeak ? 1231 : 1237);
+    result = prime * result + priority;
+    result = prime * result + ((regionName == null) ? 0 : regionName.hashCode());
+    result = prime * result + (int) (selectionTime ^ (selectionTime >>> 32));
+    result = prime * result + ((storeName == null) ? 0 : storeName.hashCode());
+    result = prime * result + ((timeInNanos == null) ? 0 : timeInNanos.hashCode());
+    result = prime * result + (int) (totalSize ^ (totalSize >>> 32));
+    return result;
   }
 
   @Override
   public boolean equals(Object obj) {
-    return Objects.equals(this, obj);
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    CompactionRequest other = (CompactionRequest) obj;
+    if (filesToCompact == null) {
+      if (other.filesToCompact != null) {
+        return false;
+      }
+    } else if (!filesToCompact.equals(other.filesToCompact)) {
+      return false;
+    }
+    if (isMajor != other.isMajor) {
+      return false;
+    }
+    if (isOffPeak != other.isOffPeak) {
+      return false;
+    }
+    if (priority != other.priority) {
+      return false;
+    }
+    if (regionName == null) {
+      if (other.regionName != null) {
+        return false;
+      }
+    } else if (!regionName.equals(other.regionName)) {
+      return false;
+    }
+    if (selectionTime != other.selectionTime) {
+      return false;
+    }
+    if (storeName == null) {
+      if (other.storeName != null) {
+        return false;
+      }
+    } else if (!storeName.equals(other.storeName)) {
+      return false;
+    }
+    if (timeInNanos == null) {
+      if (other.timeInNanos != null) {
+        return false;
+      }
+    } else if (!timeInNanos.equals(other.timeInNanos)) {
+      return false;
+    }
+    if (totalSize != other.totalSize) {
+      return false;
+    }
+    return true;
   }
 
   public Collection<StoreFile> getFiles() {
