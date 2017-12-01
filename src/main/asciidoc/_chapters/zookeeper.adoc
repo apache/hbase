@@ -106,7 +106,7 @@ The newer version, the better. ZooKeeper 3.4.x is required as of HBase 1.0.0
 .ZooKeeper Maintenance
 [CAUTION]
 ====
-Be sure to set up the data dir cleaner described under link:http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance[ZooKeeper
+Be sure to set up the data dir cleaner described under link:https://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance[ZooKeeper
         Maintenance] else you could have 'interesting' problems a couple of months in; i.e.
 zookeeper could start dropping sessions if it has to run through a directory of hundreds of thousands of logs which is wont to do around leader reelection time -- a process rare but run on occasion whether because a machine is dropped or happens to hiccup.
 ====
@@ -135,9 +135,9 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 Note that you can use HBase in this manner to spin up a ZooKeeper cluster, unrelated to HBase.
 Just make sure to set `HBASE_MANAGES_ZK` to `false`      if you want it to stay up across HBase restarts so that when HBase shuts down, it doesn't take ZooKeeper down with it.
 
-For more information about running a distinct ZooKeeper cluster, see the ZooKeeper link:http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html[Getting
+For more information about running a distinct ZooKeeper cluster, see the ZooKeeper link:https://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html[Getting
         Started Guide].
-Additionally, see the link:http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7[ZooKeeper Wiki] or the link:http://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup[ZooKeeper
+Additionally, see the link:https://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7[ZooKeeper Wiki] or the link:https://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup[ZooKeeper
         documentation] for more information on ZooKeeper sizing.
 
 [[zk.sasl.auth]]
@@ -181,7 +181,7 @@ We'll refer to this JAAS configuration file as _$CLIENT_CONF_        below.
 
 === HBase-managed ZooKeeper Configuration
 
-On each node that will run a zookeeper, a master, or a regionserver, create a link:http://docs.oracle.com/javase/1.4.2/docs/guide/security/jgss/tutorials/LoginConfigFile.html[JAAS]        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
+On each node that will run a zookeeper, a master, or a regionserver, create a link:http://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/LoginConfigFile.html[JAAS]        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
 
 [source,java]
 ----

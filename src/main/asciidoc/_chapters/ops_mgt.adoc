@@ -332,7 +332,7 @@ See <<hfile_tool>>.
 === WAL Tools
 
 [[hlog_tool]]
-==== `FSHLog` tool
+==== FSHLog tool
 
 The main method on `FSHLog` offers manual split and dump facilities.
 Pass it WALs or the product of a split, the content of the _recovered.edits_.
@@ -353,9 +353,9 @@ Similarly you can force a split of a log file directory by doing:
 ----
 
 [[hlog_tool.prettyprint]]
-===== WAL Pretty Printer
+===== WALPrettyPrinter
 
-The WAL Pretty Printer is a tool with configurable options to print the contents of a WAL.
+The `WALPrettyPrinter` is a tool with configurable options to print the contents of a WAL.
 You can invoke it via the HBase cli with the 'wal' command.
 
 ----
@@ -365,7 +365,7 @@ You can invoke it via the HBase cli with the 'wal' command.
 .WAL Printing in older versions of HBase
 [NOTE]
 ====
-Prior to version 2.0, the WAL Pretty Printer was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log.
+Prior to version 2.0, the `WALPrettyPrinter` was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log.
 In those versions, you can print the contents of a WAL using the same configuration as above, but with the 'hlog' command.
 
 ----
@@ -444,11 +444,55 @@ See Jonathan Hsieh's link:https://blog.cloudera.com/blog/2012/06/online-hbase-ba
 === Export
 
 Export is a utility that will dump the contents of table to HDFS in a sequence file.
-Invoke via:
+The Export can be run via a Coprocessor Endpoint or MapReduce. Invoke via:
 
+*mapreduce-based Export*
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 ----
+
+*endpoint-based Export*
+----
+$ bin/hbase org.apache.hadoop.hbase.coprocessor.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
+----
+
+*The Comparison of Endpoint-based Export And Mapreduce-based Export*
+|===
+||Endpoint-based Export|Mapreduce-based Export
+
+|HBase version requirement
+|2.0+
+|0.2.1+
+
+|Maven dependency
+|hbase-endpoint
+|hbase-mapreduce (2.0+), hbase-server(prior to 2.0)
+
+|Requirement before dump
+|mount the endpoint.Export on the target table
+|deploy the MapReduce framework
+
+|Read latency
+|low, directly read the data from region
+|normal, traditional RPC scan
+
+|Read Scalability
+|depend on number of regions
+|depend on number of mappers (see TableInputFormatBase#getSplits)
+
+|Timeout
+|operation timeout. configured by hbase.client.operation.timeout
+|scan timeout. configured by hbase.client.scanner.timeout.period
+
+|Permission requirement
+|READ, EXECUTE
+|READ
+
+|Fault tolerance
+|no
+|depend on MapReduce
+|===
+
 
 NOTE: To see usage instructions, run the command with no options. Available options include
 specifying column families and applying filters during the export.
@@ -577,7 +621,7 @@ There are two ways to invoke this utility, with explicit classname and via the d
 
 .Explicit Classname
 ----
-$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles <hdfs://storefileoutput> <tablename>
+$ bin/hbase org.apache.hadoop.hbase.tool.LoadIncrementalHFiles <hdfs://storefileoutput> <tablename>
 ----
 
 .Driver
@@ -620,7 +664,7 @@ To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in 
 [[rowcounter]]
 === RowCounter and CellCounter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
 This is a good utility to use as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
 It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit. It is also possible to limit
 the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
@@ -633,7 +677,7 @@ RowCounter only counts one version per cell.
 
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 
-HBase ships another diagnostic mapreduce job called link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
+HBase ships another diagnostic mapreduce job called link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
 Like RowCounter, it gathers more fine-grained statistics about your table.
 The statistics gathered by RowCounter are more fine-grained and include:
 
@@ -666,7 +710,7 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 === Offline Compaction Tool
 
 See the usage for the
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
 Run it like:
 
 [source, bash]
@@ -722,7 +766,7 @@ The LoadTestTool has received many updates in recent HBase releases, including s
 [[ops.regionmgt.majorcompact]]
 === Major Compaction
 
-Major compactions can be requested via the HBase shell or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact%28java.lang.String%29[Admin.majorCompact].
+Major compactions can be requested via the HBase shell or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
 
 Note: major compactions do NOT do region merges.
 See <<compaction,compaction>> for more information about compactions.
@@ -739,7 +783,7 @@ $ bin/hbase org.apache.hadoop.hbase.util.Merge <tablename> <region1> <region2>
 
 If you feel you have too many regions and want to consolidate them, Merge is the utility you need.
 Merge must run be done when the cluster is down.
-See the link:http://ofps.oreilly.com/titles/9781449396107/performance.html[O'Reilly HBase
+See the link:https://web.archive.org/web/20111231002503/http://ofps.oreilly.com/titles/9781449396107/performance.html[O'Reilly HBase
           Book] for an example of usage.
 
 You will need to pass 3 parameters to this application.
@@ -868,7 +912,7 @@ But usually disks do the "John Wayne" -- i.e.
 take a while to go down spewing errors in _dmesg_ -- or for some reason, run much slower than their companions.
 In this case you want to decommission the disk.
 You have two options.
-You can link:http://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F[decommission
+You can link:https://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F[decommission
             the datanode] or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can't umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from -- it will likely roll its WAL log too -- but in general but for some latency spikes, it should keep on chugging.
 
 .Short Circuit Reads
@@ -1006,7 +1050,7 @@ In this case, or if you are in a OLAP environment and require having locality, t
 [[hbase_metrics]]
 == HBase Metrics
 
-HBase emits metrics which adhere to the link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[Hadoop metrics] API.
+HBase emits metrics which adhere to the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/Metrics.html[Hadoop Metrics] API.
 Starting with HBase 0.95footnote:[The Metrics system was redone in
           HBase 0.96. See Migration
             to the New Metrics Hotness – Metrics2 by Elliot Clark for detail], HBase is configured to emit a default set of metrics with a default sampling period of every 10 seconds.
@@ -1021,7 +1065,7 @@ To configure metrics for a given region server, edit the _conf/hadoop-metrics2-h
 Restart the region server for the changes to take effect.
 
 To change the sampling rate for the default sink, edit the line beginning with `*.period`.
-To filter which metrics are emitted or to extend the metrics framework, see http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html
+To filter which metrics are emitted or to extend the metrics framework, see https://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html
 
 .HBase Metrics and Ganglia
 [NOTE]
@@ -1029,7 +1073,7 @@ To filter which metrics are emitted or to extend the metrics framework, see http
 By default, HBase emits a large number of metrics per region server.
 Ganglia may have difficulty processing all these metrics.
 Consider increasing the capacity of the Ganglia server or reducing the number of metrics emitted by HBase.
-See link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html#filtering[Metrics Filtering].
+See link:https://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html#filtering[Metrics Filtering].
 ====
 
 === Disabling Metrics
@@ -1287,7 +1331,7 @@ Have a look in the Web UI.
 == Cluster Replication
 
 NOTE: This information was previously available at
-link:http://hbase.apache.org#replication[Cluster Replication].
+link:https://hbase.apache.org/0.94/replication.html[Cluster Replication].
 
 HBase provides a cluster replication mechanism which allows you to keep one cluster's state synchronized with that of another cluster, using the write-ahead log (WAL) of the source cluster to propagate the changes.
 Some use cases for cluster replication include:
@@ -1323,9 +1367,11 @@ If a slave cluster does run out of room, or is inaccessible for other reasons, i
 .Consistency Across Replicated Clusters
 [WARNING]
 ====
-How your application builds on top of the HBase API matters when replication is in play. HBase's replication system provides at-least-once delivery of client edits for an enabled column family to each configured destination cluster. In the event of failure to reach a given destination, the replication system will retry sending edits in a way that might repeat a given message. Further more, there is not a guaranteed order of delivery for client edits. In the event of a RegionServer failing, recovery of the replication queue happens independent of recovery of the individual regions that server was previously handling. This means that it is possible for the not-yet-replicated edits to be serviced by a RegionServer that is currently slower to replicate than the one that handles edits from after the failure.
+How your application builds on top of the HBase API matters when replication is in play. HBase's replication system provides at-least-once delivery of client edits for an enabled column family to each configured destination cluster. In the event of failure to reach a given destination, the replication system will retry sending edits in a way that might repeat a given message. HBase provides two ways of replication, one is the original replication and the other is serial replication. In the previous way of replication, there is not a guaranteed order of delivery for client edits. In the event of a RegionServer failing, recovery of the replication queue happens independent of recovery of the individual regions that server was previously handling. This means that it is possible for the not-yet-replicated edits to be serviced by a RegionServer that is currently slower to replicate than the one that handles edits from after the failure.
 
 The combination of these two properties (at-least-once delivery and the lack of message ordering) means that some destination clusters may end up in a different state if your application makes use of operations that are not idempotent, e.g. Increments.
+
+To solve the problem, HBase now supports serial replication, which sends edits to destination cluster as the order of requests from client.
 ====
 
 .Terminology Changes
@@ -1351,6 +1397,7 @@ image::hbase_replication_diagram.jpg[]
 HBase replication borrows many concepts from the [firstterm]_statement-based replication_ design used by MySQL.
 Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts coming from Put and Delete operations on the clients) are replicated in order to maintain atomicity.
 
+[[hbase.replication.management]]
 === Managing and Configuring Cluster Replication
 .Cluster Configuration Overview
 
@@ -1365,11 +1412,15 @@ Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts 
 LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 ----
 
+.Serial Replication Configuration
+See <<Serial Replication,Serial Replication>>
+
 .Cluster Management Commands
 add_peer <ID> <CLUSTER_KEY>::
   Adds a replication relationship between two clusters. +
   * ID -- a unique string, which must not contain a hyphen.
   * CLUSTER_KEY: composed using the following template, with appropriate place-holders: `hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent`
+  * STATE(optional): ENABLED or DISABLED, default value is ENABLED
 list_peers:: list all replication relationships known by this cluster
 enable_peer <ID>::
   Enable a previously-disabled replication relationship
@@ -1384,6 +1435,40 @@ enable_table_replication <TABLE_NAME>::
   Enable the table replication switch for all its column families. If the table is not found in the destination cluster then it will create one with the same name and column families.
 disable_table_replication <TABLE_NAME>::
   Disable the table replication switch for all its column families.
+
+=== Serial Replication
+
+Note: this feature is introduced in HBase 1.5
+
+.Function of serial replication
+
+Serial replication supports to push logs to the destination cluster in the same order as logs reach to the source cluster.
+
+.Why need serial replication?
+In replication of HBase, we push mutations to destination cluster by reading WAL in each region server. We have a queue for WAL files so we can read them in order of creation time. However, when region-move or RS failure occurs in source cluster, the hlog entries that are not pushed before region-move or RS-failure will be pushed by original RS(for region move) or another RS which takes over the remained hlog of dead RS(for RS failure), and the new entries for the same region(s) will be pushed by the RS which now serves the region(s), but they push the hlog entries of a same region concurrently without coordination.
+
+This treatment can possibly lead to data inconsistency between source and destination clusters:
+
+1. there are put and then delete written to source cluster.
+
+2. due to region-move / RS-failure, they are pushed by different replication-source threads to peer cluster.
+
+3. if delete is pushed to peer cluster before put, and flush and major-compact occurs in peer cluster before put is pushed to peer cluster, the delete is collected and the put remains in peer cluster, but in source cluster the put is masked by the delete, hence data inconsistency between source and destination clusters.
+
+
+.Serial replication configuration
+
+. Set REPLICATION_SCOPE=>2 on the column family which is to be replicated serially when creating tables.
+
+ REPLICATION_SCOPE is a column family level attribute. Its value can be 0, 1 or 2. Value 0 means replication is disabled, 1 means replication is enabled but which not guarantee log order, and 2 means serial replication is enabled.
+
+. This feature relies on zk-less assignment, and conflicts with distributed log replay, so users must set hbase.assignment.usezk=false and hbase.master.distributed.log.replay=false to support this feature.(Note that distributed log replay is deprecated and has already been purged from 2.0)
+
+.Limitations in serial replication
+
+Now we read and push logs in one RS to one peer in one thread, so if one log has not been pushed, all logs after it will be blocked. One wal file may contain wal edits from different tables, if one of the tables(or its CF) which REPLICATION_SCOPE is 2, and it is blocked, then all edits will be blocked, although other tables do not need serial replication. If you want to prevent this, then you need to split these tables/cfs into different peers.
+
+More details about serial replication can be found in link:https://issues.apache.org/jira/browse/HBASE-9465[HBASE-9465].
 
 === Verifying Replicated Data
 
@@ -1414,7 +1499,7 @@ A single WAL edit goes through several steps in order to be replicated to a slav
 . The edit is tagged with the master's UUID and added to a buffer.
   When the buffer is filled, or the reader reaches the end of the file, the buffer is sent to a random region server on the slave cluster.
 . The region server reads the edits sequentially and separates them into buffers, one buffer per table.
-  After all edits are read, each buffer is flushed using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
+  After all edits are read, each buffer is flushed using link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
   The master's UUID and the UUIDs of slaves which have already consumed the data are preserved in the edits they are applied, in order to prevent replication loops.
 . In the master, the offset for the WAL that is currently being replicated is registered in ZooKeeper.
 
@@ -2049,7 +2134,7 @@ The act of copying these files creates new HDFS metadata, which is why a restore
 === Live Cluster Backup - Replication
 
 This approach assumes that there is a second cluster.
-See the HBase page on link:http://hbase.apache.org/book.html#replication[replication] for more information.
+See the HBase page on link:https://hbase.apache.org/book.html#_cluster_replication[replication] for more information.
 
 [[ops.backup.live.copytable]]
 === Live Cluster Backup - CopyTable
@@ -2258,7 +2343,7 @@ as in <<snapshots_s3>>.
 - You must be using HBase 1.2 or higher with Hadoop 2.7.1 or
   higher. No version of HBase supports Hadoop 2.7.0.
 - Your hosts must be configured to be aware of the Azure blob storage filesystem.
-  See http://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html.
+  See https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html.
 
 After you meet the prerequisites, follow the instructions
 in <<snapshots_s3>>, replacingthe protocol specifier with `wasb://` or `wasbs://`.
@@ -2321,7 +2406,7 @@ See <<gcpause,gcpause>>, <<trouble.log.gc,trouble.log.gc>> and elsewhere (TODO: 
 Generally less regions makes for a smoother running cluster (you can always manually split the big regions later (if necessary) to spread the data, or request load, over the cluster); 20-200 regions per RS is a reasonable range.
 The number of regions cannot be configured directly (unless you go for fully <<disable.splitting,disable.splitting>>); adjust the region size to achieve the target region size given table size.
 
-When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor], as well as shell commands.
+When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor], as well as shell commands.
 These settings will override the ones in `hbase-site.xml`.
 That is useful if your tables have different workloads/use cases.
 
@@ -2478,7 +2563,7 @@ void rename(Admin admin, String oldTableName, TableName newTableName) {
 RegionServer Grouping (A.K.A `rsgroup`) is an advanced feature for
 partitioning regionservers into distinctive groups for strict isolation. It
 should only be used by users who are sophisticated enough to understand the
-full implications and have a sufficient background in managing HBase clusters. 
+full implications and have a sufficient background in managing HBase clusters.
 It was developed by Yahoo! and they run it at scale on their large grid cluster.
 See link:http://www.slideshare.net/HBaseCon/keynote-apache-hbase-at-yahoo-scale[HBase at Yahoo! Scale].
 
@@ -2491,20 +2576,20 @@ rsgroup at a time. By default, all tables and regionservers belong to the
 APIs. A custom balancer implementation tracks assignments per rsgroup and makes
 sure to move regions to the relevant regionservers in that rsgroup. The rsgroup
 information is stored in a regular HBase table, and a zookeeper-based read-only
-cache is used at cluster bootstrap time. 
+cache is used at cluster bootstrap time.
 
-To enable, add the following to your hbase-site.xml and restart your Master: 
+To enable, add the following to your hbase-site.xml and restart your Master:
 
 [source,xml]
 ----
- <property> 
-   <name>hbase.coprocessor.master.classes</name> 
-   <value>org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint</value> 
- </property> 
- <property> 
-   <name>hbase.master.loadbalancer.class</name> 
-   <value>org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer</value> 
- </property> 
+ <property>
+   <name>hbase.coprocessor.master.classes</name>
+   <value>org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint</value>
+ </property>
+ <property>
+   <name>hbase.master.loadbalancer.class</name>
+   <value>org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer</value>
+ </property>
 ----
 
 Then use the shell _rsgroup_ commands to create and manipulate RegionServer
@@ -2514,7 +2599,7 @@ rsgroup commands available in the hbase shell type:
 [source, bash]
 ----
  hbase(main):008:0> help ‘rsgroup’
- Took 0.5610 seconds 
+ Took 0.5610 seconds
 ----
 
 High level, you create a rsgroup that is other than the `default` group using
@@ -2531,8 +2616,8 @@ Here is example using a few of the rsgroup  commands. To add a group, do as foll
 
 [source, bash]
 ----
- hbase(main):008:0> add_rsgroup 'my_group' 
- Took 0.5610 seconds 
+ hbase(main):008:0> add_rsgroup 'my_group'
+ Took 0.5610 seconds
 ----
 
 
@@ -2556,11 +2641,11 @@ ERROR: org.apache.hadoop.hbase.exceptions.UnknownProtocolException: No registere
 ====
 
 Add a server (specified by hostname + port) to the just-made group using the
-_move_servers_rsgroup_ command as follows: 
+_move_servers_rsgroup_ command as follows:
 
 [source, bash]
 ----
- hbase(main):010:0> move_servers_rsgroup 'my_group',['k.att.net:51129'] 
+ hbase(main):010:0> move_servers_rsgroup 'my_group',['k.att.net:51129']
 ----
 
 .Hostname and Port vs ServerName

@@ -51,7 +51,7 @@ Apart from downloading HBase, this procedure should take less than 10 minutes.
 
 Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1.
 Ubuntu and some other distributions default to 127.0.1.1 and this will cause
-problems for you. See link:http://devving.com/?p=414[Why does HBase care about /etc/hosts?] for detail
+problems for you. See link:https://web-beta.archive.org/web/20140104070155/http://blog.devving.com/why-does-hbase-care-about-etchosts[Why does HBase care about /etc/hosts?] for detail
 
 The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble.
 [listing]
@@ -70,7 +70,7 @@ See <<java,Java>> for information about supported JDK versions.
 === Get Started with HBase
 
 .Procedure: Download, Configure, and Start HBase in Standalone Mode
-. Choose a download site from this list of link:http://www.apache.org/dyn/closer.cgi/hbase/[Apache Download Mirrors].
+. Choose a download site from this list of link:https://www.apache.org/dyn/closer.cgi/hbase/[Apache Download Mirrors].
   Click on the suggested top link.
   This will take you to a mirror of _HBase Releases_.
   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
@@ -307,7 +307,7 @@ You can skip the HDFS configuration to continue storing your data in the local f
 This procedure assumes that you have configured Hadoop and HDFS on your local system and/or a remote
 system, and that they are running and available. It also assumes you are using Hadoop 2.
 The guide on
-link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
+link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
 in the Hadoop documentation is a good starting point.
 ====
 

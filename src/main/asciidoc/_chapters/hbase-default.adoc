@@ -376,23 +376,6 @@ The WAL file writer implementation.
 .Default
 `org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter`
 
-
-[[hbase.master.distributed.log.replay]]
-*`hbase.master.distributed.log.replay`*::
-+
-.Description
-Enable 'distributed log replay' as default engine splitting
-    WAL files on server crash.  This default is new in hbase 1.0.  To fall
-    back to the old mode 'distributed log splitter', set the value to
-    'false'.  'Disributed log replay' improves MTTR because it does not
-    write intermediate files.  'DLR' required that 'hfile.format.version'
-    be set to version 3 or higher.
-
-+
-.Default
-`true`
-
-
 [[hbase.regionserver.global.memstore.size]]
 *`hbase.regionserver.global.memstore.size`*::
 +
@@ -461,11 +444,12 @@ The host name or IP address of the name server (DNS)
 
       A split policy determines when a region should be split. The various other split policies that
       are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
-      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy,
+      BusyRegionSplitPolicy, SteppingSplitPolicy etc.
 
 +
 .Default
-`org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy`
+`org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy`
 
 
 [[zookeeper.session.timeout]]
@@ -475,7 +459,7 @@ The host name or IP address of the name server (DNS)
 ZooKeeper session timeout in milliseconds. It is used in two different ways.
       First, this value is used in the ZK client that HBase uses to connect to the ensemble.
       It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'. See
-      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
+      https://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
       For example, if an HBase region server connects to a ZK ensemble that's also managed
       by HBase, then the
       session timeout will be the one specified by this configuration. But, a region server that connects
@@ -539,7 +523,7 @@ The host name or IP address of the name server (DNS)
 +
 .Description
 Port used by ZooKeeper peers to talk to each other.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.
 +
 .Default
@@ -551,7 +535,7 @@ Port used by ZooKeeper peers to talk to each other.
 +
 .Description
 Port used by ZooKeeper for leader election.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.
 +
 .Default
@@ -636,7 +620,7 @@ Property from ZooKeeper's config zoo.cfg.
 *`hbase.client.write.buffer`*::
 +
 .Description
-Default size of the HTable client write buffer in bytes.
+Default size of the BufferedMutator write buffer in bytes.
     A bigger buffer takes more memory -- on both the client and server
     side since server instantiates the passed write buffer to process
     it -- but a larger buffer size reduces the number of RPCs made.
@@ -694,7 +678,7 @@ The maximum number of concurrent tasks a single HTable instance will
     send to a single region server.
 +
 .Default
-`5`
+`2`
 
 
 [[hbase.client.max.perregion.tasks]]
@@ -1263,9 +1247,8 @@ A comma-separated list of sizes for buckets for the bucketcache
 +
 .Description
 The HFile format version to use for new files.
-      Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
-      Distributed Log Replay requires that tags are enabled. Also see the configuration
-      'hbase.replication.rpc.codec'.
+      Version 3 adds support for tags in hfiles (See https://hbase.apache.org/book.html#hbase.tags).
+      Also see the configuration 'hbase.replication.rpc.codec'.
 
 +
 .Default
@@ -1963,7 +1946,7 @@ If the DFSClient configuration
 
       Class used to execute the regions balancing when the period occurs.
       See the class comment for more on how it works
-      http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/balancer/StochasticLoadBalancer.html
+      https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/balancer/StochasticLoadBalancer.html
       It replaces the DefaultLoadBalancer as the default (since renamed
       as the SimpleLoadBalancer).
 
@@ -2022,17 +2005,6 @@ A comma-separated list of
 +
 .Default
 ``
-
-
-[[hbase.coordinated.state.manager.class]]
-*`hbase.coordinated.state.manager.class`*::
-+
-.Description
-Fully qualified name of class implementing coordinated state manager.
-+
-.Default
-`org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager`
-
 
 [[hbase.regionserver.storefile.refresh.period]]
 *`hbase.regionserver.storefile.refresh.period`*::
@@ -2111,7 +2083,7 @@ Fully qualified name of class implementing coordinated state manager.
 
 +
 .Default
-`10`
+`16`
 
 
 [[hbase.replication.rpc.codec]]

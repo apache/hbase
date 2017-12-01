@@ -27,7 +27,7 @@
 :icons: font
 :experimental:
 
-link:http://spark.apache.org/[Apache Spark] is a software framework that is used
+link:https://spark.apache.org/[Apache Spark] is a software framework that is used
 to process data in memory in a distributed manner, and is replacing MapReduce in
 many use cases.
 
@@ -151,7 +151,7 @@ access to HBase
 For examples of all these functionalities, see the HBase-Spark Module.
 
 == Spark Streaming
-http://spark.apache.org/streaming/[Spark Streaming] is a micro batching stream
+https://spark.apache.org/streaming/[Spark Streaming] is a micro batching stream
 processing framework built on top of Spark. HBase and Spark Streaming make great
 companions in that HBase can help serve the following benefits alongside Spark
 Streaming.
