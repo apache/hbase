@@ -3,6 +3,97 @@ HBase Change Log
 
 
 
+
+Release Notes - HBase - Version 1.1.13 11/30/2017
+
+** Sub-task
+    * [HBASE-18867] - maven enforcer plugin needs update to work with jdk9
+    * [HBASE-18957] - add test that confirms 2 FamilyFilters in a FilterList using MUST_PASS_ONE operator will return results that match either of the FamilyFilters and revert as needed to make it pass.
+    * [HBASE-18980] - Address issues found by error-prone in hbase-hadoop2-compat
+    * [HBASE-19070] - temporarily make the mvnsite nightly test non-voting.
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-14745] - Shade the last few dependencies in hbase-shaded-client
+    * [HBASE-18125] - HBase shell disregards spaces at the end of a split key in a split file
+    * [HBASE-18438] - Precommit doesn't warn about unused imports
+    * [HBASE-18505] - Our build/yetus personality will run tests on individual modules and then on all (i.e. 'root'). Should do one or other
+    * [HBASE-18577] - shaded client includes several non-relocated third party dependencies
+    * [HBASE-18665] - ReversedScannerCallable invokes getRegionLocations incorrectly
+    * [HBASE-18679] - YARN may null Counters object and cause an NPE in ITBLL
+    * [HBASE-18818] - TestConnectionImplemenation fails
+    * [HBASE-18934] - precommit on branch-1 isn't supposed to run against hadoop 3
+    * [HBASE-18940] - branch-2 (and probably others) fail check of generated source artifact
+    * [HBASE-18998] - processor.getRowsToLock() always assumes there is some row being locked
+    * [HBASE-19020] - TestXmlParsing exception checking relies on a particular xml implementation without declaring it.
+    * [HBASE-19030] - nightly runs should attempt to log test results after archiving
+    * [HBASE-19038] - precommit mvn install should run from root on patch
+    * [HBASE-19039] - refactor shadedjars test to only run on java changes.
+    * [HBASE-19055] - Backport HBASE-19042 to other active branches
+    * [HBASE-19058] - The wget isn't installed in building docker image
+    * [HBASE-19060] - "Hadoop check" test is running all the time instead of just when changes to java
+    * [HBASE-19061] - enforcer NPE on hbase-shaded-invariants
+    * [HBASE-19066] - Correct the directory of openjdk-8 for jenkins
+    * [HBASE-19124] - Move HBase-Nightly source artifact creation test from JenkinsFile to a script in dev-support
+    * [HBASE-19137] - Nightly test should make junit reports optional rather than attempt archive after reporting.
+    * [HBASE-19184] - clean up nightly source artifact test to match expectations from switch to git-archive
+    * [HBASE-19223] - Remove references to Date Tiered compaction from branch-1.2 and branch-1.1 ref guide
+    * [HBASE-19229] - Nightly script to check source artifact should not do a destructive git operation without opt-in
+    * [HBASE-19249] - test for "hbase antipatterns" should check _count_ of occurance rather than text of
+    * [HBASE-19393] - HTTP 413 FULL head while accessing HBase UI using SSL. 
+
+
+
+
+
+
+
+
+
+
+** Improvement
+    * [HBASE-18631] - Allow configuration of ChaosMonkey properties via hbase-site
+    * [HBASE-18675] - Making {max,min}SessionTimeout configurable for MiniZooKeeperCluster
+    * [HBASE-19052] - FixedFileTrailer should recognize CellComparatorImpl class in branch-1.x
+    * [HBASE-19140] - hbase-cleanup.sh uses deprecated call to remove files in hdfs
+    * [HBASE-19227] - Nightly jobs should archive JVM dumpstream files
+    * [HBASE-19228] - nightly job should gather machine stats.
+
+
+
+** New Feature
+    * [HBASE-19189] - Ad-hoc test job for running a subset of tests lots of times
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-16459] - Remove unused hbase shell --format option
+    * [HBASE-18833] - Ensure precommit personality is up to date on all active branches
+    * [HBASE-19097] - update testing to use Apache Yetus Test Patch version 0.6.0
+
+
+
+
+
 Release Notes - HBase - Version 1.1.12 08/12/2017
 
 ** Sub-task
