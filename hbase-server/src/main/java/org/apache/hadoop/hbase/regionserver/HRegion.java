@@ -2451,13 +2451,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       for (HStore s : storesToFlush) {
-        MemStoreSize flushableSize = s.getFlushableSize();
-        totalSizeOfFlushableStores.incMemStoreSize(flushableSize);
         storeFlushCtxs.put(s.getColumnFamilyDescriptor().getName(),
           s.createFlushContext(flushOpSeqId, tracker));
         // for writing stores to WAL
         committedFiles.put(s.getColumnFamilyDescriptor().getName(), null);
-        storeFlushableSize.put(s.getColumnFamilyDescriptor().getName(), flushableSize);
       }
 
       // write the snapshot start to WAL
@@ -2470,9 +2467,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       // Prepare flush (take a snapshot)
-      for (StoreFlushContext flush : storeFlushCtxs.values()) {
-        flush.prepare();
-      }
+      storeFlushCtxs.forEach((name, flush) -> {
+        MemStoreSize snapshotSize = flush.prepare();
+        totalSizeOfFlushableStores.incMemStoreSize(snapshotSize);
+        storeFlushableSize.put(name, snapshotSize);
+      });
     } catch (IOException ex) {
       doAbortFlushToWAL(wal, flushOpSeqId, committedFiles);
       throw ex;
