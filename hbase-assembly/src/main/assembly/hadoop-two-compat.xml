@@ -34,7 +34,6 @@
       <includes>
         <!-- Keep this list sorted by name -->
         <include>org.apache.hbase:hbase-annotations</include>
-        <include>org.apache.hbase:hbase-backup</include>
         <include>org.apache.hbase:hbase-client</include>
         <include>org.apache.hbase:hbase-common</include>
         <include>org.apache.hbase:hbase-examples</include>

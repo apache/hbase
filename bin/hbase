@@ -103,8 +103,6 @@ if [ $# = 0 ]; then
   echo "  ltt             Run LoadTestTool"
   echo "  canary          Run the Canary tool"
   echo "  version         Print the version"
-  echo "  backup          Backup tables for recovery"
-  echo "  restore         Restore tables from existing backup image"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
 fi
@@ -363,10 +361,6 @@ elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZKMainServer"
-elif [ "$COMMAND" = "backup" ] ; then
-  CLASS='org.apache.hadoop.hbase.backup.BackupDriver'
-elif [ "$COMMAND" = "restore" ] ; then
-  CLASS='org.apache.hadoop.hbase.backup.RestoreDriver'
 elif [ "$COMMAND" = "upgrade" ] ; then
   echo "This command was used to upgrade to HBase 0.96, it was removed in HBase 2.0.0."
   echo "Please follow the documentation at http://hbase.apache.org/book.html#upgrading."

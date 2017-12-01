@@ -89,7 +89,6 @@
     <module>hbase-archetypes</module>
     <module>hbase-metrics-api</module>
     <module>hbase-metrics</module>
-    <module>hbase-backup</module>
     <module>hbase-zookeeper</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
@@ -1478,11 +1477,6 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-backup</artifactId>
-        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
