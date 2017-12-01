@@ -142,7 +142,7 @@ If this occurs, try modifying the command as follows, so that it uses the HBase 
 
 [source,bash]
 ----
-$ HADOOP_CLASSPATH=${HBASE_BUILD_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar:`${HBASE_BUILD_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_BUILD_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar rowcounter usertable
+$ HADOOP_CLASSPATH=${HBASE_BUILD_HOME}/hbase-mapreduce/target/hbase-mapreduce-VERSION-SNAPSHOT.jar:`${HBASE_BUILD_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_BUILD_HOME}/hbase-mapreduce/target/hbase-mapreduce-VERSION-SNAPSHOT.jar rowcounter usertable
 ----
 ====
 
@@ -238,7 +238,7 @@ To learn about the bundled MapReduce jobs, run the following command.
 
 [source,bash]
 ----
-$ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar
+$ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-mapreduce-VERSION.jar
 An example program must be given as the first argument.
 Valid program names are:
   copytable: Export a table from local cluster to peer cluster
@@ -254,7 +254,7 @@ To run one of the jobs, model your command after the following example.
 
 [source,bash]
 ----
-$ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar rowcounter myTable
+$ ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-mapreduce-VERSION.jar rowcounter myTable
 ----
 
 == HBase as a MapReduce Job Data Source and Data Sink

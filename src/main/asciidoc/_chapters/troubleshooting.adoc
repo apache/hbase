@@ -758,7 +758,7 @@ For example (substitute VERSION with your HBase version):
 
 [source,bourne]
 ----
-HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-server-VERSION.jar rowcounter usertable
+HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-mapreduce-VERSION.jar rowcounter usertable
 ----
 
 See <<hbase.mapreduce.classpath,HBase, MapReduce, and the CLASSPATH>> for more information on HBase MapReduce jobs and classpaths.
