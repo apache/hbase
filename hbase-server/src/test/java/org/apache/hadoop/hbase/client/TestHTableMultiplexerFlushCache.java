@@ -39,9 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestHTableMultiplexerFlushCache {
@@ -151,7 +149,7 @@ public class TestHTableMultiplexerFlushCache {
     ServerName newServer = null;
     // Find a new server to move that region to
     for (int i = 0; i < SLAVES; i++) {
-      HRegionServer rs = hbaseCluster.getRegionServer(0);
+      HRegionServer rs = hbaseCluster.getRegionServer(i);
       if (!rs.getServerName().equals(originalServer.getServerName())) {
         newServer = rs.getServerName();
         break;
