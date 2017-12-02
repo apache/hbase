@@ -43,9 +43,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.security.sasl.SaslException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +55,17 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.htrace.core.TraceScope;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message.Builder;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
@@ -67,15 +76,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
-import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ExceptionUtil;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.htrace.core.TraceScope;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Thread that reads responses and notifies callers. Each connection owns a socket connected to a
@@ -263,8 +263,16 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         /*
          * The max number of retries is 45, which amounts to 20s*45 = 15 minutes retries.
          */
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received exception in connection setup.\n" +
+              StringUtils.stringifyException(toe));
+        }
         handleConnectionFailure(timeoutFailures++, this.rpcClient.maxRetries, toe);
       } catch (IOException ie) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received exception in connection setup.\n" +
+              StringUtils.stringifyException(ie));
+        }
         handleConnectionFailure(ioFailures++, this.rpcClient.maxRetries, ie);
       }
     }
@@ -296,8 +304,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       ExceptionUtil.rethrowIfInterrupt(ie);
     }
 
-    LOG.info("Retrying connect to server: " + remoteId.getAddress() + " after sleeping "
-        + this.rpcClient.failureSleep + "ms. Already tried " + curRetries + " time(s).");
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Retrying connect to server: " + remoteId.getAddress() +
+        " after sleeping " + this.rpcClient.failureSleep + "ms. Already tried " + curRetries +
+        " time(s).");
+    }
   }
 
   /*
@@ -381,7 +392,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (shouldAuthenticateOverKrb()) {
           if (currRetries < maxRetries) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Exception encountered while connecting to " + "the server : " + ex);
+              LOG.debug("Exception encountered while connecting to " +
+                "the server : " + StringUtils.stringifyException(ex));
             }
             // try re-login
             relogin();
