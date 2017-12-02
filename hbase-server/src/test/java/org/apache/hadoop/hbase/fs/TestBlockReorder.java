@@ -295,7 +295,7 @@ public class TestBlockReorder {
       final List<HRegion> regions = targetRs.getRegions(h.getName());
       final CountDownLatch latch = new CountDownLatch(regions.size());
       // listen for successful log rolls
-      final WALActionsListener listener = new WALActionsListener.Base() {
+      final WALActionsListener listener = new WALActionsListener() {
             @Override
             public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
               latch.countDown();

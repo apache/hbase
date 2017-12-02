@@ -577,7 +577,7 @@ public class TestWALLockup {
     }
   }
 
-  static class DummyWALActionsListener extends WALActionsListener.Base {
+  static class DummyWALActionsListener implements WALActionsListener {
 
     @Override
     public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)

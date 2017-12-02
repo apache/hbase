@@ -68,8 +68,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
  * Gateway to Replication.  Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 @InterfaceAudience.Private
-public class Replication extends WALActionsListener.Base implements
-  ReplicationSourceService, ReplicationSinkService {
+public class Replication implements
+  ReplicationSourceService, ReplicationSinkService, WALActionsListener {
   private static final Log LOG =
       LogFactory.getLog(Replication.class);
   private boolean replicationForBulkLoadData;

@@ -136,7 +136,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
         new FSHLog(FS, FSUtils.getRootDir(CONF), name, HConstants.HREGION_OLDLOGDIR_NAME, CONF,
             null, true, null, null)) {
 
-      log.registerWALActionsListener(new WALActionsListener.Base() {
+      log.registerWALActionsListener(new WALActionsListener() {
         @Override
         public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)
             throws IOException {

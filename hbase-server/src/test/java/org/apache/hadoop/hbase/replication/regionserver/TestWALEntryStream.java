@@ -422,7 +422,7 @@ public class TestWALEntryStream {
     };
   }
 
-  class PathWatcher extends WALActionsListener.Base {
+  class PathWatcher implements WALActionsListener {
 
     Path currentPath;
 

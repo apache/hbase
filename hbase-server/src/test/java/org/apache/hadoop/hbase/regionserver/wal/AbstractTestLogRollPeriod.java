@@ -131,7 +131,7 @@ public abstract class AbstractTestLogRollPeriod {
   private void checkMinLogRolls(final WAL log, final int minRolls)
       throws Exception {
     final List<Path> paths = new ArrayList<>();
-    log.registerWALActionsListener(new WALActionsListener.Base() {
+    log.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void postLogRoll(Path oldFile, Path newFile) {
         LOG.debug("postLogRoll: oldFile="+oldFile+" newFile="+newFile);

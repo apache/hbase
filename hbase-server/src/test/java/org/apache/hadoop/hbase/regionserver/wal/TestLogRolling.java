@@ -145,7 +145,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
     final FSHLog log = (FSHLog) server.getWAL(region);
     final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
 
-    log.registerWALActionsListener(new WALActionsListener.Base() {
+    log.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void logRollRequested(boolean lowReplication) {
         if (lowReplication) {
@@ -255,7 +255,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       final List<Integer> preLogRolledCalled = new ArrayList<>();
 
       paths.add(AbstractFSWALProvider.getCurrentFileName(log));
-      log.registerWALActionsListener(new WALActionsListener.Base() {
+      log.registerWALActionsListener(new WALActionsListener() {
 
         @Override
         public void preLogRoll(Path oldFile, Path newFile) {
