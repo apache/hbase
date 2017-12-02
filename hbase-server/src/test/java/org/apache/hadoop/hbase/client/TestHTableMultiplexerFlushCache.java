@@ -156,7 +156,7 @@ public class TestHTableMultiplexerFlushCache {
     ServerName newServer = null;
     // Find a new server to move that region to
     for (int i = 0; i < SLAVES; i++) {
-      HRegionServer rs = hbaseCluster.getRegionServer(0);
+      HRegionServer rs = hbaseCluster.getRegionServer(i);
       if (!rs.getServerName().equals(originalServer.getServerName())) {
         newServer = rs.getServerName();
         break;
