@@ -47,8 +47,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * <p>Often used reading {@link org.apache.hadoop.hbase.Cell}s written by
  * {@link org.apache.hadoop.hbase.io.CellOutputStream}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
 public interface CellScanner {
   /**
    * @return the current Cell which may be mutable
