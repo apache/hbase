@@ -99,7 +99,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
   private final ConcurrentMap<ServerName, Integer> lastSent =
       new ConcurrentHashMap<ServerName, Integer>();
   private Publisher publisher;
-  private boolean connected = false;
+  private volatile boolean connected = false;
 
   /**
    * We want to limit the size of the protobuf message sent, do fit into a single packet.
@@ -169,9 +169,11 @@ public class ClusterStatusPublisher extends ScheduledChore {
   }
 
   @Override
-  protected synchronized void cleanup() {
+  protected void cleanup() {
     connected = false;
-    publisher.close();
+    synchronized (this) {
+      publisher.close();
+    }
   }
 
   /**
