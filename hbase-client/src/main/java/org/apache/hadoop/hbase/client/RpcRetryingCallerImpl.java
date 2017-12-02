@@ -28,17 +28,18 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
 /**
  * Runs an rpc'ing {@link RetryingCallable}. Sets into rpc client
@@ -119,10 +120,20 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         t = translateException(t);
 
         if (tries > startLogErrorsCnt) {
-          LOG.info("Call exception, tries=" + tries + ", maxAttempts=" + maxAttempts + ", started="
-              + (EnvironmentEdgeManager.currentTime() - tracker.getStartTime()) + " ms ago, "
-              + "cancelled=" + cancelled.get() + ", msg="
-              + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail());
+          if (LOG.isInfoEnabled()) {
+            StringBuilder builder = new StringBuilder("Call exception, tries=").append(tries)
+              .append(", retries=").append(tries).append(", started=")
+              .append((EnvironmentEdgeManager.currentTime() - tracker.getStartTime()))
+              .append(" ms ago, ").append("cancelled=").append(cancelled.get())
+              .append(", msg=").append(t.getMessage())
+              .append(", details=").append(callable.getExceptionMessageAdditionalDetail());
+            if (LOG.isDebugEnabled()) {
+              builder.append(", exception=").append(StringUtils.stringifyException(t));
+              LOG.debug(builder.toString());
+            } else {
+              LOG.info(builder.toString());
+            }
+          }
         }
 
         callable.throwable(t, maxAttempts != 1);
