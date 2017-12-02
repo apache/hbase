@@ -503,7 +503,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     // If we haven't already, attach a listener to this wal to handle rolls and metrics.
     if (walsListenedTo.add(wal)) {
       roller.addWAL(wal);
-      wal.registerWALActionsListener(new WALActionsListener.Base() {
+      wal.registerWALActionsListener(new WALActionsListener() {
         private int appends = 0;
 
         @Override

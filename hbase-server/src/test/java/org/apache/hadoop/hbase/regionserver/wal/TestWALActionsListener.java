@@ -139,7 +139,7 @@ public class TestWALActionsListener {
   /**
    * Just counts when methods are called
    */
-  public static class DummyWALActionsListener extends WALActionsListener.Base {
+  public static class DummyWALActionsListener implements WALActionsListener {
     public int preLogRollCounter = 0;
     public int postLogRollCounter = 0;
     public int closedCount = 0;

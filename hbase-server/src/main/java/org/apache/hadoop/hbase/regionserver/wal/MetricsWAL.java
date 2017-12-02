@@ -36,7 +36,7 @@ import org.apache.hadoop.util.StringUtils;
  * single function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
-public class MetricsWAL extends WALActionsListener.Base {
+public class MetricsWAL implements WALActionsListener {
   private static final Log LOG = LogFactory.getLog(MetricsWAL.class);
 
   private final MetricsWALSource source;

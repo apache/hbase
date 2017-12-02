@@ -69,7 +69,7 @@ public class LogRoller extends HasThread implements Closeable {
 
   public void addWAL(final WAL wal) {
     if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
-      wal.registerWALActionsListener(new WALActionsListener.Base() {
+      wal.registerWALActionsListener(new WALActionsListener() {
         @Override
         public void logRollRequested(boolean lowReplicas) {
           walNeedsRoll.put(wal, Boolean.TRUE);

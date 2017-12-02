@@ -778,7 +778,7 @@ public class TestCellBasedImportExport2 {
    * This listens to the {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} to
    * identify that an entry is written to the Write Ahead Log for the given table.
    */
-  private static class TableWALActionListener extends WALActionsListener.Base {
+  private static class TableWALActionListener implements WALActionsListener {
 
     private RegionInfo regionInfo;
     private boolean isVisited = false;

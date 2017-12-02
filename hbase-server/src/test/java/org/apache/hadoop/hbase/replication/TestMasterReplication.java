@@ -692,7 +692,7 @@ public class TestMasterReplication {
     final CountDownLatch latch = new CountDownLatch(1);
 
     // listen for successful log rolls
-    final WALActionsListener listener = new WALActionsListener.Base() {
+    final WALActionsListener listener = new WALActionsListener() {
           @Override
           public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
             latch.countDown();

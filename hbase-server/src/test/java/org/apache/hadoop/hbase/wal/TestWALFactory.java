@@ -30,7 +30,6 @@ import java.net.BindException;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
@@ -673,11 +673,11 @@ public class TestWALFactory {
     assertNotNull(c);
   }
 
-  static class DumbWALActionsListener extends WALActionsListener.Base {
+  static class DumbWALActionsListener implements WALActionsListener {
     int increments = 0;
 
     @Override
-    public void visitLogEntryBeforeWrite(HRegionInfo info, WALKey logKey,
+    public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey,
                                          WALEdit logEdit) {
       increments++;
     }
