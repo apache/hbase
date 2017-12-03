@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,13 +21,14 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.curator.shaded.com.google.common.base.Stopwatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeperMain;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
 
 /**
  * Tool for running ZookeeperMain from HBase by  reading a ZooKeeper server

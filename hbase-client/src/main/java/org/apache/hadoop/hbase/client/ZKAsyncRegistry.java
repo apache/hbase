@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZK_SESSION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.ZK_SESSION_TIMEOUT;
 import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
 import static org.apache.hadoop.hbase.client.RegionInfoBuilder.FIRST_META_REGIONINFO;
 import static org.apache.hadoop.hbase.client.RegionReplicaUtil.getRegionInfoForDefaultReplica;
@@ -28,16 +26,10 @@ import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.api.BackgroundPathable;
-import org.apache.curator.framework.api.CuratorEvent;
-import org.apache.curator.retry.RetryNTimes;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -45,16 +37,14 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKConfig;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.data.Stat;
-
 
 /**
  * Fetch the registry data from zookeeper.
@@ -64,53 +54,36 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   private static final Log LOG = LogFactory.getLog(ZKAsyncRegistry.class);
 
-  private final CuratorFramework zk;
+  private final ReadOnlyZKClient zk;
 
   private final ZNodePaths znodePaths;
 
   ZKAsyncRegistry(Configuration conf) {
     this.znodePaths = new ZNodePaths(conf);
-    int zkSessionTimeout = conf.getInt(ZK_SESSION_TIMEOUT, DEFAULT_ZK_SESSION_TIMEOUT);
-    int zkRetry = conf.getInt("zookeeper.recovery.retry", 30);
-    int zkRetryIntervalMs = conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
-    this.zk = CuratorFrameworkFactory.builder()
-        .connectString(ZKConfig.getZKQuorumServersString(conf)).sessionTimeoutMs(zkSessionTimeout)
-        .retryPolicy(new RetryNTimes(zkRetry, zkRetryIntervalMs))
-        .threadFactory(
-          Threads.newDaemonThreadFactory(String.format("ZKClusterRegistry-0x%08x", hashCode())))
-        .build();
-    this.zk.start();
-    // TODO: temporary workaround for HBASE-19312, must be removed before 2.0.0 release!
-    try {
-      this.zk.blockUntilConnected(2, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      return;
-    }
+    this.zk = new ReadOnlyZKClient(conf);
   }
 
-  private interface CuratorEventProcessor<T> {
-    T process(CuratorEvent event) throws Exception;
+  private interface Converter<T> {
+    T convert(byte[] data) throws Exception;
   }
 
-  private static <T> CompletableFuture<T> exec(BackgroundPathable<?> opBuilder, String path,
-      CuratorEventProcessor<T> processor) {
+  private <T> CompletableFuture<T> getAndConvert(String path, Converter<T> converter) {
     CompletableFuture<T> future = new CompletableFuture<>();
-    try {
-      opBuilder.inBackground((client, event) -> {
-        try {
-          future.complete(processor.process(event));
-        } catch (Exception e) {
-          future.completeExceptionally(e);
-        }
-      }).withUnhandledErrorListener((msg, e) -> future.completeExceptionally(e)).forPath(path);
-    } catch (Exception e) {
-      future.completeExceptionally(e);
-    }
+    zk.get(path).whenComplete((data, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      try {
+        future.complete(converter.convert(data));
+      } catch (Exception e) {
+        future.completeExceptionally(e);
+      }
+    });
     return future;
   }
 
-  private static String getClusterId(CuratorEvent event) throws DeserializationException {
-    byte[] data = event.getData();
+  private static String getClusterId(byte[] data) throws DeserializationException {
     if (data == null || data.length == 0) {
       return null;
     }
@@ -120,17 +93,15 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   @Override
   public CompletableFuture<String> getClusterId() {
-    return exec(zk.getData(), znodePaths.clusterIdZNode, ZKAsyncRegistry::getClusterId);
+    return getAndConvert(znodePaths.clusterIdZNode, ZKAsyncRegistry::getClusterId);
   }
 
   @VisibleForTesting
-  CuratorFramework getCuratorFramework() {
+  ReadOnlyZKClient getZKClient() {
     return zk;
   }
 
-  private static ZooKeeperProtos.MetaRegionServer getMetaProto(CuratorEvent event)
-      throws IOException {
-    byte[] data = event.getData();
+  private static ZooKeeperProtos.MetaRegionServer getMetaProto(byte[] data) throws IOException {
     if (data == null || data.length == 0) {
       return null;
     }
@@ -169,7 +140,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
     MutableInt remaining = new MutableInt(locs.length);
     znodePaths.metaReplicaZNodes.forEach((replicaId, path) -> {
       if (replicaId == DEFAULT_REPLICA_ID) {
-        exec(zk.getData(), path, ZKAsyncRegistry::getMetaProto).whenComplete((proto, error) -> {
+        getAndConvert(path, ZKAsyncRegistry::getMetaProto).whenComplete((proto, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
             return;
@@ -184,13 +155,13 @@ class ZKAsyncRegistry implements AsyncRegistry {
               new IOException("Meta region is in state " + stateAndServerName.getFirst()));
             return;
           }
-          locs[DEFAULT_REPLICA_ID] = new HRegionLocation(
-              getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO),
-              stateAndServerName.getSecond());
+          locs[DEFAULT_REPLICA_ID] =
+              new HRegionLocation(getRegionInfoForDefaultReplica(FIRST_META_REGIONINFO),
+                  stateAndServerName.getSecond());
           tryComplete(remaining, locs, future);
         });
       } else {
-        exec(zk.getData(), path, ZKAsyncRegistry::getMetaProto).whenComplete((proto, error) -> {
+        getAndConvert(path, ZKAsyncRegistry::getMetaProto).whenComplete((proto, error) -> {
           if (future.isDone()) {
             return;
           }
@@ -203,13 +174,13 @@ class ZKAsyncRegistry implements AsyncRegistry {
           } else {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
             if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
-              LOG.warn("Meta region for replica " + replicaId + " is in state "
-                  + stateAndServerName.getFirst());
+              LOG.warn("Meta region for replica " + replicaId + " is in state " +
+                  stateAndServerName.getFirst());
               locs[replicaId] = null;
             } else {
-              locs[replicaId] = new HRegionLocation(
-                  getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
-                  stateAndServerName.getSecond());
+              locs[replicaId] =
+                  new HRegionLocation(getRegionInfoForReplica(FIRST_META_REGIONINFO, replicaId),
+                      stateAndServerName.getSecond());
             }
           }
           tryComplete(remaining, locs, future);
@@ -219,18 +190,12 @@ class ZKAsyncRegistry implements AsyncRegistry {
     return future;
   }
 
-  private static int getCurrentNrHRS(CuratorEvent event) {
-    Stat stat = event.getStat();
-    return stat != null ? stat.getNumChildren() : 0;
-  }
-
   @Override
   public CompletableFuture<Integer> getCurrentNrHRS() {
-    return exec(zk.checkExists(), znodePaths.rsZNode, ZKAsyncRegistry::getCurrentNrHRS);
+    return zk.exists(znodePaths.rsZNode).thenApply(s -> s != null ? s.getNumChildren() : 0);
   }
 
-  private static ZooKeeperProtos.Master getMasterProto(CuratorEvent event) throws IOException {
-    byte[] data = event.getData();
+  private static ZooKeeperProtos.Master getMasterProto(byte[] data) throws IOException {
     if (data == null || data.length == 0) {
       return null;
     }
@@ -241,7 +206,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   @Override
   public CompletableFuture<ServerName> getMasterAddress() {
-    return exec(zk.getData(), znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
+    return getAndConvert(znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
         .thenApply(proto -> {
           if (proto == null) {
             return null;
@@ -254,7 +219,7 @@ class ZKAsyncRegistry implements AsyncRegistry {
 
   @Override
   public CompletableFuture<Integer> getMasterInfoPort() {
-    return exec(zk.getData(), znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
+    return getAndConvert(znodePaths.masterAddressZNode, ZKAsyncRegistry::getMasterProto)
         .thenApply(proto -> proto != null ? proto.getInfoPort() : 0);
   }
 

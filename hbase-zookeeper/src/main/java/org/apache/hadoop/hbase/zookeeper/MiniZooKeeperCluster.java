@@ -469,4 +469,8 @@ public class MiniZooKeeperCluster {
     return activeZKServerIndex < 0 || activeZKServerIndex >= clientPortList.size() ? -1
         : clientPortList.get(activeZKServerIndex);
   }
+
+  List<ZooKeeperServer> getZooKeeperServers() {
+    return zooKeeperServers;
+  }
 }
