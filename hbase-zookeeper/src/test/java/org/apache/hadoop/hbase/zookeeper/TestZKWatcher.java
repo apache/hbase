@@ -24,10 +24,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ SmallTests.class })
+@Category({ ZKTests.class, SmallTests.class })
 public class TestZKWatcher {
 
   @Test
