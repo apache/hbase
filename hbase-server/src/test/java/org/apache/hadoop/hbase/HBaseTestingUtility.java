@@ -2510,6 +2510,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return rows;
   }
 
+  /*
+   * Find any other region server which is different from the one identified by parameter
+   * @param rs
+   * @return another region server
+   */
+  public HRegionServer getOtherRegionServer(HRegionServer rs) {
+    for (JVMClusterUtil.RegionServerThread rst :
+      getMiniHBaseCluster().getRegionServerThreads()) {
+      if (!(rst.getRegionServer() == rs)) {
+        return rst.getRegionServer();
+      }
+    }
+    return null;
+  }
+
   /**
    * Tool to get the reference to the region server object that holds the
    * region of the specified user table.
