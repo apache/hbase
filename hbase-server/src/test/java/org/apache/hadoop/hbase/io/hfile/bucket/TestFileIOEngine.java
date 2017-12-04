@@ -114,4 +114,19 @@ public class TestFileIOEngine {
     fileIOEngine.read(ByteBuffer.wrap(data2), 0);
     assertArrayEquals(data1, data2);
   }
+
+  @Test
+  public void testClosedChannelException() throws IOException {
+    fileIOEngine.closeFileChannels();
+    int len = 5;
+    long offset = 0L;
+    byte[] data1 = new byte[len];
+    for (int j = 0; j < data1.length; ++j) {
+      data1[j] = (byte) (Math.random() * 255);
+    }
+    byte[] data2 = new byte[len];
+    fileIOEngine.write(ByteBuffer.wrap(data1), offset);
+    fileIOEngine.read(ByteBuffer.wrap(data2), offset);
+    assertArrayEquals(data1, data2);
+  }
 }
