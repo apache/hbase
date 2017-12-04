@@ -558,6 +558,7 @@ public class BackupAdminImpl implements BackupAdmin {
           throw new IOException("Target backup directory " + targetTableBackupDir
               + " exists already.");
         }
+        outputFs.mkdirs(targetTableBackupDirPath);
       }
       ArrayList<TableName> nonExistingTableList = null;
       try (Admin admin = conn.getAdmin();) {
