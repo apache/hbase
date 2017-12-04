@@ -145,7 +145,7 @@ limitations under the License.
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
-      <version>${hadoop-two.version}</version>
+      <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
           <groupId>com.google.guava</groupId>
@@ -156,7 +156,7 @@ limitations under the License.
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop-two.version}</version>
+      <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.htrace</groupId>
