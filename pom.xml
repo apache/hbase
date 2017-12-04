@@ -1002,12 +1002,17 @@
         <!-- version set by parent -->
         <executions>
           <execution>
-            <id>min-maven-min-java-banned-xerces</id>
+            <id>hadoop-profile-min-maven-min-java-banned-xerces</id>
             <goals>
               <goal>enforce</goal>
             </goals>
             <configuration>
               <rules>
+                <!-- Help people activate profiles correctly -->
+                <evaluateBeanshell>
+                  <condition>System.getProperty("hadoop-profile", "").isEmpty()</condition>
+                  <message>The hadoop-profile property is unused, did you mean to set hadoop.profile instead?</message>
+                </evaluateBeanshell>
                 <!-- The earliest maven version we verify builds for via ASF Jenkins -->
                 <requireMavenVersion>
                   <version>[${maven.min.version},)</version>
