@@ -2360,6 +2360,18 @@
                <groupId>io.netty</groupId>
                <artifactId>netty</artifactId>
              </exclusion>
+              <exclusion>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2391,6 +2403,10 @@
            <artifactId>hadoop-hdfs</artifactId>
            <exclusions>
              <exclusion>
+               <groupId>org.apache.htrace</groupId>
+               <artifactId>htrace-core</artifactId>
+             </exclusion>
+             <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
              </exclusion>
@@ -2405,6 +2421,14 @@
              <exclusion>
                <groupId>xerces</groupId>
                <artifactId>xercesImpl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
            </exclusions>
            <version>${hadoop-three.version}</version>
@@ -2417,6 +2441,10 @@
            <scope>test</scope>
            <exclusions>
              <exclusion>
+               <groupId>org.apache.htrace</groupId>
+               <artifactId>htrace-core</artifactId>
+             </exclusion>
+             <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
              </exclusion>
@@ -2431,6 +2459,14 @@
              <exclusion>
                <groupId>xerces</groupId>
                <artifactId>xercesImpl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehaus.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
              </exclusion>
            </exclusions>
          </dependency>
@@ -2438,12 +2474,26 @@
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-auth</artifactId>
            <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>com.google.guava</groupId>
+               <artifactId>guava</artifactId>
+             </exclusion>
+           </exclusions>
          </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-common</artifactId>
            <version>${hadoop-three.version}</version>
            <exclusions>
+             <exclusion>
+               <groupId>org.apache.htrace</groupId>
+               <artifactId>htrace-core</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>commons-beanutils</groupId>
+               <artifactId>commons-beanutils</artifactId>
+             </exclusion>
              <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
@@ -2464,6 +2514,18 @@
                <groupId>com.google.code.findbugs</groupId>
                <artifactId>jsr305</artifactId>
              </exclusion>
+             <exclusion>
+               <groupId>junit</groupId>
+               <artifactId>junit</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehause.jackson</groupId>
+               <artifactId>jackson-core-asl</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>org.codehause.jackson</groupId>
+               <artifactId>jackson-mapper-asl</artifactId>
+             </exclusion>
            </exclusions>
          </dependency>
          <dependency>
@@ -2483,6 +2545,14 @@
            <artifactId>hadoop-minicluster</artifactId>
            <version>${hadoop-three.version}</version>
            <exclusions>
+             <exclusion>
+               <groupId>org.apache.htrace</groupId>
+               <artifactId>htrace-core</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>commons-httpclient</groupId>
+               <artifactId>commons-httpclient</artifactId>
+             </exclusion>
              <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
@@ -2514,7 +2584,6 @@
        </dependencies>
      </dependencyManagement>
     </profile>
-
     <!-- profiles for the tests
          See as well the properties of the project for the values
          when no profile is active.     -->

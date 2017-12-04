@@ -115,8 +115,6 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
-import net.sf.ehcache.search.Results;
-
 /**
  * A mock RegionServer implementation.
  * Use this when you can't bend Mockito to your liking (e.g. return null result
