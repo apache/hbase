@@ -19,12 +19,15 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -108,6 +111,17 @@ public class FileIOEngine implements IOEngine {
     return 0;
   }
 
+  @VisibleForTesting
+  void closeFileChannels() {
+    for (FileChannel fileChannel: fileChannels) {
+      try {
+        fileChannel.close();
+      } catch (IOException e) {
+        LOG.warn("Failed to close FileChannel", e);
+      }
+    }
+  }
+
   /**
    * Transfers data from the given byte buffer to file
    * @param srcBuffer the given byte buffer from which bytes are to be read
@@ -169,11 +183,18 @@ public class FileIOEngine implements IOEngine {
     int bufLimit = buffer.limit();
     while (true) {
       FileChannel fileChannel = fileChannels[accessFileNum];
+      int accessLen = 0;
       if (endFileNum > accessFileNum) {
         // short the limit;
         buffer.limit((int) (buffer.limit() - remainingAccessDataLen + sizePerFile - accessOffset));
       }
-      int accessLen = accessor.access(fileChannel, buffer, accessOffset);
+      try {
+        accessLen = accessor.access(fileChannel, buffer, accessOffset);
+      } catch (ClosedChannelException e) {
+        LOG.warn("Caught ClosedChannelException accessing BucketCache, reopening file. ", e);
+        refreshFileConnection(accessFileNum);
+        continue;
+      }
       // recover the limit
       buffer.limit(bufLimit);
       if (accessLen < remainingAccessDataLen) {
@@ -211,6 +232,11 @@ public class FileIOEngine implements IOEngine {
       throw new RuntimeException("Not expected offset " + offset + " where capacity=" + capacity);
     }
     return fileNum;
+  }
+
+  private void refreshFileConnection(int accessFileNum) throws FileNotFoundException {
+    rafs[accessFileNum] = new RandomAccessFile(filePaths[accessFileNum], "rw");
+    fileChannels[accessFileNum] = rafs[accessFileNum].getChannel();
   }
 
   private static interface FileAccessor {
