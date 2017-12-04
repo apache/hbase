@@ -21,7 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -49,6 +52,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompactionInDeadRegionServer {
+  private static final Log LOG = LogFactory.getLog(TestCompactionInDeadRegionServer.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -104,8 +108,21 @@ public class TestCompactionInDeadRegionServer {
 
   @Test
   public void test() throws Exception {
+    HRegionServer regionSvr = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    Region region = regionSvr.getOnlineRegions(TABLE_NAME).get(0);
+    String regName = region.getRegionInfo().getEncodedName();
+    List<Region> metaRegs = regionSvr.getOnlineRegions(TableName.META_TABLE_NAME);
+    if (metaRegs != null && !metaRegs.isEmpty()) {
+      LOG.info("meta is on the same server: " + regionSvr);
+      // when region is on same server as hbase:meta, reassigning meta would abort the server
+      // since WAL is broken.
+      // so the region is moved to a different server
+      HRegionServer otherRs = UTIL.getOtherRegionServer(regionSvr);
+      UTIL.moveRegionAndWait(region.getRegionInfo(), otherRs.getServerName());
+      LOG.info("Moved region: " + regName + " to " + otherRs.getServerName());
+    }
     final HRegionServer rsToSuspend = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    HRegion region = (HRegion) rsToSuspend.getOnlineRegions(TABLE_NAME).get(0);
+    region = (HRegion) rsToSuspend.getOnlineRegions(TABLE_NAME).get(0);
     ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
     watcher.getRecoverableZooKeeper()
         .delete(ZKUtil.joinZNode(watcher.rsZNode, rsToSuspend.getServerName().toString()), -1);
@@ -128,11 +145,11 @@ public class TestCompactionInDeadRegionServer {
       }
     });
     try {
-      region.compact(true);
+      ((HRegion)region).compact(true);
       fail("Should fail as our wal file has already been closed, " +
           "and walDir has also been renamed");
     } catch (Exception e) {
-      // expected
+      LOG.debug("expected exception: ", e);
     }
     Table table = UTIL.getConnection().getTable(TABLE_NAME);
     // should not hit FNFE
