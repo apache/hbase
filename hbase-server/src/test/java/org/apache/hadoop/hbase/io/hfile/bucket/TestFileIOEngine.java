@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -116,6 +115,22 @@ public class TestFileIOEngine {
     fileIOEngine.write(ByteBuffer.wrap(data1), 0);
     BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
     fileIOEngine.read(0, 0, deserializer);
+    ByteBuff data2 = deserializer.getDeserializedByteBuff();
+    assertArrayEquals(data1, data2.array());
+  }
+
+  @Test
+  public void testClosedChannelException() throws IOException {
+    fileIOEngine.closeFileChannels();
+    int len = 5;
+    long offset = 0L;
+    byte[] data1 = new byte[len];
+    for (int j = 0; j < data1.length; ++j) {
+      data1[j] = (byte) (Math.random() * 255);
+    }
+    fileIOEngine.write(ByteBuffer.wrap(data1), offset);
+    BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
+    fileIOEngine.read(offset, len, deserializer);
     ByteBuff data2 = deserializer.getDeserializedByteBuff();
     assertArrayEquals(data1, data2.array());
   }
