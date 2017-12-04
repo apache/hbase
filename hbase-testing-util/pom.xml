@@ -195,25 +195,37 @@
                     <value>3.0</value>
                 </property>
             </activation>
-            <properties>
-                <hadoop.version>3.0-SNAPSHOT</hadoop.version>
-            </properties>
+	    <properties>
+                <hadoop.version>${hadoop-three.version}</hadoop.version>
+	    </properties>
             <dependencies>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
                     <scope>compile</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.apache.htrace</groupId>
+                            <artifactId>htrace-core</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-minicluster</artifactId>
                     <scope>compile</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.apache.htrace</groupId>
+                            <artifactId>htrace-core</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-minikdc</artifactId>
                 </dependency>
             </dependencies>
-        </profile>
+	</profile>
     </profiles>
 </project>

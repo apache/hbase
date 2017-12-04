@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MBeanUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.thrift.TException;
 
 /**

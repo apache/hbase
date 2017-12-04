@@ -565,16 +565,28 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>3.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>${hadoop-three.version}</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.htrace</groupId>
+              <artifactId>htrace-core</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.htrace</groupId>
+              <artifactId>htrace-core</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
       <build>
@@ -593,7 +605,8 @@
                   the required classpath that is required in the env
                   of the launch container in the mini mr/yarn cluster
                   -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
+                  </outputFile>
                 </configuration>
               </execution>
             </executions>
