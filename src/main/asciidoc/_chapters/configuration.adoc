@@ -1033,77 +1033,76 @@ Only a subset of all configurations can currently be changed in the running serv
 Here are those configurations:
 
 .Configurations support dynamically change
-[cols="1,1",options="header"]
+[cols="1",options="header"]
 |===
-| Key | Default Value
-| hbase.ipc.server.fallback-to-simple-auth-allowed | false
-| hbase.cleaner.scan.dir.concurrent.size | 0.5
-| hbase.regionserver.thread.compaction.large | 1
-| hbase.regionserver.thread.compaction.small | 1
-| hbase.regionserver.thread.split | 1
-| hbase.regionserver.throughput.controller | PressureAwareCompactionThroughputController.class
-| hbase.regionserver.thread.hfilecleaner.throttle | 64*1024*1024 (64M)
-| hbase.regionserver.hfilecleaner.large.queue.size | 10240
-| hbase.regionserver.hfilecleaner.small.queue.size | 10240
-| hbase.regionserver.hfilecleaner.large.thread.count | 1
-| hbase.regionserver.hfilecleaner.small.thread.count | 1
-| hbase.regionserver.flush.throughput.controller | NoLimitThroughputController.class
-| hbase.hstore.compaction.max.size | Long.MAX
-| hbase.hstore.compaction.max.size.offpeak | Long.MAX
-| hbase.hstore.compaction.min.size | 1024*1024*128 (128M)
-| hbase.hstore.compaction.min | 3
-| hbase.hstore.compaction.max | 10
-| hbase.hstore.compaction.ratio | 1.2f
-| hbase.hstore.compaction.ratio.offpeak | 5.0f
-| hbase.regionserver.thread.compaction.throttle | 2*10*1024*1024*128 (2560M)
-| hbase.hregion.majorcompaction | 1000*60*60*24*7 (1 week)
-| hbase.hregion.majorcompaction.jitter | 0.5f
-| hbase.hstore.min.locality.to.skip.major.compact | 0.0f
-| hbase.hstore.compaction.date.tiered.max.storefile.age.millis | Long.MAX
-| hbase.hstore.compaction.date.tiered.incoming.window.min | 6
-| hbase.hstore.compaction.date.tiered.window.policy.class | ExploringCompactionPolicy.class
-| hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction | true
-| hbase.hstore.compaction.date.tiered.window.factory.class | ExponentialCompactionWindowFactory.class
-| hbase.offpeak.start.hour | -1
-| hbase.offpeak.end.hour | -1
-| hbase.oldwals.cleaner.thread.size | 2
-| hbase.procedure.worker.keep.alive.time.msec | Long.MAX
-| hbase.procedure.worker.add.stuck.percentage | 0.5f
-| hbase.procedure.worker.monitor.interval.msec | 5000 (5 seconds)
-| hbase.procedure.worker.stuck.threshold.msec | 10000 (10 seconds)
-| hbase.regions.slop | 0.2
-| hbase.regions.overallSlop | 0.2
-| hbase.balancer.tablesOnMaster | false
-| hbase.balancer.tablesOnMaster.systemTablesOnly | false
-| hbase.util.ip.to.rack.determiner | ScriptBasedMapping.class
-| hbase.ipc.server.max.callqueue.length | 10*30
-| hbase.ipc.server.priority.max.callqueue.length | 10*30
-| hbase.ipc.server.callqueue.type | fifo
-| hbase.ipc.server.callqueue.codel.target.delay | 100
-| hbase.ipc.server.callqueue.codel.interval | 100
-| hbase.ipc.server.callqueue.codel.lifo.threshold | 0.8
-| hbase.master.balancer.stochastic.maxSteps | 1000000
-| hbase.master.balancer.stochastic.stepsPerRegion | 800
-| hbase.master.balancer.stochastic.maxRunningTime | 30*1000 (30 seconds)
-| hbase.master.balancer.stochastic.runMaxSteps | false
-| hbase.master.balancer.stochastic.numRegionLoadsToRemember | 15
-| hbase.master.loadbalance.bytable | false
-| hbase.master.balancer.stochastic.minCostNeedBalance | 0.05f
-| hbase.master.balancer.stochastic.localityCost | 25
-| hbase.master.balancer.stochastic.rackLocalityCost | 15
-| hbase.master.balancer.stochastic.readRequestCost | 5
-| hbase.master.balancer.stochastic.writeRequestCost | 5
-| hbase.master.balancer.stochastic.memstoreSizeCost | 5
-| hbase.master.balancer.stochastic.storefileSizeCost | 5
-| hbase.master.balancer.stochastic.regionReplicaHostCostKey | 100000
-| hbase.master.balancer.stochastic.regionReplicaRackCostKey | 10000
-| hbase.master.balancer.stochastic.regionCountCost | 500
-| hbase.master.balancer.stochastic.primaryRegionCountCost | 500
-| hbase.master.balancer.stochastic.moveCost | 7
-| hbase.master.balancer.stochastic.maxMovePercent | 0.25f
-| hbase.master.balancer.stochastic.tableSkewCost | 35
+| Key
+| hbase.ipc.server.fallback-to-simple-auth-allowed
+| hbase.cleaner.scan.dir.concurrent.size
+| hbase.regionserver.thread.compaction.large
+| hbase.regionserver.thread.compaction.small
+| hbase.regionserver.thread.split
+| hbase.regionserver.throughput.controller
+| hbase.regionserver.thread.hfilecleaner.throttle
+| hbase.regionserver.hfilecleaner.large.queue.size
+| hbase.regionserver.hfilecleaner.small.queue.size
+| hbase.regionserver.hfilecleaner.large.thread.count
+| hbase.regionserver.hfilecleaner.small.thread.count
+| hbase.regionserver.flush.throughput.controller
+| hbase.hstore.compaction.max.size
+| hbase.hstore.compaction.max.size.offpeak
+| hbase.hstore.compaction.min.size
+| hbase.hstore.compaction.min
+| hbase.hstore.compaction.max
+| hbase.hstore.compaction.ratio
+| hbase.hstore.compaction.ratio.offpeak
+| hbase.regionserver.thread.compaction.throttle
+| hbase.hregion.majorcompaction
+| hbase.hregion.majorcompaction.jitter
+| hbase.hstore.min.locality.to.skip.major.compact
+| hbase.hstore.compaction.date.tiered.max.storefile.age.millis
+| hbase.hstore.compaction.date.tiered.incoming.window.min
+| hbase.hstore.compaction.date.tiered.window.policy.class
+| hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction
+| hbase.hstore.compaction.date.tiered.window.factory.class
+| hbase.offpeak.start.hour
+| hbase.offpeak.end.hour
+| hbase.oldwals.cleaner.thread.size
+| hbase.procedure.worker.keep.alive.time.msec
+| hbase.procedure.worker.add.stuck.percentage
+| hbase.procedure.worker.monitor.interval.msec
+| hbase.procedure.worker.stuck.threshold.msec
+| hbase.regions.slop
+| hbase.regions.overallSlop
+| hbase.balancer.tablesOnMaster
+| hbase.balancer.tablesOnMaster.systemTablesOnly
+| hbase.util.ip.to.rack.determiner
+| hbase.ipc.server.max.callqueue.length
+| hbase.ipc.server.priority.max.callqueue.length
+| hbase.ipc.server.callqueue.type
+| hbase.ipc.server.callqueue.codel.target.delay
+| hbase.ipc.server.callqueue.codel.interval
+| hbase.ipc.server.callqueue.codel.lifo.threshold
+| hbase.master.balancer.stochastic.maxSteps
+| hbase.master.balancer.stochastic.stepsPerRegion
+| hbase.master.balancer.stochastic.maxRunningTime
+| hbase.master.balancer.stochastic.runMaxSteps
+| hbase.master.balancer.stochastic.numRegionLoadsToRemember
+| hbase.master.loadbalance.bytable
+| hbase.master.balancer.stochastic.minCostNeedBalance
+| hbase.master.balancer.stochastic.localityCost
+| hbase.master.balancer.stochastic.rackLocalityCost
+| hbase.master.balancer.stochastic.readRequestCost
+| hbase.master.balancer.stochastic.writeRequestCost
+| hbase.master.balancer.stochastic.memstoreSizeCost
+| hbase.master.balancer.stochastic.storefileSizeCost
+| hbase.master.balancer.stochastic.regionReplicaHostCostKey
+| hbase.master.balancer.stochastic.regionReplicaRackCostKey
+| hbase.master.balancer.stochastic.regionCountCost
+| hbase.master.balancer.stochastic.primaryRegionCountCost
+| hbase.master.balancer.stochastic.moveCost
+| hbase.master.balancer.stochastic.maxMovePercent
+| hbase.master.balancer.stochastic.tableSkewCost
 |===
-For more details consult the patch attached to  link:https://issues.apache.org/jira/browse/HBASE-12147[HBASE-12147 Porting Online Config Change from 89-fb].
 
 ifdef::backend-docbook[]
 [index]
