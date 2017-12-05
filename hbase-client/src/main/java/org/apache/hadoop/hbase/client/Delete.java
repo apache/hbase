@@ -24,15 +24,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to perform Delete operations on a single row.
@@ -294,26 +293,10 @@ public class Delete extends Mutation implements Comparable<Row> {
     return this;
   }
 
-  /**
-   * Set the timestamp of the delete.
-   *
-   * @param timestamp
-   */
-  public Delete setTimestamp(long timestamp) {
-    if (timestamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
-    }
-    this.ts = timestamp;
-    return this;
-  }
-
   @Override
-  public Map<String, Object> toMap(int maxCols) {
-    // we start with the fingerprint map and build on top of it.
-    Map<String, Object> map = super.toMap(maxCols);
-    // why is put not doing this?
-    map.put("ts", this.ts);
-    return map;
+  public Delete setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
+    return this;
   }
 
   @Override

@@ -17,19 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Performs Append operations on a single row.
@@ -139,6 +137,12 @@ public class Append extends Mutation {
 
     // find where the new entry should be placed in the List
     list.add(cell);
+    return this;
+  }
+
+  @Override
+  public Append setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
     return this;
   }
 
