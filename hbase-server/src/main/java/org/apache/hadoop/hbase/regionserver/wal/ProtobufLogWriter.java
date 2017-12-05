@@ -93,7 +93,8 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
     this.output = fs.createNonRecursive(path, overwritable, bufferSize, replication, blockSize,
       null);
     // TODO Be sure to add a check for hsync if this branch includes HBASE-19024
-    if (!(CommonFSUtils.hasCapability(output, "hflush"))) {
+    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true) &&
+        !(CommonFSUtils.hasCapability(output, "hflush"))) {
       throw new StreamLacksCapabilityException("hflush");
     }
   }
