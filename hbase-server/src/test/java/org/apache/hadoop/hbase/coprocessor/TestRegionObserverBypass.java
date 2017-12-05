@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -63,9 +64,12 @@ public class TestRegionObserverBypass {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // Stack up three coprocessors just so I can check bypass skips subsequent calls.
     Configuration conf = HBaseConfiguration.create();
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessor.class.getName());
+        new String [] {TestCoprocessor.class.getName(),
+          TestCoprocessor2.class.getName(),
+          TestCoprocessor3.class.getName()});
     util = new HBaseTestingUtility(conf);
     util.startMiniCluster();
   }
@@ -85,6 +89,8 @@ public class TestRegionObserverBypass {
       admin.deleteTable(tableName);
     }
     util.createTable(tableName, new byte[][] {dummy, test});
+    TestCoprocessor.PREPUT_BYPASSES.set(0);
+    TestCoprocessor.PREPUT_INVOCATIONS.set(0);
   }
 
   /**
@@ -104,6 +110,7 @@ public class TestRegionObserverBypass {
 
   /**
    * Test various multiput operations.
+   * If the column family is 'test', then bypass is invoked.
    * @throws Exception
    */
   @Test
@@ -205,7 +212,48 @@ public class TestRegionObserverBypass {
     t.delete(d);
   }
 
+  /**
+   * Test that when bypass is called, we skip out calling any other coprocessors stacked up method,
+   * in this case, a prePut.
+   * If the column family is 'test', then bypass is invoked.
+   */
+  @Test
+  public void testBypassAlsoCompletes() throws IOException {
+    //ensure that server time increments every time we do an operation, otherwise
+    //previous deletes will eclipse successive puts having the same timestamp
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
+
+    Table t = util.getConnection().getTable(tableName);
+    List<Put> puts = new ArrayList<>();
+    Put p = new Put(row1);
+    p.addColumn(dummy, dummy, dummy);
+    puts.add(p);
+    p = new Put(row2);
+    p.addColumn(test, dummy, dummy);
+    puts.add(p);
+    p = new Put(row3);
+    p.addColumn(test, dummy, dummy);
+    puts.add(p);
+    t.put(puts);
+    // Ensure expected result.
+    checkRowAndDelete(t,row1,1);
+    checkRowAndDelete(t,row2,0);
+    checkRowAndDelete(t,row3,0);
+    // We have three Coprocessors stacked up on the prePut. See the beforeClass setup. We did three
+    // puts above two of which bypassed. A bypass means do not call the other coprocessors in the
+    // stack so for the two 'test' calls in the above, we should not have call through to all all
+    // three coprocessors in the chain. So we should have:
+    // 3 invocations for first put + 1 invocation + 1 bypass for second put + 1 invocation +
+    // 1 bypass for the last put. Assert.
+    assertEquals("Total CP invocation count", 5, TestCoprocessor.PREPUT_INVOCATIONS.get());
+    assertEquals("Total CP bypasses", 2, TestCoprocessor.PREPUT_BYPASSES.get());
+  }
+
+
   public static class TestCoprocessor implements RegionCoprocessor, RegionObserver {
+    static AtomicInteger PREPUT_INVOCATIONS = new AtomicInteger(0);
+    static AtomicInteger PREPUT_BYPASSES = new AtomicInteger(0);
+
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);
@@ -215,10 +263,22 @@ public class TestRegionObserverBypass {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Put put, final WALEdit edit, final Durability durability)
         throws IOException {
+      PREPUT_INVOCATIONS.incrementAndGet();
       Map<byte[], List<Cell>> familyMap = put.getFamilyCellMap();
       if (familyMap.containsKey(test)) {
+        PREPUT_BYPASSES.incrementAndGet();
         e.bypass();
       }
     }
   }
+
+  /**
+   * Calls through to TestCoprocessor.
+   */
+  public static class TestCoprocessor2 extends TestRegionObserverBypass.TestCoprocessor {}
+
+  /**
+   * Calls through to TestCoprocessor.
+   */
+  public static class TestCoprocessor3 extends TestRegionObserverBypass.TestCoprocessor {}
 }

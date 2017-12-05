@@ -678,6 +678,11 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       // Internal to shouldBypass, it checks if obeserverOperation#isBypassable().
       bypass |= observerOperation.shouldBypass();
       observerOperation.postEnvCall();
+      if (bypass) {
+        // If CP says bypass, skip out w/o calling any following CPs; they might ruin our response.
+        // In hbase1, this used to be called 'complete'. In hbase2, we unite bypass and 'complete'.
+        break;
+      }
     }
     return bypass;
   }
