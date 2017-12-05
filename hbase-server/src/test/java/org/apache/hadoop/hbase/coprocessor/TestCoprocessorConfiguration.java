@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.mockito.Mockito.*;
@@ -40,14 +39,17 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 /**
  * Tests for global coprocessor loading configuration
  */
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorConfiguration {
+  @Rule public ExpectedException thrown = ExpectedException.none();
 
   private static final Configuration CONF = HBaseConfiguration.create();
   static {
@@ -169,5 +171,30 @@ public class TestCoprocessorConfiguration {
       systemCoprocessorLoaded.get());
     assertFalse("Table coprocessors should not have been loaded",
       tableCoprocessorLoaded.get());
+  }
+
+  /**
+   * Rough test that Coprocessor Environment is Read-Only.
+   * Just check a random CP and see that it returns a read-only config.
+   */
+  @Test
+  public void testReadOnlyConfiguration() throws Exception {
+    Configuration conf = new Configuration(CONF);
+    HRegion region = mock(HRegion.class);
+    when(region.getRegionInfo()).thenReturn(REGIONINFO);
+    when(region.getTableDescriptor()).thenReturn(TABLEDESC);
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    RegionCoprocessorHost rcp = new RegionCoprocessorHost(region, rsServices, conf);
+    boolean found = false;
+    for (String cpStr: rcp.getCoprocessors()) {
+      CoprocessorEnvironment cpenv = rcp.findCoprocessorEnvironment(cpStr);
+      if (cpenv != null) {
+        found = true;
+      }
+      Configuration c = cpenv.getConfiguration();
+      thrown.expect(UnsupportedOperationException.class);
+      c.set("one.two.three", "four.five.six");
+    }
+    assertTrue("Should be at least one CP found", found);
   }
 }
