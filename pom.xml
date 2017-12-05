@@ -2888,6 +2888,7 @@
           </reportSet>
         </reportSets>
       </plugin>
+      <!--
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -2898,6 +2899,7 @@
           <includeTestSourceDirectory>true</includeTestSourceDirectory>
         </configuration>
       </plugin>
+      -->
     </plugins>
   </reporting>
   <distributionManagement>
