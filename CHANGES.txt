@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.0 12/04/2017
+Release Notes - HBase - Version 1.4.0 12/18/2017
 
 ** Sub-task
     * [HBASE-12148] - Remove TimeRangeTracker as point of contention when many threads writing a Store
