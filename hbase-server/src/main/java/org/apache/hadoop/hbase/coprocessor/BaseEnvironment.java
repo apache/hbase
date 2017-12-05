@@ -57,7 +57,7 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
     this.priority = priority;
     this.state = Coprocessor.State.INSTALLED;
     this.seq = seq;
-    this.conf = conf;
+    this.conf = new ReadOnlyConfiguration(conf);
   }
 
   /** Initialize the environment */
