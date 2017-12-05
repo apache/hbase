@@ -117,7 +117,7 @@ public class HFileSystem extends FilterFileSystem {
 
   /**
    * Wrap a FileSystem object within a HFileSystem. The noChecksumFs and
-   * writefs are both set to be the same specified fs. 
+   * writefs are both set to be the same specified fs.
    * Do not verify hbase-checksums while reading data from filesystem.
    * @param fs Set the noChecksumFs and writeFs to this specified filesystem.
    */

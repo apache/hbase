@@ -27,18 +27,17 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to perform Put operations for a single row.
@@ -326,141 +325,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     return this;
   }
 
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * a value assigned to the given family &amp; qualifier.
-   * Both given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @return returns true if the given family and qualifier already has an
-   * existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier) {
-  return has(family, qualifier, this.ts, HConstants.EMPTY_BYTE_ARRAY, true, true);
-  }
-
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * a value assigned to the given family, qualifier and timestamp.
-   * All 3 given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param ts timestamp
-   * @return returns true if the given family, qualifier and timestamp already has an
-   * existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier, long ts) {
-  return has(family, qualifier, ts, HConstants.EMPTY_BYTE_ARRAY, false, true);
-  }
-
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * a value assigned to the given family, qualifier and timestamp.
-   * All 3 given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param value value to check
-   * @return returns true if the given family, qualifier and value already has an
-   * existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier, byte [] value) {
-    return has(family, qualifier, this.ts, value, true, false);
-  }
-
-  /**
-   * A convenience method to determine if this object's familyMap contains
-   * the given value assigned to the given family, qualifier and timestamp.
-   * All 4 given arguments must match the KeyValue object to return true.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param ts timestamp
-   * @param value value to check
-   * @return returns true if the given family, qualifier timestamp and value
-   * already has an existing KeyValue object in the family map.
-   */
-  public boolean has(byte [] family, byte [] qualifier, long ts, byte [] value) {
-      return has(family, qualifier, ts, value, false, false);
-  }
-
-  /*
-   * Private method to determine if this object's familyMap contains
-   * the given value assigned to the given family, qualifier and timestamp
-   * respecting the 2 boolean arguments
-   *
-   * @param family
-   * @param qualifier
-   * @param ts
-   * @param value
-   * @param ignoreTS
-   * @param ignoreValue
-   * @return returns true if the given family, qualifier timestamp and value
-   * already has an existing KeyValue object in the family map.
-   */
-  private boolean has(byte[] family, byte[] qualifier, long ts, byte[] value,
-                      boolean ignoreTS, boolean ignoreValue) {
-    List<Cell> list = getCellList(family);
-    if (list.isEmpty()) {
-      return false;
-    }
-    // Boolean analysis of ignoreTS/ignoreValue.
-    // T T => 2
-    // T F => 3 (first is always true)
-    // F T => 2
-    // F F => 1
-    if (!ignoreTS && !ignoreValue) {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) &&
-            CellUtil.matchingQualifier(cell, qualifier)  &&
-            CellUtil.matchingValue(cell, value) &&
-            cell.getTimestamp() == ts) {
-          return true;
-        }
-      }
-    } else if (ignoreValue && !ignoreTS) {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
-            && cell.getTimestamp() == ts) {
-          return true;
-        }
-      }
-    } else if (!ignoreValue && ignoreTS) {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
-            && CellUtil.matchingValue(cell, value)) {
-          return true;
-        }
-      }
-    } else {
-      for (Cell cell : list) {
-        if (CellUtil.matchingFamily(cell, family) &&
-            CellUtil.matchingQualifier(cell, qualifier)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Returns a list of all KeyValue objects with matching column family and qualifier.
-   *
-   * @param family column family
-   * @param qualifier column qualifier
-   * @return a list of KeyValue objects with the matching family and qualifier,
-   * returns an empty list if one doesn't exist for the given family.
-   */
-  public List<Cell> get(byte[] family, byte[] qualifier) {
-    List<Cell> filteredList = new ArrayList<>();
-    for (Cell cell: getCellList(family)) {
-      if (CellUtil.matchingQualifier(cell, qualifier)) {
-        filteredList.add(cell);
-      }
-    }
-    return filteredList;
+  @Override
+  public Put setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
+    return this;
   }
 
   @Override

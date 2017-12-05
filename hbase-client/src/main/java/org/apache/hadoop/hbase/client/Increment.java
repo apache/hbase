@@ -24,16 +24,15 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to perform Increment operations on a single row.
@@ -151,7 +150,13 @@ public class Increment extends Mutation implements Comparable<Row> {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
-  
+
+  @Override
+  public Increment setTimestamp(long timestamp) {
+    super.setTimestamp(timestamp);
+    return this;
+  }
+
   /**
    * @param returnResults True (default) if the increment operation should return the results. A
    *          client that is not interested in the result can save network bandwidth setting this
