@@ -73,8 +73,9 @@ public final class AsyncFSOutputHelper {
     // After we create the stream but before we attempt to use it at all
     // ensure that we can provide the level of data safety we're configured
     // to provide.
-    if (!(CommonFSUtils.hasCapability(fsOut, "hflush") &&
-      CommonFSUtils.hasCapability(fsOut, "hsync"))) {
+    if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true) &&
+        !(CommonFSUtils.hasCapability(fsOut, "hflush") &&
+          CommonFSUtils.hasCapability(fsOut, "hsync"))) {
       throw new CommonFSUtils.StreamLacksCapabilityException("hflush and hsync");
     }
     final ExecutorService flushExecutor =

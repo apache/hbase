@@ -131,6 +131,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final FileSystem fs;
   private final Path walDir;
   private final Path walArchiveDir;
+  private final boolean enforceStreamCapability;
 
   private final AtomicReference<Throwable> syncException = new AtomicReference<>();
   private final AtomicBoolean loading = new AtomicBoolean(true);
@@ -205,6 +206,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     this.walDir = walDir;
     this.walArchiveDir = walArchiveDir;
     this.fs = walDir.getFileSystem(conf);
+    this.enforceStreamCapability = conf.getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true);
 
     // Create the log directory for the procedure store
     if (!fs.exists(walDir)) {
@@ -1028,8 +1030,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     // ensure that we can provide the level of data safety we're configured
     // to provide.
     final String durability = useHsync ? "hsync" : "hflush";
-    if (!(CommonFSUtils.hasCapability(newStream, durability))) {
-      throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
+    if (enforceStreamCapability && !(CommonFSUtils.hasCapability(newStream, durability))) {
+        throw new IllegalStateException("The procedure WAL relies on the ability to " + durability +
           " for proper operation during component failures, but the underlying filesystem does " +
           "not support doing so. Please check the config value of '" + USE_HSYNC_CONF_KEY +
           "' to set the desired level of robustness and ensure the config value of '" +

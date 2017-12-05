@@ -62,6 +62,9 @@ public abstract class CommonFSUtils {
   /** Parameter name for HBase WAL directory */
   public static final String HBASE_WAL_DIR = "hbase.wal.dir";
 
+  /** Parameter to disable stream capability enforcement checks */
+  public static final String UNSAFE_STREAM_CAPABILITY_ENFORCE = "hbase.unsafe.stream.capability.enforce";
+
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
 
