@@ -62,8 +62,13 @@ public interface ObserverContext<E extends CoprocessorEnvironment> {
    * that the replacement for the bypassed code takes care of all necessary
    * skipped concerns. Because those concerns can change at any point, such an
    * assumption is never safe.</p>
+   * <p>As of hbase2, when bypass has been set, we will NOT call any Coprocessors follow the
+   * bypassing Coprocessor; we cut short the processing and return the bypassing Coprocessors
+   * response (this used be a separate 'complete' option that has been folded into the
+   * 'bypass' in hbase2.</p>
    */
   void bypass();
+
 
   /**
    * Returns the active user for the coprocessor call. If an explicit {@code User} instance was
