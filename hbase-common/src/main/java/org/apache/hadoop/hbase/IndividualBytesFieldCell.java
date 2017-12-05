@@ -155,7 +155,7 @@ public class IndividualBytesFieldCell implements ExtendedCell {
       out.write((byte)(0xff & getTagsLength()));
 
       // Tags byte array
-      out.write(tags);
+      out.write(tags, tagsOffset, tagsLength);
     }
 
     return getSerializedSize(withTags);
