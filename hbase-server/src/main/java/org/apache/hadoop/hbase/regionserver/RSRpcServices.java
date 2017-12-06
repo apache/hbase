@@ -2214,7 +2214,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
-      boolean loaded = false;
       Map<byte[], List<Path>> map = null;
 
       // Check to see if this bulk load would exceed the space quota for this table
@@ -2233,24 +2232,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
 
+      List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
+      for (FamilyPath familyPath : request.getFamilyPathList()) {
+        familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
+      }
       if (!request.hasBulkToken()) {
-        // Old style bulk load. This will not be supported in future releases
-        List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
-        for (FamilyPath familyPath : request.getFamilyPathList()) {
-          familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
-        }
         if (region.getCoprocessorHost() != null) {
           region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
         }
         try {
           map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
               request.getCopyFile());
-          if (map != null) {
-            loaded = true;
-          }
         } finally {
           if (region.getCoprocessorHost() != null) {
-            loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
+            region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
           }
         }
       } else {
@@ -2258,10 +2253,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         map = regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
       }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
-      if (map != null) {
-        loaded = true;
-      }
-      builder.setLoaded(loaded);
+      builder.setLoaded(map != null);
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

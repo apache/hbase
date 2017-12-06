@@ -195,7 +195,6 @@ public class SecureBulkLoadManager {
     if (region.getCoprocessorHost() != null) {
       region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
     }
-    boolean loaded = false;
     Map<byte[], List<Path>> map = null;
 
     try {
@@ -238,12 +237,9 @@ public class SecureBulkLoadManager {
           return null;
         }
       });
-      if (map != null) {
-        loaded = true;
-      }
     } finally {
       if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
+        region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map);
       }
     }
     return map;
