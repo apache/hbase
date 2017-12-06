@@ -162,8 +162,17 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
     </dependency>
-    <!--Some of the CPEPs use hbase server-side internals; they shouldn't!
-           -->
+    <!--Some of the CPEPs use hbase server-side internals; they shouldn't!-->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-zookeeper</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-zookeeper</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>

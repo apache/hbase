@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,10 +24,10 @@ import java.lang.reflect.Field;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -40,10 +40,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ ZKTests.class, MediumTests.class })
 public class TestRecoverableZooKeeper {
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
 
   Abortable abortable = new Abortable() {
     @Override
@@ -107,8 +107,9 @@ public class TestRecoverableZooKeeper {
         throwExceptionInNumOperations = 0;
         throw new KeeperException.ConnectionLossException();
       }
-      if (throwExceptionInNumOperations > 0)
+      if (throwExceptionInNumOperations > 0) {
         throwExceptionInNumOperations--;
+      }
     }
 
     @Override

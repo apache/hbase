@@ -29,8 +29,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
@@ -222,5 +223,29 @@ public class HBaseCommonTestingUtility {
       }
     } while (ntries < 30);
     return ntries < 30;
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate)
+      throws E {
+    return Waiter.waitFor(this.conf, timeout, predicate);
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
+      throws E {
+    return Waiter.waitFor(this.conf, timeout, interval, predicate);
+  }
+
+  /**
+   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
+   */
+  public <E extends Exception> long waitFor(long timeout, long interval,
+      boolean failIfTimeout, Predicate<E> predicate) throws E {
+    return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 }

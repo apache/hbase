@@ -220,10 +220,10 @@ public final class Waiter {
     }
   }
 
-  public static String getExplanation(Predicate explain) {
+  public static String getExplanation(Predicate<?> explain) {
     if (explain instanceof ExplainingPredicate) {
       try {
-        return " " + ((ExplainingPredicate) explain).explainFailure();
+        return " " + ((ExplainingPredicate<?>) explain).explainFailure();
       } catch (Exception e) {
         LOG.error("Failed to get explanation, ", e);
         return e.getMessage();

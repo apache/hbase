@@ -31,9 +31,13 @@ import javax.security.auth.login.AppConfigurationEntry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TestZooKeeper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
@@ -43,7 +47,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ ZKTests.class, MediumTests.class })
 public class TestZooKeeperACL {
   private final static Log LOG = LogFactory.getLog(TestZooKeeperACL.class);
   private final static HBaseTestingUtility TEST_UTIL =
@@ -89,9 +93,6 @@ public class TestZooKeeperACL {
         TestZooKeeper.class.getName(), null);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (!secureZKAvailable) {
@@ -100,9 +101,6 @@ public class TestZooKeeperACL {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @Before
   public void setUp() throws Exception {
     if (!secureZKAvailable) {
@@ -270,7 +268,8 @@ public class TestZooKeeperACL {
    */
   @Test
   public void testIsZooKeeperSecure() throws Exception {
-    boolean testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+    boolean testJaasConfig =
+        ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
     assertEquals(testJaasConfig, secureZKAvailable);
     // Define Jaas configuration without ZooKeeper Jaas config
     File saslConfFile = File.createTempFile("tmp", "fakeJaas.conf");

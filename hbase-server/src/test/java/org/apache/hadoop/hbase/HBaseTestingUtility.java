@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -51,7 +53,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -64,16 +65,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
-import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -81,14 +76,18 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.ImmutableHRegionInfo;
 import org.apache.hadoop.hbase.client.ImmutableHTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -100,8 +99,10 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStateStore;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ChunkCreator;
@@ -119,7 +120,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -134,8 +135,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -144,13 +145,12 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -171,8 +171,16 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
  */
 @InterfaceAudience.Public
 @SuppressWarnings("deprecation")
-public class HBaseTestingUtility extends HBaseCommonTestingUtility {
-   private MiniZooKeeperCluster zkCluster = null;
+public class HBaseTestingUtility extends HBaseZKTestingUtility {
+
+  /**
+   * System property key to get test directory value. Name is as it is because mini dfs has
+   * hard-codings to put test data here. It should NOT be used directly in HBase, as it's a property
+   * used in mini dfs.
+   * @deprecated can be used only with mini dfs
+   */
+  @Deprecated
+  private static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
   /**
@@ -184,11 +192,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
   public static final boolean PRESPLIT_TEST_TABLE = true;
-  /**
-   * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
-   * part of general shutdown.
-   */
-  private boolean passedZkCluster = false;
+
   private MiniDFSCluster dfsCluster = null;
 
   private volatile HBaseCluster hbaseCluster = null;
@@ -198,9 +202,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private volatile boolean miniClusterRunning;
 
   private String hadoopLogDir;
-
-  /** Directory (a subdirectory of dataTestDir) used by the dfs cluster if any */
-  private File clusterTestDir = null;
 
   /** Directory on test filesystem where we put the data for this instance of
     * HBaseTestingUtility*/
@@ -212,16 +213,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private volatile Connection connection;
 
   private boolean localMode = false;
-
-  /**
-   * System property key to get test directory value.
-   * Name is as it is because mini dfs has hard-codings to put test data here.
-   * It should NOT be used directly in HBase, as it's a property used in
-   *  mini dfs.
-   *  @deprecated can be used only with mini dfs
-   */
-  @Deprecated
-  private static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
@@ -496,37 +487,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * @return Where the DFS cluster will write data on the local subsystem.
-   * Creates it if it does not exist already.  A subdir of {@link #getBaseTestDir()}
-   * @see #getTestFileSystem()
-   */
-  Path getClusterTestDir() {
-    if (clusterTestDir == null){
-      setupClusterTestDir();
-    }
-    return new Path(clusterTestDir.getAbsolutePath());
-  }
-
-  /**
-   * Creates a directory for the DFS cluster, under the test data
-   */
-  private void setupClusterTestDir() {
-    if (clusterTestDir != null) {
-      return;
-    }
-
-    // Using randomUUID ensures that multiple clusters can be launched by
-    //  a same test, if it stops & starts them
-    Path testDir = getDataTestDir("dfscluster_" + UUID.randomUUID().toString());
-    clusterTestDir = new File(testDir.toString()).getAbsoluteFile();
-    // Have it cleaned up on exit
-    boolean b = deleteOnExit();
-    if (b) clusterTestDir.deleteOnExit();
-    conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    LOG.info("Created new mini-cluster data directory: " + clusterTestDir + ", deleteOnExit=" + b);
-  }
-
-  /**
    * Returns a Path in the test filesystem, obtained from {@link #getTestFileSystem()}
    * to write temporary test data. Call this method after setting up the mini dfs cluster
    * if the test relies on it.
@@ -715,6 +675,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /** This is used before starting HDFS and map-reduce mini-clusters */
   private void createDirsAndSetProperties() throws IOException {
     setupClusterTestDir();
+    conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
     createDirAndSetProperty("cache_data", "test.cache.data");
     createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
@@ -792,83 +753,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-  /**
-   * Call this if you only want a zk cluster.
-   * @see #startMiniZKCluster() if you want zk + dfs + hbase mini cluster.
-   * @throws Exception
-   * @see #shutdownMiniZKCluster()
-   * @return zk cluster started.
-   */
-  public MiniZooKeeperCluster startMiniZKCluster() throws Exception {
-    return startMiniZKCluster(1);
-  }
-
-  /**
-   * Call this if you only want a zk cluster.
-   * @param zooKeeperServerNum
-   * @see #startMiniZKCluster() if you want zk + dfs + hbase mini cluster.
-   * @throws Exception
-   * @see #shutdownMiniZKCluster()
-   * @return zk cluster started.
-   */
-  public MiniZooKeeperCluster startMiniZKCluster(
-      final int zooKeeperServerNum,
-      final int ... clientPortList)
-      throws Exception {
-    setupClusterTestDir();
-    return startMiniZKCluster(clusterTestDir, zooKeeperServerNum, clientPortList);
-  }
-
-  private MiniZooKeeperCluster startMiniZKCluster(final File dir)
-    throws Exception {
-    return startMiniZKCluster(dir, 1, null);
-  }
-
-  /**
-   * Start a mini ZK cluster. If the property "test.hbase.zookeeper.property.clientPort" is set
-   *  the port mentionned is used as the default port for ZooKeeper.
-   */
-  private MiniZooKeeperCluster startMiniZKCluster(final File dir,
-      final int zooKeeperServerNum,
-      final int [] clientPortList)
-  throws Exception {
-    if (this.zkCluster != null) {
-      throw new IOException("Cluster already running at " + dir);
-    }
-    this.passedZkCluster = false;
-    this.zkCluster = new MiniZooKeeperCluster(this.getConfiguration());
-    final int defPort = this.conf.getInt("test.hbase.zookeeper.property.clientPort", 0);
-    if (defPort > 0){
-      // If there is a port in the config file, we use it.
-      this.zkCluster.setDefaultClientPort(defPort);
-    }
-
-    if (clientPortList != null) {
-      // Ignore extra client ports
-      int clientPortListSize = (clientPortList.length <= zooKeeperServerNum) ?
-          clientPortList.length : zooKeeperServerNum;
-      for (int i=0; i < clientPortListSize; i++) {
-        this.zkCluster.addClientPort(clientPortList[i]);
-      }
-    }
-    int clientPort =   this.zkCluster.startup(dir,zooKeeperServerNum);
-    this.conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
-      Integer.toString(clientPort));
-    return this.zkCluster;
-  }
-
-  /**
-   * Shuts down zk cluster created by call to {@link #startMiniZKCluster(File)}
-   * or does nothing.
-   * @throws IOException
-   * @see #startMiniZKCluster()
-   */
-  public void shutdownMiniZKCluster() throws IOException {
-    if (this.zkCluster != null) {
-      this.zkCluster.shutdown();
-      this.zkCluster = null;
-    }
-  }
 
   /**
    * Start up a minicluster of hbase, dfs, and zookeeper.
@@ -1078,8 +962,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } else LOG.info("NOT STARTING DFS");
 
     // Start up a zk cluster.
-    if (this.zkCluster == null) {
-      startMiniZKCluster(clusterTestDir);
+    if (getZkCluster() == null) {
+      startMiniZKCluster();
     }
 
     // Start the MiniHBaseCluster
@@ -1197,28 +1081,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       this.connection = null;
     }
     shutdownMiniHBaseCluster();
-    if (!this.passedZkCluster){
-      shutdownMiniZKCluster();
-    }
     shutdownMiniDFSCluster();
+    shutdownMiniZKCluster();
 
     cleanupTestDir();
     miniClusterRunning = false;
     LOG.info("Minicluster is down");
-  }
-
-  /**
-   * @return True if we removed the test dirs
-   * @throws IOException
-   */
-  @Override
-  public boolean cleanupTestDir() throws IOException {
-    boolean ret = super.cleanupTestDir();
-    if (deleteDir(this.clusterTestDir)) {
-      this.clusterTestDir = null;
-      return ret & true;
-    }
-    return false;
   }
 
   /**
@@ -2902,30 +2770,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   private HBaseAdmin hbaseAdmin = null;
 
-  /**
-   * Returns a ZKWatcher instance.
-   * This instance is shared between HBaseTestingUtility instance users.
-   * Don't close it, it will be closed automatically when the
-   * cluster shutdowns
-   *
-   * @return The ZKWatcher instance.
-   * @throws IOException
-   */
-  public synchronized ZKWatcher getZooKeeperWatcher()
-    throws IOException {
-    if (zooKeeperWatcher == null) {
-      zooKeeperWatcher = new ZKWatcher(conf, "testing utility",
-        new Abortable() {
-        @Override public void abort(String why, Throwable e) {
-          throw new RuntimeException("Unexpected abort in HBaseTestingUtility:"+why, e);
-        }
-        @Override public boolean isAborted() {return false;}
-      });
-    }
-    return zooKeeperWatcher;
-  }
-  private ZKWatcher zooKeeperWatcher;
-
 
 
   /**
@@ -3006,16 +2850,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       attempts++;
     } while (maxAttempts == -1 || attempts < maxAttempts);
     return null;
-  }
-
-  public MiniZooKeeperCluster getZkCluster() {
-    return zkCluster;
-  }
-
-  public void setZkCluster(MiniZooKeeperCluster zkCluster) {
-    this.passedZkCluster = true;
-    this.zkCluster = zkCluster;
-    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkCluster.getClientPort());
   }
 
   public MiniDFSCluster getDFSCluster() {
@@ -3417,7 +3251,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       throws IOException {
     final Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     try {
-      long l = waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
+      waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
         @Override
         public String explainFailure() throws IOException {
           return explainTableAvailability(tableName);
@@ -3545,31 +3379,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     s.put(store.getColumnFamilyDescriptor().getName(), columns);
 
     return getFromStoreFile(store,get);
-  }
-
-  /**
-   * Gets a ZKWatcher.
-   * @param TEST_UTIL
-   */
-  public static ZKWatcher getZooKeeperWatcher(
-      HBaseTestingUtility TEST_UTIL) throws ZooKeeperConnectionException,
-      IOException {
-    ZKWatcher zkw = new ZKWatcher(TEST_UTIL.getConfiguration(),
-        "unittest", new Abortable() {
-          boolean aborted = false;
-
-          @Override
-          public void abort(String why, Throwable e) {
-            aborted = true;
-            throw new RuntimeException("Fatal ZK error, why=" + why, e);
-          }
-
-          @Override
-          public boolean isAborted() {
-            return aborted;
-          }
-        });
-    return zkw;
   }
 
   public static void assertKVListsEqual(String additionalMsg,
@@ -3773,12 +3582,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-
   public static String randomMultiCastAddress() {
     return "226.1.1." + random.nextInt(254);
   }
-
-
 
   public static void waitForHostPort(String host, int port)
       throws IOException {
@@ -4019,30 +3825,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public void setFileSystemURI(String fsURI) {
     FS_URI = fsURI;
-  }
-
-  /**
-   * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
-   */
-  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate)
-      throws E {
-    return Waiter.waitFor(this.conf, timeout, predicate);
-  }
-
-  /**
-   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
-   */
-  public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
-      throws E {
-    return Waiter.waitFor(this.conf, timeout, interval, predicate);
-  }
-
-  /**
-   * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
-   */
-  public <E extends Exception> long waitFor(long timeout, long interval,
-      boolean failIfTimeout, Predicate<E> predicate) throws E {
-    return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 
   /**

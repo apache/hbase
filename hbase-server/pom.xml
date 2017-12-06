@@ -132,20 +132,6 @@
           </excludes>
         </configuration>
       </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <!-- General ant tasks, bound to different build phases -->
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -398,6 +384,12 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-procedure</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-zookeeper</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>

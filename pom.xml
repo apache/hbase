@@ -702,6 +702,7 @@
               <phase>prepare-package</phase>
               <goals>
                 <goal>jar-no-fork</goal>
+                <goal>test-jar-no-fork</goal>
               </goals>
             </execution>
           </executions>
@@ -1688,6 +1689,13 @@
         <artifactId>hbase-zookeeper</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-zookeeper</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <!-- General dependencies -->
       <dependency>

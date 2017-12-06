@@ -17,5 +17,9 @@
  */
 package org.apache.hadoop.hbase.testclassification;
 
+/**
+ * For tests which test the general logic of zookeeper related tools, such as
+ * {@code RecoverableZooKeeper}, not for tests which depend on zookeeper.
+ */
 public interface ZKTests {
 }

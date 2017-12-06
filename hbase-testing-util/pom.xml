@@ -80,6 +80,18 @@
         </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-zookeeper</artifactId>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-zookeeper</artifactId>
+            <type>test-jar</type>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-server</artifactId>
             <type>jar</type>
             <scope>compile</scope>

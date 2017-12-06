@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ ZKTests.class, MediumTests.class })
 public class TestZKLeaderManager {
   private static final Log LOG = LogFactory.getLog(TestZKLeaderManager.class);
 
@@ -119,12 +123,12 @@ public class TestZKLeaderManager {
     }
   }
 
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseZKTestingUtility TEST_UTIL;
   private static MockLeader[] CANDIDATES;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = new HBaseZKTestingUtility();
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -233,4 +237,3 @@ public class TestZKLeaderManager {
   }
 
 }
-
