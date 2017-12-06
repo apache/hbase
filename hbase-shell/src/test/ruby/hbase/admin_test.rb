@@ -185,10 +185,18 @@ module Hbase
     
     define_test "create should be able to set table options" do
       drop_test_table(@create_test_name)
-      admin.create(@create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678, OWNER => '987654321')
+      admin.create(@create_test_name, 'a', 'b',
+      'MAX_FILESIZE' => 12345678,
+      OWNER => '987654321',
+      FLUSH_POLICY => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
+      SPLIT_POLICY => 'org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy',
+      REGION_MEMSTORE_REPLICATION => 'TRUE')
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
       assert_match(/12345678/, admin.describe(@create_test_name))
       assert_match(/987654321/, admin.describe(@create_test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy/,admin.describe(@create_test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy/,admin.describe(@create_test_name))
+      assert_match(/REGION_MEMSTORE_REPLICATION/, admin.describe(@create_test_name))
     end
         
     define_test "create should ignore table_att" do
@@ -308,13 +316,27 @@ module Hbase
     end
 
     define_test "alter should be able to change table options" do
-      admin.alter(@test_name, true, METHOD => 'table_att', 'MAX_FILESIZE' => 12345678)
+      admin.alter(@test_name, true, METHOD => 'table_att',
+      'MAX_FILESIZE' => 12345678,
+      'FLUSH_POLICY' => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
+      'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy',
+      'REGION_MEMSTORE_REPLICATION' => 'TRUE')
       assert_match(/12345678/, admin.describe(@test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy/,admin.describe(@test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy/,admin.describe(@test_name))
+      assert_match(/REGION_MEMSTORE_REPLICATION/, admin.describe(@test_name))
     end
 
     define_test "alter should be able to change table options w/o table_att" do
-      admin.alter(@test_name, true, 'MAX_FILESIZE' => 12345678)
+      admin.alter(@test_name, true,
+      'MAX_FILESIZE' => 12345678,
+      'FLUSH_POLICY' => 'org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy',
+      'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy',
+      'REGION_MEMSTORE_REPLICATION' => 'TRUE')
       assert_match(/12345678/, admin.describe(@test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.FlushAllLargeStoresPolicy/,admin.describe(@test_name))
+      assert_match(/org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy/,admin.describe(@test_name))
+      assert_match(/REGION_MEMSTORE_REPLICATION/, admin.describe(@test_name))
     end
     
     define_test "alter should be able to change coprocessor attributes" do
