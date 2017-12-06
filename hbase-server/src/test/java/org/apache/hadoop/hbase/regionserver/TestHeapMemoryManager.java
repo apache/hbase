@@ -645,7 +645,8 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+        boolean cacheDataInL1) {
 
     }
 

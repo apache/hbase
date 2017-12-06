@@ -52,7 +52,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final String CACHE_INDEX_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_INDEX_ON_WRITE;
   public static final String CACHE_BLOOMS_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_BLOOMS_ON_WRITE;
   public static final String EVICT_BLOCKS_ON_CLOSE = ColumnFamilyDescriptorBuilder.EVICT_BLOCKS_ON_CLOSE;
-  public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
+  public static final String CACHE_DATA_IN_L1 = ColumnFamilyDescriptorBuilder.CACHE_DATA_IN_L1;
   public static final String PREFETCH_BLOCKS_ON_OPEN = ColumnFamilyDescriptorBuilder.PREFETCH_BLOCKS_ON_OPEN;
   public static final String BLOCKSIZE = ColumnFamilyDescriptorBuilder.BLOCKSIZE;
   public static final String LENGTH = "LENGTH";
@@ -87,7 +87,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final KeepDeletedCells DEFAULT_KEEP_DELETED = ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED;
   public static final boolean DEFAULT_BLOCKCACHE = ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKCACHE;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_ON_WRITE;
-  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = false;
+  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_IN_L1;
   public static final boolean DEFAULT_CACHE_INDEX_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_INDEX_ON_WRITE;
   public static final int DEFAULT_BLOCKSIZE = ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKSIZE;
   public static final String DEFAULT_BLOOMFILTER =  ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
@@ -534,16 +534,18 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return this;
   }
 
+  @Override
+  public boolean isCacheDataInL1() {
+    return delegatee.isCacheDataInL1();
+  }
+
   /**
-   * This is a noop call from HBase 2.0 onwards
-   *
+   * @param value true if we should cache data blocks in the L1 cache (if block cache deploy
+   * has more than one tier; e.g. we are using CombinedBlockCache).
    * @return this (for chained invocation)
-   * @deprecated Since 2.0 and will be removed in 3.0 with out any replacement. Caching data in on
-   *             heap Cache, when there are both on heap LRU Cache and Bucket Cache will no longer
-   *             be supported from 2.0.
    */
-  @Deprecated
   public HColumnDescriptor setCacheDataInL1(boolean value) {
+    getDelegateeForModification().setCacheDataInL1(value);
     return this;
   }
 

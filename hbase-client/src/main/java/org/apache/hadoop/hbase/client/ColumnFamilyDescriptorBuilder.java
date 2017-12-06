@@ -98,6 +98,14 @@ public class ColumnFamilyDescriptorBuilder {
   @InterfaceAudience.Private
   public static final String EVICT_BLOCKS_ON_CLOSE = "EVICT_BLOCKS_ON_CLOSE";
   private static final Bytes EVICT_BLOCKS_ON_CLOSE_BYTES = new Bytes(Bytes.toBytes(EVICT_BLOCKS_ON_CLOSE));
+  /**
+   * Key for cache data into L1 if cache is set up with more than one tier. To
+   * set in the shell, do something like this:      <code>hbase(main):003:0&gt; create 't',
+   *    {NAME =&gt; 't', CONFIGURATION =&gt; {CACHE_DATA_IN_L1 =&gt; 'true'}}</code>
+   */
+  @InterfaceAudience.Private
+  public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
+  private static final Bytes CACHE_DATA_IN_L1_BYTES = new Bytes(Bytes.toBytes(CACHE_DATA_IN_L1));
 
   /**
    * Key for the PREFETCH_BLOCKS_ON_OPEN attribute. If set, all INDEX, BLOOM,
@@ -221,6 +229,13 @@ public class ColumnFamilyDescriptorBuilder {
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
 
   /**
+   * Default setting for whether to cache data blocks in L1 tier. Only makes
+   * sense if more than one tier in operations: i.e. if we have an L1 and a L2.
+   * This will be the cases if we are using BucketCache.
+   */
+  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = false;
+
+  /**
    * Default setting for whether to cache index blocks on write if block caching
    * is enabled.
    */
@@ -295,6 +310,7 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
     DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
+    DEFAULT_VALUES.put(CACHE_DATA_IN_L1, String.valueOf(DEFAULT_CACHE_DATA_IN_L1));
     DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
     DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
     DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
@@ -425,6 +441,11 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setCacheBloomsOnWrite(boolean value) {
     desc.setCacheBloomsOnWrite(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setCacheDataInL1(boolean value) {
+    desc.setCacheDataInL1(value);
     return this;
   }
 
@@ -987,6 +1008,21 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setCacheDataOnWrite(boolean value) {
       return setValue(CACHE_DATA_ON_WRITE_BYTES, Boolean.toString(value));
+    }
+
+    @Override
+    public boolean isCacheDataInL1() {
+      return getStringOrDefault(CACHE_DATA_IN_L1_BYTES, Boolean::valueOf, DEFAULT_CACHE_DATA_IN_L1);
+    }
+
+    /**
+     * @param value true if we should cache data blocks in the L1 cache (if
+     * block cache deploy has more than one tier; e.g. we are using
+     * CombinedBlockCache).
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setCacheDataInL1(boolean value) {
+      return setValue(CACHE_DATA_IN_L1_BYTES, Boolean.toString(value));
     }
 
     @Override

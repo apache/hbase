@@ -226,6 +226,9 @@ public class TableDescriptorBuilder {
                               .setInMemory(true)
                               .setBlocksize(8 * 1024)
                               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+                              // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                              // e.g. if using CombinedBlockCache (BucketCache).
+                              .setCacheDataInL1(true)
                               .build())
                             .build();
   private final ModifyableTableDescriptor desc;

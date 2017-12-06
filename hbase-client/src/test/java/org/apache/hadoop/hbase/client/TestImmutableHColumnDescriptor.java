@@ -51,6 +51,7 @@ public class TestImmutableHColumnDescriptor {
     hcd -> hcd.setBlocksize(10),
     hcd -> hcd.setBloomFilterType(BloomType.NONE),
     hcd -> hcd.setCacheBloomsOnWrite(false),
+    hcd -> hcd.setCacheDataInL1(true),
     hcd -> hcd.setCacheDataOnWrite(true),
     hcd -> hcd.setCacheIndexesOnWrite(true),
     hcd -> hcd.setCompactionCompressionType(Compression.Algorithm.LZO),
