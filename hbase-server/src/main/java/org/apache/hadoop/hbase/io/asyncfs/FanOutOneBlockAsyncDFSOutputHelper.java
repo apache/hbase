@@ -409,11 +409,13 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static PBHelper createPBHelper() throws NoSuchMethodException {
     Class<?> helperClass;
+    String clazzName = "org.apache.hadoop.hdfs.protocolPB.PBHelperClient";
     try {
-      helperClass = Class.forName("org.apache.hadoop.hdfs.protocolPB.PBHelperClient");
+      helperClass = Class.forName(clazzName);
     } catch (ClassNotFoundException e) {
-      LOG.debug("No PBHelperClient class found, should be hadoop 2.7-", e);
       helperClass = org.apache.hadoop.hdfs.protocolPB.PBHelper.class;
+      LOG.debug(""  + clazzName + " not found (Hadoop is pre-2.8.0?); using " +
+          helperClass.toString() + " instead.");
     }
     Method convertEBMethod = helperClass.getMethod("convert", ExtendedBlock.class);
     Method convertTokenMethod = helperClass.getMethod("convert", Token.class);
