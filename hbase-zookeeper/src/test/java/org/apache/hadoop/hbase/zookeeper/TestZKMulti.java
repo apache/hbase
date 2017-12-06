@@ -17,9 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
-
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -32,9 +30,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.CreateMode;
@@ -49,10 +47,10 @@ import org.junit.experimental.categories.Category;
 /**
  * Test ZooKeeper multi-update functionality
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ ZKTests.class, MediumTests.class })
 public class TestZKMulti {
   private static final Log LOG = LogFactory.getLog(TestZKMulti.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
   private static ZKWatcher zkw = null;
 
   @BeforeClass

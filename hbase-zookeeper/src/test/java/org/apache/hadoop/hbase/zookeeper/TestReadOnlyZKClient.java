@@ -28,15 +28,14 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.zookeeper.CreateMode;
@@ -52,9 +51,7 @@ import org.junit.experimental.categories.Category;
 @Category({ ZKTests.class, MediumTests.class })
 public class TestReadOnlyZKClient {
 
-  private static HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
-
-  private static MiniZooKeeperCluster CLUSTER;
+  private static HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
 
   private static int PORT;
 
@@ -67,11 +64,9 @@ public class TestReadOnlyZKClient {
   private static ReadOnlyZKClient RO_ZK;
 
   @BeforeClass
-  public static void setUp() throws IOException, InterruptedException, KeeperException {
-    File file =
-        new File(UTIL.getDataTestDir("zkcluster_" + UUID.randomUUID().toString()).toString());
-    CLUSTER = new MiniZooKeeperCluster(UTIL.getConfiguration());
-    PORT = CLUSTER.startup(file);
+  public static void setUp() throws Exception {
+    PORT = UTIL.startMiniZKCluster().getClientPort();
+
     ZooKeeper zk = new ZooKeeper("localhost:" + PORT, 10000, e -> {
     });
     DATA = new byte[10];
@@ -94,18 +89,28 @@ public class TestReadOnlyZKClient {
   @AfterClass
   public static void tearDown() throws IOException {
     RO_ZK.close();
-    CLUSTER.shutdown();
+    UTIL.shutdownMiniZKCluster();
     UTIL.cleanupTestDir();
   }
 
   @Test
-  public void testGetAndExists() throws InterruptedException, ExecutionException {
+  public void testGetAndExists() throws Exception {
     assertArrayEquals(DATA, RO_ZK.get(PATH).get());
     assertEquals(CHILDREN, RO_ZK.exists(PATH).get().getNumChildren());
     assertNotNull(RO_ZK.getZooKeeper());
-    // a little longer than keep alive millis
-    Thread.sleep(5000);
-    assertNull(RO_ZK.getZooKeeper());
+    // The zookeeper client should be closed finally after the keep alive time elapsed
+    UTIL.waitFor(10000, new ExplainingPredicate<Exception>() {
+
+      @Override
+      public boolean evaluate() throws Exception {
+        return RO_ZK.getZooKeeper() == null;
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "Connection to zookeeper is still alive";
+      }
+    });
   }
 
   @Test
@@ -129,7 +134,7 @@ public class TestReadOnlyZKClient {
     assertArrayEquals(DATA, RO_ZK.get(PATH).get());
     ZooKeeper zk = RO_ZK.getZooKeeper();
     long sessionId = zk.getSessionId();
-    CLUSTER.getZooKeeperServers().get(0).closeSession(sessionId);
+    UTIL.getZkCluster().getZooKeeperServers().get(0).closeSession(sessionId);
     // should not reach keep alive so still the same instance
     assertSame(zk, RO_ZK.getZooKeeper());
 

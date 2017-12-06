@@ -25,21 +25,20 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Random;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadLocalRandom;
 
-import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.master.TestActiveMasterManager.NodeDeletionListener;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.AfterClass;
@@ -47,12 +46,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ ZKTests.class, MediumTests.class })
 public class TestZKNodeTracker {
   private static final Log LOG = LogFactory.getLog(TestZKNodeTracker.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  private final static Random rand = new Random();
+  private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -66,13 +63,11 @@ public class TestZKNodeTracker {
 
   /**
    * Test that we can interrupt a node that is blocked on a wait.
-   * @throws IOException
-   * @throws InterruptedException
    */
-  @Test public void testInterruptible() throws IOException, InterruptedException {
+  @Test
+  public void testInterruptible() throws IOException, InterruptedException {
     Abortable abortable = new StubAbortable();
-    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
-      "testInterruptible", abortable);
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(), "testInterruptible", abortable);
     final TestTracker tracker = new TestTracker(zk, "/xyz", abortable);
     tracker.start();
     Thread t = new Thread() {
@@ -86,7 +81,9 @@ public class TestZKNodeTracker {
       }
     };
     t.start();
-    while (!t.isAlive()) Threads.sleep(1);
+    while (!t.isAlive()) {
+      Threads.sleep(1);
+    }
     tracker.stop();
     t.join();
     // If it wasn't interruptible, we'd never get to here.
@@ -99,8 +96,8 @@ public class TestZKNodeTracker {
         "testNodeTracker", abortable);
     ZKUtil.createAndFailSilent(zk, zk.znodePaths.baseZNode);
 
-    final String node =
-      ZNodePaths.joinZNode(zk.znodePaths.baseZNode, new Long(rand.nextLong()).toString());
+    final String node = ZNodePaths.joinZNode(zk.znodePaths.baseZNode,
+      Long.toString(ThreadLocalRandom.current().nextLong()));
 
     final byte [] dataOne = Bytes.toBytes("dataOne");
     final byte [] dataTwo = Bytes.toBytes("dataTwo");
@@ -132,9 +129,9 @@ public class TestZKNodeTracker {
 
     // Create a completely separate zk connection for test triggers and avoid
     // any weird watcher interactions from the test
-    final ZooKeeper zkconn = new ZooKeeper(
-        ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()), 60000,
-        new StubWatcher());
+    final ZooKeeper zkconn =
+        new ZooKeeper(ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()), 60000, e -> {
+        });
 
     // Add the node with data one
     zkconn.create(node, dataOne, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -247,7 +244,7 @@ public class TestZKNodeTracker {
   }
 
   public static class TestingZKListener extends ZKListener {
-    private static final Log LOG = LogFactory.getLog(NodeDeletionListener.class);
+    private static final Log LOG = LogFactory.getLog(TestingZKListener.class);
 
     private Semaphore deletedLock;
     private Semaphore createdLock;
@@ -307,12 +304,6 @@ public class TestZKNodeTracker {
     public boolean isAborted() {
       return false;
     }
-
-  }
-
-  public static class StubWatcher implements Watcher {
-    @Override
-    public void process(WatchedEvent event) {}
   }
 
   @Test
@@ -331,21 +322,20 @@ public class TestZKNodeTracker {
     // Check that we manage the case when there is no data
     ZKUtil.createAndFailSilent(zkw, nodeName);
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString());
-    Assert.assertFalse(ZKUtil.getData(zkw, nodeName) == null);
+    assertNotNull(ZKUtil.getData(zkw, nodeName));
 
     // Check that we don't delete if we're not supposed to
     ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, ServerName.valueOf("127.0.0.2:52", 45L).toString());
-    Assert.assertFalse(ZKUtil.getData(zkw, nodeName) == null);
+    assertNotNull(ZKUtil.getData(zkw, nodeName));
 
     // Check that we delete when we're supposed to
     ZKUtil.setData(zkw, nodeName,MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString());
-    Assert.assertTrue( ZKUtil.getData(zkw, nodeName)== null );
+    assertNull(ZKUtil.getData(zkw, nodeName));
 
     // Check that we support the case when the znode does not exist
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString()); // must not throw an exception
   }
 
 }
-

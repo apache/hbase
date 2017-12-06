@@ -24,13 +24,15 @@ import static org.junit.Assert.assertTrue;
 import java.security.Permission;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ ZKTests.class, SmallTests.class })
 public class TestZKMainServer {
   // ZKMS calls System.exit.  Catch the call and prevent exit using trick described up in
   // http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit
@@ -63,12 +65,11 @@ public class TestZKMainServer {
 
   /**
    * We need delete of a znode to work at least.
-   * @throws Exception
    */
   @Test
   public void testCommandLineWorks() throws Exception {
     System.setSecurityManager(new NoExitSecurityManager());
-    HBaseTestingUtility htu = new HBaseTestingUtility();
+    HBaseZKTestingUtility htu = new HBaseZKTestingUtility();
     htu.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     htu.startMiniZKCluster();
     try {

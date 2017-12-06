@@ -62,20 +62,6 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <!-- General plugins -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
