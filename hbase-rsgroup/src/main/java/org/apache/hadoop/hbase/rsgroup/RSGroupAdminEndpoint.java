@@ -684,7 +684,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   @Override
   public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                   boolean newValue) throws IOException {
-    return false;
+    return newValue;
   }
 
   @Override
