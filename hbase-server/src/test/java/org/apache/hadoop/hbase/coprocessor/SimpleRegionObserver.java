@@ -567,8 +567,8 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      List<Pair<byte[], String>> familyPaths, Map<byte[], List<Path>> map, boolean hasLoaded)
+  public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      List<Pair<byte[], String>> familyPaths, Map<byte[], List<Path>> map)
           throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
     assertNotNull(e);
@@ -583,7 +583,6 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
       assertEquals(familyPath.substring(familyPath.length()-familyName.length()-1),"/"+familyName);
     }
     ctPostBulkLoadHFile.incrementAndGet();
-    return hasLoaded;
   }
 
   @Override

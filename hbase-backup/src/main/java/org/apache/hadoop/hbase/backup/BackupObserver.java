@@ -54,17 +54,17 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
   }
 
   @Override
-  public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths,
-    boolean hasLoaded) throws IOException {
+  public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
+        throws IOException {
     Configuration cfg = ctx.getEnvironment().getConfiguration();
-    if (!hasLoaded) {
+    if (finalPaths == null) {
       // there is no need to record state
-      return hasLoaded;
+      return;
     }
-    if (finalPaths == null || !BackupManager.isBackupEnabled(cfg)) {
+    if (!BackupManager.isBackupEnabled(cfg)) {
       LOG.debug("skipping recording bulk load in postBulkLoadHFile since backup is disabled");
-      return hasLoaded;
+      return;
     }
     try (Connection connection = ConnectionFactory.createConnection(cfg);
         BackupSystemTable tbl = new BackupSystemTable(connection)) {
@@ -75,13 +75,11 @@ public class BackupObserver implements RegionCoprocessor, RegionObserver {
         if (LOG.isTraceEnabled()) {
           LOG.trace(tableName + " has not gone thru full backup");
         }
-        return hasLoaded;
+        return;
       }
       tbl.writePathsPostBulkLoad(tableName, info.getEncodedNameAsBytes(), finalPaths);
-      return hasLoaded;
     } catch (IOException ioe) {
       LOG.error("Failed to get tables which have been fully backed up", ioe);
-      return false;
     }
   }
   @Override

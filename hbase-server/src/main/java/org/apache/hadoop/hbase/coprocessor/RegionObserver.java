@@ -974,13 +974,12 @@ public interface RegionObserver {
    * @param ctx the environment provided by the region server
    * @param stagingFamilyPaths pairs of { CF, HFile path } submitted for bulk load
    * @param finalPaths Map of CF to List of file paths for the loaded files
-   * @param hasLoaded whether the bulkLoad was successful
-   * @return the new value of hasLoaded
+   *   if the Map is not null, the bulkLoad was successful. Otherwise the bulk load failed.
+   *   bulkload is done by the time this hook is called.
    */
-  default boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths,
-      boolean hasLoaded) throws IOException {
-    return hasLoaded;
+  default void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
+          throws IOException {
   }
 
   /**

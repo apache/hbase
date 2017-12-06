@@ -1624,20 +1624,18 @@ public class RegionCoprocessorHost
   /**
    * @param familyPaths pairs of { CF, file path } submitted for bulk load
    * @param map Map of CF to List of file paths for the final loaded files
-   * @param result whether load was successful or not
-   * @return the possibly modified value of hasLoaded
    * @throws IOException
    */
-  public boolean postBulkLoadHFile(final List<Pair<byte[], String>> familyPaths,
-      Map<byte[], List<Path>> map, boolean result) throws IOException {
+  public void postBulkLoadHFile(final List<Pair<byte[], String>> familyPaths,
+      Map<byte[], List<Path>> map) throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
-      return result;
+      return;
     }
-    return execOperationWithResult(
-        new ObserverOperationWithResult<RegionObserver, Boolean>(regionObserverGetter, result) {
+    execOperation(coprocEnvironments.isEmpty()? null:
+        new RegionObserverOperationWithoutResult() {
           @Override
-          public Boolean call(RegionObserver observer) throws IOException {
-            return observer.postBulkLoadHFile(this, familyPaths, map, getResult());
+          public void call(RegionObserver observer) throws IOException {
+            observer.postBulkLoadHFile(this, familyPaths, map);
           }
         });
   }
