@@ -213,7 +213,7 @@ public class MemorySizeUtil {
    * @return the number of bytes to use for LRU, negative if disabled.
    * @throws IllegalArgumentException if HFILE_BLOCK_CACHE_SIZE_KEY is > 1.0
    */
-  public static long getLruCacheSize(final Configuration conf) {
+  public static long getOnHeapCacheSize(final Configuration conf) {
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     if (cachePercentage <= 0.0001f) {

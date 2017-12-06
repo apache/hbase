@@ -202,11 +202,7 @@ public interface ColumnFamilyDescriptor {
    * @return true if we should cache bloomfilter blocks on write
    */
   boolean isCacheBloomsOnWrite();
-  /**
-   * @return true if we should cache data blocks in the L1 cache (if block cache deploy has more
-   *         than one tier; e.g. we are using CombinedBlockCache).
-   */
-  boolean isCacheDataInL1();
+
   /**
    * @return true if we should cache data blocks on write
    */

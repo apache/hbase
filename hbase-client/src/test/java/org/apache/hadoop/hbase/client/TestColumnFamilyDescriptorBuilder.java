@@ -45,8 +45,7 @@ public class TestColumnFamilyDescriptorBuilder {
       = ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
             .setInMemory(true)
             .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-            .setBloomFilterType(BloomType.NONE)
-            .setCacheDataInL1(true);
+            .setBloomFilterType(BloomType.NONE);
     final int v = 123;
     builder.setBlocksize(v);
     builder.setTimeToLive(v);
