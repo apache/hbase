@@ -110,10 +110,7 @@ public class MemcachedBlockCache implements BlockCache {
   }
 
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey,
-                         Cacheable buf,
-                         boolean inMemory,
-                         boolean cacheDataInL1) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     cacheBlock(cacheKey, buf);
   }
 
@@ -288,10 +285,4 @@ public class MemcachedBlockCache implements BlockCache {
       return MAX_SIZE;
     }
   }
-
-  @Override
-  public void returnBlock(BlockCacheKey cacheKey, Cacheable block) {
-    // Not doing reference counting. All blocks here are EXCLUSIVE
-  }
-
 }

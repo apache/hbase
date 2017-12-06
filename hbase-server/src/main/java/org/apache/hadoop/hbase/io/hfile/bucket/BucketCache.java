@@ -397,7 +397,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    cacheBlock(cacheKey, buf, false, false);
+    cacheBlock(cacheKey, buf, false);
   }
 
   /**
@@ -405,12 +405,10 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param cacheKey block's cache key
    * @param cachedItem block buffer
    * @param inMemory if block is in-memory
-   * @param cacheDataInL1
    */
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
-      final boolean cacheDataInL1) {
-    cacheBlockWithWait(cacheKey, cachedItem, inMemory, cacheDataInL1, wait_when_cache);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory) {
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
   }
 
   /**
@@ -421,23 +419,18 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param wait if true, blocking wait when queue is full
    */
   public void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
-      boolean cacheDataInL1, boolean wait) {
+      boolean wait) {
     if (LOG.isTraceEnabled()) LOG.trace("Caching key=" + cacheKey + ", item=" + cachedItem);
     if (!cacheEnabled) {
       return;
     }
 
     if (backingMap.containsKey(cacheKey)) {
-      /*
-       * Compare already cached block only if lruBlockCache is not used to cache data blocks
-       */
-       if (!cacheDataInL1) {
-         Cacheable existingBlock = getBlock(cacheKey, false, false, false);
-         if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
-           throw new RuntimeException("Cached block contents differ, which should not have happened."
-	                              + "cacheKey:" + cacheKey);
-         }
-       }
+      Cacheable existingBlock = getBlock(cacheKey, false, false, false);
+      if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
+        throw new RuntimeException("Cached block contents differ, which should not have happened."
+            + "cacheKey:" + cacheKey);
+      }
        String msg = "Caching an already cached block: " + cacheKey;
        msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
        LOG.warn(msg);
