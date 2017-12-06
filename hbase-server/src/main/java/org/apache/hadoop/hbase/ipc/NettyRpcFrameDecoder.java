@@ -95,18 +95,14 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     }
 
     int frameLengthInt = (int) frameLength;
-    if (in.readableBytes() < frameLengthInt) {
+    if (in.readableBytes() < frameLengthInt + FRAME_LENGTH_FIELD_LENGTH) {
       return;
     }
 
     in.skipBytes(FRAME_LENGTH_FIELD_LENGTH);
 
     // extract frame
-    int readerIndex = in.readerIndex();
-    ByteBuf frame = in.retainedSlice(readerIndex, frameLengthInt);
-    in.readerIndex(readerIndex + frameLengthInt);
-
-    out.add(frame);
+    out.add(in.readRetainedSlice(frameLengthInt));
   }
 
   private void handleTooBigRequest(ByteBuf in) throws IOException {
