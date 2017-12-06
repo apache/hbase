@@ -242,7 +242,7 @@ public class HFileOutputFormat2
         Cell kv = cell;
         // null input == user explicitly wants to flush
         if (row == null && kv == null) {
-          rollWriters();
+          rollWriters(null);
           return;
         }
 
@@ -276,15 +276,13 @@ public class HFileOutputFormat2
           configureStoragePolicy(conf, fs, tableAndFamily, writerPath);
         }
 
-        // If any of the HFiles for the column families has reached
-        // maxsize, we need to roll all the writers
         if (wl != null && wl.written + length >= maxsize) {
           this.rollRequested = true;
         }
 
         // This can only happen once a row is finished though
         if (rollRequested && Bytes.compareTo(this.previousRow, rowKey) != 0) {
-          rollWriters();
+          rollWriters(wl);
         }
 
         // create a new WAL writer, if necessary
@@ -345,17 +343,25 @@ public class HFileOutputFormat2
         this.previousRow = rowKey;
       }
 
-      private void rollWriters() throws IOException {
-        for (WriterLength wl : this.writers.values()) {
-          if (wl.writer != null) {
-            LOG.info(
-                "Writer=" + wl.writer.getPath() + ((wl.written == 0)? "": ", wrote=" + wl.written));
-            close(wl.writer);
+      private void rollWriters(WriterLength writerLength) throws IOException {
+        if (writerLength != null) {
+          closeWriter(writerLength);
+        } else {
+          for (WriterLength wl : this.writers.values()) {
+            closeWriter(wl);
           }
-          wl.writer = null;
-          wl.written = 0;
         }
         this.rollRequested = false;
+      }
+
+      private void closeWriter(WriterLength wl) throws IOException {
+        if (wl.writer != null) {
+          LOG.info(
+              "Writer=" + wl.writer.getPath() + ((wl.written == 0)? "": ", wrote=" + wl.written));
+          close(wl.writer);
+        }
+        wl.writer = null;
+        wl.written = 0;
       }
 
       /*
