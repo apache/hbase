@@ -104,11 +104,12 @@ public class TestBucketCache {
     }
 
     @Override
-    public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+        boolean cacheDataInL1) {
       if (super.getBlock(cacheKey, true, false, true) != null) {
         throw new RuntimeException("Cached an already cached block");
       }
-      super.cacheBlock(cacheKey, buf, inMemory);
+      super.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
     }
 
     @Override

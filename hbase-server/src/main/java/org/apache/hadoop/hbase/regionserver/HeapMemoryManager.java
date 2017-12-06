@@ -107,9 +107,9 @@ public class HeapMemoryManager {
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
       Server server, RegionServerAccounting regionServerAccounting) {
-    ResizableBlockCache lruCache = CacheConfig.getOnHeapCache(conf);
-    if (lruCache != null) {
-      return new HeapMemoryManager(lruCache, memStoreFlusher, server, regionServerAccounting);
+    ResizableBlockCache l1Cache = CacheConfig.getL1(conf);
+    if (l1Cache != null) {
+      return new HeapMemoryManager(l1Cache, memStoreFlusher, server, regionServerAccounting);
     }
     return null;
   }

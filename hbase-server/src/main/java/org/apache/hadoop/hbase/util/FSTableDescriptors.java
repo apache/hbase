@@ -155,6 +155,9 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -165,6 +168,9 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_POSITION_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -175,6 +181,9 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_META_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -185,6 +194,9 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
                     // Ten is arbitrary number.  Keep versions to help debugging.
@@ -194,6 +206,9 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                    .setCacheDataInL1(true)
                     .build())
             .addCoprocessor("org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
                     null, Coprocessor.PRIORITY_SYSTEM, null);
