@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -108,15 +109,16 @@ public class ReplicationProtbufUtil {
     HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
     for (Entry entry: entries) {
       entryBuilder.clear();
-      // TODO: this duplicates a lot in WALKey#getBuilder
+      // TODO: this duplicates a lot in WALKeyImpl#getBuilder
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
-      WALKey key = entry.getKey();
+      WALKeyImpl key = entry.getKey();
       keyBuilder.setEncodedRegionName(
           UnsafeByteOperations.unsafeWrap(encodedRegionName == null
             ? key.getEncodedRegionName()
             : encodedRegionName));
       keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(key.getTablename().getName()));
-      keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
+      long sequenceId = key.getSequenceId();
+      keyBuilder.setLogSequenceNumber(sequenceId);
       keyBuilder.setWriteTime(key.getWriteTime());
       if (key.getNonce() != HConstants.NO_NONCE) {
         keyBuilder.setNonce(key.getNonce());
@@ -129,7 +131,7 @@ public class ReplicationProtbufUtil {
         uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
         keyBuilder.addClusterIds(uuidBuilder.build());
       }
-      if(key.getOrigLogSeqNum() > 0) {
+      if (key.getOrigLogSeqNum() > 0) {
         keyBuilder.setOrigSequenceNumber(key.getOrigLogSeqNum());
       }
       WALEdit edit = entry.getEdit();

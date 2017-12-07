@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDe
  * All the edits for a given transaction are written out as a single record, in PB format followed
  * by Cells written via the WALCellEncoder.
  */
+// TODO: Do not expose this class to Coprocessors. It has set methods. A CP might meddle.
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
     HBaseInterfaceAudience.COPROC })
 public class WALEdit implements HeapSize {
@@ -119,6 +120,7 @@ public class WALEdit implements HeapSize {
     return this.isReplay;
   }
 
+  @InterfaceAudience.Private
   public WALEdit add(Cell cell) {
     this.cells.add(cell);
     return this;

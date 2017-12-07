@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -232,8 +232,8 @@ public class TestWALObserver {
 
     // it's where WAL write cp should occur.
     long now = EnvironmentEdgeManager.currentTime();
-    // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-    long txid = log.append(hri, new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now,
+    // we use HLogKey here instead of WALKeyImpl directly to support legacy coprocessors.
+    long txid = log.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now,
         new MultiVersionConcurrencyControl(), scopes),
       edit, true);
     log.sync(txid);
@@ -286,7 +286,7 @@ public class TestWALObserver {
 
       final long now = EnvironmentEdgeManager.currentTime();
       long txid = log.append(hri,
-          new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes),
+          new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes),
           new WALEdit(), true);
       log.sync(txid);
 
@@ -334,7 +334,7 @@ public class TestWALObserver {
       addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
           EnvironmentEdgeManager.getDelegate(), wal, scopes, mvcc);
     }
-    wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
+    wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
         true);
     // sync to fs.
     wal.sync();
@@ -476,9 +476,9 @@ public class TestWALObserver {
       byte[] columnBytes = Bytes.toBytes(familyStr + ":" + Integer.toString(j));
       WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
-      // uses WALKey instead of HLogKey on purpose. will only work for tests where we don't care
+      // uses WALKeyImpl instead of HLogKey on purpose. will only work for tests where we don't care
       // about legacy coprocessors
-      txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
+      txid = wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
           ee.currentTime(), mvcc), edit, true);
     }
     if (-1 != txid) {

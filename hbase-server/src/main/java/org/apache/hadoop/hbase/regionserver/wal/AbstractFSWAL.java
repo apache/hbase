@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
@@ -954,7 +955,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
-  protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKey key,
+  protected final long stampSequenceIdAndPublishToRingBuffer(RegionInfo hri, WALKeyImpl key,
       WALEdit edits, boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
       throws IOException {
     if (this.closed) {
@@ -1017,7 +1018,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * this append; otherwise, you will just have to wait on the WriteEntry to get filled in.
    */
   @Override
-  public abstract long append(RegionInfo info, WALKey key, WALEdit edits, boolean inMemstore)
+  public abstract long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore)
       throws IOException;
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;

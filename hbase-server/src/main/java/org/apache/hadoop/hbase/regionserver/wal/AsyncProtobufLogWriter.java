@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
@@ -113,7 +114,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     int buffered = output.buffered();
     entry.setCompressionContext(compressionContext);
     try {
-      entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
+      entry.getKey().
+        getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
           .writeDelimitedTo(asyncOutputWrapper);
     } catch (IOException e) {
       throw new AssertionError("should not happen", e);

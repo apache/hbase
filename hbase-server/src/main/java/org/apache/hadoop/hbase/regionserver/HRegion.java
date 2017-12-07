@@ -191,6 +191,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.hadoop.io.MultipleIOException;
@@ -3343,7 +3344,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public long getOrigLogSeqNum() {
-      return WALKey.NO_SEQUENCE_ID;
+      return SequenceId.NO_SEQUENCE_ID;
     }
 
     @Override
@@ -4504,16 +4505,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           if (firstSeqIdInLog == -1) {
-            firstSeqIdInLog = key.getLogSeqNum();
+            firstSeqIdInLog = key.getSequenceId();
           }
-          if (currentEditSeqId > key.getLogSeqNum()) {
+          if (currentEditSeqId > key.getSequenceId()) {
             // when this condition is true, it means we have a serious defect because we need to
             // maintain increasing SeqId for WAL edits per region
             LOG.error(getRegionInfo().getEncodedName() + " : "
                  + "Found decreasing SeqId. PreId=" + currentEditSeqId + " key=" + key
                 + "; edit=" + val);
           } else {
-            currentEditSeqId = key.getLogSeqNum();
+            currentEditSeqId = key.getSequenceId();
           }
           currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ?
             key.getOrigLogSeqNum() : currentEditSeqId;
@@ -4571,7 +4572,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               continue;
             }
             // Now, figure if we should skip this edit.
-            if (key.getLogSeqNum() <= maxSeqIdInStores.get(store.getColumnFamilyDescriptor()
+            if (key.getSequenceId() <= maxSeqIdInStores.get(store.getColumnFamilyDescriptor()
                 .getName())) {
               skippedEdits++;
               continue;
@@ -7550,7 +7551,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, List<UUID> clusterIds,
       long now, long nonceGroup, long nonce) throws IOException {
     return doWALAppend(walEdit, durability, clusterIds, now, nonceGroup, nonce,
-        WALKey.NO_SEQUENCE_ID);
+        SequenceId.NO_SEQUENCE_ID);
   }
 
   /**
@@ -7560,16 +7561,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       long now, long nonceGroup, long nonce, long origLogSeqNum) throws IOException {
     Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(),
         "WALEdit is null or empty!");
-    Preconditions.checkArgument(!walEdit.isReplay() || origLogSeqNum != WALKey.NO_SEQUENCE_ID,
+    Preconditions.checkArgument(!walEdit.isReplay() || origLogSeqNum != SequenceId.NO_SEQUENCE_ID,
         "Invalid replay sequence Id for replay WALEdit!");
     // Using default cluster id, as this can only happen in the originating cluster.
     // A slave cluster receives the final value (not the delta) as a Put. We use HLogKey
-    // here instead of WALKey directly to support legacy coprocessors.
-    WALKey walKey = walEdit.isReplay() ? new WALKey(this.getRegionInfo().getEncodedNameAsBytes(),
-        this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now, clusterIds, nonceGroup,
-        nonce, mvcc) :
-        new WALKey(this.getRegionInfo().getEncodedNameAsBytes(),
-            this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now, clusterIds,
+    // here instead of WALKeyImpl directly to support legacy coprocessors.
+    WALKeyImpl walKey = walEdit.isReplay()?
+        new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
+          this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now, clusterIds,
+            nonceGroup, nonce, mvcc) :
+        new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
+            this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now, clusterIds,
             nonceGroup, nonce, mvcc, this.getReplicationScope());
     if (walEdit.isReplay()) {
       walKey.setOrigLogSeqNum(origLogSeqNum);

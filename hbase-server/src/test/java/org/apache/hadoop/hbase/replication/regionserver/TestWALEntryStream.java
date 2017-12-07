@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -374,8 +374,8 @@ public class TestWALEntryStream {
 
   private void appendToLog(String key) throws IOException {
     final long txid = log.append(info,
-      new WALKey(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(), mvcc, scopes),
-      getWALEdit(key), true);
+      new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(),
+          mvcc, scopes), getWALEdit(key), true);
     log.sync(txid);
   }
 
@@ -390,9 +390,8 @@ public class TestWALEntryStream {
   }
 
   private void appendToLogPlus(int count) throws IOException {
-    final long txid = log.append(info,
-      new WALKey(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(), mvcc, scopes),
-      getWALEdits(count), true);
+    final long txid = log.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
+            System.currentTimeMillis(), mvcc, scopes), getWALEdits(count), true);
     log.sync(txid);
   }
 

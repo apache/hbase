@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
@@ -299,7 +300,7 @@ public class TestHRegionReplayEvents {
     put.setDurability(Durability.SKIP_WAL);
     MutationReplay mutation = new MutationReplay(MutationType.PUT, put, 0, 0);
     region.batchReplay(new MutationReplay[] {mutation},
-      entry.getKey().getLogSeqNum());
+      entry.getKey().getSequenceId());
     return Integer.parseInt(Bytes.toString(put.getRow()));
   }
 
@@ -1150,7 +1151,7 @@ public class TestHRegionReplayEvents {
     // test for region open and close
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, walSecondary, CONF, rss, null);
     verify(walSecondary, times(0)).append((HRegionInfo)any(),
-      (WALKey)any(), (WALEdit)any(),  anyBoolean());
+      (WALKeyImpl)any(), (WALEdit)any(),  anyBoolean());
 
     // test for replay prepare flush
     putDataByReplay(secondaryRegion, 0, 10, cq, families);
@@ -1166,11 +1167,11 @@ public class TestHRegionReplayEvents {
       .build());
 
     verify(walSecondary, times(0)).append((HRegionInfo)any(),
-      (WALKey)any(), (WALEdit)any(), anyBoolean());
+      (WALKeyImpl)any(), (WALEdit)any(), anyBoolean());
 
     secondaryRegion.close();
     verify(walSecondary, times(0)).append((HRegionInfo)any(),
-      (WALKey)any(), (WALEdit)any(),  anyBoolean());
+      (WALKeyImpl)any(), (WALEdit)any(),  anyBoolean());
   }
 
   /**
@@ -1259,7 +1260,7 @@ public class TestHRegionReplayEvents {
       }
       FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flush != null) {
-        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getLogSeqNum());
+        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getSequenceId());
       }
     }
 
@@ -1299,7 +1300,7 @@ public class TestHRegionReplayEvents {
       }
       FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flush != null) {
-        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getLogSeqNum());
+        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getSequenceId());
       } else {
         replayEdit(secondaryRegion, entry);
       }
@@ -1333,7 +1334,7 @@ public class TestHRegionReplayEvents {
       }
       FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
       if (flush != null) {
-        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getLogSeqNum());
+        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getSequenceId());
       }
     }
 

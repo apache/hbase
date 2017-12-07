@@ -367,7 +367,8 @@ public class ProtobufLogReader extends ReaderBase {
         entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
         if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" + this.inputStream.getPos());
+            LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset=" +
+                this.inputStream.getPos());
           }
           continue;
         }

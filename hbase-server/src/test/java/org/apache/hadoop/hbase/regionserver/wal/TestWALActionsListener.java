@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -115,7 +115,7 @@ public class TestWALActionsListener {
       for(byte[] fam : htd.getFamiliesKeys()) {
         scopes.put(fam, 0);
       }
-      final long txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(),
+      final long txid = wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
           TableName.valueOf(b), 0, mvcc, scopes), edit, true);
       wal.sync(txid);
       if (i == 10) {

@@ -88,7 +88,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -669,7 +669,7 @@ public class TestDistributedLogSplitting {
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, System.currentTimeMillis(), value));
         log.append(curRegionInfo,
-            new WALKey(curRegionInfo.getEncodedNameAsBytes(), tableName,
+            new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(), tableName,
                 System.currentTimeMillis(), mvcc), e, true);
         if (0 == i % syncEvery) {
           log.sync();

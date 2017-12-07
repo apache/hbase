@@ -138,7 +138,7 @@ public class TestSecureWAL {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
-      wal.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+      wal.append(regioninfo, new WALKeyImpl(regioninfo.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes), kvs, true);
     }
     wal.sync();

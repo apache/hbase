@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
@@ -57,7 +57,7 @@ class FSWALEntry extends Entry {
   private final transient RegionInfo regionInfo;
   private final transient Set<byte[]> familyNames;
 
-  FSWALEntry(final long txid, final WALKey key, final WALEdit edit,
+  FSWALEntry(final long txid, final WALKeyImpl key, final WALEdit edit,
       final RegionInfo regionInfo, final boolean inMemstore) {
     super(key, edit);
     this.inMemstore = inMemstore;

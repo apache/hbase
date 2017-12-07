@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -204,7 +204,7 @@ public class TestLogRollAbort {
         for(byte[] fam : htd.getFamiliesKeys()) {
           scopes.put(fam, 0);
         }
-        log.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+        log.append(regioninfo, new WALKeyImpl(regioninfo.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       // Send the data to HDFS datanodes and close the HDFS writer

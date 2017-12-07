@@ -156,6 +156,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -655,7 +656,7 @@ public class TestHRegion {
         WALEdit edit = new WALEdit();
         edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
             .toBytes(i)));
-        writer.append(new WAL.Entry(new WALKey(regionName, tableName, i, time,
+        writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, i, time,
             HConstants.DEFAULT_CLUSTER_ID), edit));
 
         writer.close();
@@ -706,7 +707,7 @@ public class TestHRegion {
         WALEdit edit = new WALEdit();
         edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
             .toBytes(i)));
-        writer.append(new WAL.Entry(new WALKey(regionName, tableName, i, time,
+        writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, i, time,
             HConstants.DEFAULT_CLUSTER_ID), edit));
 
         writer.close();
@@ -809,7 +810,7 @@ public class TestHRegion {
           edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
             .toBytes(i)));
         }
-        writer.append(new WAL.Entry(new WALKey(regionName, tableName, i, time,
+        writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, i, time,
             HConstants.DEFAULT_CLUSTER_ID), edit));
         writer.close();
       }
@@ -906,7 +907,7 @@ public class TestHRegion {
 
       long time = System.nanoTime();
 
-      writer.append(new WAL.Entry(new WALKey(regionName, tableName, 10, time,
+      writer.append(new WAL.Entry(new WALKeyImpl(regionName, tableName, 10, time,
           HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(region.getRegionInfo(),
           compactionDescriptor)));
       writer.close();
@@ -4695,7 +4696,7 @@ public class TestHRegion {
 
     //verify append called or not
     verify(wal, expectAppend ? times(1) : never())
-      .append((HRegionInfo)any(), (WALKey)any(),
+      .append((HRegionInfo)any(), (WALKeyImpl)any(),
           (WALEdit)any(), Mockito.anyBoolean());
 
     // verify sync called or not
@@ -5843,7 +5844,7 @@ public class TestHRegion {
       region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
         TEST_UTIL.getConfiguration(), rss, null);
 
-      verify(wal, times(1)).append((HRegionInfo)any(), (WALKey)any()
+      verify(wal, times(1)).append((HRegionInfo)any(), (WALKeyImpl)any()
         , editCaptor.capture(), anyBoolean());
 
       WALEdit edit = editCaptor.getValue();
@@ -5914,18 +5915,18 @@ public class TestHRegion {
 
   /**
    * Utility method to setup a WAL mock.
-   * Needs to do the bit where we close latch on the WALKey on append else test hangs.
+   * Needs to do the bit where we close latch on the WALKeyImpl on append else test hangs.
    * @return
    * @throws IOException
    */
   private WAL mockWAL() throws IOException {
     WAL wal = mock(WAL.class);
     Mockito.when(wal.append((HRegionInfo)Mockito.any(),
-        (WALKey)Mockito.any(), (WALEdit)Mockito.any(), Mockito.anyBoolean())).
+        (WALKeyImpl)Mockito.any(), (WALEdit)Mockito.any(), Mockito.anyBoolean())).
       thenAnswer(new Answer<Long>() {
         @Override
         public Long answer(InvocationOnMock invocation) throws Throwable {
-          WALKey key = invocation.getArgument(1);
+          WALKeyImpl key = invocation.getArgument(1);
           MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin();
           key.setWriteEntry(we);
           return 1L;
@@ -5967,7 +5968,7 @@ public class TestHRegion {
     region.close(false);
 
     // 2 times, one for region open, the other close region
-    verify(wal, times(2)).append((HRegionInfo)any(), (WALKey)any(),
+    verify(wal, times(2)).append((HRegionInfo)any(), (WALKeyImpl)any(),
       editCaptor.capture(), anyBoolean());
 
     WALEdit edit = editCaptor.getAllValues().get(1);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,7 +76,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
@@ -764,7 +764,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         .setEndKey(HConstants.EMPTY_END_ROW)
         .build();
     WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
-    Replication.scopeWALEdits(new WALKey(), edit,
+    Replication.scopeWALEdits(new WALKeyImpl(), edit,
       htable1.getConfiguration(), null);
   }
 
@@ -844,7 +844,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     long now = EnvironmentEdgeManager.currentTime();
     edit.add(new KeyValue(rowName, famName, qualifier,
       now, value));
-    WALKey walKey = new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes);
+    WALKeyImpl walKey = new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes);
     wal.append(hri, walKey, edit, true);
     wal.sync();
 

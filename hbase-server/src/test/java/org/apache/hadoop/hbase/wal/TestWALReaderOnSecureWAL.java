@@ -127,7 +127,7 @@ public class TestWALReaderOnSecureWAL {
         } else {
           kvs.add(kv);
         }
-        wal.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+        wal.append(regioninfo, new WALKeyImpl(regioninfo.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       wal.sync();

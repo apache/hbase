@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -185,8 +185,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             WALEdit walEdit = new WALEdit();
             addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
             RegionInfo hri = region.getRegionInfo();
-            final WALKey logkey =
-                new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
+            final WALKeyImpl logkey =
+                new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
             wal.append(hri, logkey, walEdit, true);
             if (!this.noSync) {
               if (++lastSync >= this.syncInterval) {
@@ -430,7 +430,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           break;
         }
         count++;
-        long seqid = e.getKey().getLogSeqNum();
+        long seqid = e.getKey().getSequenceId();
         if (sequenceIds.containsKey(Bytes.toString(e.getKey().getEncodedRegionName()))) {
           // sequenceIds should be increasing for every regions
           if (sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName())) >= seqid) {

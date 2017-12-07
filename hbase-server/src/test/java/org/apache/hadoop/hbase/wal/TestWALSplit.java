@@ -379,7 +379,7 @@ public class TestWALSplit {
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     Entry entry =
-        new Entry(new WALKey(encoded,
+        new Entry(new WALKeyImpl(encoded,
             TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
             new WALEdit());
     Path p = WALSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR,
@@ -401,7 +401,7 @@ public class TestWALSplit {
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     Entry entry =
-        new Entry(new WALKey(encoded,
+        new Entry(new WALKeyImpl(encoded,
             TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
             new WALEdit());
     Path parent = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
@@ -1345,7 +1345,7 @@ public class TestWALSplit {
         .addCompactionOutput(output);
 
     WALEdit edit = WALEdit.createCompaction(hri, desc.build());
-    WALKey key = new WALKey(hri.getEncodedNameAsBytes(), TABLE_NAME, 1,
+    WALKeyImpl key = new WALKeyImpl(hri.getEncodedNameAsBytes(), TABLE_NAME, 1,
         EnvironmentEdgeManager.currentTime(), HConstants.DEFAULT_CLUSTER_ID);
     w.append(new Entry(key, edit));
     w.sync();
@@ -1362,7 +1362,7 @@ public class TestWALSplit {
     final long time = EnvironmentEdgeManager.currentTime();
     KeyValue kv = new KeyValue(region.getBytes(), WALEdit.METAFAMILY, WALEdit.REGION_EVENT,
         time, regionOpenDesc.toByteArray());
-    final WALKey walKey = new WALKey(region.getBytes(), TABLE_NAME, 1, time,
+    final WALKeyImpl walKey = new WALKeyImpl(region.getBytes(), TABLE_NAME, 1, time,
         HConstants.DEFAULT_CLUSTER_ID);
     w.append(
         new Entry(walKey, new WALEdit().add(kv)));
@@ -1390,7 +1390,7 @@ public class TestWALSplit {
     final KeyValue cell = new KeyValue(row, family, qualifier, time, KeyValue.Type.Put, value);
     WALEdit edit = new WALEdit();
     edit.add(cell);
-    return new Entry(new WALKey(region, table, seq, time,
+    return new Entry(new WALKeyImpl(region, table, seq, time,
         HConstants.DEFAULT_CLUSTER_ID), edit);
   }
 

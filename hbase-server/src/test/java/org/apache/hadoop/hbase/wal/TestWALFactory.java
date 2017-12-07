@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -197,7 +197,7 @@ public class TestWALFactory {
           edit.add(new KeyValue(rowName, family, qualifier,
               System.currentTimeMillis(), column));
           LOG.info("Region " + i + ": " + edit);
-          WALKey walKey =  new WALKey(infos[i].getEncodedNameAsBytes(), tableName,
+          WALKeyImpl walKey =  new WALKeyImpl(infos[i].getEncodedNameAsBytes(), tableName,
               System.currentTimeMillis(), mvcc, scopes);
           log.append(infos[i], walKey, edit, true);
           walKey.getWriteEntry();
@@ -266,7 +266,7 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+        wal.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       // Now call sync and try reading.  Opening a Reader before you sync just
@@ -285,7 +285,7 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-        wal.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+        wal.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       wal.sync();
@@ -307,7 +307,7 @@ public class TestWALFactory {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), value));
-        wal.append(info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+        wal.append(info, new WALKeyImpl(info.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), mvcc, scopes), kvs,  true);
       }
       // Now I should have written out lots of blocks.  Sync then read.
@@ -390,7 +390,7 @@ public class TestWALFactory {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
-      wal.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+      wal.append(regioninfo, new WALKeyImpl(regioninfo.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes),
         kvs, true);
     }
@@ -526,7 +526,7 @@ public class TestWALFactory {
       final WAL log = wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
 
       final long txid = log.append(info,
-        new WALKey(info.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
+        new WALKeyImpl(info.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
             mvcc, scopes),
         cols, true);
       log.sync(txid);
@@ -589,7 +589,7 @@ public class TestWALFactory {
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       final WAL log = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
       final long txid = log.append(hri,
-        new WALKey(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis(),
             mvcc, scopes),
         cols, true);
       log.sync(txid);
@@ -646,7 +646,7 @@ public class TestWALFactory {
       cols.add(new KeyValue(row, Bytes.toBytes("column"),
           Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[]{(byte) (i + '0')}));
-      log.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
+      log.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
           System.currentTimeMillis(), mvcc, scopes), cols, true);
     }
     log.sync();
@@ -656,7 +656,7 @@ public class TestWALFactory {
     cols.add(new KeyValue(row, Bytes.toBytes("column"),
         Bytes.toBytes(Integer.toString(11)),
         timestamp, new byte[]{(byte) (11 + '0')}));
-    log.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
+    log.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName,
         System.currentTimeMillis(), mvcc, scopes), cols, true);
     log.sync();
     assertEquals(COL_COUNT, visitor.increments);
@@ -677,8 +677,7 @@ public class TestWALFactory {
     int increments = 0;
 
     @Override
-    public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey,
-                                         WALEdit logEdit) {
+    public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
       increments++;
     }
 

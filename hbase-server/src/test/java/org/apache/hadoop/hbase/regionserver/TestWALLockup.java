@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -229,8 +230,8 @@ public class TestWALLockup {
       // edit. WAL subsystem doesn't care.
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
-      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName(),
-          System.currentTimeMillis(), mvcc, scopes);
+      WALKeyImpl key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
+          htd.getTableName(), System.currentTimeMillis(), mvcc, scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -406,8 +407,8 @@ public class TestWALLockup {
     try {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
-      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName(),
-          System.currentTimeMillis(), mvcc, scopes);
+      WALKeyImpl key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
+          htd.getTableName(), System.currentTimeMillis(), mvcc, scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -438,8 +439,8 @@ public class TestWALLockup {
 
       // make RingBufferEventHandler sleep 1s, so the following sync
       // endOfBatch=false
-      key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), TableName.valueOf("sleep"),
-          System.currentTimeMillis(), mvcc, scopes);
+      key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
+          TableName.valueOf("sleep"), System.currentTimeMillis(), mvcc, scopes);
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 
       Thread t = new Thread("Sync") {
@@ -462,7 +463,7 @@ public class TestWALLockup {
         e1.printStackTrace();
       }
       // make append throw DamagedWALException
-      key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
+      key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
           TableName.valueOf("DamagedWALException"), System.currentTimeMillis(), mvcc, scopes);
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 

@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -151,7 +151,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
       // Write log in pb format.
       writer = createWriter(path);
       for (int i = 0; i < recordCount; ++i) {
-        WALKey key = new WALKey(
+        WALKeyImpl key = new WALKeyImpl(
             hri.getEncodedNameAsBytes(), tableName, i, timestamp, HConstants.DEFAULT_CLUSTER_ID);
         WALEdit edit = new WALEdit();
         for (int j = 0; j < columnCount; ++j) {

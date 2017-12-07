@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -964,7 +964,7 @@ public class WALSplitter {
     }
 
     private void internify(Entry entry) {
-      WALKey k = entry.getKey();
+      WALKeyImpl k = entry.getKey();
       k.internTableName(this.tableName);
       k.internEncodedRegionName(this.encodedRegionName);
     }
@@ -1685,7 +1685,7 @@ public class WALSplitter {
     List<MutationReplay> mutations = new ArrayList<>();
     Cell previousCell = null;
     Mutation m = null;
-    WALKey key = null;
+    WALKeyImpl key = null;
     WALEdit val = null;
     if (logEntry != null) val = new WALEdit();
 
@@ -1733,7 +1733,7 @@ public class WALSplitter {
       for (HBaseProtos.UUID uuid : entry.getKey().getClusterIdsList()) {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }
-      key = new WALKey(walKeyProto.getEncodedRegionName().toByteArray(), TableName.valueOf(
+      key = new WALKeyImpl(walKeyProto.getEncodedRegionName().toByteArray(), TableName.valueOf(
               walKeyProto.getTableName().toByteArray()), replaySeqId, walKeyProto.getWriteTime(),
               clusterIds, walKeyProto.getNonceGroup(), walKeyProto.getNonce(), null);
       logEntry.setFirst(key);

@@ -98,7 +98,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.junit.After;
@@ -801,14 +801,14 @@ public abstract class AbstractTestWALReplay {
     long now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
       now, rowName));
-    wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
+    wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
         true);
 
     // Delete the c family to verify deletes make it over.
     edit = new WALEdit();
     now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now, KeyValue.Type.DeleteFamily));
-    wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
+    wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
         true);
 
     // Sync.
@@ -1140,9 +1140,9 @@ public abstract class AbstractTestWALReplay {
     }
   }
 
-  private WALKey createWALKey(final TableName tableName, final HRegionInfo hri,
+  private WALKeyImpl createWALKey(final TableName tableName, final HRegionInfo hri,
       final MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> scopes) {
-    return new WALKey(hri.getEncodedNameAsBytes(), tableName, 999, mvcc, scopes);
+    return new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, 999, mvcc, scopes);
   }
 
   private WALEdit createWALEdit(final byte[] rowName, final byte[] family, EnvironmentEdge ee,
