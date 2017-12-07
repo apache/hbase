@@ -74,7 +74,7 @@ public class StorageClusterStatusResource extends ResourceBase {
         EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS));
       StorageClusterStatusModel model = new StorageClusterStatusModel();
       model.setRegions(status.getRegionsCount());
-      model.setRequests(status.getRequestsCount());
+      model.setRequests(status.getRequestCount());
       model.setAverageLoad(status.getAverageLoad());
       for (ServerName info: status.getServers()) {
         ServerLoad load = status.getLoad(info);

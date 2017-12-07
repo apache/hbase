@@ -630,7 +630,7 @@ public class StorageClusterStatusModel
    * @param requests the total number of requests per second handled by the
    * cluster
    */
-  public void setRequests(int requests) {
+  public void setRequests(long requests) {
     this.requests = requests;
   }
 

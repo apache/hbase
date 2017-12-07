@@ -193,15 +193,21 @@ public class ClusterStatus {
 
   /**
    * @return the number of requests since last report
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             Use {@link #getRequestCount()} instead.
    */
+  @Deprecated
   public int getRequestsCount() {
-    int count = 0;
-    if (liveServers != null && !liveServers.isEmpty()) {
-      for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-        count += e.getValue().getNumberOfRequests();
-      }
+    return (int) getRequestCount();
+  }
+
+  public long getRequestCount() {
+    if (liveServers == null) {
+      return 0L;
     }
-    return count;
+    return liveServers.values().stream()
+            .mapToLong(ServerLoad::getNumberOfRequests)
+            .sum();
   }
 
   /**
@@ -375,7 +381,7 @@ public class ClusterStatus {
     }
 
     sb.append("\nAverage load: " + getAverageLoad());
-    sb.append("\nNumber of requests: " + getRequestsCount());
+    sb.append("\nNumber of requests: " + getRequestCount());
     sb.append("\nNumber of regions: " + getRegionsCount());
 
     int ritSize = (intransition != null) ? intransition.size() : 0;
