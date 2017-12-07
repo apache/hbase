@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A RetryingCallable for Master RPC operations.
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * it has to deal with Coprocessor Endpoints.
  * @param <V> return type
  */
+@InterfaceAudience.Private
 abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   protected final ClusterConnection connection;
   protected MasterKeepAliveConnection master;
