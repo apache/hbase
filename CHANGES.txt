@@ -451,6 +451,8 @@ Release Notes - HBase - Version 1.4.0 12/18/2017
     * [HBASE-19440] - Not able to enable balancer with RSGroups once disabled
     * [HBASE-19442] - Backport HBASE-19065 to branch-1 (HRegion#bulkLoadHFiles() should wait for concurrent Region#flush() to finish).
     * [HBASE-19445] - PerformanceEvaluation NPE processing split policy option
+    * [HBASE-19446] - Misspelled 'default' in SimpleRpcScheduler
+    * [HBASE-19447] - INFO level logging of GetClusterStatus from HMaster is too chatty
 
 ** Improvement
     * [HBASE-11013] - Clone Snapshots on Secure Cluster Should provide option to apply Retained User Permissions
