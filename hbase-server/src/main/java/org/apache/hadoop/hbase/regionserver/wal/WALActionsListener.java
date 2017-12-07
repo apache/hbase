@@ -74,13 +74,8 @@ public interface WALActionsListener {
 
   /**
   * Called before each write.
-  * @param info
-  * @param logKey
-  * @param logEdit
   */
-  default void visitLogEntryBeforeWrite(
-    RegionInfo info, WALKey logKey, WALEdit logEdit
-  ) {}
+  default void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {}
 
   /**
    * @param logKey

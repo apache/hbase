@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -113,7 +113,7 @@ public class TestBulkLoad {
                     familyName, storeFileNames)),
             anyBoolean())).thenAnswer(new Answer() {
               public Object answer(InvocationOnMock invocation) {
-                WALKey walKey = invocation.getArgument(1);
+                WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
                 if (mvcc != null) {
                   MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
@@ -138,7 +138,7 @@ public class TestBulkLoad {
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
               public Object answer(InvocationOnMock invocation) {
-                WALKey walKey = invocation.getArgument(1);
+                WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
                 if (mvcc != null) {
                   MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
@@ -157,7 +157,7 @@ public class TestBulkLoad {
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
               public Object answer(InvocationOnMock invocation) {
-                WALKey walKey = invocation.getArgument(1);
+                WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
                 if (mvcc != null) {
                   MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
@@ -177,7 +177,7 @@ public class TestBulkLoad {
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
               public Object answer(InvocationOnMock invocation) {
-                WALKey walKey = invocation.getArgument(1);
+                WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
                 if (mvcc != null) {
                   MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();

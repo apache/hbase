@@ -82,7 +82,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -277,7 +277,7 @@ public abstract class TestReplicationSourceManager {
       LOG.info(i);
       final long txid = wal.append(
           hri,
-          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+          new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
           edit,
           true);
       wal.sync(txid);
@@ -292,9 +292,8 @@ public abstract class TestReplicationSourceManager {
 
     for (int i = 0; i < 3; i++) {
       wal.append(hri,
-          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
-          edit,
-          true);
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+          edit, true);
     }
     wal.sync();
 
@@ -310,7 +309,7 @@ public abstract class TestReplicationSourceManager {
         "1", 0, false, false);
 
     wal.append(hri,
-        new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),
         edit,
         true);
     wal.sync();
@@ -428,7 +427,7 @@ public abstract class TestReplicationSourceManager {
     // 1. Get the bulk load wal edit event
     WALEdit logEdit = getBulkLoadWALEdit(scope);
     // 2. Create wal key
-    WALKey logKey = new WALKey(scope);
+    WALKeyImpl logKey = new WALKeyImpl(scope);
 
     // 3. Get the scopes for the key
     Replication.scopeWALEdits(logKey, logEdit, conf, manager);
@@ -444,7 +443,7 @@ public abstract class TestReplicationSourceManager {
     NavigableMap<byte[], Integer> scope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     WALEdit logEdit = getBulkLoadWALEdit(scope);
     // 2. Create wal key
-    WALKey logKey = new WALKey(scope);
+    WALKeyImpl logKey = new WALKeyImpl(scope);
     // 3. Enable bulk load hfile replication
     Configuration bulkLoadConf = HBaseConfiguration.create(conf);
     bulkLoadConf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);

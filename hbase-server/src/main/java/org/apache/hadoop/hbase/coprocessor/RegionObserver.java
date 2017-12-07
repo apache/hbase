@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -912,26 +912,16 @@ public interface RegionObserver {
   /**
    * Called before a {@link WALEdit}
    * replayed for this region.
-   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
-   * damage.
    * @param ctx the environment provided by the region server
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
-   * with something that doesn't expose IntefaceAudience.Private classes.
    */
-  @Deprecated
   default void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   /**
    * Called after a {@link WALEdit}
    * replayed for this region.
-   * Do not amend the WALKey. It is InterfaceAudience.Private. Changing the WALKey will cause
-   * damage.
    * @param ctx the environment provided by the region server
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
-   * with something that doesn't expose IntefaceAudience.Private classes.
    */
-  @Deprecated
   default void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
     RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 

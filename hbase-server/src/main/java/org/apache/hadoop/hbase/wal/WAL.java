@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -116,7 +116,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    * in it.
    */
-  long append(RegionInfo info, WALKey key, WALEdit edits, boolean inMemstore) throws IOException;
+  long append(RegionInfo info, WALKeyImpl key, WALEdit edits, boolean inMemstore) throws IOException;
 
   /**
    * updates the seuence number of a specific store.
@@ -230,10 +230,10 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    */
   class Entry {
     private final WALEdit edit;
-    private final WALKey key;
+    private final WALKeyImpl key;
 
     public Entry() {
-      this(new WALKey(), new WALEdit());
+      this(new WALKeyImpl(), new WALEdit());
     }
 
     /**
@@ -242,7 +242,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      * @param edit log's edit
      * @param key log's key
      */
-    public Entry(WALKey key, WALEdit edit) {
+    public Entry(WALKeyImpl key, WALEdit edit) {
       this.key = key;
       this.edit = edit;
     }
@@ -261,7 +261,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
      *
      * @return key
      */
-    public WALKey getKey() {
+    public WALKeyImpl getKey() {
       return key;
     }
 

@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -162,7 +162,7 @@ public class TestLogRollingNoCluster {
           for(byte[] fam : htd.getFamiliesKeys()) {
             scopes.put(fam, 0);
           }
-          final long txid = wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(),
+          final long txid = wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
               TableName.META_TABLE_NAME, now, mvcc, scopes), edit, true);
           Threads.sleep(ThreadLocalRandom.current().nextInt(5));
           wal.sync(txid);

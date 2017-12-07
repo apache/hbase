@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -441,7 +442,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification = "Will never be null")
   @Override
-  public long append(final RegionInfo hri, final WALKey key, final WALEdit edits,
+  public long append(final RegionInfo hri, final WALKeyImpl key, final WALEdit edits,
       final boolean inMemstore) throws IOException {
     return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
       disruptor.getRingBuffer());
@@ -469,17 +470,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     private final BlockingQueue<SyncFuture> syncFutures;
     private volatile SyncFuture takeSyncFuture = null;
 
-    /**
-     * UPDATE!
-     * @param syncs the batch of calls to sync that arrived as this thread was starting; when done,
-     *          we will put the result of the actual hdfs sync call as the result.
-     * @param sequence The sequence number on the ring buffer when this thread was set running. If
-     *          this actual writer sync completes then all appends up this point have been
-     *          flushed/synced/pushed to datanodes. If we fail, then the passed in
-     *          <code>syncs</code> futures will return the exception to their clients; some of the
-     *          edits may have made it out to data nodes but we will report all that were part of
-     *          this session as failed.
-     */
     SyncRunner(final String name, final int maxHandlersCount) {
       super(name);
       // LinkedBlockingQueue because of

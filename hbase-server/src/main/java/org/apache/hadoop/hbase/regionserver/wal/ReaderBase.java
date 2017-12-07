@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
@@ -92,7 +92,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
   public Entry next(Entry reuse) throws IOException {
     Entry e = reuse;
     if (e == null) {
-      e = new Entry(new WALKey(), new WALEdit());
+      e = new Entry();
     }
     if (compressionContext != null) {
       e.setCompressionContext(compressionContext);

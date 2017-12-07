@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -111,7 +112,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
             newEdit.add(cell);
           }
         }
-        newEntries.add(new Entry(entry.getKey(), newEdit));
+        newEntries.add(new Entry(((WALKeyImpl)entry.getKey()), newEdit));
       }
       replicateContext.setEntries(newEntries);
       return delegator.replicate(replicateContext);

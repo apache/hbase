@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -412,7 +412,7 @@ public class TestRegionReplicaReplicationEndpoint {
     byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
 
     Entry entry = new Entry(
-      new WALKey(encodedRegionName, toBeDisabledTable, 1),
+      new WALKeyImpl(encodedRegionName, toBeDisabledTable, 1),
       new WALEdit());
 
     HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table

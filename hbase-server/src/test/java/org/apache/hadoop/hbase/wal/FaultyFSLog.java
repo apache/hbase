@@ -58,7 +58,7 @@ public class FaultyFSLog extends FSHLog {
   }
 
   @Override
-  public long append(RegionInfo info, WALKey key,
+  public long append(RegionInfo info, WALKeyImpl key,
       WALEdit edits, boolean inMemstore) throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");

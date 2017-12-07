@@ -183,7 +183,7 @@ public class TestWALMethods {
 
     WALEdit edit = new WALEdit();
     edit.add(KeyValueTestUtil.create("row", "fam", "qual", 1234, "val"));
-    WALKey key = new WALKey(TEST_REGION, TEST_TABLE, seq, now,
+    WALKeyImpl key = new WALKeyImpl(TEST_REGION, TEST_TABLE, seq, now,
         HConstants.DEFAULT_CLUSTER_ID);
     WAL.Entry entry = new WAL.Entry(key, edit);
     return entry;

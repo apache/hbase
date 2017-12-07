@@ -139,11 +139,6 @@ public class WALCoprocessorHost
     }
   }
 
-  /**
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
-   * with something that doesn't expose IntefaceAudience.Private classes.
-   */
-  @Deprecated
   public void preWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     // Not bypassable.
@@ -157,11 +152,7 @@ public class WALCoprocessorHost
       }
     });
   }
-  /**
-   * @deprecated Since hbase-2.0.0. No replacement. To be removed in hbase-3.0.0 and replaced
-   * with something that doesn't expose IntefaceAudience.Private classes.
-   */
-  @Deprecated
+
   public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {

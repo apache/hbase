@@ -166,9 +166,9 @@ public class TestFSHLogProvider {
    * used by TestDefaultWALProviderWithHLogKey
    * @param scopes
    */
-  WALKey getWalKey(final byte[] info, final TableName tableName, final long timestamp,
+  WALKeyImpl getWalKey(final byte[] info, final TableName tableName, final long timestamp,
       NavigableMap<byte[], Integer> scopes) {
-    return new WALKey(info, tableName, timestamp, mvcc, scopes);
+    return new WALKeyImpl(info, tableName, timestamp, mvcc, scopes);
   }
 
   /**
