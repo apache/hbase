@@ -176,7 +176,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     int i = 1;
     try {
       for (Segment segment : getSegments()) {

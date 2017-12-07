@@ -85,7 +85,7 @@ public class SecureTestUtil {
     // the superuser list or security won't function properly. We expect the
     // HBase service account(s) to have superuser privilege.
     String currentUser = User.getCurrent().getName();
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("admin,");
     sb.append(currentUser);
     // Assumes we won't ever have a minicluster with more than 5 slaves

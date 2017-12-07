@@ -287,7 +287,7 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   private String printRegions(List<RegionInfo> regions) {
-    StringBuffer strBuf = new StringBuffer();
+    StringBuilder strBuf = new StringBuilder();
     for (RegionInfo r : regions) {
       strBuf.append(" ____ " + r.toString());
     }

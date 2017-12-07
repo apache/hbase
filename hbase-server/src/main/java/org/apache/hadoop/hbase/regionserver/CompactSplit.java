@@ -166,7 +166,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   }
 
   public String dumpQueue() {
-    StringBuffer queueLists = new StringBuffer();
+    StringBuilder queueLists = new StringBuilder();
     queueLists.append("Compaction/Split Queue dump:\n");
     queueLists.append("  LargeCompation Queue:\n");
     BlockingQueue<Runnable> lq = longCompactions.getQueue();

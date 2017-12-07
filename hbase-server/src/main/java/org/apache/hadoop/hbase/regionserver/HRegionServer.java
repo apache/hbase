@@ -1753,7 +1753,7 @@ public class HRegionServer extends HasThread implements
 
     @Override
     protected void chore() {
-      final StringBuffer whyFlush = new StringBuffer();
+      final StringBuilder whyFlush = new StringBuilder();
       for (HRegion r : this.server.onlineRegions.values()) {
         if (r == null) continue;
         if (r.shouldFlush(whyFlush)) {
