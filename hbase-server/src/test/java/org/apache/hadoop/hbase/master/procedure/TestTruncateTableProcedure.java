@@ -43,6 +43,8 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
 @Category(MediumTests.class)
 public class TestTruncateTableProcedure {
   private static final Log LOG = LogFactory.getLog(TestTruncateTableProcedure.class);
@@ -240,4 +242,52 @@ public class TestTruncateTableProcedure {
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
+
+  @Test(timeout = 60000)
+  public void testTruncateWithPreserveAfterSplit() throws Exception {
+    final String[] families = new String[] { "f1", "f2" };
+    final byte[][] splitKeys =
+        new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+    TableName tableName = TableName.valueOf("testTruncateWithPreserveAfterSplit");
+    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
+    splitAndTruncate(families, splitKeys, tableName, regions);
+  }
+
+  @Test(timeout = 60000)
+  public void testTruncatePreserveWithReplicaRegionAfterSplit() throws Exception {
+    final String[] families = new String[] { "f1", "f2" };
+    final byte[][] splitKeys =
+        new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+    TableName tableName = TableName.valueOf("testTruncateWithPreserveAfterSplit");
+    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, families);
+    htd.setRegionReplication(3);
+    HRegionInfo[] regions =
+        MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(), htd, splitKeys);
+    splitAndTruncate(families, splitKeys, tableName, regions);
+  }
+
+  private void splitAndTruncate(final String[] families, final byte[][] splitKeys,
+      TableName tableName, HRegionInfo[] regions) throws IOException, InterruptedException {
+    // load enough data so the table can split
+    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 5000, splitKeys,
+      families);
+    assertEquals(5000, UTIL.countRows(tableName));
+    UTIL.getHBaseAdmin().split(tableName);
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+    // wait until split really happens
+    while (UTIL.getHBaseAdmin().getTableRegions(tableName).size() <= regions.length) {
+      Thread.sleep(50);
+    }
+    // disable the table
+    UTIL.getHBaseAdmin().disableTable(tableName);
+    // truncate the table
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+  }
+
 }

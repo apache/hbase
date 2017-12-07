@@ -74,6 +74,11 @@ public class MasterProcedureTestingUtility {
   public static HRegionInfo[] createTable(final ProcedureExecutor<MasterProcedureEnv> procExec,
       final TableName tableName, final byte[][] splitKeys, String... family) throws IOException {
     HTableDescriptor htd = createHTD(tableName, family);
+    return createTable(procExec, htd, splitKeys);
+  }
+
+  public static HRegionInfo[] createTable(final ProcedureExecutor<MasterProcedureEnv> procExec,
+      HTableDescriptor htd, final byte[][] splitKeys) throws IOException {
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
