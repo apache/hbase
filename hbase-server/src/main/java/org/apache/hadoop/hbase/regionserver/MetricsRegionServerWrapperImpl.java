@@ -153,8 +153,8 @@ class MetricsRegionServerWrapperImpl
   private synchronized  void initBlockCache() {
     CacheConfig cacheConfig = this.regionServer.cacheConfig;
     if (cacheConfig != null) {
-      l1Stats = cacheConfig.getL1Stats();
-      l2Stats = cacheConfig.getL2Stats();
+      l1Stats = cacheConfig.getOnHeapCacheStats();
+      l2Stats = cacheConfig.getL2CacheStats();
       if (this.blockCache == null) {
         this.blockCache = cacheConfig.getBlockCache();
       }

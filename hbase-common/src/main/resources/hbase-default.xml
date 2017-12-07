@@ -901,13 +901,6 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.bucketcache.combinedcache.enabled</name>
-    <value>true</value>
-    <description>Whether or not the bucketcache is used in league with the LRU
-    on-heap block cache. In this mode, indices and blooms are kept in the LRU
-    blockcache and the data blocks are kept in the bucketcache.</description>
-  </property>
-  <property>
     <name>hbase.bucketcache.size</name>
     <value></value>
     <description>A float that EITHER represents a percentage of total heap memory

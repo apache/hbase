@@ -218,6 +218,9 @@ public class TableDescriptorBuilder {
   /**
    * Table descriptor for namespace table
    */
+  // TODO We used to set CacheDataInL1 for NS table. When we have BucketCache in file mode, now the
+  // NS data goes to File mode BC only. Test how that affect the system. If too much, we have to
+  // rethink about adding back the setCacheDataInL1 for NS table.
   public static final TableDescriptor NAMESPACE_TABLEDESC
     = TableDescriptorBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME)
                             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(NAMESPACE_FAMILY_INFO_BYTES)
@@ -226,9 +229,6 @@ public class TableDescriptorBuilder {
                               .setInMemory(true)
                               .setBlocksize(8 * 1024)
                               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-                              // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                              // e.g. if using CombinedBlockCache (BucketCache).
-                              .setCacheDataInL1(true)
                               .build())
                             .build();
   private final ModifyableTableDescriptor desc;
