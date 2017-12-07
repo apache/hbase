@@ -928,7 +928,7 @@ public class TestDefaultMemStore {
       p.add(KeyValueTestUtil.create("r", cf, "q", 100, "v"));
       region.put(p);
       edge.setCurrentTimeMillis(1234 + 100);
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       assertTrue(!region.shouldFlush(sb));
       edge.setCurrentTimeMillis(1234 + 10000);
       assertTrue(region.shouldFlush(sb) == expected);
@@ -966,7 +966,7 @@ public class TestDefaultMemStore {
             wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
     addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     assertTrue(meta.shouldFlush(sb) == false);
     edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
     assertTrue(meta.shouldFlush(sb) == true);

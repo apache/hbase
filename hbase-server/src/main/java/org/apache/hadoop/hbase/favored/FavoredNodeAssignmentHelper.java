@@ -621,7 +621,7 @@ public class FavoredNodeAssignmentHelper {
   }
 
   public static String getFavoredNodesAsString(List<ServerName> nodes) {
-    StringBuffer strBuf = new StringBuffer();
+    StringBuilder strBuf = new StringBuilder();
     int i = 0;
     for (ServerName node : nodes) {
       strBuf.append(node.getHostAndPort());

@@ -835,7 +835,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Get a string representation of all the sources' metrics
    */
   public String getStats() {
-    StringBuffer stats = new StringBuffer();
+    StringBuilder stats = new StringBuilder();
     for (ReplicationSourceInterface source : sources) {
       stats.append("Normal source for cluster " + source.getPeerId() + ": ");
       stats.append(source.getStats() + "\n");

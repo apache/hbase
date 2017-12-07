@@ -755,7 +755,7 @@ public class BucketCache implements BlockCache, HeapSize {
       freeInProgress = true;
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
-      StringBuffer msgBuffer = LOG.isDebugEnabled()? new StringBuffer(): null;
+      StringBuilder msgBuffer = LOG.isDebugEnabled()? new StringBuilder(): null;
       BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
       long[] bytesToFreeForBucket = new long[stats.length];
       for (int i = 0; i < stats.length; i++) {
