@@ -565,7 +565,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     errors.print("Average load: " + status.getAverageLoad());
-    errors.print("Number of requests: " + status.getRequestsCount());
+    errors.print("Number of requests: " + status.getRequestCount());
     errors.print("Number of regions: " + status.getRegionsCount());
 
     List<RegionState> rits = status.getRegionsInTransition();
