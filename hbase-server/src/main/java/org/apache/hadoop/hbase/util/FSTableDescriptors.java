@@ -145,6 +145,9 @@ public class FSTableDescriptors implements TableDescriptors {
 
   @VisibleForTesting
   public static TableDescriptorBuilder createMetaTableDescriptorBuilder(final Configuration conf) throws IOException {
+    // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
+    // the META table data goes to File mode BC only. Test how that affect the system. If too much,
+    // we have to rethink about adding back the setCacheDataInL1 for META table CFs.
     return TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -155,9 +158,6 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_BARRIER_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -168,9 +168,6 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_POSITION_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -181,9 +178,6 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.REPLICATION_META_FAMILY)
                     .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
@@ -194,9 +188,6 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                    .setCacheDataInL1(true)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
                     // Ten is arbitrary number.  Keep versions to help debugging.
@@ -206,9 +197,6 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                     .setBloomFilterType(BloomType.NONE)
-                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
-                    // e.g. if using CombinedBlockCache (BucketCache).
-                    .setCacheDataInL1(true)
                     .build())
             .addCoprocessor("org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
                     null, Coprocessor.PRIORITY_SYSTEM, null);

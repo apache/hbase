@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -186,7 +185,7 @@ public class TestCacheConfig {
     Cacheable c = new DataCacheEntry();
     // Do asserts on block counting.
     long initialBlockCount = bc.getBlockCount();
-    bc.cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
+    bc.cacheBlock(bck, c, cc.isInMemory());
     assertEquals(doubling? 2: 1, bc.getBlockCount() - initialBlockCount);
     bc.evictBlock(bck);
     assertEquals(initialBlockCount, bc.getBlockCount());
@@ -194,25 +193,12 @@ public class TestCacheConfig {
     // buffers do lazy allocation so sizes are off on first go around.
     if (sizing) {
       long originalSize = bc.getCurrentSize();
-      bc.cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
+      bc.cacheBlock(bck, c, cc.isInMemory());
       assertTrue(bc.getCurrentSize() > originalSize);
       bc.evictBlock(bck);
       long size = bc.getCurrentSize();
       assertEquals(originalSize, size);
     }
-  }
-
-  /**
-   * @param cc
-   * @param filename
-   * @return
-   */
-  private long cacheDataBlock(final CacheConfig cc, final String filename) {
-    BlockCacheKey bck = new BlockCacheKey(filename, 0);
-    Cacheable c = new DataCacheEntry();
-    // Do asserts on block counting.
-    cc.getBlockCache().cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
-    return cc.getBlockCache().getBlockCount();
   }
 
   @Test
@@ -324,7 +310,7 @@ public class TestCacheConfig {
     BlockCache [] bcs = cbc.getBlockCaches();
     assertTrue(bcs[0] instanceof LruBlockCache);
     LruBlockCache lbc = (LruBlockCache)bcs[0];
-    assertEquals(MemorySizeUtil.getLruCacheSize(this.conf), lbc.getMaxSize());
+    assertEquals(MemorySizeUtil.getOnHeapCacheSize(this.conf), lbc.getMaxSize());
     assertTrue(bcs[1] instanceof BucketCache);
     BucketCache bc = (BucketCache)bcs[1];
     // getMaxSize comes back in bytes but we specified size in MB
@@ -342,19 +328,19 @@ public class TestCacheConfig {
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long lruExpectedSize = MemorySizeUtil.getLruCacheSize(this.conf);
+    long lruExpectedSize = MemorySizeUtil.getOnHeapCacheSize(this.conf);
     final int bcSize = 100;
     long bcExpectedSize = 100 * 1024 * 1024; // MB.
     assertTrue(lruExpectedSize < bcExpectedSize);
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
-    this.conf.setBoolean(CacheConfig.BUCKET_CACHE_COMBINED_KEY, false);
     CacheConfig cc = new CacheConfig(this.conf);
     basicBlockCacheOps(cc, false, false);
-    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
+    assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
-    LruBlockCache lbc = (LruBlockCache)cc.getBlockCache();
+    CombinedBlockCache cbc = (CombinedBlockCache)cc.getBlockCache();
+    LruBlockCache lbc = cbc.onHeapCache;
     assertEquals(lruExpectedSize, lbc.getMaxSize());
-    BlockCache bc = lbc.getVictimHandler();
+    BlockCache bc = cbc.l2Cache;
     // getMaxSize comes back in bytes but we specified size in MB
     assertEquals(bcExpectedSize, ((BucketCache) bc).getMaxSize());
     // Test the L1+L2 deploy works as we'd expect with blocks evicted from L1 going to L2.
@@ -362,7 +348,7 @@ public class TestCacheConfig {
     long initialL2BlockCount = bc.getBlockCount();
     Cacheable c = new DataCacheEntry();
     BlockCacheKey bck = new BlockCacheKey("bck", 0);
-    lbc.cacheBlock(bck, c, false, false);
+    lbc.cacheBlock(bck, c, false);
     assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
     assertEquals(initialL2BlockCount, bc.getBlockCount());
     // Force evictions by putting in a block too big.
@@ -381,32 +367,6 @@ public class TestCacheConfig {
     // The eviction thread in lrublockcache needs to run.
     while (initialL1BlockCount != lbc.getBlockCount()) Threads.sleep(10);
     assertEquals(initialL1BlockCount, lbc.getBlockCount());
-    long count = bc.getBlockCount();
-    assertTrue(initialL2BlockCount + 1 <= count);
-  }
-
-  /**
-   * Test the cacheDataInL1 flag.  When set, data blocks should be cached in the l1 tier, up in
-   * LruBlockCache when using CombinedBlockCcahe.
-   */
-  @Test
-  public void testCacheDataInL1() {
-    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
-    CacheConfig cc = new CacheConfig(this.conf);
-    assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
-    CombinedBlockCache cbc = (CombinedBlockCache)cc.getBlockCache();
-    // Add a data block.  Should go into L2, into the Bucket Cache, not the LruBlockCache.
-    cacheDataBlock(cc, "1");
-    LruBlockCache lrubc = (LruBlockCache)cbc.getBlockCaches()[0];
-    assertDataBlockCount(lrubc, 0);
-    // Enable our test flag.
-    cc.setCacheDataInL1(true);
-    cacheDataBlock(cc, "2");
-    assertDataBlockCount(lrubc, 1);
-    cc.setCacheDataInL1(false);
-    cacheDataBlock(cc, "3");
-    assertDataBlockCount(lrubc, 1);
   }
 
   @Test
@@ -416,16 +376,9 @@ public class TestCacheConfig {
     c.set(CacheConfig.BUCKET_CACHE_BUCKETS_KEY, "256,512,1024,2048,4000,4096");
     c.setFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 1024);
     try {
-      CacheConfig.getL2(c);
+      CacheConfig.getBucketCache(c);
       fail("Should throw IllegalArgumentException when passing illegal value for bucket size");
     } catch (IllegalArgumentException e) {
     }
-  }
-
-  private void assertDataBlockCount(final LruBlockCache bc, final int expected) {
-    Map<BlockType, Integer> blocks = bc.getBlockTypeCountsForTest();
-    assertEquals(expected, blocks == null? 0:
-      blocks.get(BlockType.DATA) == null? 0:
-      blocks.get(BlockType.DATA).intValue());
   }
 }

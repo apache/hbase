@@ -1408,8 +1408,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
       // Cache the block
       if (cacheBlock) {
-        cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock,
-            cacheConf.isInMemory(), this.cacheConf.isCacheDataInL1());
+        cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock, cacheConf.isInMemory());
       }
 
       return metaBlock;
@@ -1495,7 +1494,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
           cacheConf.getBlockCache().cacheBlock(cacheKey,
             cacheConf.shouldCacheCompressed(category) ? hfileBlock : unpacked,
-            cacheConf.isInMemory(), this.cacheConf.isCacheDataInL1());
+            cacheConf.isInMemory());
         }
 
         if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {

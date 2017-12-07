@@ -1326,10 +1326,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         setBlockCacheEnabled(true).
         setBlocksize(8 * 1024).
         setBloomFilterType(BloomType.NONE).
-        setScope(HConstants.REPLICATION_SCOPE_LOCAL).
-        // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
-        // be the case if we are using CombinedBlockCache (Bucket Cache).
-        setCacheDataInL1(true).build();
+        setScope(HConstants.REPLICATION_SCOPE_LOCAL).build();
     TableDescriptor td =
         TableDescriptorBuilder.newBuilder(AccessControlLists.ACL_TABLE_NAME).
         addColumnFamily(cfd).build();

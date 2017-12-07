@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
@@ -109,14 +108,6 @@ public class CacheConfig {
   public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY =
       "hbase.bucketcache.persistent.path";
 
-  /**
-   * If the bucket cache is used in league with the lru on-heap block cache (meta blocks such
-   * as indices and blooms are kept in the lru blockcache and the data blocks in the
-   * bucket cache).
-   */
-  public static final String BUCKET_CACHE_COMBINED_KEY =
-      "hbase.bucketcache.combinedcache.enabled";
-
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
   public static final String BUCKET_CACHE_WRITER_QUEUE_KEY =
       "hbase.bucketcache.writer.queuelength";
@@ -129,7 +120,6 @@ public class CacheConfig {
   /**
    * Defaults for Bucket cache
    */
-  public static final boolean DEFAULT_BUCKET_CACHE_COMBINED = true;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_THREADS = 3;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_QUEUE = 64;
 
@@ -218,13 +208,6 @@ public class CacheConfig {
   /** Whether data blocks should be prefetched into the cache */
   private final boolean prefetchOnOpen;
 
-  /**
-   * If true and if more than one tier in this cache deploy -- e.g. CombinedBlockCache has an L1
-   * and an L2 tier -- then cache data blocks up in the L1 tier (The meta blocks are likely being
-   * cached up in L1 already.  At least this is the case if CombinedBlockCache).
-   */
-  private boolean cacheDataInL1;
-
   private final boolean dropBehindCompaction;
 
   /**
@@ -251,8 +234,6 @@ public class CacheConfig {
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
             DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
-        conf.getBoolean(ColumnFamilyDescriptorBuilder.CACHE_DATA_IN_L1,
-            ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
     LOG.info("Created cacheConfig for " + family.getNameAsString() + ": " + this);
@@ -276,8 +257,6 @@ public class CacheConfig {
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
-        conf.getBoolean(ColumnFamilyDescriptorBuilder.CACHE_DATA_IN_L1,
-          ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_IN_L1),
         conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
     LOG.info("Created cacheConfig: " + this);
@@ -305,7 +284,7 @@ public class CacheConfig {
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
       final boolean cacheDataCompressed, final boolean prefetchOnOpen,
-      final boolean cacheDataInL1, final boolean dropBehindCompaction) {
+      final boolean dropBehindCompaction) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
@@ -315,7 +294,6 @@ public class CacheConfig {
     this.evictOnClose = evictOnClose;
     this.cacheDataCompressed = cacheDataCompressed;
     this.prefetchOnOpen = prefetchOnOpen;
-    this.cacheDataInL1 = cacheDataInL1;
     this.dropBehindCompaction = dropBehindCompaction;
   }
 
@@ -328,12 +306,11 @@ public class CacheConfig {
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
         cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen,
-        cacheConf.cacheDataInL1, cacheConf.dropBehindCompaction);
+        cacheConf.dropBehindCompaction);
   }
 
   private CacheConfig() {
-    this(null, false, false, false, false, false,
-               false, false, false, false, false);
+    this(null, false, false, false, false, false, false, false, false, false);
   }
 
   /**
@@ -387,13 +364,6 @@ public class CacheConfig {
   }
 
   /**
-   * @return True if cache data blocks in L1 tier (if more than one tier in block cache deploy).
-   */
-  public boolean isCacheDataInL1() {
-    return isBlockCacheEnabled() && this.cacheDataInL1;
-  }
-
-  /**
    * @return true if data blocks should be written to the cache when an HFile is
    *         written, false if not
    */
@@ -409,16 +379,6 @@ public class CacheConfig {
   @VisibleForTesting
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
-  }
-
-  /**
-   * Only used for testing.
-   * @param cacheDataInL1 Whether to cache data blocks up in l1 (if a multi-tier cache
-   * implementation).
-   */
-  @VisibleForTesting
-  public void setCacheDataInL1(boolean cacheDataInL1) {
-    this.cacheDataInL1 = cacheDataInL1;
   }
 
   /**
@@ -547,8 +507,8 @@ public class CacheConfig {
   // Clear this if in tests you'd make more than one block cache instance.
   @VisibleForTesting
   static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
-  private static LruBlockCache GLOBAL_L1_CACHE_INSTANCE = null;
-  private static BlockCache GLOBAL_L2_CACHE_INSTANCE = null;
+  private static LruBlockCache ONHEAP_CACHE_INSTANCE = null;
+  private static BlockCache L2_CACHE_INSTANCE = null;// Can be BucketCache or External cache.
 
   /** Boolean whether we have disabled the block cache entirely. */
   @VisibleForTesting
@@ -558,20 +518,20 @@ public class CacheConfig {
    * @param c Configuration to use.
    * @return An L1 instance.  Currently an instance of LruBlockCache.
    */
-  public static LruBlockCache getL1(final Configuration c) {
-    return getL1Internal(c);
+  public static LruBlockCache getOnHeapCache(final Configuration c) {
+    return getOnHeapCacheInternal(c);
   }
 
-  public CacheStats getL1Stats() {
-    if (GLOBAL_L1_CACHE_INSTANCE != null) {
-      return GLOBAL_L1_CACHE_INSTANCE.getStats();
+  public CacheStats getOnHeapCacheStats() {
+    if (ONHEAP_CACHE_INSTANCE != null) {
+      return ONHEAP_CACHE_INSTANCE.getStats();
     }
     return null;
   }
 
-  public CacheStats getL2Stats() {
-    if (GLOBAL_L2_CACHE_INSTANCE != null) {
-      return GLOBAL_L2_CACHE_INSTANCE.getStats();
+  public CacheStats getL2CacheStats() {
+    if (L2_CACHE_INSTANCE != null) {
+      return L2_CACHE_INSTANCE.getStats();
     }
     return null;
   }
@@ -580,43 +540,26 @@ public class CacheConfig {
    * @param c Configuration to use.
    * @return An L1 instance.  Currently an instance of LruBlockCache.
    */
-  private synchronized static LruBlockCache getL1Internal(final Configuration c) {
-    if (GLOBAL_L1_CACHE_INSTANCE != null) return GLOBAL_L1_CACHE_INSTANCE;
-    final long lruCacheSize = MemorySizeUtil.getLruCacheSize(c);
-    if (lruCacheSize < 0) {
+  private synchronized static LruBlockCache getOnHeapCacheInternal(final Configuration c) {
+    if (ONHEAP_CACHE_INSTANCE != null) {
+      return ONHEAP_CACHE_INSTANCE;
+    }
+    final long cacheSize = MemorySizeUtil.getOnHeapCacheSize(c);
+    if (cacheSize < 0) {
       blockCacheDisabled = true;
     }
     if (blockCacheDisabled) return null;
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
-    LOG.info("Allocating LruBlockCache size=" +
-      StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
-    GLOBAL_L1_CACHE_INSTANCE = new LruBlockCache(lruCacheSize, blockSize, true, c);
-    return GLOBAL_L1_CACHE_INSTANCE;
-  }
-
-  /**
-   * @param c Configuration to use.
-   * @return Returns L2 block cache instance (for now it is BucketCache BlockCache all the time)
-   * or null if not supposed to be a L2.
-   */
-  @VisibleForTesting
-  static BlockCache getL2(final Configuration c) {
-    final boolean useExternal = c.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Trying to use " + (useExternal?" External":" Internal") + " l2 cache");
-    }
-
-    // If we want to use an external block cache then create that.
-    if (useExternal) {
-      GLOBAL_L2_CACHE_INSTANCE = getExternalBlockcache(c);
-    } else {
-      // otherwise use the bucket cache.
-      GLOBAL_L2_CACHE_INSTANCE = getBucketCache(c);
-    }
-    return GLOBAL_L2_CACHE_INSTANCE;
+    LOG.info("Allocating On heap LruBlockCache size=" +
+      StringUtils.byteDesc(cacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
+    ONHEAP_CACHE_INSTANCE = new LruBlockCache(cacheSize, blockSize, true, c);
+    return ONHEAP_CACHE_INSTANCE;
   }
 
   private static BlockCache getExternalBlockcache(Configuration c) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Trying to use External l2 cache");
+    }
     Class klass = null;
 
     // Get the class, from the config. s
@@ -642,7 +585,8 @@ public class CacheConfig {
 
   }
 
-  private static BlockCache getBucketCache(Configuration c) {
+  @VisibleForTesting
+  static BucketCache getBucketCache(Configuration c) {
     // Check for L2.  ioengine name must be non-null.
     String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) return null;
@@ -705,30 +649,25 @@ public class CacheConfig {
   public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
     if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
-    LruBlockCache l1 = getL1Internal(conf);
-    // blockCacheDisabled is set as a side-effect of getL1Internal(), so check it again after the call.
+    LruBlockCache onHeapCache = getOnHeapCacheInternal(conf);
+    // blockCacheDisabled is set as a side-effect of getL1Internal(), so check it again after the
+    // call.
     if (blockCacheDisabled) return null;
-    BlockCache l2 = getL2(conf);
-    if (l2 == null) {
-      GLOBAL_BLOCK_CACHE_INSTANCE = l1;
+    boolean useExternal = conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
+    if (useExternal) {
+      L2_CACHE_INSTANCE = getExternalBlockcache(conf);
+      GLOBAL_BLOCK_CACHE_INSTANCE = L2_CACHE_INSTANCE == null ? onHeapCache
+          : new InclusiveCombinedBlockCache(onHeapCache, L2_CACHE_INSTANCE);
     } else {
-      boolean useExternal = conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
-      boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
-        DEFAULT_BUCKET_CACHE_COMBINED);
-      if (useExternal) {
-        GLOBAL_BLOCK_CACHE_INSTANCE = new InclusiveCombinedBlockCache(l1, l2);
-      } else {
-        if (combinedWithLru) {
-          GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(l1, l2);
-        } else {
-          // L1 and L2 are not 'combined'.  They are connected via the LruBlockCache victimhandler
-          // mechanism.  It is a little ugly but works according to the following: when the
-          // background eviction thread runs, blocks evicted from L1 will go to L2 AND when we get
-          // a block from the L1 cache, if not in L1, we will search L2.
-          GLOBAL_BLOCK_CACHE_INSTANCE = l1;
-        }
+      // otherwise use the bucket cache.
+      L2_CACHE_INSTANCE = getBucketCache(conf);
+      if (!conf.getBoolean("hbase.bucketcache.combinedcache.enabled", true)) {
+        // Non combined mode is off from 2.0
+        LOG.warn(
+            "From HBase 2.0 onwards only combined mode of LRU cache and bucket cache is available");
       }
-      l1.setVictimCache(l2);
+      GLOBAL_BLOCK_CACHE_INSTANCE = L2_CACHE_INSTANCE == null ? onHeapCache
+          : new CombinedBlockCache(onHeapCache, L2_CACHE_INSTANCE);
     }
     return GLOBAL_BLOCK_CACHE_INSTANCE;
   }
@@ -736,8 +675,8 @@ public class CacheConfig {
   // Supposed to use only from tests. Some tests want to reinit the Global block cache instance
   @VisibleForTesting
   static synchronized void clearGlobalInstances() {
-    GLOBAL_L1_CACHE_INSTANCE = null;
-    GLOBAL_L2_CACHE_INSTANCE = null;
+    ONHEAP_CACHE_INSTANCE = null;
+    L2_CACHE_INSTANCE = null;
     GLOBAL_BLOCK_CACHE_INSTANCE = null;
   }
 }
