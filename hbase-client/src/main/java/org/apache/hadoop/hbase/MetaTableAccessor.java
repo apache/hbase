@@ -392,12 +392,27 @@ public class MetaTableAccessor {
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw,
-      Connection connection, TableName tableName, final boolean excludeOfflinedSplitParents)
-        throws IOException {
+  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw, Connection connection,
+      TableName tableName, final boolean excludeOfflinedSplitParents) throws IOException {
+    return getTableRegions(zkw, connection, tableName, excludeOfflinedSplitParents, false);
+  }
+
+  /**
+   * Gets all of the regions of the specified table.
+   * @param zkw zookeeper connection to access meta table
+   * @param connection connection we're using
+   * @param tableName table we're looking for
+   * @param excludeOfflinedSplitParents If true, do not include offlined split parents in the
+   *          return.
+   * @param excludeReplicaRegions If true, do not include replica regions in the result.
+   * @return Ordered list of {@link HRegionInfo}.
+   */
+  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw, Connection connection,
+      TableName tableName, final boolean excludeOfflinedSplitParents,
+      final boolean excludeReplicaRegions) throws IOException {
     List<Pair<HRegionInfo, ServerName>> result = null;
-      result = getTableRegionsAndLocations(zkw, connection, tableName,
-        excludeOfflinedSplitParents);
+    result = getTableRegionsAndLocations(zkw, connection, tableName, excludeOfflinedSplitParents,
+      excludeReplicaRegions);
     return getListOfHRegionInfos(result);
   }
 
@@ -478,7 +493,22 @@ public class MetaTableAccessor {
   public static List<Pair<HRegionInfo, ServerName>> getTableRegionsAndLocations(
       ZooKeeperWatcher zkw, Connection connection, final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
+    return getTableRegionsAndLocations(zkw, connection, tableName, excludeOfflinedSplitParents,
+      false);
+  }
 
+  /**
+   * @param zkw ZooKeeperWatcher instance we're using to get hbase:meta location
+   * @param connection connection we're using
+   * @param tableName table to work with
+   * @param excludeOfflinedSplitParents Exclude offline regions
+   * @param excludeReplicaRegions If true, do not include replica regions in the result.
+   * @return List of regioninfos and server addresses.
+   */
+  public static List<Pair<HRegionInfo, ServerName>> getTableRegionsAndLocations(
+      ZooKeeperWatcher zkw, Connection connection, final TableName tableName,
+      final boolean excludeOfflinedSplitParents, final boolean excludeReplicaRegions)
+          throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       // If meta, do a bit of special handling.
       ServerName serverName = new MetaTableLocator().getMetaRegionLocation(zkw);
@@ -514,6 +544,11 @@ public class MetaTableAccessor {
           }
           for (HRegionLocation loc : current.getRegionLocations()) {
             if (loc != null) {
+              // Exclude replica region from the result
+              if (excludeReplicaRegions
+                  && !RegionReplicaUtil.isDefaultReplica(loc.getRegionInfo())) {
+                continue;
+              }
               this.results.add(new Pair<HRegionInfo, ServerName>(
                 loc.getRegionInfo(), loc.getServerName()));
             }
