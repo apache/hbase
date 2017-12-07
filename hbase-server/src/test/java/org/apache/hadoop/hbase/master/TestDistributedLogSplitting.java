@@ -119,9 +119,14 @@ public class TestDistributedLogSplitting {
 
   }
 
+  @Rule
+  public TestName testName = new TestName();
+  TableName tableName;
+
   // Start a cluster with 2 masters and 6 regionservers
   static final int NUM_MASTERS = 2;
   static final int NUM_RS = 5;
+  static byte[] COLUMN_FAMILY = Bytes.toBytes("family");
 
   MiniHBaseCluster cluster;
   HMaster master;
@@ -174,6 +179,7 @@ public class TestDistributedLogSplitting {
   public void before() throws Exception {
     // refresh configuration
     conf = HBaseConfiguration.create(originalConf);
+    tableName = TableName.valueOf(testName.getMethodName());
   }
 
   @After
@@ -208,8 +214,7 @@ public class TestDistributedLogSplitting {
     Path rootdir = FSUtils.getRootDir(conf);
 
     int numRegions = 50;
-    Table t = installTable(new ZKWatcher(conf, "table-creation", null),
-        "table", "family", numRegions);
+    Table t = installTable(new ZKWatcher(conf, "table-creation", null), numRegions);
     try {
       TableName table = t.getName();
       List<RegionInfo> regions = null;
@@ -233,7 +238,7 @@ public class TestDistributedLogSplitting {
         }
       }
 
-      makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
+      makeWAL(hrs, regions, NUM_LOG_LINES, 100);
 
       slm.splitLogDistributed(logDir);
 
@@ -282,11 +287,11 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZKWatcher zkw = new ZKWatcher(conf, "table-creation", null);
-    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, NUM_REGIONS_TO_CREATE);
     try {
-      HRegionServer hrs = findRSToKill(false, "table");
+      HRegionServer hrs = findRSToKill(false);
       List<RegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-      makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
+      makeWAL(hrs, regions, NUM_LOG_LINES, 100);
 
       // abort master
       abortMaster(cluster);
@@ -345,16 +350,14 @@ public class TestDistributedLogSplitting {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
     final List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    HRegionServer hrs = findRSToKill(false, "table");
+    HRegionServer hrs = findRSToKill(false);
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
       AbstractFSWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
 
-    Table t = installTable(new ZKWatcher(conf, "table-creation", null),
-        "table", "family", 40);
+    Table t = installTable(new ZKWatcher(conf, "table-creation", null), 40);
     try {
-      makeWAL(hrs, ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()),
-          "table", "family", NUM_LOG_LINES, 100);
+      makeWAL(hrs, ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()), NUM_LOG_LINES, 100);
 
       new Thread() {
         @Override
@@ -405,46 +408,32 @@ public class TestDistributedLogSplitting {
 
     startCluster(NUM_RS); // NUM_RS=6.
 
-    final ZKWatcher zkw = new ZKWatcher(conf,
-        "distributed log splitting test", null);
+    final ZKWatcher zkw = new ZKWatcher(conf, "distributed log splitting test", null);
 
-    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table table = installTable(zkw, NUM_REGIONS_TO_CREATE);
     try {
-      populateDataInTable(NUM_ROWS_PER_REGION, "family");
-
+      populateDataInTable(NUM_ROWS_PER_REGION);
 
       List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
       assertEquals(NUM_RS, rsts.size());
-      rsts.get(0).getRegionServer().abort("testing");
-      rsts.get(1).getRegionServer().abort("testing");
-      rsts.get(2).getRegionServer().abort("testing");
+      cluster.killRegionServer(rsts.get(0).getRegionServer().getServerName());
+      cluster.killRegionServer(rsts.get(1).getRegionServer().getServerName());
+      cluster.killRegionServer(rsts.get(2).getRegionServer().getServerName());
 
       long start = EnvironmentEdgeManager.currentTime();
       while (cluster.getLiveRegionServerThreads().size() > (NUM_RS - 3)) {
         if (EnvironmentEdgeManager.currentTime() - start > 60000) {
-          assertTrue(false);
+          fail("Timed out waiting for server aborts.");
         }
         Thread.sleep(200);
       }
-
-      start = EnvironmentEdgeManager.currentTime();
-      while (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
-          < (NUM_REGIONS_TO_CREATE + 1)) {
-        if (EnvironmentEdgeManager.currentTime() - start > 60000) {
-          assertTrue("Timedout", false);
-        }
-        Thread.sleep(200);
-      }
-
-      assertEquals(NUM_REGIONS_TO_CREATE * NUM_ROWS_PER_REGION,
-          TEST_UTIL.countRows(ht));
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      assertEquals(NUM_REGIONS_TO_CREATE * NUM_ROWS_PER_REGION, TEST_UTIL.countRows(table));
     } finally {
-      if (ht != null) ht.close();
+      if (table != null) table.close();
       if (zkw != null) zkw.close();
     }
   }
-
-
 
   @Test(timeout=30000)
   public void testDelayedDeleteOnFailure() throws Exception {
@@ -519,7 +508,7 @@ public class TestDistributedLogSplitting {
     LOG.info("testReadWriteSeqIdFiles");
     startCluster(2);
     final ZKWatcher zkw = new ZKWatcher(conf, "table-creation", null);
-    Table ht = installTable(zkw, name.getMethodName(), "family", 10);
+    Table ht = installTable(zkw, 10);
     try {
       FileSystem fs = master.getMasterFileSystem().getFileSystem();
       Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf(name.getMethodName()));
@@ -549,19 +538,17 @@ public class TestDistributedLogSplitting {
     }
   }
 
-  Table installTable(ZKWatcher zkw, String tname, String fname, int nrs) throws Exception {
-    return installTable(zkw, tname, fname, nrs, 0);
+  Table installTable(ZKWatcher zkw, int nrs) throws Exception {
+    return installTable(zkw, nrs, 0);
   }
 
-  Table installTable(ZKWatcher zkw, String tname, String fname, int nrs,
-                     int existingRegions) throws Exception {
+  Table installTable(ZKWatcher zkw, int nrs, int existingRegions) throws Exception {
     // Create a table with regions
-    TableName table = TableName.valueOf(tname);
-    byte [] family = Bytes.toBytes(fname);
+    byte [] family = Bytes.toBytes("family");
     LOG.info("Creating table with " + nrs + " regions");
-    Table ht = TEST_UTIL.createMultiRegionTable(table, family, nrs);
+    Table table = TEST_UTIL.createMultiRegionTable(tableName, family, nrs);
     int numRegions = -1;
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(table)) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       numRegions = r.getStartKeys().length;
     }
     assertEquals(nrs, numRegions);
@@ -570,7 +557,7 @@ public class TestDistributedLogSplitting {
     // disable-enable cycle to get rid of table's dead regions left behind
     // by createMultiRegions
     LOG.debug("Disabling table\n");
-    TEST_UTIL.getAdmin().disableTable(table);
+    TEST_UTIL.getAdmin().disableTable(tableName);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
@@ -581,18 +568,16 @@ public class TestDistributedLogSplitting {
     }
     assertEquals(2 + existingRegions, regions.size());
     LOG.debug("Enabling table\n");
-    TEST_UTIL.getAdmin().enableTable(table);
+    TEST_UTIL.getAdmin().enableTable(tableName);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertEquals(numRegions + 2 + existingRegions, regions.size());
-    return ht;
+    return table;
   }
 
-  void populateDataInTable(int nrows, String fname) throws Exception {
-    byte [] family = Bytes.toBytes(fname);
-
+  void populateDataInTable(int nrows) throws Exception {
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     assertEquals(NUM_RS, rsts.size());
 
@@ -607,7 +592,7 @@ public class TestDistributedLogSplitting {
             " region = "+ hri.getRegionNameAsString());
         Region region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);
-        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
+        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), COLUMN_FAMILY);
       }
     }
 
@@ -628,22 +613,20 @@ public class TestDistributedLogSplitting {
             " region = "+ hri.getRegionNameAsString());
         Region region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);
-        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
+        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), COLUMN_FAMILY);
       }
     }
   }
 
-  public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, String tname, String fname,
-      int num_edits, int edit_size) throws IOException {
-    makeWAL(hrs, regions, tname, fname, num_edits, edit_size, true);
+  public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, int num_edits, int edit_size)
+      throws IOException {
+    makeWAL(hrs, regions, num_edits, edit_size, true);
   }
 
-  public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, String tname, String fname,
+  public void makeWAL(HRegionServer hrs, List<RegionInfo> regions,
       int num_edits, int edit_size, boolean cleanShutdown) throws IOException {
-    TableName fullTName = TableName.valueOf(tname);
     // remove root and meta region
     regions.remove(RegionInfoBuilder.FIRST_META_REGIONINFO);
-
 
     for(Iterator<RegionInfo> iter = regions.iterator(); iter.hasNext(); ) {
       RegionInfo regionInfo = iter.next();
@@ -651,14 +634,13 @@ public class TestDistributedLogSplitting {
         iter.remove();
       }
     }
-    HTableDescriptor htd = new HTableDescriptor(fullTName);
-    byte[] family = Bytes.toBytes(fname);
-    htd.addFamily(new HColumnDescriptor(family));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     byte[] value = new byte[edit_size];
 
     List<RegionInfo> hris = new ArrayList<>();
     for (RegionInfo region : regions) {
-      if (!region.getTable().getNameAsString().equalsIgnoreCase(tname)) {
+      if (region.getTable() != tableName) {
         continue;
       }
       hris.add(region);
@@ -685,9 +667,9 @@ public class TestDistributedLogSplitting {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, family, qualifier, System.currentTimeMillis(), value));
+        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, System.currentTimeMillis(), value));
         log.append(curRegionInfo,
-            new WALKey(curRegionInfo.getEncodedNameAsBytes(), fullTName,
+            new WALKey(curRegionInfo.getEncodedNameAsBytes(), tableName,
                 System.currentTimeMillis(), mvcc), e, true);
         if (0 == i % syncEvery) {
           log.sync();
@@ -781,11 +763,8 @@ public class TestDistributedLogSplitting {
   /**
    * Find a RS that has regions of a table.
    * @param hasMetaRegion when true, the returned RS has hbase:meta region as well
-   * @param tableName
-   * @return
-   * @throws Exception
    */
-  private HRegionServer findRSToKill(boolean hasMetaRegion, String tableName) throws Exception {
+  private HRegionServer findRSToKill(boolean hasMetaRegion) throws Exception {
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     List<RegionInfo> regions = null;
     HRegionServer hrs = null;
@@ -805,7 +784,7 @@ public class TestDistributedLogSplitting {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;
         }
-        if (tableName == null || region.getTable().getNameAsString().equals(tableName)) {
+        if (region.getTable() == tableName) {
           foundTableRegion = true;
         }
         if (foundTableRegion && (isCarryingMeta || !hasMetaRegion)) {
@@ -817,8 +796,7 @@ public class TestDistributedLogSplitting {
         if (!foundTableRegion) {
           final HRegionServer destRS = hrs;
           // the RS doesn't have regions of the specified table so we need move one to this RS
-          List<RegionInfo> tableRegions =
-              TEST_UTIL.getAdmin().getRegions(TableName.valueOf(tableName));
+          List<RegionInfo> tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
           final RegionInfo hri = tableRegions.get(0);
           TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(),
               Bytes.toBytes(destRS.getServerName().getServerName()));
