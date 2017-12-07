@@ -236,8 +236,8 @@ public class MapReduceCell extends ByteBufferCell implements ExtendedCell {
   }
 
   @Override
-  public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-    PrivateCellUtil.setTimestamp(cell, ts, tsOffset);
+  public void setTimestamp(byte[] ts) throws IOException {
+    PrivateCellUtil.setTimestamp(cell, ts);
   }
 
   @Override

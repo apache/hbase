@@ -405,7 +405,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
 
     if (result.size() < get.getMaxVersions()) {
       // Nothing to delete
-      PrivateCellUtil.updateLatestStamp(cell, byteNow, 0);
+      PrivateCellUtil.updateLatestStamp(cell, byteNow);
       return;
     }
     if (result.size() > get.getMaxVersions()) {

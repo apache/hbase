@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -30,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -42,8 +42,6 @@ import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility methods helpful slinging {@link Cell} instances. It has more powerful and
@@ -260,19 +258,19 @@ public final class PrivateCellUtil {
 
     @Override
     public void setTimestamp(long ts) throws IOException {
-      // The incoming cell is supposed to be SettableTimestamp type.
+      // The incoming cell is supposed to be ExtendedCell type.
       PrivateCellUtil.setTimestamp(cell, ts);
     }
 
     @Override
-    public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-      // The incoming cell is supposed to be SettableTimestamp type.
-      PrivateCellUtil.setTimestamp(cell, ts, tsOffset);
+    public void setTimestamp(byte[] ts) throws IOException {
+      // The incoming cell is supposed to be ExtendedCell type.
+      PrivateCellUtil.setTimestamp(cell, ts);
     }
 
     @Override
     public void setSequenceId(long seqId) throws IOException {
-      // The incoming cell is supposed to be SettableSequenceId type.
+      // The incoming cell is supposed to be ExtendedCell type.
       PrivateCellUtil.setSequenceId(cell, seqId);
     }
 
@@ -442,8 +440,8 @@ public final class PrivateCellUtil {
     }
 
     @Override
-    public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-      PrivateCellUtil.setTimestamp(this.cell, ts, tsOffset);
+    public void setTimestamp(byte[] ts) throws IOException {
+      PrivateCellUtil.setTimestamp(this.cell, ts);
     }
 
     @Override
@@ -1251,11 +1249,21 @@ public final class PrivateCellUtil {
    * These cells are used in reseeks/seeks to improve the read performance. They are not real cells
    * that are returned back to the clients
    */
-  private static abstract class EmptyCell implements Cell, SettableSequenceId {
+  private static abstract class EmptyCell implements ExtendedCell {
 
     @Override
     public void setSequenceId(long seqId) {
       // Fake cells don't need seqId, so leaving it as a noop.
+    }
+
+    @Override
+    public void setTimestamp(long ts) {
+      // Fake cells can't be changed timestamp, so leaving it as a noop.
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts) {
+      // Fake cells can't be changed timestamp, so leaving it as a noop.
     }
 
     @Override
@@ -1344,11 +1352,21 @@ public final class PrivateCellUtil {
    * that are returned back to the clients
    */
   private static abstract class EmptyByteBufferCell extends ByteBufferCell
-      implements SettableSequenceId {
+      implements ExtendedCell {
 
     @Override
     public void setSequenceId(long seqId) {
       // Fake cells don't need seqId, so leaving it as a noop.
+    }
+
+    @Override
+    public void setTimestamp(long ts) {
+      // Fake cells can't be changed timestamp, so leaving it as a noop.
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts) {
+      // Fake cells can't be changed timestamp, so leaving it as a noop.
     }
 
     @Override
@@ -1483,6 +1501,11 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowCell extends EmptyCell {
+    private static final long FIXED_HEAPSIZE =
+        ClassSize.OBJECT // object
+      + ClassSize.REFERENCE // row array
+      + Bytes.SIZEOF_INT // row offset
+      + Bytes.SIZEOF_SHORT;  // row length
     private final byte[] rowArray;
     private final int roffset;
     private final short rlength;
@@ -1491,6 +1514,13 @@ public final class PrivateCellUtil {
       this.rowArray = row;
       this.roffset = roffset;
       this.rlength = rlength;
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_HEAPSIZE)
+          // array overhead
+          + (rlength == 0 ? ClassSize.sizeOfByteArray(rlength) : rlength);
     }
 
     @Override
@@ -1520,6 +1550,11 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowByteBufferCell extends EmptyByteBufferCell {
+    private static final int FIXED_OVERHEAD =
+        ClassSize.OBJECT // object
+        + ClassSize.REFERENCE // row buffer
+        + Bytes.SIZEOF_INT // row offset
+        + Bytes.SIZEOF_SHORT; // row length
     private final ByteBuffer rowBuff;
     private final int roffset;
     private final short rlength;
@@ -1528,6 +1563,14 @@ public final class PrivateCellUtil {
       this.rowBuff = row;
       this.roffset = roffset;
       this.rlength = rlength;
+    }
+
+    @Override
+    public long heapSize() {
+      if (this.rowBuff.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + rlength);
+      }
+      return ClassSize.align(FIXED_OVERHEAD);
     }
 
     @Override
@@ -1557,6 +1600,11 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowByteBufferCell extends EmptyByteBufferCell {
+    private static final int FIXED_OVERHEAD =
+        ClassSize.OBJECT // object
+      + ClassSize.REFERENCE // rowBuff
+      + Bytes.SIZEOF_INT // roffset
+      + Bytes.SIZEOF_SHORT; // rlength
     private final ByteBuffer rowBuff;
     private final int roffset;
     private final short rlength;
@@ -1565,6 +1613,14 @@ public final class PrivateCellUtil {
       this.rowBuff = row;
       this.roffset = roffset;
       this.rlength = rlength;
+    }
+
+    @Override
+    public long heapSize() {
+      if (this.rowBuff.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + rlength);
+      }
+      return ClassSize.align(FIXED_OVERHEAD);
     }
 
     @Override
@@ -1594,6 +1650,11 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowColByteBufferCell extends FirstOnRowByteBufferCell {
+    private static final int FIXED_OVERHEAD =
+        FirstOnRowByteBufferCell.FIXED_OVERHEAD
+        + ClassSize.REFERENCE * 2 // family buffer and column buffer
+        + Bytes.SIZEOF_INT * 3 // famOffset, colOffset, colLength
+        + Bytes.SIZEOF_BYTE; // famLength
     private final ByteBuffer famBuff;
     private final int famOffset;
     private final byte famLength;
@@ -1611,6 +1672,19 @@ public final class PrivateCellUtil {
       this.colBuff = col;
       this.colOffset = colOffset;
       this.colLength = colLength;
+    }
+
+    @Override
+    public long heapSize() {
+      if (famBuff.hasArray() && colBuff.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + famLength + colLength);
+      } else if (famBuff.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + famLength);
+      } else if (colBuff.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + colLength);
+      } else {
+        return ClassSize.align(FIXED_OVERHEAD);
+      }
     }
 
     @Override
@@ -1645,6 +1719,11 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowColCell extends FirstOnRowCell {
+    private static final long FIXED_HEAPSIZE =
+        FirstOnRowCell.FIXED_HEAPSIZE
+      + Bytes.SIZEOF_BYTE // flength
+      + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
+      + ClassSize.REFERENCE * 2; // fArray, qArray
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -1661,6 +1740,14 @@ public final class PrivateCellUtil {
       this.qArray = qArray;
       this.qoffset = qoffset;
       this.qlength = qlength;
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_HEAPSIZE)
+          // array overhead
+          + (flength == 0 ? ClassSize.sizeOfByteArray(flength) : flength)
+          + (qlength == 0 ? ClassSize.sizeOfByteArray(qlength) : qlength);
     }
 
     @Override
@@ -1695,7 +1782,9 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowColTSCell extends FirstOnRowColCell {
-
+    private static final long FIXED_HEAPSIZE =
+        FirstOnRowColCell.FIXED_HEAPSIZE
+            + Bytes.SIZEOF_LONG; // ts
     private long ts;
 
     public FirstOnRowColTSCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
@@ -1708,10 +1797,17 @@ public final class PrivateCellUtil {
     public long getTimestamp() {
       return this.ts;
     }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_HEAPSIZE);
+    }
   }
 
   private static class FirstOnRowColTSByteBufferCell extends FirstOnRowColByteBufferCell {
-
+    private static final int FIXED_OVERHEAD =
+        FirstOnRowColByteBufferCell.FIXED_OVERHEAD
+            + Bytes.SIZEOF_LONG; // ts
     private long ts;
 
     public FirstOnRowColTSByteBufferCell(ByteBuffer rBuffer, int roffset, short rlength,
@@ -1725,9 +1821,19 @@ public final class PrivateCellUtil {
     public long getTimestamp() {
       return this.ts;
     }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_OVERHEAD + super.heapSize());
+    }
   }
 
   private static class LastOnRowCell extends EmptyCell {
+    private static final long FIXED_OVERHEAD =
+        ClassSize.OBJECT // object
+      + ClassSize.REFERENCE // row array
+      + Bytes.SIZEOF_INT // row offset
+      + Bytes.SIZEOF_SHORT; // row length
     private final byte[] rowArray;
     private final int roffset;
     private final short rlength;
@@ -1736,6 +1842,13 @@ public final class PrivateCellUtil {
       this.rowArray = row;
       this.roffset = roffset;
       this.rlength = rlength;
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_OVERHEAD)
+          // array overhead
+          + (rlength == 0 ? ClassSize.sizeOfByteArray(rlength) : rlength);
     }
 
     @Override
@@ -1765,6 +1878,10 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowColCell extends LastOnRowCell {
+    private static final long FIXED_OVERHEAD = LastOnRowCell.FIXED_OVERHEAD
+        + ClassSize.REFERENCE * 2 // fArray and qArray
+        + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
+        + Bytes.SIZEOF_BYTE; // flength
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -1781,6 +1898,14 @@ public final class PrivateCellUtil {
       this.qArray = qArray;
       this.qoffset = qoffset;
       this.qlength = qlength;
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_OVERHEAD)
+          // array overhead
+          + (flength == 0 ? ClassSize.sizeOfByteArray(flength) : flength)
+          + (qlength == 0 ? ClassSize.sizeOfByteArray(qlength) : qlength);
     }
 
     @Override
@@ -1815,6 +1940,11 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowColByteBufferCell extends LastOnRowByteBufferCell {
+    private static final int FIXED_OVERHEAD =
+        LastOnRowByteBufferCell.FIXED_OVERHEAD
+            + ClassSize.REFERENCE * 2 // fBuffer and qBuffer
+            + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
+            + Bytes.SIZEOF_BYTE; // flength
     private final ByteBuffer fBuffer;
     private final int foffset;
     private final byte flength;
@@ -1832,6 +1962,19 @@ public final class PrivateCellUtil {
       this.qBuffer = qBuffer;
       this.qoffset = qoffset;
       this.qlength = qlength;
+    }
+
+    @Override
+    public long heapSize() {
+      if (fBuffer.hasArray() && qBuffer.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + flength + qlength);
+      } else if (fBuffer.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + flength);
+      } else if (qBuffer.hasArray()) {
+        return ClassSize.align(FIXED_OVERHEAD + qlength);
+      } else {
+        return ClassSize.align(FIXED_OVERHEAD);
+      }
     }
 
     @Override
@@ -1866,12 +2009,26 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowDeleteFamilyCell extends EmptyCell {
+    private static final int FIXED_OVERHEAD =
+        ClassSize.OBJECT // object
+      + ClassSize.REFERENCE * 2 // fBuffer and qBuffer
+      + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
+      + Bytes.SIZEOF_BYTE; // flength
     private final byte[] row;
     private final byte[] fam;
 
     public FirstOnRowDeleteFamilyCell(byte[] row, byte[] fam) {
       this.row = row;
       this.fam = fam;
+    }
+
+    @Override
+    public long heapSize() {
+      return ClassSize.align(FIXED_OVERHEAD)
+        // array overhead
+        + (getRowLength() == 0 ? ClassSize.sizeOfByteArray(getRowLength()) : getRowLength())
+        + (getFamilyLength() == 0 ?
+          ClassSize.sizeOfByteArray(getFamilyLength()) : getFamilyLength());
     }
 
     @Override
@@ -2035,14 +2192,14 @@ public final class PrivateCellUtil {
    * sequenceid is an internal implementation detail not for general public use.
    * @param cell
    * @param seqId
-   * @throws IOException when the passed cell is not of type {@link SettableSequenceId}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static void setSequenceId(Cell cell, long seqId) throws IOException {
-    if (cell instanceof SettableSequenceId) {
-      ((SettableSequenceId) cell).setSequenceId(seqId);
+    if (cell instanceof ExtendedCell) {
+      ((ExtendedCell) cell).setSequenceId(seqId);
     } else {
       throw new IOException(new UnsupportedOperationException(
-          "Cell is not of type " + SettableSequenceId.class.getName()));
+          "Cell is not of type " + ExtendedCell.class.getName()));
     }
   }
 
@@ -2050,14 +2207,14 @@ public final class PrivateCellUtil {
    * Sets the given timestamp to the cell.
    * @param cell
    * @param ts
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static void setTimestamp(Cell cell, long ts) throws IOException {
-    if (cell instanceof SettableTimestamp) {
-      ((SettableTimestamp) cell).setTimestamp(ts);
+    if (cell instanceof ExtendedCell) {
+      ((ExtendedCell) cell).setTimestamp(ts);
     } else {
       throw new IOException(new UnsupportedOperationException(
-          "Cell is not of type " + SettableTimestamp.class.getName()));
+          "Cell is not of type " + ExtendedCell.class.getName()));
     }
   }
 
@@ -2065,15 +2222,14 @@ public final class PrivateCellUtil {
    * Sets the given timestamp to the cell.
    * @param cell
    * @param ts buffer containing the timestamp value
-   * @param tsOffset offset to the new timestamp
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
-  public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
-    if (cell instanceof SettableTimestamp) {
-      ((SettableTimestamp) cell).setTimestamp(ts, tsOffset);
+  public static void setTimestamp(Cell cell, byte[] ts) throws IOException {
+    if (cell instanceof ExtendedCell) {
+      ((ExtendedCell) cell).setTimestamp(ts);
     } else {
       throw new IOException(new UnsupportedOperationException(
-          "Cell is not of type " + SettableTimestamp.class.getName()));
+          "Cell is not of type " + ExtendedCell.class.getName()));
     }
   }
 
@@ -2083,7 +2239,7 @@ public final class PrivateCellUtil {
    * @param cell
    * @param ts
    * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static boolean updateLatestStamp(Cell cell, long ts) throws IOException {
     if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
@@ -2098,13 +2254,12 @@ public final class PrivateCellUtil {
    * {@link HConstants#LATEST_TIMESTAMP}.
    * @param cell
    * @param ts buffer containing the timestamp value
-   * @param tsOffset offset to the new timestamp
    * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
-  public static boolean updateLatestStamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
+  public static boolean updateLatestStamp(Cell cell, byte[] ts) throws IOException {
     if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
-      setTimestamp(cell, ts, tsOffset);
+      setTimestamp(cell, ts);
       return true;
     }
     return false;
@@ -2517,7 +2672,7 @@ public final class PrivateCellUtil {
         // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
         Bytes.SIZEOF_INT;
   }
-  
+
   /**
    * @param cell
    * @return Sum of the lengths of all the elements in a Cell; does not count in any infrastructure

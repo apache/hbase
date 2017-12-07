@@ -296,8 +296,8 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
   }
 
   @Override
-  public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-    ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, tsOffset,
+  public void setTimestamp(byte[] ts) throws IOException {
+    ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, 0,
         Bytes.SIZEOF_LONG);
   }
 

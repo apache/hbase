@@ -1445,8 +1445,8 @@ public class KeyValue implements ExtendedCell {
   }
 
   @Override
-  public void setTimestamp(byte[] ts, int tsOffset) {
-    Bytes.putBytes(this.bytes, this.getTimestampOffset(), ts, tsOffset, Bytes.SIZEOF_LONG);
+  public void setTimestamp(byte[] ts) {
+    Bytes.putBytes(this.bytes, this.getTimestampOffset(), ts, 0, Bytes.SIZEOF_LONG);
   }
 
   //---------------------------------------------------------------------------

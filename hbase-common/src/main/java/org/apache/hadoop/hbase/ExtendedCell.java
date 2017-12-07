@@ -20,21 +20,18 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Extension to {@link Cell} with server side required functions. Server side Cell implementations
  * must implement this.
- * @see SettableSequenceId
- * @see SettableTimestamp
  */
 @InterfaceAudience.Private
-public interface ExtendedCell extends RawCell, SettableSequenceId, SettableTimestamp, HeapSize,
-    Cloneable {
+public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
 
-  public static int CELL_NOT_BASED_ON_CHUNK = -1;
+  int CELL_NOT_BASED_ON_CHUNK = -1;
   /**
    * Write this cell to an OutputStream in a {@link KeyValue} format.
    * <br> KeyValue format <br>
@@ -48,7 +45,29 @@ public interface ExtendedCell extends RawCell, SettableSequenceId, SettableTimes
    * @throws IOException
    */
   // TODO remove the boolean param once HBASE-16706 is done.
-  int write(OutputStream out, boolean withTags) throws IOException;
+  default int write(OutputStream out, boolean withTags) throws IOException {
+    // Key length and then value length
+    ByteBufferUtils.putInt(out, KeyValueUtil.keyLength(this));
+    ByteBufferUtils.putInt(out, getValueLength());
+
+    // Key
+    PrivateCellUtil.writeFlatKey(this, out);
+
+    // Value
+    out.write(getValueArray());
+
+    // Tags length and tags byte array
+    if (withTags && getTagsLength() > 0) {
+      // Tags length
+      out.write((byte)(0xff & (getTagsLength() >> 8)));
+      out.write((byte)(0xff & getTagsLength()));
+
+      // Tags byte array
+      out.write(getTagsArray(), getTagsOffset(), getTagsLength());
+    }
+
+    return getSerializedSize(withTags);
+  }
 
   /**
    * @param withTags Whether to write tags.
@@ -60,20 +79,28 @@ public interface ExtendedCell extends RawCell, SettableSequenceId, SettableTimes
    * &lt;tags&gt;</code>
    */
   // TODO remove the boolean param once HBASE-16706 is done.
-  int getSerializedSize(boolean withTags);
+  default int getSerializedSize(boolean withTags) {
+    return KeyValueUtil.length(getRowLength(), getFamilyLength(), getQualifierLength(),
+        getValueLength(), getTagsLength(), withTags);
+  }
 
   /**
    * Write this Cell into the given buf's offset in a {@link KeyValue} format.
    * @param buf The buffer where to write the Cell.
    * @param offset The offset within buffer, to write the Cell.
    */
-  void write(ByteBuffer buf, int offset);
+  default void write(ByteBuffer buf, int offset) {
+    KeyValueUtil.appendTo(this, buf, offset, true);
+  }
 
   /**
    * Does a deep copy of the contents to a new memory area and returns it as a new cell.
    * @return The deep cloned cell
    */
-  ExtendedCell deepClone();
+  default ExtendedCell deepClone() {
+    // When being added to the memstore, deepClone() is called and KeyValue has less heap overhead.
+    return new KeyValue(this);
+  }
 
   /**
    * Extracts the id of the backing bytebuffer of this cell if it was obtained from fixed sized
@@ -83,4 +110,22 @@ public interface ExtendedCell extends RawCell, SettableSequenceId, SettableTimes
   default int getChunkId() {
     return CELL_NOT_BASED_ON_CHUNK;
   }
+
+  /**
+   * Sets with the given seqId.
+   * @param seqId sequence ID
+   */
+  void setSequenceId(long seqId) throws IOException;
+
+  /**
+   * Sets with the given timestamp.
+   * @param ts timestamp
+   */
+  void setTimestamp(long ts) throws IOException;
+
+  /**
+   * Sets with the given timestamp.
+   * @param ts buffer containing the timestamp value
+   */
+  void setTimestamp(byte[] ts) throws IOException;
 }

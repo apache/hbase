@@ -34,15 +34,15 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience.Private;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility methods helpful for slinging {@link Cell} instances. Some methods below are for internal
@@ -505,7 +505,7 @@ public final class CellUtil {
   }
 
   /**
-   * Marked as audience Private as of 1.2.0. 
+   * Marked as audience Private as of 1.2.0.
    * Creating a Cell with tags and a memstoreTS/mvcc is an
    * internal implementation detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
@@ -529,7 +529,7 @@ public final class CellUtil {
   }
 
   /**
-   * Marked as audience Private as of 1.2.0. 
+   * Marked as audience Private as of 1.2.0.
    * Creating a Cell with tags is an internal implementation detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
@@ -1169,34 +1169,24 @@ public final class CellUtil {
    * sequenceid is an internal implementation detail not for general public use.
    * @param cell
    * @param seqId
-   * @throws IOException when the passed cell is not of type {@link SettableSequenceId}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static void setSequenceId(Cell cell, long seqId) throws IOException {
-    if (cell instanceof SettableSequenceId) {
-      ((SettableSequenceId) cell).setSequenceId(seqId);
-    } else {
-      throw new IOException(new UnsupportedOperationException(
-          "Cell is not of type " + SettableSequenceId.class.getName()));
-    }
+    PrivateCellUtil.setSequenceId(cell, seqId);
   }
 
   /**
    * Sets the given timestamp to the cell.
    * @param cell
    * @param ts
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static void setTimestamp(Cell cell, long ts) throws IOException {
-    if (cell instanceof SettableTimestamp) {
-      ((SettableTimestamp) cell).setTimestamp(ts);
-    } else {
-      throw new IOException(new UnsupportedOperationException(
-          "Cell is not of type " + SettableTimestamp.class.getName()));
-    }
+    PrivateCellUtil.setTimestamp(cell, ts);
   }
 
   /**
@@ -1204,17 +1194,12 @@ public final class CellUtil {
    * @param cell
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
-    if (cell instanceof SettableTimestamp) {
-      ((SettableTimestamp) cell).setTimestamp(ts, tsOffset);
-    } else {
-      throw new IOException(new UnsupportedOperationException(
-          "Cell is not of type " + SettableTimestamp.class.getName()));
-    }
+    PrivateCellUtil.setTimestamp(cell, Bytes.toLong(ts, tsOffset));
   }
 
   /**
@@ -1223,16 +1208,12 @@ public final class CellUtil {
    * @param cell
    * @param ts
    * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static boolean updateLatestStamp(Cell cell, long ts) throws IOException {
-    if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
-      PrivateCellUtil.setTimestamp(cell, ts);
-      return true;
-    }
-    return false;
+    return PrivateCellUtil.updateLatestStamp(cell, ts);
   }
 
   /**
@@ -1242,16 +1223,12 @@ public final class CellUtil {
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static boolean updateLatestStamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
-    if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
-      PrivateCellUtil.setTimestamp(cell, ts, tsOffset);
-      return true;
-    }
-    return false;
+    return PrivateCellUtil.updateLatestStamp(cell, Bytes.toLong(ts, tsOffset));
   }
 
   /**
