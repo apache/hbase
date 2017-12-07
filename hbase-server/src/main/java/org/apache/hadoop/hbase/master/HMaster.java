@@ -2485,8 +2485,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.preGetClusterStatus();
     }
     ClusterStatus status = getClusterStatusWithoutCoprocessor(options);
-    LOG.info(getClientIdAuditPrefix() + " get ClusterStatus, status=" + status
-        + ", options=" + options);
     if (cpHost != null) {
       cpHost.postGetClusterStatus(status);
     }
