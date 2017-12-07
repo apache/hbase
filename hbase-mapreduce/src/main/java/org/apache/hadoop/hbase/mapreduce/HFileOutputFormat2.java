@@ -334,7 +334,6 @@ public class HFileOutputFormat2
         }
 
         // we now have the proper WAL writer. full steam ahead
-        // TODO : Currently in SettableTimeStamp but this will also move to ExtendedCell
         PrivateCellUtil.updateLatestStamp(cell, this.now);
         wl.writer.append(kv);
         wl.written += length;

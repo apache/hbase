@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -28,10 +31,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestIndividualBytesFieldCell {
@@ -168,16 +167,10 @@ public class TestIndividualBytesFieldCell {
     assertEquals(kv1.getTagsLength()     , ic1.getTagsLength());
   }
 
-  // Verify if SettableSequenceId interface is implemented
+  // Verify if ExtendedCell interface is implemented
   @Test
-  public void testIfSettableSequenceIdImplemented() {
-    assertTrue(ic0 instanceof SettableSequenceId);
-  }
-
-  // Verify if SettableTimestamp interface is implemented
-  @Test
-  public void testIfSettableTimestampImplemented() {
-    assertTrue(ic0 instanceof SettableTimestamp);
+  public void testIfExtendedCellImplemented() {
+    assertTrue(ic0 instanceof ExtendedCell);
   }
 
   @Test(expected = IllegalArgumentException.class)

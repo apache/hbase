@@ -2876,7 +2876,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             updateDeleteLatestVersionTimeStamp(cell, get, count, byteNow);
           }
         } else {
-          PrivateCellUtil.updateLatestStamp(cell, byteNow, 0);
+          PrivateCellUtil.updateLatestStamp(cell, byteNow);
         }
       }
     }
@@ -2888,7 +2888,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     if (result.size() < count) {
       // Nothing to delete
-      PrivateCellUtil.updateLatestStamp(cell, byteNow, 0);
+      PrivateCellUtil.updateLatestStamp(cell, byteNow);
       return;
     }
     if (result.size() > count) {
@@ -4104,7 +4104,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
-        PrivateCellUtil.updateLatestStamp(cells.get(i), now, 0);
+        PrivateCellUtil.updateLatestStamp(cells.get(i), now);
       }
     }
   }

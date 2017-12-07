@@ -34,15 +34,15 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience.Private;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility methods helpful for slinging {@link Cell} instances. Some methods below are for internal
@@ -564,7 +564,7 @@ public final class CellUtil {
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
-   *        
+   *
    */
   @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
@@ -935,7 +935,7 @@ public final class CellUtil {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. 
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static boolean isDeleteFamily(final Cell cell) {
@@ -943,7 +943,7 @@ public final class CellUtil {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. 
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static boolean isDeleteFamilyVersion(final Cell cell) {
@@ -951,7 +951,7 @@ public final class CellUtil {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. 
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static boolean isDeleteColumns(final Cell cell) {
@@ -959,7 +959,7 @@ public final class CellUtil {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. 
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static boolean isDeleteColumnVersion(final Cell cell) {
@@ -1112,7 +1112,7 @@ public final class CellUtil {
    * Setting a Cell sequenceid is an internal implementation detail not for general public use.
    * @param cell
    * @param seqId
-   * @throws IOException when the passed cell is not of type {@link SettableSequenceId}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -1124,7 +1124,7 @@ public final class CellUtil {
    * Sets the given timestamp to the cell.
    * @param cell
    * @param ts
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -1137,12 +1137,12 @@ public final class CellUtil {
    * @param cell
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
-    PrivateCellUtil.setTimestamp(cell, ts, tsOffset);
+    PrivateCellUtil.setTimestamp(cell, Bytes.toLong(ts, tsOffset));
   }
 
   /**
@@ -1151,7 +1151,7 @@ public final class CellUtil {
    * @param cell
    * @param ts
    * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -1166,12 +1166,12 @@ public final class CellUtil {
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @return True if cell timestamp is modified.
-   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static boolean updateLatestStamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
-    return PrivateCellUtil.updateLatestStamp(cell, ts, tsOffset);
+    return PrivateCellUtil.updateLatestStamp(cell, Bytes.toLong(ts, tsOffset));
   }
 
 

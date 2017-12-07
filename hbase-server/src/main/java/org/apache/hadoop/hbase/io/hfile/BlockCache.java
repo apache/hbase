@@ -119,7 +119,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @return number of blocks in the cache
    */
   long getBlockCount();
- 
+
  /**
   * Returns the number of data blocks currently cached in the block cache.
   * @return number of blocks in the cache
