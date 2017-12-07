@@ -3224,8 +3224,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName) throws IOException {
-    waitUntilAllRegionsAssigned(
-      tableName,
+    waitUntilAllRegionsAssigned( tableName,
       this.conf.getLong("hbase.client.sync.wait.timeout.msec", 60000));
   }
 
@@ -3251,6 +3250,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       throws IOException {
     final Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     try {
+      LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
+          timeout + "ms");
       waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
         @Override
         public String explainFailure() throws IOException {
@@ -3259,7 +3260,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
         @Override
         public boolean evaluate() throws IOException {
-          boolean allRegionsAssigned = true;
           Scan scan = new Scan();
           scan.addFamily(HConstants.CATALOG_FAMILY);
           ResultScanner s = meta.getScanner(scan);
@@ -3295,17 +3295,17 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           } finally {
             s.close();
           }
-          return allRegionsAssigned;
+          return true;
         }
       });
     } finally {
       meta.close();
     }
-
+    LOG.info("All regions for table " + tableName + " assigned to meta. Checking AM states.");
     // check from the master state if we are using a mini cluster
     if (!getHBaseClusterInterface().isDistributedCluster()) {
       // So, all regions are in the meta table but make sure master knows of the assignments before
-      // returing -- sometimes this can lag.
+      // returning -- sometimes this can lag.
       HMaster master = getHBaseCluster().getMaster();
       final RegionStates states = master.getAssignmentManager().getRegionStates();
       waitFor(timeout, 200, new ExplainingPredicate<IOException>() {
@@ -3321,6 +3321,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         }
       });
     }
+    LOG.info("All regions for table " + tableName + " assigned.");
   }
 
   /**
