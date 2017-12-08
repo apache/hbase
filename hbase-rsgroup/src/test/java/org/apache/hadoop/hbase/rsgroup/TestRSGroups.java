@@ -186,7 +186,7 @@ public class TestRSGroups extends TestRSGroupsBase {
   @Test
   public void testDefaultNamespaceCreateAndAssign() throws Exception {
     LOG.info("testDefaultNamespaceCreateAndAssign");
-    final byte[] tableName = Bytes.toBytes(tablePrefix + "_testCreateAndAssign");
+    String tableName = tablePrefix + "_testCreateAndAssign";
     admin.modifyNamespace(NamespaceDescriptor.create("default")
         .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
     final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));

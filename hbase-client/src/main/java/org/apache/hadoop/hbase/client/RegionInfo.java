@@ -305,6 +305,9 @@ public interface RegionInfo {
         break;
       }
     }
+    if (offset <= 0) {
+      throw new IllegalArgumentException("offset=" + offset);
+    }
     byte[] buff  = new byte[offset];
     System.arraycopy(regionName, 0, buff, 0, offset);
     return TableName.valueOf(buff);
