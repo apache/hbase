@@ -447,8 +447,10 @@ Release Notes - HBase - Version 1.4.0 12/18/2017
     * [HBASE-19396] - Fix flaky test TestHTableMultiplexerFlushCache
     * [HBASE-19406] - Fix CompactionRequest equals and hashCode
     * [HBASE-19421] - branch-1 does not compile against Hadoop 3.0.0
+    * [HBASE-19422] - using hadoop-profile property leads to confusing failures
     * [HBASE-19423] - Replication entries are not filtered correctly when replication scope is set through WAL Co-processor
     * [HBASE-19429] - Release build fails in checkstyle phase of site target (branch-1)
+    * [HBASE-19435] - Reopen Files for ClosedChannelException in BucketCache
     * [HBASE-19440] - Not able to enable balancer with RSGroups once disabled
     * [HBASE-19442] - Backport HBASE-19065 to branch-1 (HRegion#bulkLoadHFiles() should wait for concurrent Region#flush() to finish)
     * [HBASE-19445] - PerformanceEvaluation NPE processing split policy option
@@ -618,8 +620,6 @@ Release Notes - HBase - Version 1.4.0 12/18/2017
     * [HBASE-19239] - Fix findbugs and error-prone warnings (branch-1)
     * [HBASE-19262] - Revisit checkstyle rules
 
-
-
 ** New Feature
     * [HBASE-15134] - Add visibility into Flush and Compaction queues
     * [HBASE-15576] - Scanning cursor to prevent blocking long time on ResultScanner.next()
@@ -662,6 +662,7 @@ Release Notes - HBase - Version 1.4.0 12/18/2017
     * [HBASE-19217] - Update supplemental-models.xml for jetty-sslengine
     * [HBASE-19232] - Fix shaded-check-invariants (check-jar-contents) failure on branch-1
     * [HBASE-19419] - Remove hbase-native-client from branch-1
+    * [HBASE-19420] - Backport HBASE-19152 (Update refguide 'how to build an RC' and the make_rc.sh script) to branch-1
 
 ** Test
     * [HBASE-16349] - TestClusterId may hang during cluster shutdown
