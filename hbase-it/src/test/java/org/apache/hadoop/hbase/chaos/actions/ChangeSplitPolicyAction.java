@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy;
@@ -49,10 +50,11 @@ public class ChangeSplitPolicyAction extends Action {
     Admin admin = util.getAdmin();
 
     LOG.info("Performing action: Change split policy of table " + tableName);
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
+    TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
     String chosenPolicy = possiblePolicies[random.nextInt(possiblePolicies.length)];
-    tableDescriptor.setRegionSplitPolicyClassName(chosenPolicy);
+    builder.setRegionSplitPolicyClassName(chosenPolicy);
     LOG.info("Changing "  + tableName + " split policy to " + chosenPolicy);
-    admin.modifyTable(tableName, tableDescriptor);
+    admin.modifyTable(builder.build());
   }
 }

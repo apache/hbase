@@ -34,8 +34,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.NamespaceExistException;
@@ -50,12 +48,15 @@ import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.FatalConnectionException;
@@ -232,15 +233,17 @@ public class IntegrationTestMTTR {
     }
 
     // Create the table.  If this fails then fail everything.
-    HTableDescriptor tableDescriptor = new HTableDescriptor(tableName);
+    TableDescriptor tableDescriptor = util.getAdmin().getDescriptor(tableName);
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
 
     // Make the max file size huge so that splits don't happen during the test.
-    tableDescriptor.setMaxFileSize(Long.MAX_VALUE);
+    builder.setMaxFileSize(Long.MAX_VALUE);
 
-    HColumnDescriptor descriptor = new HColumnDescriptor(FAMILY);
-    descriptor.setMaxVersions(1);
-    tableDescriptor.addFamily(descriptor);
-    util.getAdmin().createTable(tableDescriptor);
+    ColumnFamilyDescriptorBuilder colDescriptorBldr =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    colDescriptorBldr.setMaxVersions(1);
+    builder.addColumnFamily(colDescriptorBldr.build());
+    util.getAdmin().createTable(builder.build());
 
     // Setup the table for LoadTestTool
     int ret = loadTool.run(new String[]{"-tn", loadTableName.getNameAsString(), "-init_only"});
