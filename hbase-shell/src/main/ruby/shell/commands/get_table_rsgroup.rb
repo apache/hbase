@@ -30,10 +30,11 @@ EOF
       end
 
       def command(table)
+        now = Time.now
         group_name =
             rsgroup_admin.get_rsgroup_of_table(table).getName
         formatter.row([group_name])
-        formatter.footer(1)
+        formatter.footer(now, 1)
       end
     end
   end
