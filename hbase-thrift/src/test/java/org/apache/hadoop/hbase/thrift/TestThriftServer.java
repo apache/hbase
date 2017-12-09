@@ -101,7 +101,7 @@ public class TestThriftServer {
   private static ByteBuffer valueBname = asByteBuffer("valueB");
   private static ByteBuffer valueCname = asByteBuffer("valueC");
   private static ByteBuffer valueDname = asByteBuffer("valueD");
-  private static ByteBuffer valueEname = asByteBuffer(100l);
+  private static ByteBuffer valueEname = asByteBuffer(100L);
 
   @Rule
   public TestName name = new TestName();
@@ -124,8 +124,6 @@ public class TestThriftServer {
    * consolidate all testing to one method because HBaseClusterTestCase
    * is prone to OutOfMemoryExceptions when there are three or more
    * JUnit test methods.
-   *
-   * @throws Exception
    */
   @Test
   public void testAll() throws Exception {
@@ -147,8 +145,6 @@ public class TestThriftServer {
    * Tests for creating, enabling, disabling, and deleting tables.  Also
    * tests that creating a table with an invalid column name yields an
    * IllegalArgument exception.
-   *
-   * @throws Exception
    */
   public void doTestTableCreateDrop() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
@@ -181,10 +177,6 @@ public class TestThriftServer {
    * TODO: These counts are supposed to be zero but sometimes they are not, they are equal to the
    * passed in maybe.  Investigate why.  My guess is they are set by the test that runs just
    * previous to this one.  Sometimes they are cleared.  Sometimes not.
-   * @param name
-   * @param maybe
-   * @param metrics
-   * @return
    */
   private int getCurrentCount(final String name, final int maybe, final ThriftMetrics metrics) {
     int currentCount = 0;
@@ -220,12 +212,14 @@ public class TestThriftServer {
     handler.getTableNames(); // This will have an artificial delay.
 
     // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds
-   try {
-     metricsHelper.assertGaugeGt("getTableNames_avg_time", 3L * 1000 * 1000 * 1000, metrics.getSource());
-     metricsHelper.assertGaugeLt("getTableNames_avg_time",6L * 1000 * 1000 * 1000, metrics.getSource());
-   } catch (AssertionError e) {
-     LOG.info("Fix me!  Why does this happen?  A concurrent cluster running?", e);
-   }
+    try {
+      metricsHelper.assertGaugeGt("getTableNames_avg_time", 3L * 1000 * 1000 * 1000,
+              metrics.getSource());
+      metricsHelper.assertGaugeLt("getTableNames_avg_time",6L * 1000 * 1000 * 1000,
+              metrics.getSource());
+    } catch (AssertionError e) {
+      LOG.info("Fix me!  Why does this happen?  A concurrent cluster running?", e);
+    }
   }
 
   private static Hbase.Iface getHandlerForMetricsTest(ThriftMetrics metrics, Configuration conf)
@@ -235,7 +229,7 @@ public class TestThriftServer {
   }
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
-    return new ThriftMetrics( conf, ThriftMetrics.ThriftServerType.ONE);
+    return new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
   }
 
 
@@ -300,9 +294,11 @@ public class TestThriftServer {
     Thread.sleep(1000);
     long lv = handler.get(tableAname, rowAname, columnAname, null).get(0).value.getLong();
     // Wait on all increments being flushed
-    while (handler.coalescer.getQueueSize() != 0) Threads.sleep(10);
-    assertEquals((100 + (2 * numIncrements)), lv );
+    while (handler.coalescer.getQueueSize() != 0) {
+      Threads.sleep(10);
+    }
 
+    assertEquals((100 + (2 * numIncrements)), lv);
 
     lv = handler.get(tableAname, rowBname, columnAAname, null).get(0).value.getLong();
     assertEquals((100 + (3 * 7 * numIncrements)), lv);
@@ -315,8 +311,6 @@ public class TestThriftServer {
    * Tests adding a series of Mutations and BatchMutations, including a
    * delete mutation.  Also tests data retrieval, and getting back multiple
    * versions.
-   *
-   * @throws Exception
    */
   public void doTestTableMutations() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
@@ -393,8 +387,6 @@ public class TestThriftServer {
    * Similar to testTableMutations(), except Mutations are applied with
    * specific timestamps and data retrieval uses these timestamps to
    * extract specific versions of data.
-   *
-   * @throws Exception
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
@@ -473,8 +465,6 @@ public class TestThriftServer {
   /**
    * Tests the four different scanner-opening methods (with and without
    * a stoprow, with and without a timestamp).
-   *
-   * @throws Exception
    */
   public void doTestTableScanners() throws Exception {
     // Setup
@@ -515,7 +505,8 @@ public class TestThriftServer {
     closeScanner(scanner1, handler);
 
     // Test a scanner on all rows and all columns, with timestamp
-    int scanner2 = handler.scannerOpenTs(tableAname, rowAname, getColumnList(true, true), time1, null);
+    int scanner2 = handler.scannerOpenTs(tableAname, rowAname, getColumnList(true, true), time1,
+            null);
     TRowResult rowResult2a = handler.scannerGet(scanner2).get(0);
     assertEquals(rowResult2a.columns.size(), 1);
     // column A deleted, does not exist.
@@ -594,8 +585,6 @@ public class TestThriftServer {
   /**
    * For HBASE-2556
    * Tests for GetTableRegions
-   *
-   * @throws Exception
    */
   public void doTestGetTableRegions() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
@@ -659,8 +648,6 @@ public class TestThriftServer {
 
   /**
    * Appends the value to a cell and checks that the cell value is updated properly.
-   *
-   * @throws Exception
    */
   public static void doTestAppend() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
@@ -693,8 +680,6 @@ public class TestThriftServer {
   /**
    * Check that checkAndPut fails if the cell does not exist, then put in the cell, then check that
    * the checkAndPut succeeds.
-   *
-   * @throws Exception
    */
   public static void doTestCheckAndPut() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
@@ -791,9 +776,8 @@ public class TestThriftServer {
   }
 
   /**
-   *
    * @return a List of ColumnDescriptors for use in creating a table.  Has one
-   * default ColumnDescriptor and one ColumnDescriptor with fewer versions
+   *         default ColumnDescriptor and one ColumnDescriptor with fewer versions
    */
   private static List<ColumnDescriptor> getColumnDescriptors() {
     ArrayList<ColumnDescriptor> cDescriptors = new ArrayList<>(2);
@@ -819,15 +803,20 @@ public class TestThriftServer {
    */
   private List<ByteBuffer> getColumnList(boolean includeA, boolean includeB) {
     List<ByteBuffer> columnList = new ArrayList<>();
-    if (includeA) columnList.add(columnAname);
-    if (includeB) columnList.add(columnBname);
+
+    if (includeA) {
+      columnList.add(columnAname);
+    }
+    if (includeB) {
+      columnList.add(columnBname);
+    }
+
     return columnList;
   }
 
   /**
-   *
    * @return a List of Mutations for a row, with columnA having valueA
-   * and columnB having valueB
+   *         and columnB having valueB
    */
   private static List<Mutation> getMutations() {
     List<Mutation> mutations = new ArrayList<>(2);
@@ -837,12 +826,11 @@ public class TestThriftServer {
   }
 
   /**
-   *
    * @return a List of BatchMutations with the following effects:
-   * (rowA, columnA): delete
-   * (rowA, columnB): place valueC
-   * (rowB, columnA): place valueC
-   * (rowB, columnB): place valueD
+   *         (rowA, columnA): delete
+   *         (rowA, columnB): place valueC
+   *         (rowB, columnA): place valueC
+   *         (rowB, columnB): place valueD
    */
   private static List<BatchMutation> getBatchMutations() {
     List<BatchMutation> batchMutations = new ArrayList<>(3);
@@ -871,7 +859,6 @@ public class TestThriftServer {
    *
    * @param scannerId the scanner to close
    * @param handler the HBaseHandler interfacing to HBase
-   * @throws Exception
    */
   private void closeScanner(
       int scannerId, ThriftServerRunner.HBaseHandler handler) throws Exception {

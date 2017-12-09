@@ -64,12 +64,14 @@ public class ThriftMetrics  {
 
 
   public ThriftMetrics(Configuration conf, ThriftServerType t) {
-    slowResponseTime = conf.getLong( SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
+    slowResponseTime = conf.getLong(SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
 
     if (t == ThriftServerType.ONE) {
-      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftOneSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+              .createThriftOneSource();
     } else if (t == ThriftServerType.TWO) {
-      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftTwoSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
+              .createThriftTwoSource();
     }
 
   }

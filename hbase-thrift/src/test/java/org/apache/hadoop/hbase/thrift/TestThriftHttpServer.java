@@ -138,7 +138,7 @@ public class TestThriftHttpServer {
 
     // wait up to 10s for the server to start
     for (int i = 0; i < 100
-        && ( thriftServer.serverRunner == null ||  thriftServer.serverRunner.httpServer ==
+        && (thriftServer.serverRunner == null ||  thriftServer.serverRunner.httpServer ==
         null); i++) {
       Thread.sleep(100);
     }

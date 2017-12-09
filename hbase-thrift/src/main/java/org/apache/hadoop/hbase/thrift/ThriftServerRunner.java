@@ -161,7 +161,8 @@ public class ThriftServerRunner implements Runnable {
   static final String BIND_CONF_KEY = "hbase.regionserver.thrift.ipaddress";
   static final String COMPACT_CONF_KEY = "hbase.regionserver.thrift.compact";
   static final String FRAMED_CONF_KEY = "hbase.regionserver.thrift.framed";
-  static final String MAX_FRAME_SIZE_CONF_KEY = "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
+  static final String MAX_FRAME_SIZE_CONF_KEY =
+          "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
   static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
   static final String USE_HTTP_CONF_KEY = "hbase.regionserver.thrift.http";
@@ -347,7 +348,8 @@ public class ThriftServerRunner implements Runnable {
     doAsEnabled = conf.getBoolean(THRIFT_SUPPORT_PROXYUSER, false);
     if (doAsEnabled) {
       if (!conf.getBoolean(USE_HTTP_CONF_KEY, false)) {
-        LOG.warn("Fail to enable the doAs feature. hbase.regionserver.thrift.http is not configured ");
+        LOG.warn("Fail to enable the doAs feature. hbase.regionserver.thrift.http is not " +
+                "configured ");
       }
     }
     if (qop != null) {
@@ -433,7 +435,8 @@ public class ThriftServerRunner implements Runnable {
     httpServer = new Server(threadPool);
 
     // Context handler
-    ServletContextHandler ctxHandler = new ServletContextHandler(httpServer, "/", ServletContextHandler.SESSIONS);
+    ServletContextHandler ctxHandler = new ServletContextHandler(httpServer, "/",
+            ServletContextHandler.SESSIONS);
     ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), "/*");
 
     // set up Jetty and run the embedded server
@@ -508,14 +511,7 @@ public class ThriftServerRunner implements Runnable {
    */
   private void setupServer() throws Exception {
     // Construct correct ProtocolFactory
-    TProtocolFactory protocolFactory;
-    if (conf.getBoolean(COMPACT_CONF_KEY, false)) {
-      LOG.debug("Using compact protocol");
-      protocolFactory = new TCompactProtocol.Factory();
-    } else {
-      LOG.debug("Using binary protocol");
-      protocolFactory = new TBinaryProtocol.Factory();
-    }
+    TProtocolFactory protocolFactory = getProtocolFactory();
 
     final TProcessor p = new Hbase.Processor<>(handler);
     ImplType implType = ImplType.getServerImpl(conf);
@@ -614,10 +610,8 @@ public class ThriftServerRunner implements Runnable {
         CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
         ExecutorService executorService = createExecutor(
             callQueue, serverArgs.getMaxWorkerThreads(), serverArgs.getMaxWorkerThreads());
-        serverArgs.executorService(executorService)
-                  .processor(processor)
-                  .transportFactory(transportFactory)
-                  .protocolFactory(protocolFactory);
+        serverArgs.executorService(executorService).processor(processor)
+                .transportFactory(transportFactory).protocolFactory(protocolFactory);
         tserver = new THsHaServer(serverArgs);
       } else { // THREADED_SELECTOR
         TThreadedSelectorServer.Args serverArgs =
@@ -625,10 +619,8 @@ public class ThriftServerRunner implements Runnable {
         CallQueue callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
         ExecutorService executorService = createExecutor(
             callQueue, serverArgs.getWorkerThreads(), serverArgs.getWorkerThreads());
-        serverArgs.executorService(executorService)
-                  .processor(processor)
-                  .transportFactory(transportFactory)
-                  .protocolFactory(protocolFactory);
+        serverArgs.executorService(executorService).processor(processor)
+                .transportFactory(transportFactory).protocolFactory(protocolFactory);
         tserver = new TThreadedSelectorServer(serverArgs);
       }
       LOG.info("starting HBase " + implType.simpleClassName() +
@@ -640,21 +632,17 @@ public class ThriftServerRunner implements Runnable {
           THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
       TServerTransport serverTransport = new TServerSocket(
           new TServerSocket.ServerSocketTransportArgs().
-              bindAddr(new InetSocketAddress(listenAddress, listenPort)).
-              backlog(backlog).
+              bindAddr(new InetSocketAddress(listenAddress, listenPort)).backlog(backlog).
               clientTimeout(readTimeout));
 
       TBoundedThreadPoolServer.Args serverArgs =
           new TBoundedThreadPoolServer.Args(serverTransport, conf);
-      serverArgs.processor(processor)
-                .transportFactory(transportFactory)
-                .protocolFactory(protocolFactory);
+      serverArgs.processor(processor).transportFactory(transportFactory)
+              .protocolFactory(protocolFactory);
       LOG.info("starting " + ImplType.THREAD_POOL.simpleClassName() + " on "
           + listenAddress + ":" + Integer.toString(listenPort)
           + " with readTimeout " + readTimeout + "ms; " + serverArgs);
-      TBoundedThreadPoolServer tserver =
-          new TBoundedThreadPoolServer(serverArgs, metrics);
-      this.tserver = tserver;
+      this.tserver = new TBoundedThreadPoolServer(serverArgs, metrics);
     } else {
       throw new AssertionError("Unsupported Thrift server implementation: " +
           implType.simpleClassName());
@@ -670,6 +658,20 @@ public class ThriftServerRunner implements Runnable {
 
 
     registerFilters(conf);
+  }
+
+  private TProtocolFactory getProtocolFactory() {
+    TProtocolFactory protocolFactory;
+
+    if (conf.getBoolean(COMPACT_CONF_KEY, false)) {
+      LOG.debug("Using compact protocol");
+      protocolFactory = new TCompactProtocol.Factory();
+    } else {
+      LOG.debug("Using binary protocol");
+      protocolFactory = new TBinaryProtocol.Factory();
+    }
+
+    return protocolFactory;
   }
 
   ExecutorService createExecutor(BlockingQueue<Runnable> callQueue,
@@ -697,7 +699,7 @@ public class ThriftServerRunner implements Runnable {
                                 boolean sortResultColumns) {
       scanner = resultScanner;
       sortColumns = sortResultColumns;
-   }
+    }
 
     public ResultScanner getScanner() {
       return scanner;
@@ -749,10 +751,9 @@ public class ThriftServerRunner implements Runnable {
      * @param tableName
      *          name of table
      * @return Table object
-     * @throws IOException
+     * @throws IOException if getting the table fails
      */
-    public Table getTable(final byte[] tableName) throws
-        IOException {
+    public Table getTable(final byte[] tableName) throws IOException {
       String table = Bytes.toString(tableName);
       return connectionCache.getTable(table);
     }
@@ -765,10 +766,10 @@ public class ThriftServerRunner implements Runnable {
      * Assigns a unique ID to the scanner and adds the mapping to an internal
      * hash-map.
      *
-     * @param scanner
+     * @param scanner the {@link ResultScanner} to add
      * @return integer scanner id
      */
-    protected synchronized int addScanner(ResultScanner scanner,boolean sortColumns) {
+    protected synchronized int addScanner(ResultScanner scanner, boolean sortColumns) {
       int id = nextScannerId++;
       ResultScannerWrapper resultScannerWrapper = new ResultScannerWrapper(scanner, sortColumns);
       scannerMap.put(id, resultScannerWrapper);
@@ -778,7 +779,7 @@ public class ThriftServerRunner implements Runnable {
     /**
      * Returns the scanner associated with the specified ID.
      *
-     * @param id
+     * @param id the ID of the scanner to get
      * @return a Scanner, or null if ID was invalid.
      */
     protected synchronized ResultScannerWrapper getScanner(int id) {
@@ -789,7 +790,7 @@ public class ThriftServerRunner implements Runnable {
      * Removes the scanner associated with the specified ID from the internal
      * id-&gt;scanner hash-map.
      *
-     * @param id
+     * @param id the ID of the scanner to remove
      * @return a Scanner, or null if ID was invalid.
      */
     protected synchronized ResultScannerWrapper removeScanner(int id) {
@@ -1116,9 +1117,9 @@ public class ThriftServerRunner implements Runnable {
         for(ByteBuffer column : columns) {
           byte [][] famAndQf = CellUtil.parseColumn(getBytes(column));
           if (famAndQf.length == 1) {
-              get.addFamily(famAndQf[0]);
+            get.addFamily(famAndQf[0]);
           } else {
-              get.addColumn(famAndQf[0], famAndQf[1]);
+            get.addColumn(famAndQf[0], famAndQf[1]);
           }
         }
         get.setTimeRange(0, timestamp);
@@ -1361,10 +1362,12 @@ public class ThriftServerRunner implements Runnable {
             put.setDurability(m.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
           }
         }
-        if (!delete.isEmpty())
+        if (!delete.isEmpty()) {
           table.delete(delete);
-        if (!put.isEmpty())
+        }
+        if (!put.isEmpty()) {
           table.put(put);
+        }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw getIOError(e);
@@ -1434,19 +1437,23 @@ public class ThriftServerRunner implements Runnable {
             put.setDurability(m.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
           }
         }
-        if (!delete.isEmpty())
+        if (!delete.isEmpty()) {
           deletes.add(delete);
-        if (!put.isEmpty())
+        }
+        if (!put.isEmpty()) {
           puts.add(put);
+        }
       }
 
       Table table = null;
       try {
         table = getTable(tableName);
-        if (!puts.isEmpty())
+        if (!puts.isEmpty()) {
           table.put(puts);
-        if (!deletes.isEmpty())
+        }
+        if (!deletes.isEmpty()) {
           table.delete(deletes);
+        }
 
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
@@ -1762,8 +1769,7 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    private void closeTable(Table table) throws IOError
-    {
+    private void closeTable(Table table) throws IOError {
       try{
         if(table != null){
           table.close();
@@ -1885,7 +1891,7 @@ public class ThriftServerRunner implements Runnable {
         LOG.warn(e.getMessage(), e);
         throw getIOError(e);
       } finally{
-          closeTable(table);
+        closeTable(table);
       }
     }
 
@@ -1932,7 +1938,7 @@ public class ThriftServerRunner implements Runnable {
         LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       } finally {
-          closeTable(table);
+        closeTable(table);
       }
     }
   }

@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * time of each call to ThriftMetrics.
  */
 @InterfaceAudience.Private
-public class HbaseHandlerMetricsProxy implements InvocationHandler {
+public final class HbaseHandlerMetricsProxy implements InvocationHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       HbaseHandlerMetricsProxy.class);

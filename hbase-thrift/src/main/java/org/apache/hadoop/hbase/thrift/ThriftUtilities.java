@@ -46,16 +46,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class ThriftUtilities {
+public final class ThriftUtilities {
+  private ThriftUtilities() {
+  }
 
   /**
    * This utility method creates a new Hbase HColumnDescriptor object based on a
    * Thrift ColumnDescriptor "struct".
    *
-   * @param in
-   *          Thrift ColumnDescriptor object
+   * @param in Thrift ColumnDescriptor object
    * @return HColumnDescriptor
-   * @throws IllegalArgument
+   * @throws IllegalArgument if the column name is empty
    */
   static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in)
       throws IllegalArgument {
@@ -150,31 +151,35 @@ public class ThriftUtilities {
    */
   static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
     List<TRowResult> results = new ArrayList<>(in.length);
-    for ( Result result_ : in) {
-        if(result_ == null || result_.isEmpty()) {
-            continue;
+    for (Result result_ : in) {
+      if(result_ == null || result_.isEmpty()) {
+        continue;
+      }
+
+      TRowResult result = new TRowResult();
+      result.row = ByteBuffer.wrap(result_.getRow());
+
+      if (sortColumns) {
+        result.sortedColumns = new ArrayList<>();
+        for (Cell kv : result_.rawCells()) {
+          result.sortedColumns.add(new TColumn(
+              ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
+                  CellUtil.cloneQualifier(kv))),
+              new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
         }
-        TRowResult result = new TRowResult();
-        result.row = ByteBuffer.wrap(result_.getRow());
-        if (sortColumns) {
-          result.sortedColumns = new ArrayList<>();
-          for (Cell kv : result_.rawCells()) {
-            result.sortedColumns.add(new TColumn(
-                ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
-                    CellUtil.cloneQualifier(kv))),
-                new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
-          }
-        } else {
-          result.columns = new TreeMap<>();
-          for (Cell kv : result_.rawCells()) {
-            result.columns.put(
-                ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
-                    CellUtil.cloneQualifier(kv))),
-                new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
-          }
+      } else {
+        result.columns = new TreeMap<>();
+        for (Cell kv : result_.rawCells()) {
+          result.columns.put(
+              ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
+                  CellUtil.cloneQualifier(kv))),
+              new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
         }
+      }
+
       results.add(result);
     }
+
     return results;
   }
 
@@ -204,7 +209,11 @@ public class ThriftUtilities {
   public static Increment incrementFromThrift(TIncrement tincrement) {
     Increment inc = new Increment(tincrement.getRow());
     byte[][] famAndQf = CellUtil.parseColumn(tincrement.getColumn());
-    if (famAndQf.length != 2) return null;
+
+    if (famAndQf.length != 2) {
+      return null;
+    }
+
     inc.addColumn(famAndQf[0], famAndQf[1], tincrement.getAmmount());
     return inc;
   }

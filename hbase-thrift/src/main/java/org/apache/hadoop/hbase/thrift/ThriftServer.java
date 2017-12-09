@@ -87,23 +87,24 @@ public class ThriftServer {
 
   /**
    * Start up or shuts down the Thrift server, depending on the arguments.
-   * @param args
+   * @param args the arguments to pass in when starting the Thrift server
    */
-   void doMain(final String[] args) throws Exception {
-     processOptions(args);
+  void doMain(final String[] args) throws Exception {
+    processOptions(args);
+    serverRunner = new ThriftServerRunner(conf);
 
-     serverRunner = new ThriftServerRunner(conf);
+    // Put up info server.
+    int port = conf.getInt("hbase.thrift.info.port", 9095);
 
-     // Put up info server.
-     int port = conf.getInt("hbase.thrift.info.port", 9095);
-     if (port >= 0) {
-       conf.setLong("startcode", System.currentTimeMillis());
-       String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
-       infoServer = new InfoServer("thrift", a, port, false, conf);
-       infoServer.setAttribute("hbase.conf", conf);
-       infoServer.start();
-     }
-     serverRunner.run();
+    if (port >= 0) {
+      conf.setLong("startcode", System.currentTimeMillis());
+      String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
+      infoServer = new InfoServer("thrift", a, port, false, conf);
+      infoServer.setAttribute("hbase.conf", conf);
+      infoServer.start();
+    }
+
+    serverRunner.run();
   }
 
   /**
@@ -230,10 +231,6 @@ public class ThriftServer {
     }
   }
 
-  /**
-   * @param args
-   * @throws Exception
-   */
   public static void main(String [] args) throws Exception {
     LOG.info("***** STARTING service '" + ThriftServer.class.getSimpleName() + "' *****");
     VersionInfo.logVersion();

@@ -238,7 +238,7 @@ public class TestThriftHBaseServiceHandler {
     puts.add(new TPut(wrap(rowName2), columnValues));
 
     handler.putMultiple(table, puts);
-    List<Boolean> existsResult2 = handler.existsAll(table,gets );
+    List<Boolean> existsResult2 = handler.existsAll(table, gets);
 
     assertTrue(existsResult2.get(0));
     assertTrue(existsResult2.get(1));
@@ -590,8 +590,6 @@ public class TestThriftHBaseServiceHandler {
   /**
    * check that checkAndPut fails if the cell does not exist, then put in the cell, then check
    * that the checkAndPut succeeds.
-   *
-   * @throws Exception
    */
   @Test
   public void testCheckAndPut() throws Exception {
@@ -637,8 +635,6 @@ public class TestThriftHBaseServiceHandler {
   /**
    * check that checkAndDelete fails if the cell does not exist, then put in the cell, then
    * check that the checkAndDelete succeeds.
-   *
-   * @throws Exception
    */
   @Test
   public void testCheckAndDelete() throws Exception {
@@ -733,8 +729,7 @@ public class TestThriftHBaseServiceHandler {
 
   /**
    * Tests keeping a HBase scanner alive for long periods of time. Each call to getScannerRow()
-   * should reset the ConnectionCache timeout for the scanner's connection
-   * @throws Exception
+   * should reset the ConnectionCache timeout for the scanner's connection.
    */
   @Test
   public void testLongLivedScan() throws Exception {
@@ -1047,7 +1042,11 @@ public class TestThriftHBaseServiceHandler {
    */
   private String pad(int n, byte pad) {
     String res = Integer.toString(n);
-    while (res.length() < pad) res = "0" + res;
+
+    while (res.length() < pad) {
+      res = "0" + res;
+    }
+
     return res;
   }
 
@@ -1179,7 +1178,7 @@ public class TestThriftHBaseServiceHandler {
       assertArrayEquals(("testGetScannerResults" + pad(19 - i, (byte) 2)).getBytes(), results.get(i)
           .getRow());
     }
- }
+  }
 
   @Test
   public void testFilterRegistration() throws Exception {
@@ -1213,7 +1212,7 @@ public class TestThriftHBaseServiceHandler {
 
     assertTrue(handler.exists(table, get));
     metricsHelper.assertCounter("put_num_ops", 1, metrics.getSource());
-    metricsHelper.assertCounter( "exists_num_ops", 2, metrics.getSource());
+    metricsHelper.assertCounter("exists_num_ops", 2, metrics.getSource());
   }
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
@@ -1265,7 +1264,7 @@ public class TestThriftHBaseServiceHandler {
   }
 
   private void testExceptionType(THBaseService.Iface handler, ThriftMetrics metrics,
-                                 ByteBuffer tTableName, byte[] rowkey, ErrorThrowingGetObserver.ErrorType errorType) {
+      ByteBuffer tTableName, byte[] rowkey, ErrorThrowingGetObserver.ErrorType errorType) {
     long preGetCounter = metricsHelper.getCounter("get_num_ops", metrics.getSource());
     String exceptionKey = errorType.getMetricName();
     long preExceptionCounter = metricsHelper.checkCounterExists(exceptionKey, metrics.getSource()) ?
@@ -1381,8 +1380,6 @@ public class TestThriftHBaseServiceHandler {
   /**
    * Put valueA to a row, make sure put has happened, then create a mutation object to put valueB
    * and delete ValueA, then check that the row value is only valueB.
-   *
-   * @throws Exception
    */
   @Test
   public void testMutateRow() throws Exception {
@@ -1445,8 +1442,6 @@ public class TestThriftHBaseServiceHandler {
    * Create TPut, TDelete , TIncrement objects, set durability then call ThriftUtility
    * functions to get Put , Delete and Increment respectively. Use getDurability to make sure
    * the returned objects have the appropriate durability setting.
-   *
-   * @throws Exception
    */
   @Test
   public void testDurability() throws Exception {

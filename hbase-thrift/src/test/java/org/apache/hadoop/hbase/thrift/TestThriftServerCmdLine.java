@@ -89,8 +89,9 @@ public class TestThriftServerCmdLine {
             continue;
           }
           for (boolean specifyCompact : new boolean[] {false, true}) {
-            parameters.add(new Object[]{implType, specifyFramed,
-                specifyBindIP, specifyCompact});
+            parameters.add(new Object[] {
+              implType, specifyFramed, specifyBindIP, specifyCompact
+            });
           }
         }
       }

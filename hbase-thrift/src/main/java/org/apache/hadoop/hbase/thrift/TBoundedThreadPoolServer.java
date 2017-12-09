@@ -258,7 +258,7 @@ public class TBoundedThreadPoolServer extends TServer {
     serverTransport_.interrupt();
   }
 
-  private class ClientConnnection implements Runnable {
+  private final class ClientConnnection implements Runnable {
 
     private TTransport client;
 

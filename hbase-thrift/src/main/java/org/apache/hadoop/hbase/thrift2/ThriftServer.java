@@ -89,8 +89,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in the
- * HbaseClient.thrift IDL file.
+ * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in
+ * the HbaseClient.thrift IDL file.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -155,11 +155,14 @@ public class ThriftServer extends Configured implements Tool {
     options.addOption("ro", "readonly", false,
       "Respond only to read method requests [default: false]");
     OptionGroup servers = new OptionGroup();
-    servers.addOption(
-        new Option("nonblocking", false, "Use the TNonblockingServer. This implies the framed transport."));
-    servers.addOption(new Option("hsha", false, "Use the THsHaServer. This implies the framed transport."));
-    servers.addOption(new Option("selector", false, "Use the TThreadedSelectorServer. This implies the framed transport."));
-    servers.addOption(new Option("threadpool", false, "Use the TThreadPoolServer. This is the default."));
+    servers.addOption(new Option("nonblocking", false,
+            "Use the TNonblockingServer. This implies the framed transport."));
+    servers.addOption(new Option("hsha", false,
+            "Use the THsHaServer. This implies the framed transport."));
+    servers.addOption(new Option("selector", false,
+            "Use the TThreadedSelectorServer. This implies the framed transport."));
+    servers.addOption(new Option("threadpool", false,
+            "Use the TThreadPoolServer. This is the default."));
     options.addOptionGroup(servers);
     return options;
   }
@@ -243,8 +246,9 @@ public class ThriftServer extends Configured implements Tool {
     }
   }
 
-  private static TServer getTNonBlockingServer(TProtocolFactory protocolFactory, TProcessor processor,
-      TTransportFactory transportFactory, InetSocketAddress inetSocketAddress) throws TTransportException {
+  private static TServer getTNonBlockingServer(TProtocolFactory protocolFactory,
+      TProcessor processor, TTransportFactory transportFactory, InetSocketAddress inetSocketAddress)
+          throws TTransportException {
     TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(inetSocketAddress);
     log.info("starting HBase Nonblocking Thrift server on " + inetSocketAddress.toString());
     TNonblockingServer.Args serverArgs = new TNonblockingServer.Args(serverTransport);
@@ -284,10 +288,10 @@ public class ThriftServer extends Configured implements Tool {
     log.info("starting HBase ThreadedSelector Thrift server on " + inetSocketAddress.toString());
     TThreadedSelectorServer.Args serverArgs = new TThreadedSelectorServer.Args(serverTransport);
     if (workerThreads > 0) {
-        serverArgs.workerThreads(workerThreads);
+      serverArgs.workerThreads(workerThreads);
     }
     if (selectorThreads > 0) {
-        serverArgs.selectorThreads(selectorThreads);
+      serverArgs.selectorThreads(selectorThreads);
     }
 
     ExecutorService executorService = createExecutor(
@@ -378,31 +382,18 @@ public class ThriftServer extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     final Configuration conf = getConf();
-    TServer server = null;
     Options options = getOptions();
     CommandLine cmd = parseArguments(conf, options, args);
     int workerThreads = 0;
     int selectorThreads = 0;
     int maxCallQueueSize = -1; // use unbounded queue by default
 
-    /**
-     * This is to please both bin/hbase and bin/hbase-daemon. hbase-daemon provides "start" and "stop" arguments hbase
-     * should print the help if no argument is provided
-     */
-    List<?> argList = cmd.getArgList();
-    if (cmd.hasOption("help") || !argList.contains("start") || argList.contains("stop")) {
-      printUsage();
+    if (checkArguments(cmd)) {
       return 1;
     }
 
     // Get address to bind
-    String bindAddress;
-    if (cmd.hasOption("bind")) {
-      bindAddress = cmd.getOptionValue("bind");
-      conf.set("hbase.thrift.info.bindAddress", bindAddress);
-    } else {
-      bindAddress = conf.get("hbase.thrift.info.bindAddress");
-    }
+    String bindAddress = getBindAddress(conf, cmd);
 
     // check if server should only process read requests, if so override the conf
     if (cmd.hasOption("readonly")) {
@@ -413,35 +404,13 @@ public class ThriftServer extends Configured implements Tool {
     }
 
     // Get read timeout
-    int readTimeout = THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT;
-    if (cmd.hasOption(READ_TIMEOUT_OPTION)) {
-      try {
-        readTimeout = Integer.parseInt(cmd.getOptionValue(READ_TIMEOUT_OPTION));
-      } catch (NumberFormatException e) {
-        throw new RuntimeException("Could not parse the value provided for the timeout option", e);
-      }
-    } else {
-      readTimeout = conf.getInt(THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY,
-        THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
-    }
-
+    int readTimeout = getReadTimeout(conf, cmd);
     // Get port to bind to
-    int listenPort = 0;
-    try {
-      if (cmd.hasOption("port")) {
-        listenPort = Integer.parseInt(cmd.getOptionValue("port"));
-      } else {
-        listenPort = conf.getInt("hbase.regionserver.thrift.port", DEFAULT_LISTEN_PORT);
-      }
-    } catch (NumberFormatException e) {
-      throw new RuntimeException("Could not parse the value provided for the port option", e);
-    }
-
+    int listenPort = getListenPort(conf, cmd);
     // Thrift's implementation uses '0' as a placeholder for 'use the default.'
     int backlog = conf.getInt(BACKLOG_CONF_KEY, 0);
 
-    // Local hostname and user name,
-    // used only if QOP is configured.
+    // Local hostname and user name, used only if QOP is configured.
     String host = null;
     String name = null;
 
@@ -453,8 +422,7 @@ public class ThriftServer extends Configured implements Tool {
       host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
         conf.get("hbase.thrift.dns.interface", "default"),
         conf.get("hbase.thrift.dns.nameserver", "default")));
-      userProvider.login("hbase.thrift.keytab.file",
-        "hbase.thrift.kerberos.principal", host);
+      userProvider.login("hbase.thrift.keytab.file", "hbase.thrift.kerberos.principal", host);
     }
 
     UserGroupInformation realUser = userProvider.getCurrent().getUGI();
@@ -463,12 +431,10 @@ public class ThriftServer extends Configured implements Tool {
     if (stringQop != null) {
       qop = SaslUtil.getQop(stringQop);
       if (!securityEnabled) {
-        throw new IOException("Thrift server must"
-          + " run in secure mode to support authentication");
+        throw new IOException("Thrift server must run in secure mode to support authentication");
       }
       // Extract the name from the principal
-      name = SecurityUtil.getUserFromPrincipal(
-        conf.get("hbase.thrift.kerberos.principal"));
+      name = SecurityUtil.getUserFromPrincipal(conf.get("hbase.thrift.kerberos.principal"));
     }
 
     boolean nonblocking = cmd.hasOption("nonblocking");
@@ -478,14 +444,7 @@ public class ThriftServer extends Configured implements Tool {
     ThriftMetrics metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.TWO);
     final JvmPauseMonitor pauseMonitor = new JvmPauseMonitor(conf, metrics.getSource());
 
-    String implType = "threadpool";
-    if (nonblocking) {
-      implType = "nonblocking";
-    } else if (hsha) {
-      implType = "hsha";
-    } else if (selector) {
-      implType = "selector";
-    }
+    String implType = getImplType(nonblocking, hsha, selector);
 
     conf.set("hbase.regionserver.thrift.server.type", implType);
     conf.setInt("hbase.regionserver.thrift.port", listenPort);
@@ -549,49 +508,12 @@ public class ThriftServer extends Configured implements Tool {
     }
 
     // Put up info server.
-    int port = conf.getInt("hbase.thrift.info.port", 9095);
-    if (port >= 0) {
-      conf.setLong("startcode", System.currentTimeMillis());
-      String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
-      InfoServer infoServer = new InfoServer("thrift", a, port, false, conf);
-      infoServer.setAttribute("hbase.conf", conf);
-      infoServer.start();
-    }
+    startInfoServer(conf);
 
-    if (nonblocking) {
-      server = getTNonBlockingServer(protocolFactory,
-          processor,
-          transportFactory,
-          inetSocketAddress);
-    } else if (hsha) {
-      server = getTHsHaServer(protocolFactory,
-          processor,
-          transportFactory,
-          workerThreads,
-          maxCallQueueSize,
-          inetSocketAddress,
-          metrics);
-    } else if (selector) {
-      server = getTThreadedSelectorServer(protocolFactory,
-          processor,
-          transportFactory,
-          workerThreads,
-          selectorThreads,
-          maxCallQueueSize,
-          inetSocketAddress,
-          metrics);
-    } else {
-      server = getTThreadPoolServer(protocolFactory,
-          processor,
-          transportFactory,
-          workerThreads,
-          inetSocketAddress,
-          backlog,
-          readTimeout,
-          metrics);
-    }
+    final TServer tserver = getServer(workerThreads, selectorThreads, maxCallQueueSize, readTimeout,
+            backlog, nonblocking, hsha, selector, metrics, protocolFactory, processor,
+            transportFactory, inetSocketAddress);
 
-    final TServer tserver = server;
     realUser.doAs(
       new PrivilegedAction<Object>() {
         @Override
@@ -607,5 +529,107 @@ public class ThriftServer extends Configured implements Tool {
       });
     // when tserver.stop eventually happens we'll get here.
     return 0;
+  }
+
+  private String getImplType(boolean nonblocking, boolean hsha, boolean selector) {
+    String implType = "threadpool";
+
+    if (nonblocking) {
+      implType = "nonblocking";
+    } else if (hsha) {
+      implType = "hsha";
+    } else if (selector) {
+      implType = "selector";
+    }
+
+    return implType;
+  }
+
+  private boolean checkArguments(CommandLine cmd) {
+    /*
+     * This is to please both bin/hbase and bin/hbase-daemon. hbase-daemon provides "start" and
+     * "stop" arguments hbase should print the help if no argument is provided
+     */
+    List<?> argList = cmd.getArgList();
+    if (cmd.hasOption("help") || !argList.contains("start") || argList.contains("stop")) {
+      printUsage();
+      return true;
+    }
+    return false;
+  }
+
+  private String getBindAddress(Configuration conf, CommandLine cmd) {
+    String bindAddress;
+    if (cmd.hasOption("bind")) {
+      bindAddress = cmd.getOptionValue("bind");
+      conf.set("hbase.thrift.info.bindAddress", bindAddress);
+    } else {
+      bindAddress = conf.get("hbase.thrift.info.bindAddress");
+    }
+    return bindAddress;
+  }
+
+  private int getListenPort(Configuration conf, CommandLine cmd) {
+    int listenPort;
+    try {
+      if (cmd.hasOption("port")) {
+        listenPort = Integer.parseInt(cmd.getOptionValue("port"));
+      } else {
+        listenPort = conf.getInt("hbase.regionserver.thrift.port", DEFAULT_LISTEN_PORT);
+      }
+    } catch (NumberFormatException e) {
+      throw new RuntimeException("Could not parse the value provided for the port option", e);
+    }
+    return listenPort;
+  }
+
+  private int getReadTimeout(Configuration conf, CommandLine cmd) {
+    int readTimeout;
+    if (cmd.hasOption(READ_TIMEOUT_OPTION)) {
+      try {
+        readTimeout = Integer.parseInt(cmd.getOptionValue(READ_TIMEOUT_OPTION));
+      } catch (NumberFormatException e) {
+        throw new RuntimeException("Could not parse the value provided for the timeout option", e);
+      }
+    } else {
+      readTimeout = conf.getInt(THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY,
+        THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT);
+    }
+    return readTimeout;
+  }
+
+  private void startInfoServer(Configuration conf) throws IOException {
+    int port = conf.getInt("hbase.thrift.info.port", 9095);
+
+    if (port >= 0) {
+      conf.setLong("startcode", System.currentTimeMillis());
+      String a = conf.get("hbase.thrift.info.bindAddress", "0.0.0.0");
+      InfoServer infoServer = new InfoServer("thrift", a, port, false, conf);
+      infoServer.setAttribute("hbase.conf", conf);
+      infoServer.start();
+    }
+  }
+
+  private TServer getServer(int workerThreads, int selectorThreads, int maxCallQueueSize,
+        int readTimeout, int backlog, boolean nonblocking, boolean hsha, boolean selector,
+        ThriftMetrics metrics, TProtocolFactory protocolFactory, TProcessor processor,
+        TTransportFactory transportFactory, InetSocketAddress inetSocketAddress)
+          throws TTransportException {
+    TServer server;
+
+    if (nonblocking) {
+      server = getTNonBlockingServer(protocolFactory, processor, transportFactory,
+              inetSocketAddress);
+    } else if (hsha) {
+      server = getTHsHaServer(protocolFactory, processor, transportFactory, workerThreads,
+              maxCallQueueSize, inetSocketAddress, metrics);
+    } else if (selector) {
+      server = getTThreadedSelectorServer(protocolFactory, processor, transportFactory,
+              workerThreads, selectorThreads, maxCallQueueSize, inetSocketAddress, metrics);
+    } else {
+      server = getTThreadPoolServer(protocolFactory, processor, transportFactory, workerThreads,
+              inetSocketAddress, backlog, readTimeout, metrics);
+    }
+    return server;
   }
 }

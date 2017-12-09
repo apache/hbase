@@ -109,7 +109,7 @@ public class TestCallQueue {
 
   private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
       throws Exception { 
-      metricsHelper.assertCounter(name, expectValue, metrics.getSource());
+    metricsHelper.assertCounter(name, expectValue, metrics.getSource());
   }
 
   private static Runnable createDummyRunnable() {
