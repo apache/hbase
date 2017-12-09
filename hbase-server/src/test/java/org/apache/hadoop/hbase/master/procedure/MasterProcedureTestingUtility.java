@@ -170,11 +170,11 @@ public class MasterProcedureTestingUtility {
     final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
     FSUtils.logFileSystemState(fs, tableDir, LOG);
-    List<Path> allRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
+    List<Path> unwantedRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
     for (int i = 0; i < regions.length; ++i) {
       Path regionDir = new Path(tableDir, regions[i].getEncodedName());
       assertTrue(regions[i] + " region dir does not exist", fs.exists(regionDir));
-      assertTrue(allRegionDirs.remove(regionDir));
+      assertTrue(unwantedRegionDirs.remove(regionDir));
       List<Path> allFamilyDirs = FSUtils.getFamilyDirs(fs, regionDir);
       for (int j = 0; j < family.length; ++j) {
         final Path familyDir = new Path(regionDir, family[j]);
@@ -191,7 +191,8 @@ public class MasterProcedureTestingUtility {
       }
       assertTrue("found extraneous families: " + allFamilyDirs, allFamilyDirs.isEmpty());
     }
-    assertTrue("found extraneous regions: " + allRegionDirs, allRegionDirs.isEmpty());
+    assertTrue("found extraneous regions: " + unwantedRegionDirs, unwantedRegionDirs.isEmpty());
+    LOG.debug("Table directory layout is as expected.");
 
     // check meta
     assertTrue(MetaTableAccessor.tableExists(master.getConnection(), tableName));

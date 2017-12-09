@@ -49,7 +49,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
   @Rule
   public TestName name = new TestName();
 
-  @Test(timeout=60000)
+  @Test
   public void testTruncateNotExistentTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
@@ -64,7 +64,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testTruncateNotDisabledTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
@@ -82,13 +82,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotDisabledException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleTruncatePreserveSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testSimpleTruncate(tableName, true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleTruncateNoPreserveSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testSimpleTruncate(tableName, false);
@@ -116,6 +116,8 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
+    // If truncate procedure completed successfully, it means all regions were assigned correctly
+    // and table is enabled now.
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // validate the table regions and layout
@@ -137,13 +139,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     assertEquals(50, UTIL.countRows(tableName));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecutionPreserveSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testRecoveryAndDoubleExecution(tableName, true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecutionNoPreserveSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testRecoveryAndDoubleExecution(tableName, false);

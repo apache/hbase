@@ -805,7 +805,7 @@ public class AssignmentManager implements ServerListener {
     }
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace(String.format("Update region transition serverName=%s region=%s state=%s",
+      LOG.trace(String.format("Update region transition serverName=%s region=%s regionState=%s",
         serverName, regionNode, state));
     }
 
@@ -838,7 +838,7 @@ public class AssignmentManager implements ServerListener {
     checkFailoverCleanupCompleted(parent);
 
     if (state != TransitionCode.READY_TO_SPLIT) {
-      throw new UnexpectedStateException("unsupported split state=" + state +
+      throw new UnexpectedStateException("unsupported split regionState=" + state +
         " for parent region " + parent +
         " maybe an old RS (< 2.0) had the operation in progress");
     }
@@ -870,7 +870,7 @@ public class AssignmentManager implements ServerListener {
     checkFailoverCleanupCompleted(merged);
 
     if (state != TransitionCode.READY_TO_MERGE) {
-      throw new UnexpectedStateException("Unsupported merge state=" + state +
+      throw new UnexpectedStateException("Unsupported merge regionState=" + state +
         " for regionA=" + hriA + " regionB=" + hriB + " merged=" + merged +
         " maybe an old RS (< 2.0) had the operation in progress");
     }
@@ -884,7 +884,8 @@ public class AssignmentManager implements ServerListener {
     // If the RS is < 2.0 throw an exception to abort the operation, we are handling the merge
     if (regionStates.getOrCreateServer(serverName).getVersionNumber() < 0x0200000) {
       throw new UnsupportedOperationException(String.format(
-        "Merge not handled yet: state=%s merged=%s hriA=%s hriB=%s", state, merged, hriA, hriB));
+        "Merge not handled yet: regionState=%s merged=%s hriA=%s hriB=%s", state, merged, hriA,
+          hriB));
     }
   }
 
@@ -1162,7 +1163,7 @@ public class AssignmentManager implements ServerListener {
       LOG.info("waiting for RS to join");
       Threads.sleep(250);
     }
-    LOG.info("RS joined " + master.getServerManager().countOfRegionServers());
+    LOG.info("RS joined. Num RS = " + master.getServerManager().countOfRegionServers());
 
     // This method will assign all user regions if a clean server startup or
     // it will reconstruct master state and cleanup any leftovers from previous master process.
@@ -1188,7 +1189,7 @@ public class AssignmentManager implements ServerListener {
           // hbase1 to hbase2? Am I restoring a SNAPSHOT or otherwise adding a region to hbase:meta?
           // In any of these cases, state is empty. For now, presume OFFLINE but there are probably
           // cases where we need to probe more to be sure this correct; TODO informed by experience.
-          LOG.info(regionInfo.getEncodedName() + " state=null; presuming " + State.OFFLINE);
+          LOG.info(regionInfo.getEncodedName() + " regionState=null; presuming " + State.OFFLINE);
           localState = State.OFFLINE;
         }
         synchronized (regionNode) {

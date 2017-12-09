@@ -733,7 +733,7 @@ public abstract class CommonFSUtils {
    */
   public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
       throws IOException {
-    LOG.debug("Current file system:");
+    LOG.debug("File system contents for path " + root);
     logFSTree(LOG, fs, root, "|-");
   }
 
