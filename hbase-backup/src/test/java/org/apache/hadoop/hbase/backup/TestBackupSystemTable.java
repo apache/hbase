@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -369,11 +370,14 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
+      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
+        "table4", "table5", "table6"));
+
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
-      assertTrue(tnames.size() == tables.length + addTables.length);
-      for (int i = 0; i < tnames.size(); i++) {
-        assertTrue(tnames.get(i).getNameAsString().equals("table" + (i + 1)));
+      assertTrue(tnames.size() == expectedTables.size());
+      for (TableName tableName : tnames) {
+        assertTrue(expectedTables.remove(tableName.getNameAsString()));
       }
       cleanBackupTable();
     }
@@ -389,11 +393,14 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table3", "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
+      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
+        "table4", "table5", "table6"));
+
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
-      assertTrue(tnames.size() == tables.length + addTables.length - 1);
-      for (int i = 0; i < tnames.size(); i++) {
-        assertTrue(tnames.get(i).getNameAsString().equals("table" + (i + 1)));
+      assertTrue(tnames.size() == expectedTables.size());
+      for (TableName tableName : tnames) {
+        assertTrue(expectedTables.remove(tableName.getNameAsString()));
       }
       cleanBackupTable();
     }
@@ -409,11 +416,13 @@ public class TestBackupSystemTable {
       String[] removeTables = new String[] { "table4", "table5", "table6" };
       table.removeFromBackupSet(setName, removeTables);
 
+      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3"));
+
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
-      assertTrue(tnames.size() == tables.length - 1);
-      for (int i = 0; i < tnames.size(); i++) {
-        assertTrue(tnames.get(i).getNameAsString().equals("table" + (i + 1)));
+      assertTrue(tnames.size() == expectedTables.size());
+      for (TableName tableName : tnames) {
+        assertTrue(expectedTables.remove(tableName.getNameAsString()));
       }
       cleanBackupTable();
     }
@@ -429,11 +438,13 @@ public class TestBackupSystemTable {
       String[] removeTables = new String[] { "table4", "table3" };
       table.removeFromBackupSet(setName, removeTables);
 
+     Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2"));
+
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
-      assertTrue(tnames.size() == tables.length - 2);
-      for (int i = 0; i < tnames.size(); i++) {
-        assertTrue(tnames.get(i).getNameAsString().equals("table" + (i + 1)));
+      assertTrue(tnames.size() == expectedTables.size());
+      for (TableName tableName : tnames) {
+        assertTrue(expectedTables.remove(tableName.getNameAsString()));
       }
       cleanBackupTable();
     }
