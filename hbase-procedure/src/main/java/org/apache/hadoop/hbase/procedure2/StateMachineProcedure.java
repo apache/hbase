@@ -176,6 +176,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
         this.cycles++;
       }
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(toString());
+      }
       stateFlow = executeFromState(env, state);
       if (!hasMoreState()) setNextState(EOF_STATE);
       if (subProcList != null && !subProcList.isEmpty()) {

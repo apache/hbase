@@ -104,6 +104,12 @@ public class TruncateTableProcedure
           break;
         case TRUNCATE_TABLE_CLEAR_FS_LAYOUT:
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
+          // NOTE: It's very important that we create new HRegions before next state, so that
+          // they get persisted in procedure state before we start using them for anything.
+          // Otherwise, if we create them in next step and master crashes after creating fs
+          // layout but before saving state, region re-created after recovery will have different
+          // regionId(s) and encoded names. That will lead to unwanted regions in FS layout
+          // (which were created before the crash).
           if (!preserveSplits) {
             // if we are not preserving splits, generate a new single region
             regions = Arrays.asList(ModifyRegionUtils.createRegionInfos(tableDescriptor, null));
