@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -238,7 +239,7 @@ public class RegionServerCoprocessorHost extends
 
     @Override
     public Connection getConnection() {
-      return this.services.getConnection();
+      return new SharedConnection(this.services.getConnection());
     }
 
     @Override

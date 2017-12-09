@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
@@ -148,7 +149,7 @@ public class RegionCoprocessorHost
     @Override
     public Connection getConnection() {
       // Mocks may have services as null at test time.
-      return services != null ? services.getConnection() : null;
+      return services != null ? new SharedConnection(services.getConnection()) : null;
     }
 
     @Override
