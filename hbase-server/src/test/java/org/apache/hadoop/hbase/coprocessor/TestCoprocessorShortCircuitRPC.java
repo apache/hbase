@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -73,36 +74,49 @@ public class TestCoprocessorShortCircuitRPC {
   // Three test coprocessors, one of each type that has a Connection in its environment
   // (WALCoprocessor does not).
   public static class TestMasterCoprocessor implements MasterCoprocessor {
-    public TestMasterCoprocessor() {}
+    public TestMasterCoprocessor() {
+    }
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       // At start, we get base CoprocessorEnvironment Type, not MasterCoprocessorEnvironment,
-      check(((MasterCoprocessorEnvironment)env).getConnection());
+      checkShared(((MasterCoprocessorEnvironment) env).getConnection());
+      checkShortCircuit(
+        ((MasterCoprocessorEnvironment) env).createConnection(env.getConfiguration()));
     }
   }
 
   public static class TestRegionServerCoprocessor implements RegionServerCoprocessor {
-    public TestRegionServerCoprocessor() {}
+    public TestRegionServerCoprocessor() {
+    }
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       // At start, we get base CoprocessorEnvironment Type, not RegionServerCoprocessorEnvironment,
-      check(((RegionServerCoprocessorEnvironment)env).getConnection());
+      checkShared(((RegionServerCoprocessorEnvironment) env).getConnection());
+      checkShortCircuit(
+        ((RegionServerCoprocessorEnvironment) env).createConnection(env.getConfiguration()));
     }
   }
 
   public static class TestRegionCoprocessor implements RegionCoprocessor {
-    public TestRegionCoprocessor() {}
+    public TestRegionCoprocessor() {
+    }
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
       // At start, we get base CoprocessorEnvironment Type, not RegionCoprocessorEnvironment,
-      check(((RegionCoprocessorEnvironment)env).getConnection());
+      checkShared(((RegionCoprocessorEnvironment) env).getConnection());
+      checkShortCircuit(
+        ((RegionCoprocessorEnvironment) env).createConnection(env.getConfiguration()));
     }
   }
 
-  private static void check(Connection connection) {
+  private static void checkShared(Connection connection) {
+    assertTrue(connection instanceof SharedConnection);
+  }
+
+  private static void checkShortCircuit(Connection connection) {
     assertTrue(connection instanceof ConnectionUtils.ShortCircuitingClusterConnection);
   }
 

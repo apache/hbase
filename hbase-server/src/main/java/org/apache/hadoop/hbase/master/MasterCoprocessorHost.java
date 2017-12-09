@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
@@ -99,7 +100,7 @@ public class MasterCoprocessorHost
 
     @Override
     public Connection getConnection() {
-      return this.services.getConnection();
+      return new SharedConnection(this.services.getConnection());
     }
 
     @Override

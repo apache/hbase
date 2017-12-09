@@ -39,10 +39,11 @@ public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment<Mas
   ServerName getServerName();
 
   /**
-   * Returns the hosts' Connection to the Cluster.
+   * Returns the hosts' Connection to the Cluster. <b>Do not close! This is a shared connection
+   * with the hosting server. Throws {@link UnsupportedOperationException} if you try to close
+   * or abort it</b>.
    *
-   * <b>Do not close! Doing so will buckle the hosting server as it depends on its
-   * Connection to function</b>. For light-weight usage only. Heavy-duty usage will pull down
+   * For light-weight usage only. Heavy-duty usage will pull down
    * the hosting RegionServer responsiveness as well as that of other Coprocessors making use of
    * this Connection. Use to create table on start or to do administrative operations. Coprocessors
    * should create their own Connections if heavy usage to avoid impinging on hosting Server
