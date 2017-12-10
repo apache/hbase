@@ -30,11 +30,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Common methods and attributes used by SplitLogManager and SplitLogWorker running distributed splitting of WAL logs.
+ * Common methods and attributes used by SplitLogManager and SplitLogWorker running distributed
+ * splitting of WAL logs.
  */
 @InterfaceAudience.Private
-public class ZKSplitLog {
+public final class ZKSplitLog {
   private static final Log LOG = LogFactory.getLog(ZKSplitLog.class);
+
+  private ZKSplitLog() {
+  }
 
   /**
    * Gets the full path node name for the log file being split.
@@ -80,7 +84,9 @@ public class ZKSplitLog {
   }
 
   /**
-   * @param zkw
+   * Checks if the given path represents a rescan node.
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and constants
    * @param path the absolute path, starts with '/'
    * @return whether the path represents a rescan node
    */

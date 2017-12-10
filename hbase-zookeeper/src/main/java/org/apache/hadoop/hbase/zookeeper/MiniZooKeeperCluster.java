@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.net.BindException;
@@ -34,9 +34,9 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -187,17 +187,18 @@ public class MiniZooKeeperCluster {
   }
 
   /**
-   * @param baseDir
-   * @param numZooKeeperServers
-   * @return ClientPort server bound to, -1 if there was a
-   *         binding problem and we couldn't pick another port.
-   * @throws IOException
-   * @throws InterruptedException
+   * @param baseDir the base directory to use
+   * @param numZooKeeperServers the number of ZooKeeper servers
+   * @return ClientPort server bound to, -1 if there was a binding problem and we couldn't pick
+   *         another port.
+   * @throws IOException if an operation fails during the startup
+   * @throws InterruptedException if the startup fails
    */
   public int startup(File baseDir, int numZooKeeperServers) throws IOException,
-      InterruptedException {
-    if (numZooKeeperServers <= 0)
+          InterruptedException {
+    if (numZooKeeperServers <= 0) {
       return -1;
+    }
 
     setupTestEnv();
     shutdown();
@@ -226,15 +227,18 @@ public class MiniZooKeeperCluster {
 
       ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
       // Setting {min,max}SessionTimeout defaults to be the same as in Zookeeper
-      server.setMinSessionTimeout(configuration.getInt("hbase.zookeeper.property.minSessionTimeout", -1));
-      server.setMaxSessionTimeout(configuration.getInt("hbase.zookeeper.property.maxSessionTimeout", -1));
+      server.setMinSessionTimeout(configuration.getInt(
+              "hbase.zookeeper.property.minSessionTimeout", -1));
+      server.setMaxSessionTimeout(configuration.getInt(
+              "hbase.zookeeper.property.maxSessionTimeout", -1));
       NIOServerCnxnFactory standaloneServerFactory;
       while (true) {
         try {
           standaloneServerFactory = new NIOServerCnxnFactory();
           standaloneServerFactory.configure(
             new InetSocketAddress(currentClientPort),
-            configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS, HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS));
+            configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
+                    HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS));
         } catch (BindException e) {
           LOG.debug("Failed binding ZK Server to client port: " +
               currentClientPort, e);
@@ -290,7 +294,7 @@ public class MiniZooKeeperCluster {
   }
 
   /**
-   * @throws IOException
+   * @throws IOException if waiting for the shutdown of a server fails
    */
   public void shutdown() throws IOException {
     // shut down all the zk servers
@@ -321,13 +325,12 @@ public class MiniZooKeeperCluster {
     }
   }
 
-  /**@return clientPort return clientPort if there is another ZK backup can run
+  /**
+   * @return clientPort return clientPort if there is another ZK backup can run
    *         when killing the current active; return -1, if there is no backups.
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws IOException if waiting for the shutdown of a server fails
    */
-  public int killCurrentActiveZooKeeperServer() throws IOException,
-                                        InterruptedException {
+  public int killCurrentActiveZooKeeperServer() throws IOException, InterruptedException {
     if (!started || activeZKServerIndex < 0) {
       return -1;
     }
@@ -363,14 +366,12 @@ public class MiniZooKeeperCluster {
   }
 
   /**
-   * Kill one back up ZK servers
-   * @throws IOException
-   * @throws InterruptedException
+   * Kill one back up ZK servers.
+   *
+   * @throws IOException if waiting for the shutdown of a server fails
    */
-  public void killOneBackupZooKeeperServer() throws IOException,
-                                        InterruptedException {
-    if (!started || activeZKServerIndex < 0 ||
-        standaloneServerFactoryList.size() <= 1) {
+  public void killOneBackupZooKeeperServer() throws IOException, InterruptedException {
+    if (!started || activeZKServerIndex < 0 || standaloneServerFactoryList.size() <= 1) {
       return ;
     }
 

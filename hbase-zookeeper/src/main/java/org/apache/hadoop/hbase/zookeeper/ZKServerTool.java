@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -26,15 +29,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * Tool for reading ZooKeeper servers from HBase XML configuration and producing
  * a line-by-line list for use by bash scripts.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
-public class ZKServerTool {
+public final class ZKServerTool {
+  private ZKServerTool() {
+  }
+
   public static ServerName[] readZKNodes(Configuration conf) {
     List<ServerName> hosts = new LinkedList<>();
     String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
@@ -56,7 +59,7 @@ public class ZKServerTool {
    * Run the tool.
    * @param args Command line arguments.
    */
-  public static void main(String args[]) {
+  public static void main(String[] args) {
     for(ServerName server: readZKNodes(HBaseConfiguration.create())) {
       // bin/zookeeper.sh relies on the "ZK host" string for grepping which is case sensitive.
       System.out.println("ZK host: " + server.getHostname());
