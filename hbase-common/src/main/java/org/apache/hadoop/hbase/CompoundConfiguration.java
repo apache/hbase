@@ -261,7 +261,7 @@ public class CompoundConfiguration extends Configuration {
 
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("CompoundConfiguration: " + this.configs.size() + " configs");
     for (ImmutableConfigMap m : this.configs) {
       sb.append(m);

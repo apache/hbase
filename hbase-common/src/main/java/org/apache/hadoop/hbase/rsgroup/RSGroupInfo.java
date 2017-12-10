@@ -124,7 +124,7 @@ public class RSGroupInfo {
 
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("Name:");
     sb.append(this.name);
     sb.append(", ");
