@@ -2201,7 +2201,11 @@ If the contributor used +git format-patch+ to generate the patch, their commit m
 [[committer.amending.author]]
 ====== Add Amending-Author when a conflict cherrypick backporting
 
-We've established the practice of committing to master and then cherry picking back to branches whenever possible.
+We've established the practice of committing to master and then cherry picking back to branches whenever possible, unless
+
+* it's breaking compat: In which case, if it can go in minor releases, backport to branch-1 and branch-2.
+* it's a new feature: No for maintenance releases, For minor releases, discuss and arrive at consensus.
+
 When there is a minor conflict we can fix it up and just proceed with the commit.
 The resulting commit retains the original author.
 When the amending author is different from the original committer, add notice of this at the end of the commit message as: `Amending-Author: Author
