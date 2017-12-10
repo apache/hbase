@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-/**
- * Tag a test that covers our metrics handling
- */
 package org.apache.hadoop.hbase.testclassification;
 
+/**
+ * Tag a test that covers our metrics handling.
+ */
 public interface MetricsTests {
 }
