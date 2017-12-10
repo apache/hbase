@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.jruby.embed.PathType;
@@ -25,10 +29,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 @Category({ ClientTests.class, LargeTests.class })
 public class TestShellNoCluster extends AbstractTestShell {
@@ -56,5 +56,4 @@ public class TestShellNoCluster extends AbstractTestShell {
     // Start ruby tests without cluster
     jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/no_cluster_tests_runner.rb");
   }
-
 }
