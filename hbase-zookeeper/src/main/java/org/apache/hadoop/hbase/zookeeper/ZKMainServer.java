@@ -76,22 +76,26 @@ public class ZKMainServer {
   }
 
   /**
-   * @param args
+   * @param args the arguments to check
    * @return True if argument strings have a '-server' in them.
    */
-  private static boolean hasServer(final String args[]) {
+  private static boolean hasServer(final String[] args) {
     return args.length > 0 && args[0].equals(SERVER_ARG);
   }
 
   /**
-   * @param args
+   * @param args the arguments to check for command-line arguments
    * @return True if command-line arguments were passed.
    */
-  private static boolean hasCommandLineArguments(final String args[]) {
+  private static boolean hasCommandLineArguments(final String[] args) {
     if (hasServer(args)) {
-      if (args.length < 2) throw new IllegalStateException("-server param but no value");
+      if (args.length < 2) {
+        throw new IllegalStateException("-server param but no value");
+      }
+
       return args.length > 2;
     }
+
     return args.length > 0;
   }
 
@@ -99,7 +103,7 @@ public class ZKMainServer {
    * Run the tool.
    * @param args Command line arguments. First arg is path to zookeepers file.
    */
-  public static void main(String args[]) throws Exception {
+  public static void main(String[] args) throws Exception {
     String [] newArgs = args;
     if (!hasServer(args)) {
       // Add the zk ensemble from configuration if none passed on command-line.

@@ -53,9 +53,10 @@ public abstract class ZKNodeTracker extends ZKListener {
    *
    * <p>After construction, use {@link #start} to kick off tracking.
    *
-   * @param watcher
-   * @param node
-   * @param abortable
+   * @param watcher reference to the {@link ZKWatcher} which also contains configuration and
+   *                constants
+   * @param node path of the node being tracked
+   * @param abortable used to abort if a fatal error occurs
    */
   public ZKNodeTracker(ZKWatcher watcher, String node,
                        Abortable abortable) {
@@ -109,14 +110,17 @@ public abstract class ZKNodeTracker extends ZKListener {
    * Gets the data of the node, blocking until the node is available or the
    * specified timeout has elapsed.
    *
-   * @param timeout maximum time to wait for the node data to be available,
-   * n milliseconds.  Pass 0 for no timeout.
+   * @param timeout maximum time to wait for the node data to be available, n milliseconds. Pass 0
+   *                for no timeout.
    * @return data of the node
    * @throws InterruptedException if the waiting thread is interrupted
    */
   public synchronized byte [] blockUntilAvailable(long timeout, boolean refresh)
-  throws InterruptedException {
-    if (timeout < 0) throw new IllegalArgumentException();
+          throws InterruptedException {
+    if (timeout < 0) {
+      throw new IllegalArgumentException();
+    }
+
     boolean notimeout = timeout == 0;
     long startTime = System.currentTimeMillis();
     long remaining = timeout;
@@ -137,9 +141,8 @@ public abstract class ZKNodeTracker extends ZKListener {
         try {
           nodeExistsChecked = (ZKUtil.checkExists(watcher, node) != -1);
         } catch (KeeperException e) {
-          LOG.warn(
-            "Got exception while trying to check existence in  ZooKeeper" +
-            " of the node: "+node+", retrying if timeout not reached",e );
+          LOG.warn("Got exception while trying to check existence in  ZooKeeper" +
+            " of the node: " + node + ", retrying if timeout not reached", e);
         }
 
         // It did not exists, and now it does.
@@ -188,7 +191,10 @@ public abstract class ZKNodeTracker extends ZKListener {
 
   @Override
   public synchronized void nodeCreated(String path) {
-    if (!path.equals(node)) return;
+    if (!path.equals(node)) {
+      return;
+    }
+
     try {
       byte [] data = ZKUtil.getDataAndWatch(watcher, node);
       if (data != null) {

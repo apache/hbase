@@ -23,8 +23,8 @@ import java.util.UUID;
 
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -90,7 +90,7 @@ public class ZKClusterId {
    * Get the UUID for the provided ZK watcher. Doesn't handle any ZK exceptions
    * @param zkw watcher connected to an ensemble
    * @return the UUID read from zookeeper
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static UUID getUUIDForCluster(ZKWatcher zkw) throws KeeperException {
     String uuid = readClusterIdZNode(zkw);

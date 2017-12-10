@@ -21,13 +21,14 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LoadBalancerProtos;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the load balancer state up in ZK
@@ -57,12 +58,14 @@ public class LoadBalancerTracker extends ZKNodeTracker {
   }
 
   /**
-   * Set the balancer on/off
-   * @param balancerOn
-   * @throws KeeperException
+   * Set the balancer on/off.
+   *
+   * @param balancerOn true if the balancher should be on, false otherwise
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public void setBalancerOn(boolean balancerOn) throws KeeperException {
-  byte [] upData = toByteArray(balancerOn);
+    byte [] upData = toByteArray(balancerOn);
+
     try {
       ZKUtil.setData(watcher, watcher.znodePaths.balancerZNode, upData);
     } catch(KeeperException.NoNodeException nne) {

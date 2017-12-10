@@ -45,12 +45,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.Superusers;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
@@ -59,6 +55,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.SetData;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -77,6 +74,10 @@ import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+
 /**
  * Internal HBase utility class for ZooKeeper.
  *
@@ -87,10 +88,13 @@ import org.apache.zookeeper.server.ZooKeeperSaslServer;
  * If ZK is required for the operation, the server will need to be aborted.
  */
 @InterfaceAudience.Private
-public class ZKUtil {
+public final class ZKUtil {
   private static final Log LOG = LogFactory.getLog(ZKUtil.class);
 
   private static int zkDumpConnectionTimeOut;
+
+  private ZKUtil() {
+  }
 
   /**
    * Creates a new connection to ZooKeeper, pulling settings and ensemble config
@@ -198,13 +202,15 @@ public class ZKUtil {
       String userNameKey, String hostname,
       String loginContextProperty, String loginContextName)
       throws IOException {
-    if (!isSecureZooKeeper(conf))
+    if (!isSecureZooKeeper(conf)) {
       return;
+    }
 
     // User has specified a jaas.conf, keep this one as the good one.
     // HBASE_OPTS="-Djava.security.auth.login.config=jaas.conf"
-    if (System.getProperty("java.security.auth.login.config") != null)
+    if (System.getProperty("java.security.auth.login.config") != null) {
       return;
+    }
 
     // No keytab specified, no auth
     String keytabFilename = conf.get(keytabFileKey);
@@ -295,7 +301,11 @@ public class ZKUtil {
         KEYTAB_KERBEROS_OPTIONS.put("useTicketCache", useTicketCache ? "true" : "false");
         return KEYTAB_KERBEROS_CONF;
       }
-      if (baseConfig != null) return baseConfig.getAppConfigurationEntry(appName);
+
+      if (baseConfig != null) {
+        return baseConfig.getAppConfigurationEntry(appName);
+      }
+
       return(null);
     }
   }
@@ -454,7 +464,7 @@ public class ZKUtil {
    * @param zkw zookeeper reference
    * @param znode node to get children of and watch
    * @return list of znode names, null if the node doesn't exist
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static List<String> listChildrenAndWatchThem(ZKWatcher zkw,
       String znode) throws KeeperException {
@@ -544,8 +554,8 @@ public class ZKUtil {
     try {
       return !zkw.getRecoverableZooKeeper().getChildren(znode, null).isEmpty();
     } catch(KeeperException.NoNodeException ke) {
-      LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
-      "because node does not exist (not an error)"));
+      LOG.debug(zkw.prefix("Unable to list children of znode " + znode +
+              " because node does not exist (not an error)"));
       return false;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to list children of znode " + znode), e);
@@ -591,8 +601,8 @@ public class ZKUtil {
 
   /**
    * Get znode data. Does not set a watcher.
-   * @return ZNode data, null if the node does not exist or if there is an
-   *  error.
+   *
+   * @return ZNode data, null if the node does not exist or if there is an error.
    */
   public static byte [] getData(ZKWatcher zkw, String znode)
       throws KeeperException, InterruptedException {
@@ -748,17 +758,16 @@ public class ZKUtil {
    * Sets no watches under any conditions.
    *
    * @param zkw zk reference
-   * @param znode
-   * @param data
-   * @param expectedVersion
+   * @param znode the path to the ZNode
+   * @param data the data to store in ZooKeeper
+   * @param expectedVersion the expected version
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.BadVersionException if version mismatch
    * @deprecated Unused
    */
   @Deprecated
-  public static void updateExistingNodeData(ZKWatcher zkw, String znode,
-                                            byte [] data, int expectedVersion)
-  throws KeeperException {
+  public static void updateExistingNodeData(ZKWatcher zkw, String znode, byte[] data,
+      int expectedVersion) throws KeeperException {
     try {
       zkw.getRecoverableZooKeeper().setData(znode, data, expectedVersion);
     } catch(InterruptedException ie) {
@@ -808,11 +817,10 @@ public class ZKUtil {
    * @param zkw zk reference
    * @param znode path of node
    * @param data data to set for node
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
-  public static void createSetData(final ZKWatcher zkw, final String znode,
-                                   final byte [] data)
-  throws KeeperException {
+  public static void createSetData(final ZKWatcher zkw, final String znode, final byte [] data)
+          throws KeeperException {
     if (checkExists(zkw, znode) == -1) {
       ZKUtil.createWithParents(zkw, znode, data);
     } else {
@@ -1025,9 +1033,8 @@ public class ZKUtil {
    * @return true name of the newly created znode or null
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static String createNodeIfNotExistsNoWatch(ZKWatcher zkw, String znode,
-                                                    byte[] data, CreateMode createMode) throws KeeperException {
-
+  public static String createNodeIfNotExistsNoWatch(ZKWatcher zkw, String znode, byte[] data,
+      CreateMode createMode) throws KeeperException {
     String createdZNode = null;
     try {
       createdZNode = zkw.getRecoverableZooKeeper().create(znode, data,
@@ -1069,7 +1076,8 @@ public class ZKUtil {
         throw KeeperException.create(KeeperException.Code.SYSTEMERROR,
             "ZK.exists returned null (i.e.: znode does not exist) for znode=" + znode);
       }
-     return stat.getVersion();
+
+      return stat.getVersion();
     } catch (InterruptedException e) {
       zkw.interruptedException(e);
       return -1;
@@ -1086,8 +1094,8 @@ public class ZKUtil {
    * @param zkw zk reference
    * @param znode path of node to create
    * @param data data of node to create
-   * @param cb
-   * @param ctx
+   * @param cb the callback to use for the creation
+   * @param ctx the context to use for the creation
    */
   public static void asyncCreate(ZKWatcher zkw,
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
@@ -1232,9 +1240,10 @@ public class ZKUtil {
 
   /**
    * Deletes the specified node.  Fails silent if the node does not exist.
-   * @param zkw
-   * @param node
-   * @throws KeeperException
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param node the node to delete
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static void deleteNodeFailSilent(ZKWatcher zkw, String node)
   throws KeeperException {
@@ -1273,7 +1282,7 @@ public class ZKUtil {
    * Sets no watches.  Throws all exceptions besides dealing with deletion of
    * children.
    *
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static void deleteChildrenRecursively(ZKWatcher zkw, String node)
       throws KeeperException {
@@ -1506,7 +1515,7 @@ public class ZKUtil {
      * ZKUtilOp representing createAndFailSilent in ZooKeeper
      * (attempt to create node, ignore error if already exists)
      */
-    public static class CreateAndFailSilent extends ZKUtilOp {
+    public static final class CreateAndFailSilent extends ZKUtilOp {
       private byte [] data;
 
       private CreateAndFailSilent(String path, byte [] data) {
@@ -1520,8 +1529,12 @@ public class ZKUtil {
 
       @Override
       public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof CreateAndFailSilent)) return false;
+        if (this == o) {
+          return true;
+        }
+        if (!(o instanceof CreateAndFailSilent)) {
+          return false;
+        }
 
         CreateAndFailSilent op = (CreateAndFailSilent) o;
         return getPath().equals(op.getPath()) && Arrays.equals(data, op.data);
@@ -1538,15 +1551,19 @@ public class ZKUtil {
      * ZKUtilOp representing deleteNodeFailSilent in ZooKeeper
      * (attempt to delete node, ignore error if node doesn't exist)
      */
-    public static class DeleteNodeFailSilent extends ZKUtilOp {
+    public static final class DeleteNodeFailSilent extends ZKUtilOp {
       private DeleteNodeFailSilent(String path) {
         super(path);
       }
 
       @Override
       public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof DeleteNodeFailSilent)) return false;
+        if (this == o) {
+          return true;
+        }
+        if (!(o instanceof DeleteNodeFailSilent)) {
+          return false;
+        }
 
         return super.equals(o);
       }
@@ -1560,7 +1577,7 @@ public class ZKUtil {
     /**
      * ZKUtilOp representing setData in ZooKeeper
      */
-    public static class SetData extends ZKUtilOp {
+    public static final class SetData extends ZKUtilOp {
       private byte [] data;
 
       private SetData(String path, byte [] data) {
@@ -1574,8 +1591,12 @@ public class ZKUtil {
 
       @Override
       public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof SetData)) return false;
+        if (this == o) {
+          return true;
+        }
+        if (!(o instanceof SetData)) {
+          return false;
+        }
 
         SetData op = (SetData) o;
         return getPath().equals(op.getPath()) && Arrays.equals(data, op.data);
@@ -1592,9 +1613,10 @@ public class ZKUtil {
   /**
    * Convert from ZKUtilOp to ZKOp
    */
-  private static Op toZooKeeperOp(ZKWatcher zkw, ZKUtilOp op)
-  throws UnsupportedOperationException {
-    if(op == null) return null;
+  private static Op toZooKeeperOp(ZKWatcher zkw, ZKUtilOp op) throws UnsupportedOperationException {
+    if(op == null) {
+      return null;
+    }
 
     if (op instanceof CreateAndFailSilent) {
       CreateAndFailSilent cafs = (CreateAndFailSilent)op;
@@ -1629,14 +1651,16 @@ public class ZKUtil {
    * In this case, if the previous conditions hold, the commands are run sequentially, which should
    * result in the correct final state, but means that the operations will not run atomically.
    *
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static void multiOrSequential(ZKWatcher zkw, List<ZKUtilOp> ops,
                                        boolean runSequentialOnMultiFailure) throws KeeperException {
     if (zkw.getConfiguration().get("hbase.zookeeper.useMulti") != null) {
       LOG.warn("hbase.zookeeper.useMulti is deprecated. Default to true always.");
     }
-    if (ops == null) return;
+    if (ops == null) {
+      return;
+    }
 
     List<Op> zkOps = new LinkedList<>();
     for (ZKUtilOp op : ops) {
@@ -1646,21 +1670,21 @@ public class ZKUtil {
       zkw.getRecoverableZooKeeper().multi(zkOps);
     } catch (KeeperException ke) {
       switch (ke.code()) {
-      case NODEEXISTS:
-      case NONODE:
-      case BADVERSION:
-      case NOAUTH:
-        // if we get an exception that could be solved by running sequentially
-        // (and the client asked us to), then break out and run sequentially
-        if (runSequentialOnMultiFailure) {
-          LOG.info("On call to ZK.multi, received exception: " + ke.toString() + "."
-              + "  Attempting to run operations sequentially because"
-              + " runSequentialOnMultiFailure is: " + runSequentialOnMultiFailure + ".");
-          processSequentially(zkw, ops);
-          break;
-        }
-      default:
-        throw ke;
+        case NODEEXISTS:
+        case NONODE:
+        case BADVERSION:
+        case NOAUTH:
+          // if we get an exception that could be solved by running sequentially
+          // (and the client asked us to), then break out and run sequentially
+          if (runSequentialOnMultiFailure) {
+            LOG.info("On call to ZK.multi, received exception: " + ke.toString() + "."
+                + "  Attempting to run operations sequentially because"
+                + " runSequentialOnMultiFailure is: " + runSequentialOnMultiFailure + ".");
+            processSequentially(zkw, ops);
+            break;
+          }
+        default:
+          throw ke;
       }
     } catch (InterruptedException ie) {
       zkw.interruptedException(ie);
@@ -1748,14 +1772,19 @@ public class ZKUtil {
 
   /**
    * Appends replication znodes to the passed StringBuilder.
-   * @param zkw
-   * @param sb
-   * @throws KeeperException
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param sb the {@link StringBuilder} to append to
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   private static void getReplicationZnodesDump(ZKWatcher zkw, StringBuilder sb)
       throws KeeperException {
     String replicationZnode = zkw.znodePaths.replicationZNode;
-    if (ZKUtil.checkExists(zkw, replicationZnode) == -1) return;
+
+    if (ZKUtil.checkExists(zkw, replicationZnode) == -1) {
+      return;
+    }
+
     // do a ls -r on this znode
     sb.append("\n").append(replicationZnode).append(": ");
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, replicationZnode);
@@ -1790,7 +1819,7 @@ public class ZKUtil {
 
   /**
    * Returns a string with replication znodes and position of the replication log
-   * @param zkw
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @return aq string of replication znodes and log positions
    */
   public static String getReplicationZnodesDump(ZKWatcher zkw) throws KeeperException {
@@ -1858,13 +1887,16 @@ public class ZKUtil {
     }
   }
 
-  private static void appendPeerState(ZKWatcher zkw, String znodeToProcess,
-                                      StringBuilder sb) throws KeeperException, InvalidProtocolBufferException {
+  private static void appendPeerState(ZKWatcher zkw, String znodeToProcess, StringBuilder sb)
+          throws KeeperException, InvalidProtocolBufferException {
     String peerState = zkw.getConfiguration().get("zookeeper.znode.replication.peers.state",
       "peer-state");
     int pblen = ProtobufUtil.lengthOfPBMagic();
     for (String child : ZKUtil.listChildrenNoWatch(zkw, znodeToProcess)) {
-      if (!child.equals(peerState)) continue;
+      if (!child.equals(peerState)) {
+        continue;
+      }
+
       String peerStateZnode = ZNodePaths.joinZNode(znodeToProcess, child);
       sb.append("\n").append(peerStateZnode).append(": ");
       byte[] peerStateData;
@@ -1929,7 +1961,10 @@ public class ZKUtil {
 
   private static void logRetrievedMsg(final ZKWatcher zkw,
       final String znode, final byte [] data, final boolean watcherSet) {
-    if (!LOG.isTraceEnabled()) return;
+    if (!LOG.isTraceEnabled()) {
+      return;
+    }
+
     LOG.trace(zkw.prefix("Retrieved " + ((data == null)? 0: data.length) +
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
@@ -2008,7 +2043,10 @@ public class ZKUtil {
    * @param root name of the root directory in zk to print
    */
   public static void logZKTree(ZKWatcher zkw, String root) {
-    if (!LOG.isDebugEnabled()) return;
+    if (!LOG.isDebugEnabled()) {
+      return;
+    }
+
     LOG.debug("Current zk system:");
     String prefix = "|-";
     LOG.debug(prefix + root);
@@ -2027,7 +2065,11 @@ public class ZKUtil {
   protected static void logZKTree(ZKWatcher zkw, String root, String prefix)
       throws KeeperException {
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, root);
-    if (children == null) return;
+
+    if (children == null) {
+      return;
+    }
+
     for (String child : children) {
       LOG.debug(prefix + child);
       String node = ZNodePaths.joinZNode(root.equals("/") ? "" : root, child);
@@ -2036,7 +2078,7 @@ public class ZKUtil {
   }
 
   /**
-   * @param position
+   * @param position the position to serialize
    * @return Serialized protobuf of <code>position</code> with pb magic prefix prepended suitable
    *         for use as content of an wal position in a replication queue.
    */
@@ -2049,7 +2091,7 @@ public class ZKUtil {
   /**
    * @param bytes - Content of a WAL position znode.
    * @return long - The current WAL position.
-   * @throws DeserializationException
+   * @throws DeserializationException if the WAL position cannot be parsed
    */
   public static long parseWALPositionFrom(final byte[] bytes) throws DeserializationException {
     if (bytes == null) {

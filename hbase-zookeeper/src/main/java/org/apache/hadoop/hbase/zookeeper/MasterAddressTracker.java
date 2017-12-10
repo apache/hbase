@@ -23,14 +23,15 @@ import java.io.InterruptedIOException;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
+
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Manages the location of the current active Master for the RegionServer.
@@ -138,12 +139,12 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * instance of this tracker in your context.
    * @param zkw ZKWatcher to use
    * @return ServerName stored in the the master address znode or null if no
-   * znode present.
-   * @throws KeeperException
-   * @throws IOException
+   *         znode present.
+   * @throws KeeperException if a ZooKeeper operation fails
+   * @throws IOException if the address of the ZooKeeper master cannot be retrieved
    */
   public static ServerName getMasterAddress(final ZKWatcher zkw)
-  throws KeeperException, IOException {
+          throws KeeperException, IOException {
     byte [] data;
     try {
       data = ZKUtil.getData(zkw, zkw.znodePaths.masterAddressZNode);
@@ -169,13 +170,12 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * instance of this tracker in your context.
    * @param zkw ZKWatcher to use
    * @return master info port in the the master address znode or null if no
-   * znode present.
-   * // TODO can't return null for 'int' return type. non-static verison returns 0
-   * @throws KeeperException
-   * @throws IOException
+   *         znode present.
+   *         // TODO can't return null for 'int' return type. non-static verison returns 0
+   * @throws KeeperException if a ZooKeeper operation fails
+   * @throws IOException if the address of the ZooKeeper master cannot be retrieved
    */
-  public static int getMasterInfoPort(final ZKWatcher zkw) throws KeeperException,
-      IOException {
+  public static int getMasterInfoPort(final ZKWatcher zkw) throws KeeperException, IOException {
     byte[] data;
     try {
       data = ZKUtil.getData(zkw, zkw.znodePaths.masterAddressZNode);
@@ -201,10 +201,10 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * path.
    * @param zkw The ZKWatcher to use.
    * @param znode Where to create the znode; could be at the top level or it
-   * could be under backup masters
+   *              could be under backup masters
    * @param master ServerName of the current master must not be null.
    * @return true if node created, false if not; a watch is set in both cases
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static boolean setMasterAddress(final ZKWatcher zkw,
       final String znode, final ServerName master, int infoPort)
@@ -223,7 +223,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
   /**
    * @param sn must not be null
    * @return Content of the master znode as a serialized pb with the pb
-   * magic as prefix.
+   *         magic as prefix.
    */
   static byte[] toByteArray(final ServerName sn, int infoPort) {
     ZooKeeperProtos.Master.Builder mbuilder = ZooKeeperProtos.Master.newBuilder();
@@ -240,7 +240,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
   /**
    * @param data zookeeper data. may be null
    * @return pb object of master, null if no active master
-   * @throws DeserializationException
+   * @throws DeserializationException if the parsing fails
    */
   public static ZooKeeperProtos.Master parse(byte[] data) throws DeserializationException {
     if (data == null) {

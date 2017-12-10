@@ -33,9 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -85,8 +85,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // negotiation to complete
   public CountDownLatch saslLatch = new CountDownLatch(1);
 
-
-
   private final Configuration conf;
 
   /* A pattern that matches a Kerberos name, borrowed from Hadoop's KerberosName */
@@ -95,8 +93,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   /**
    * Instantiate a ZooKeeper connection and watcher.
    * @param identifier string that is passed to RecoverableZookeeper to be used as
-   * identifier for this instance. Use null for default.
-   * @throws IOException
+   *                   identifier for this instance. Use null for default.
+   * @throws IOException if the connection to ZooKeeper fails
    * @throws ZooKeeperConnectionException
    */
   public ZKWatcher(Configuration conf, String identifier,
@@ -106,13 +104,13 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param conf
+   * @param conf the configuration to use
    * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
    *          this instance. Use null for default.
    * @param abortable Can be null if there is on error there is no host to abort: e.g. client
    *          context.
-   * @param canCreateBaseZNode
-   * @throws IOException
+   * @param canCreateBaseZNode true if a base ZNode can be created
+   * @throws IOException if the connection to ZooKeeper fails
    * @throws ZooKeeperConnectionException
    */
   public ZKWatcher(Configuration conf, String identifier,
@@ -211,7 +209,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   /**
    * Set the znode perms recursively. This will do post-order recursion, so that baseZnode ACLs
    * will be set last in case the master fails in between.
-   * @param znode
+   * @param znode the ZNode to set the permissions for
    */
   private void setZnodeAclsRecursive(String znode) throws KeeperException, InterruptedException {
     List<String> children = recoverableZooKeeper.getChildren(znode, false);
@@ -228,7 +226,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * Checks whether the ACLs returned from the base znode (/hbase) is set for secure setup.
    * @param acls acls from zookeeper
    * @return whether ACLs are set for the base znode
-   * @throws IOException
+   * @throws IOException if getting the current user fails
    */
   private boolean isBaseZnodeAclSetup(List<ACL> acls) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -355,7 +353,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * Adds this instance's identifier as a prefix to the passed <code>str</code>
    * @param str String to amend.
    * @return A new string with this instance's identifier as prefix: e.g.
-   * if passed 'hello world', the returned string could be
+   *         if passed 'hello world', the returned string could be
    */
   public String prefix(final String str) {
     return this.toString() + " " + str;
@@ -364,7 +362,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   /**
    * Get the znodes corresponding to the meta replicas from ZK
    * @return list of znodes
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public List<String> getMetaReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, znodePaths.baseZNode);
@@ -372,7 +370,9 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     if (childrenOfBaseNode != null) {
       String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
       for (String child : childrenOfBaseNode) {
-        if (child.startsWith(pattern)) metaReplicaNodes.add(child);
+        if (child.startsWith(pattern)) {
+          metaReplicaNodes.add(child);
+        }
       }
     }
     return metaReplicaNodes;
@@ -380,7 +380,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Register the specified listener to receive ZooKeeper events.
-   * @param listener
+   * @param listener the listener to register
    */
   public void registerListener(ZKListener listener) {
     listeners.add(listener);
@@ -389,7 +389,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   /**
    * Register the specified listener to receive ZooKeeper events and add it as
    * the first in the list of current listeners.
-   * @param listener
+   * @param listener the listener to register
    */
   public void registerListenerFirst(ZKListener listener) {
     listeners.add(0, listener);
@@ -512,7 +512,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * call, it's possible for the Abortable to catch it and try to create a new
    * session with ZooKeeper. This is what the client does in HCM.
    * <p>
-   * @param event
+   * @param event the connection-related event
    */
   private void connectionEvent(WatchedEvent event) {
     switch(event.getState()) {
@@ -571,11 +571,10 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * <p>
    * TODO: Currently this method rethrows the exception to let the caller handle
    * <p>
-   * @param ke
-   * @throws KeeperException
+   * @param ke the exception to rethrow
+   * @throws KeeperException if a ZooKeeper operation fails
    */
-  public void keeperException(KeeperException ke)
-  throws KeeperException {
+  public void keeperException(KeeperException ke) throws KeeperException {
     LOG.error(prefix("Received unexpected KeeperException, re-throwing exception"), ke);
     throw ke;
   }
@@ -623,8 +622,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
 
   @Override
   public void abort(String why, Throwable e) {
-    if (this.abortable != null) this.abortable.abort(why, e);
-    else this.aborted = true;
+    if (this.abortable != null) {
+      this.abortable.abort(why, e);
+    } else {
+      this.aborted = true;
+    }
   }
 
   @Override

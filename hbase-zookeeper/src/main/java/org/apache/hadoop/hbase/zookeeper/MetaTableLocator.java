@@ -99,9 +99,10 @@ public class MetaTableLocator {
   }
 
   /**
+   * Gets the meta regions and their locations for the given path and replica ID.
    *
-   * @param zkw
-   * @param replicaId
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param replicaId the ID of the replica
    * @return meta table regions and their locations.
    */
   public List<Pair<RegionInfo, ServerName>> getMetaRegionsAndLocations(ZKWatcher zkw,
@@ -114,6 +115,8 @@ public class MetaTableLocator {
   }
 
   /**
+   * Gets the meta regions for the given path with the default replica ID.
+   *
    * @param zkw ZooKeeper watcher to be used
    * @return List of meta regions
    */
@@ -122,9 +125,10 @@ public class MetaTableLocator {
   }
 
   /**
+   * Gets the meta regions for the given path and replica ID.
    *
-   * @param zkw
-   * @param replicaId
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param replicaId the ID of the replica
    * @return List of meta regions
    */
   public List<RegionInfo> getMetaRegions(ZKWatcher zkw, int replicaId) {
@@ -133,9 +137,11 @@ public class MetaTableLocator {
     return getListOfRegionInfos(result);
   }
 
-  private List<RegionInfo> getListOfRegionInfos(
-      final List<Pair<RegionInfo, ServerName>> pairs) {
-    if (pairs == null || pairs.isEmpty()) return Collections.EMPTY_LIST;
+  private List<RegionInfo> getListOfRegionInfos(final List<Pair<RegionInfo, ServerName>> pairs) {
+    if (pairs == null || pairs.isEmpty()) {
+      return Collections.EMPTY_LIST;
+    }
+
     List<RegionInfo> result = new ArrayList<>(pairs.size());
     for (Pair<RegionInfo, ServerName> pair: pairs) {
       result.add(pair.getFirst());
@@ -159,8 +165,8 @@ public class MetaTableLocator {
 
   /**
    * Gets the meta region location, if available.  Does not block.
-   * @param zkw
-   * @param replicaId
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param replicaId the ID of the replica
    * @return server name
    */
   public ServerName getMetaRegionLocation(final ZKWatcher zkw, int replicaId) {
@@ -177,12 +183,13 @@ public class MetaTableLocator {
    * specified timeout if not immediately available.
    * Given the zookeeper notification could be delayed, we will try to
    * get the latest data.
-   * @param zkw
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param timeout maximum time to wait, in millis
    * @return server name for server hosting meta region formatted as per
    * {@link ServerName}, or null if none available
    * @throws InterruptedException if interrupted while waiting
-   * @throws NotAllMetaRegionsOnlineException
+   * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
    */
   public ServerName waitMetaRegionLocation(ZKWatcher zkw, long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
@@ -190,17 +197,17 @@ public class MetaTableLocator {
   }
 
   /**
-   * Gets the meta region location, if available, and waits for up to the
-   * specified timeout if not immediately available.
-   * Given the zookeeper notification could be delayed, we will try to
+   * Gets the meta region location, if available, and waits for up to the specified timeout if not
+   * immediately available. Given the zookeeper notification could be delayed, we will try to
    * get the latest data.
-   * @param zkw
-   * @param replicaId
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param replicaId the ID of the replica
    * @param timeout maximum time to wait, in millis
    * @return server name for server hosting meta region formatted as per
    * {@link ServerName}, or null if none available
-   * @throws InterruptedException
-   * @throws NotAllMetaRegionsOnlineException
+   * @throws InterruptedException if waiting for the socket operation fails
+   * @throws NotAllMetaRegionsOnlineException if a meta or root region is not online
    */
   public ServerName waitMetaRegionLocation(ZKWatcher zkw, int replicaId, long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
@@ -234,7 +241,10 @@ public class MetaTableLocator {
     long startTime = System.currentTimeMillis();
     while (!stopped) {
       try {
-        if (waitMetaRegionLocation(zkw, 100) != null) break;
+        if (waitMetaRegionLocation(zkw, 100) != null) {
+          break;
+        }
+
         long sleepTime = System.currentTimeMillis() - startTime;
         // +1 in case sleepTime=0
         if ((sleepTime + 1) % 10000 == 0) {
@@ -251,33 +261,33 @@ public class MetaTableLocator {
 
   /**
    * Verify <code>hbase:meta</code> is deployed and accessible.
-   * @param hConnection
-   * @param zkw
+   *
+   * @param hConnection the connection to use
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param timeout How long to wait on zk for meta address (passed through to
-   * the internal call to {@link #getMetaServerConnection}.
+   *                the internal call to {@link #getMetaServerConnection}.
    * @return True if the <code>hbase:meta</code> location is healthy.
-   * @throws java.io.IOException
-   * @throws InterruptedException
+   * @throws IOException if the number of retries for getting the connection is exceeded
+   * @throws InterruptedException if waiting for the socket operation fails
    */
-  public boolean verifyMetaRegionLocation(ClusterConnection hConnection,
-                                          ZKWatcher zkw, final long timeout)
-  throws InterruptedException, IOException {
+  public boolean verifyMetaRegionLocation(ClusterConnection hConnection, ZKWatcher zkw,
+      final long timeout) throws InterruptedException, IOException {
     return verifyMetaRegionLocation(hConnection, zkw, timeout, RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
    * Verify <code>hbase:meta</code> is deployed and accessible.
-   * @param connection
-   * @param zkw
+   *
+   * @param connection the connection to use
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param timeout How long to wait on zk for meta address (passed through to
-   * @param replicaId
+   * @param replicaId the ID of the replica
    * @return True if the <code>hbase:meta</code> location is healthy.
-   * @throws InterruptedException
-   * @throws IOException
+   * @throws InterruptedException if waiting for the socket operation fails
+   * @throws IOException if the number of retries for getting the connection is exceeded
    */
-  public boolean verifyMetaRegionLocation(ClusterConnection connection,
-                                          ZKWatcher zkw, final long timeout, int replicaId)
-  throws InterruptedException, IOException {
+  public boolean verifyMetaRegionLocation(ClusterConnection connection, ZKWatcher zkw,
+      final long timeout, int replicaId) throws InterruptedException, IOException {
     AdminProtos.AdminService.BlockingInterface service = null;
     try {
       service = getMetaServerConnection(connection, zkw, timeout, replicaId);
@@ -299,12 +309,10 @@ public class MetaTableLocator {
    * Verify we can connect to <code>hostingServer</code> and that its carrying
    * <code>regionName</code>.
    * @param hostingServer Interface to the server hosting <code>regionName</code>
-   * @param address The servername that goes with the <code>metaServer</code>
-   * Interface.  Used logging.
+   * @param address The servername that goes with the <code>metaServer</code> interface.
+   *                Used logging.
    * @param regionName The regionname we are interested in.
-   * @return True if we were able to verify the region located at other side of
-   * the Interface.
-   * @throws IOException
+   * @return True if we were able to verify the region located at other side of the interface.
    */
   // TODO: We should be able to get the ServerName from the AdminProtocol
   // rather than have to pass it in.  Its made awkward by the fact that the
@@ -312,8 +320,7 @@ public class MetaTableLocator {
   // to be fixed to go to a local method or to a cache before we can do this.
   private boolean verifyRegionLocation(final ClusterConnection connection,
       AdminService.BlockingInterface hostingServer, final ServerName address,
-      final byte [] regionName)
-  throws IOException {
+      final byte [] regionName) {
     if (hostingServer == null) {
       LOG.info("Passed hostingServer is null");
       return false;
@@ -347,34 +354,33 @@ public class MetaTableLocator {
   }
 
   /**
-   * Gets a connection to the server hosting meta, as reported by ZooKeeper,
-   * waiting up to the specified timeout for availability.
+   * Gets a connection to the server hosting meta, as reported by ZooKeeper, waiting up to the
+   * specified timeout for availability.
+   *
    * <p>WARNING: Does not retry.  Use an {@link org.apache.hadoop.hbase.client.HTable} instead.
-   * @param connection
-   * @param zkw
+   *
+   * @param connection the connection to use
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
    * @param timeout How long to wait on meta location
-   * @param replicaId
+   * @param replicaId the ID of the replica
    * @return connection to server hosting meta
-   * @throws InterruptedException
-   * @throws NotAllMetaRegionsOnlineException if timed out waiting
-   * @throws IOException
+   * @throws InterruptedException if waiting for the socket operation fails
+   * @throws IOException if the number of retries for getting the connection is exceeded
    */
   private AdminService.BlockingInterface getMetaServerConnection(ClusterConnection connection,
-                                                                 ZKWatcher zkw, long timeout, int replicaId)
-  throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
+      ZKWatcher zkw, long timeout, int replicaId) throws InterruptedException, IOException {
     return getCachedConnection(connection, waitMetaRegionLocation(zkw, replicaId, timeout));
   }
 
   /**
    * @param sn ServerName to get a connection against.
    * @return The AdminProtocol we got when we connected to <code>sn</code>
-   * May have come from cache, may not be good, may have been setup by this
-   * invocation, or may be null.
-   * @throws IOException
+   *         May have come from cache, may not be good, may have been setup by this invocation, or
+   *         may be null.
+   * @throws IOException if the number of retries for getting the connection is exceeded
    */
   private static AdminService.BlockingInterface getCachedConnection(ClusterConnection connection,
-    ServerName sn)
-  throws IOException {
+      ServerName sn) throws IOException {
     if (sn == null) {
       return null;
     }
@@ -430,16 +436,16 @@ public class MetaTableLocator {
   }
 
   /**
-   * Sets the location of <code>hbase:meta</code> in ZooKeeper to the
-   * specified server address.
-   * @param zookeeper
-   * @param serverName
-   * @param replicaId
-   * @param state
-   * @throws KeeperException
+   * Sets the location of <code>hbase:meta</code> in ZooKeeper to the specified server address.
+   * @param zookeeper reference to the {@link ZKWatcher} which also contains configuration and
+   *                  operation
+   * @param serverName the name of the server
+   * @param replicaId the ID of the replica
+   * @param state the state of the region
+   * @throws KeeperException if a ZooKeeper operation fails
    */
-  public static void setMetaLocation(ZKWatcher zookeeper,
-      ServerName serverName, int replicaId, RegionState.State state) throws KeeperException {
+  public static void setMetaLocation(ZKWatcher zookeeper, ServerName serverName, int replicaId,
+      RegionState.State state) throws KeeperException {
     if (serverName == null) {
       LOG.warn("Tried to set null ServerName in hbase:meta; skipping -- ServerName required");
       return;
@@ -476,13 +482,14 @@ public class MetaTableLocator {
 
   /**
    * Load the meta region state from the meta server ZNode.
-   * @param zkw
-   * @param replicaId
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param replicaId the ID of the replica
    * @return regionstate
-   * @throws KeeperException
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static RegionState getMetaRegionState(ZKWatcher zkw, int replicaId)
-      throws KeeperException {
+          throws KeeperException {
     RegionState.State state = RegionState.State.OPEN;
     ServerName serverName = null;
     try {
@@ -491,8 +498,8 @@ public class MetaTableLocator {
         try {
           int prefixLen = ProtobufUtil.lengthOfPBMagic();
           ZooKeeperProtos.MetaRegionServer rl =
-            ZooKeeperProtos.MetaRegionServer.PARSER.parseFrom
-              (data, prefixLen, data.length - prefixLen);
+            ZooKeeperProtos.MetaRegionServer.PARSER.parseFrom(data, prefixLen,
+                    data.length - prefixLen);
           if (rl.hasState()) {
             state = RegionState.State.convert(rl.getState());
           }
@@ -545,24 +552,28 @@ public class MetaTableLocator {
     }
   }
   /**
-   * Wait until the primary meta region is available. Get the secondary
-   * locations as well but don't block for those.
-   * @param zkw
-   * @param timeout
-   * @param conf
+   * Wait until the primary meta region is available. Get the secondary locations as well but don't
+   * block for those.
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and operation
+   * @param timeout maximum time to wait in millis
+   * @param conf the {@link Configuration} to use
    * @return ServerName or null if we timed out.
-   * @throws InterruptedException
+   * @throws InterruptedException if waiting for the socket operation fails
    */
-  public List<ServerName> blockUntilAvailable(final ZKWatcher zkw,
-      final long timeout, Configuration conf)
-          throws InterruptedException {
+  public List<ServerName> blockUntilAvailable(final ZKWatcher zkw, final long timeout,
+      Configuration conf) throws InterruptedException {
     int numReplicasConfigured = 1;
 
     List<ServerName> servers = new ArrayList<>();
     // Make the blocking call first so that we do the wait to know
     // the znodes are all in place or timeout.
     ServerName server = blockUntilAvailable(zkw, timeout);
-    if (server == null) return null;
+
+    if (server == null) {
+      return null;
+    }
+
     servers.add(server);
 
     try {
@@ -583,27 +594,32 @@ public class MetaTableLocator {
    * @param zkw zookeeper connection to use
    * @param timeout maximum time to wait, in millis
    * @return ServerName or null if we timed out.
-   * @throws InterruptedException
+   * @throws InterruptedException if waiting for the socket operation fails
    */
-  public ServerName blockUntilAvailable(final ZKWatcher zkw,
-      final long timeout)
-  throws InterruptedException {
+  public ServerName blockUntilAvailable(final ZKWatcher zkw, final long timeout)
+          throws InterruptedException {
     return blockUntilAvailable(zkw, RegionInfo.DEFAULT_REPLICA_ID, timeout);
   }
 
   /**
    * Wait until the meta region is available and is not in transition.
-   * @param zkw
-   * @param replicaId
-   * @param timeout
+   *
+   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and constants
+   * @param replicaId the ID of the replica
+   * @param timeout maximum time to wait in millis
    * @return ServerName or null if we timed out.
-   * @throws InterruptedException
+   * @throws InterruptedException if waiting for the socket operation fails
    */
-  public ServerName blockUntilAvailable(final ZKWatcher zkw, int replicaId,
-                                        final long timeout)
-  throws InterruptedException {
-    if (timeout < 0) throw new IllegalArgumentException();
-    if (zkw == null) throw new IllegalArgumentException();
+  public ServerName blockUntilAvailable(final ZKWatcher zkw, int replicaId, final long timeout)
+          throws InterruptedException {
+    if (timeout < 0) {
+      throw new IllegalArgumentException();
+    }
+
+    if (zkw == null) {
+      throw new IllegalArgumentException();
+    }
+
     long startTime = System.currentTimeMillis();
     ServerName sn = null;
     while (true) {
