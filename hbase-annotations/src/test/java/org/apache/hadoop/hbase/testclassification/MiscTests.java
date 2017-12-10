@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +16,11 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.hbase.testclassification;
+
 /**
  * Tag a test as not easily falling into any of the below categories.
+ *
  * @see org.apache.hadoop.hbase.testclassification.ClientTests
  * @see org.apache.hadoop.hbase.testclassification.CoprocessorTests
  * @see org.apache.hadoop.hbase.testclassification.FilterTests
@@ -34,7 +36,5 @@
  * @see org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests
  * @see org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests
  */
-package org.apache.hadoop.hbase.testclassification;
-
 public interface MiscTests {
 }

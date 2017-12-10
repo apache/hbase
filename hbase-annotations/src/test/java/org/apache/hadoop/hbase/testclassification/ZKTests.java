@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.testclassification;
 
 /**
  * For tests which test the general logic of zookeeper related tools, such as
- * {@code RecoverableZooKeeper}, not for tests which depend on zookeeper.
+ * {@code RecoverableZooKeeper}, not for tests which depend on ZooKeeper.
  */
 public interface ZKTests {
 }

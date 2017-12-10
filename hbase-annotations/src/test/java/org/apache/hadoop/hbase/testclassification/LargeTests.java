@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,10 +21,12 @@ package org.apache.hadoop.hbase.testclassification;
 /**
  * Tag a test as 'large', meaning that the test class has the following
  * characteristics:
- *  - executed in an isolated JVM. Tests can however be executed in different
- *    JVM on the same machine simultaneously.
- *  - will not have to be executed by the developer before submitting a bug
- *  - ideally, last less than 2 minutes to help parallelization
+ * <ul>
+ *  <li>executed in an isolated JVM. Tests can however be executed in different JVM on the same
+ *  machine simultaneously.</li>
+ *  <li>will not have to be executed by the developer before submitting a bug</li>
+ *  <li>ideally, last less than 2 minutes to help parallelization</li>
+ * </ul>
  *
  *  It the worst case compared to small or medium, use it only for tests that
  *    you cannot put in the other categories
