@@ -386,7 +386,7 @@ public class TestCompactedHFilesDischarger {
           latch.await();
         } catch (InterruptedException e) {
         }
-        while (!next) {
+        while (next) {
           next = resScanner.next(results);
         }
       } finally {
