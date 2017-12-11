@@ -1081,6 +1081,88 @@ public class TestAsyncProcess {
   }
 
   @Test
+  public void testSettingAutoFlushParameters() throws Exception {
+    ClusterConnection conn = createHConnection();
+    MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);
+
+    checkAutoFlushParameters(conn, ap,     0,    0);
+    checkAutoFlushParameters(conn, ap, -1234,    0);
+    checkAutoFlushParameters(conn, ap,     1,    BufferedMutatorImpl.MIN_WRITE_BUFFER_MAX_LINGER);
+    checkAutoFlushParameters(conn, ap,  1234, 1234);
+  }
+
+  private void checkAutoFlushParameters(ClusterConnection conn, MyAsyncProcess ap, long set, long expect) {
+    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
+
+    // The BufferedMutatorParams does nothing with the value
+    bufferParam.writeBufferMaxLinger(set);
+    Assert.assertEquals(set, bufferParam.getWriteBufferMaxLinger());
+
+    // The BufferedMutatorImpl corrects illegal values
+    BufferedMutatorImpl ht = new BufferedMutatorImpl(conn, bufferParam, ap);
+    Assert.assertEquals(expect, ht.getWriteBufferMaxLinger());
+  }
+
+
+  @Test
+  public void testHTablePutSuccessAutoFlush() throws Exception {
+    ClusterConnection conn = createHConnection();
+    MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);
+    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
+
+    bufferParam.writeBufferMaxLinger(1); // Autoflush after 100 ms
+    bufferParam.writeBufferSize(10000);  // Write buffer set to much larger than the single record
+
+    BufferedMutatorImpl ht = new BufferedMutatorImpl(conn, bufferParam, ap);
+
+    // Verify if BufferedMutator has the right settings.
+    Assert.assertEquals(10000, ht.getWriteBufferSize());
+    Assert.assertEquals(BufferedMutatorImpl.MIN_WRITE_BUFFER_MAX_LINGER, ht.getWriteBufferMaxLinger());
+
+    Put put = createPut(1, true);
+
+    Assert.assertEquals(0, ht.getAutoFlushCount());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // ----- Insert, flush immediately, MUST NOT auto flush
+    ht.mutate(put);
+    ht.flush();
+
+    Thread.sleep(1000);
+    Assert.assertEquals(0, ht.getAutoFlushCount());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // ----- Insert, NO flush, MUST auto flush
+    ht.mutate(put);
+    Assert.assertEquals(0, ht.getAutoFlushCount());
+    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+
+    // After a little more that 10 ms we should see an automatic flush
+    // Flushing itself seems to take approx 1050 ms, so we wait for 2 seconds.
+    Thread.sleep(2000);
+    Assert.assertEquals(1, ht.getAutoFlushCount());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // ----- DISABLE AUTO FLUSH, Insert, NO flush, MUST NOT auto flush
+    ht.setWriteBufferMaxLinger(0);
+    ht.mutate(put);
+    Assert.assertEquals(1, ht.getAutoFlushCount());
+    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+
+    // Wait for 2 seconds, we should see NO flushes.
+    Thread.sleep(2000);
+    Assert.assertEquals(1, ht.getAutoFlushCount());
+    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+
+    // Reenable autoflush, wait and it should have auto flushed.
+    ht.setWriteBufferMaxLinger(1);
+    Thread.sleep(500);
+    Assert.assertEquals(2, ht.getAutoFlushCount());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+  }
+
+
+  @Test
   public void testBufferedMutatorImplWithSharedPool() throws Exception {
     ClusterConnection conn = createHConnection();
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);

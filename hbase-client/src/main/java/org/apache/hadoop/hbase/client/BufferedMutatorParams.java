@@ -34,6 +34,7 @@ public class BufferedMutatorParams implements Cloneable {
 
   private final TableName tableName;
   private long writeBufferSize = UNSET;
+  private long writeBufferMaxLinger = UNSET;
   private int maxKeyValueSize = UNSET;
   private ExecutorService pool = null;
   private String implementationClassName = null;
@@ -85,6 +86,18 @@ public class BufferedMutatorParams implements Cloneable {
    */
   public BufferedMutatorParams writeBufferSize(long writeBufferSize) {
     this.writeBufferSize = writeBufferSize;
+    return this;
+  }
+
+  public long getWriteBufferMaxLinger() {
+    return writeBufferMaxLinger;
+  }
+
+  /**
+   * Set the max timeout before the buffer is automatically flushed.
+   */
+  public BufferedMutatorParams writeBufferMaxLinger(long milliseconds) {
+    this.writeBufferMaxLinger = milliseconds;
     return this;
   }
 
@@ -153,11 +166,12 @@ public class BufferedMutatorParams implements Cloneable {
     justification="The clone below is complete")
   public BufferedMutatorParams clone() {
     BufferedMutatorParams clone = new BufferedMutatorParams(this.tableName);
-    clone.writeBufferSize = this.writeBufferSize;
-    clone.maxKeyValueSize = maxKeyValueSize;
-    clone.pool = this.pool;
-    clone.listener = this.listener;
-    clone.implementationClassName = this.implementationClassName;
+    clone.writeBufferSize          = this.writeBufferSize;
+    clone.writeBufferMaxLinger     = this.writeBufferMaxLinger;
+    clone.maxKeyValueSize          = this.maxKeyValueSize;
+    clone.pool                     = this.pool;
+    clone.listener                 = this.listener;
+    clone.implementationClassName  = this.implementationClassName;
     return clone;
   }
 }

@@ -115,6 +115,22 @@ public interface BufferedMutator extends Closeable {
   void flush() throws IOException;
 
   /**
+   * Sets the maximum time before the buffer is automatically flushed.
+   * @param milliseconds The maximum number of milliseconds how long records may be buffered before they are flushed. Set to 0 to disable.
+   */
+  default void setWriteBufferMaxLinger(long milliseconds) {
+    throw new UnsupportedOperationException("The BufferedMutator::setWriteBufferMaxLinger has not been implemented");
+  }
+
+  /**
+   * Returns the current automatic flush timeout value in milliseconds.
+   * @return The maximum number of milliseconds how long records may be buffered before they are flushed. The value 0 means this auto flush is disabled.
+   */
+  default long getWriteBufferMaxLinger() {
+    throw new UnsupportedOperationException("The BufferedMutator::getWriteBufferMaxLinger has not been implemented");
+  }
+
+  /**
    * Returns the maximum size in bytes of the write buffer for this HTable.
    * <p>
    * The default value comes from the configuration parameter {@code hbase.client.write.buffer}.
