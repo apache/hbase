@@ -119,6 +119,8 @@ public class TestConcatenatedLists {
   }
 
   @SuppressWarnings("ModifyingCollectionWithItself")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DMI_VACUOUS_SELF_COLLECTION_CALL",
+    justification="Intended vacuous containsAll call on 'c'")
   private void verify(ConcatenatedLists<Long> c, int last) {
     assertEquals((last == -1), c.isEmpty());
     assertEquals(last + 1, c.size());

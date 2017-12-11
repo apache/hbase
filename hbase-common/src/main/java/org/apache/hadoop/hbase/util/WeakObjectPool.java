@@ -21,7 +21,6 @@ import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory;
 
 /**
  * A {@code WeakReference} based shared object pool.

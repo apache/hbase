@@ -135,7 +135,7 @@ public final class PrivateCellUtil {
   static class TagRewriteCell implements ExtendedCell {
     protected Cell cell;
     protected byte[] tags;
-    private static final long HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + 2 * ClassSize.REFERENCE;
+    private static final int HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + 2 * ClassSize.REFERENCE;
 
     /**
      * @param cell The original Cell which it rewrites
@@ -317,7 +317,7 @@ public final class PrivateCellUtil {
 
     protected ByteBufferCell cell;
     protected byte[] tags;
-    private static final long HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + 2 * ClassSize.REFERENCE;
+    private static final int HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + 2 * ClassSize.REFERENCE;
 
     /**
      * @param cell The original ByteBufferCell which it rewrites
@@ -1501,7 +1501,7 @@ public final class PrivateCellUtil {
   }
 
   private static class FirstOnRowCell extends EmptyCell {
-    private static final long FIXED_HEAPSIZE =
+    private static final int FIXED_HEAPSIZE =
         ClassSize.OBJECT // object
       + ClassSize.REFERENCE // row array
       + Bytes.SIZEOF_INT // row offset
@@ -1829,7 +1829,7 @@ public final class PrivateCellUtil {
   }
 
   private static class LastOnRowCell extends EmptyCell {
-    private static final long FIXED_OVERHEAD =
+    private static final int FIXED_OVERHEAD =
         ClassSize.OBJECT // object
       + ClassSize.REFERENCE // row array
       + Bytes.SIZEOF_INT // row offset

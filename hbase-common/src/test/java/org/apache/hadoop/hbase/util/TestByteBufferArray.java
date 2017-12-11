@@ -64,9 +64,9 @@ public class TestByteBufferArray {
     assertEquals(119, array.buffers.length);
     for (int i = 0; i < array.buffers.length; i++) {
       if (i == array.buffers.length - 1) {
-        assertEquals(array.buffers[i].capacity(), 0);
+        assertEquals(0, array.buffers[i].capacity());
       } else {
-        assertEquals(array.buffers[i].capacity(), ByteBufferArray.DEFAULT_BUFFER_SIZE);
+        assertEquals(ByteBufferArray.DEFAULT_BUFFER_SIZE, array.buffers[i].capacity());
       }
     }
   }
@@ -86,9 +86,9 @@ public class TestByteBufferArray {
     array.createBuffers(allocator);
     for (int i = 0; i < array.buffers.length; i++) {
       if (i == array.buffers.length - 1) {
-        assertEquals(array.buffers[i].capacity(), 0);
+        assertEquals(0, array.buffers[i].capacity());
       } else {
-        assertEquals(array.buffers[i].capacity(), 458752);
+        assertEquals(458752, array.buffers[i].capacity());
       }
     }
   }

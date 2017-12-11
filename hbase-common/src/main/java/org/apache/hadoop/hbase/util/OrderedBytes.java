@@ -503,17 +503,17 @@ public class OrderedBytes {
     x = src.get();
     a1 = ord.apply(x) & 0xff;
     if (-1 == unsignedCmp(a0, 249)) {
-      return (a0 - 241) * 256 + a1 + 240;
+      return (a0 - 241L) * 256 + a1 + 240;
     }
     x = src.get();
     a2 = ord.apply(x) & 0xff;
     if (a0 == 249) {
-      return 2288 + 256 * a1 + a2;
+      return 2288L + 256 * a1 + a2;
     }
     x = src.get();
     a3 = ord.apply(x) & 0xff;
     if (a0 == 250) {
-      return (a1 << 16) | (a2 << 8) | a3;
+      return ((long) a1 << 16L) | (a2 << 8) | a3;
     }
     x = src.get();
     a4 = ord.apply(x) & 0xff;
@@ -663,7 +663,8 @@ public class OrderedBytes {
       dst.put((byte) ((2 * d + 1) & 0xff));
       abs = abs.subtract(BigDecimal.valueOf(d));
     }
-    a[offset + dst.getPosition() - 1] &= 0xfe; // terminal digit should be 2x
+    // terminal digit should be 2x
+    a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
       // negative values encoded as ~M
       DESCENDING.apply(a, offset + startM, dst.getPosition() - startM);
@@ -747,8 +748,8 @@ public class OrderedBytes {
       dst.put((byte) (2 * d + 1));
       abs = abs.subtract(BigDecimal.valueOf(d));
     }
-
-    a[offset + dst.getPosition() - 1] &= 0xfe; // terminal digit should be 2x
+    // terminal digit should be 2x
+    a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
     if (isNeg) {
       // negative values encoded as ~M
       DESCENDING.apply(a, offset + startM, dst.getPosition() - startM);
@@ -1063,7 +1064,8 @@ public class OrderedBytes {
       if (s > 1) {
         dst.put((byte) (0x7f & t));
       } else {
-        dst.getBytes()[offset + dst.getPosition() - 1] &= 0x7f;
+        dst.getBytes()[offset + dst.getPosition() - 1] =
+          (byte) (dst.getBytes()[offset + dst.getPosition() - 1] & 0x7f);
       }
     }
     ord.apply(dst.getBytes(), offset + start, dst.getPosition() - start);
@@ -1116,7 +1118,7 @@ public class OrderedBytes {
         ret.put((byte) (t | ((ord.apply(a[offset + i]) & 0x7f) >>> s)));
       }
       if (i == end) break;
-      t = (byte) ((ord.apply(a[offset + i]) << 8 - s) & 0xff);
+      t = (byte) ((ord.apply(a[offset + i]) << (8 - s)) & 0xff);
       s = s == 1 ? 7 : s - 1;
     }
     src.setPosition(end);
@@ -1372,7 +1374,7 @@ public class OrderedBytes {
   public static int encodeFloat32(PositionedByteRange dst, float val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     int i = Float.floatToIntBits(val);
-    i ^= ((i >> Integer.SIZE - 1) | Integer.MIN_VALUE);
+    i ^= ((i >> (Integer.SIZE - 1)) | Integer.MIN_VALUE);
     dst.put(FIXED_FLOAT32)
         .put((byte) (i >> 24))
         .put((byte) (i >> 16))
@@ -1394,7 +1396,7 @@ public class OrderedBytes {
     for (int i = 1; i < 4; i++) {
       val = (val << 8) + (ord.apply(src.get()) & 0xff);
     }
-    val ^= (~val >> Integer.SIZE - 1) | Integer.MIN_VALUE;
+    val ^= (~val >> (Integer.SIZE - 1)) | Integer.MIN_VALUE;
     return Float.intBitsToFloat(val);
   }
 
@@ -1466,7 +1468,7 @@ public class OrderedBytes {
   public static int encodeFloat64(PositionedByteRange dst, double val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
     long lng = Double.doubleToLongBits(val);
-    lng ^= ((lng >> Long.SIZE - 1) | Long.MIN_VALUE);
+    lng ^= ((lng >> (Long.SIZE - 1)) | Long.MIN_VALUE);
     dst.put(FIXED_FLOAT64)
         .put((byte) (lng >> 56))
         .put((byte) (lng >> 48))
@@ -1492,7 +1494,7 @@ public class OrderedBytes {
     for (int i = 1; i < 8; i++) {
       val = (val << 8) + (ord.apply(src.get()) & 0xff);
     }
-    val ^= (~val >> Long.SIZE - 1) | Long.MIN_VALUE;
+    val ^= (~val >> (Long.SIZE - 1)) | Long.MIN_VALUE;
     return Double.longBitsToDouble(val);
   }
 

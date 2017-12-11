@@ -28,15 +28,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class manages an array of ByteBuffers with a default size 4MB. These
@@ -237,7 +236,7 @@ public class ByteBufferArray {
     int endBuffer = (int) (end / bufferSize), endOffset = (int) (end % bufferSize);
     assert array.length >= len + arrayOffset;
     assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert endBuffer >= 0 && endBuffer < bufferCount
+    assert (endBuffer >= 0 && endBuffer < bufferCount)
         || (endBuffer == bufferCount && endOffset == 0);
     if (startBuffer >= buffers.length || startBuffer < 0) {
       String msg = "Failed multiple, start=" + start + ",startBuffer="
@@ -285,7 +284,7 @@ public class ByteBufferArray {
       endBufferOffset = bufferSize;
     }
     assert startBuffer >= 0 && startBuffer < bufferCount;
-    assert endBuffer >= 0 && endBuffer < bufferCount
+    assert (endBuffer >= 0 && endBuffer < bufferCount)
         || (endBuffer == bufferCount && endBufferOffset == 0);
     if (startBuffer >= buffers.length || startBuffer < 0) {
       String msg = "Failed subArray, start=" + offset + ",startBuffer=" + startBuffer

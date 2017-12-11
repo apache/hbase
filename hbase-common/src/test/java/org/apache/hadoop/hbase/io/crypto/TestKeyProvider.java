@@ -44,9 +44,9 @@ public class TestKeyProvider {
 
     Key key = provider.getKey("foo");
     assertNotNull("Test provider did not return a key as expected", key);
-    assertEquals("Test provider did not create a key for AES", key.getAlgorithm(), "AES");
-    assertEquals("Test provider did not create a key of adequate length",
-      key.getEncoded().length, AES.KEY_LENGTH);
+    assertEquals("Test provider did not create a key for AES", "AES", key.getAlgorithm());
+    assertEquals("Test provider did not create a key of adequate length", AES.KEY_LENGTH,
+      key.getEncoded().length);
   }
 
 }

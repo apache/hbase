@@ -100,10 +100,10 @@ public class TestCommonFSUtils {
     Path root = new Path("file:///hbase/root");
     Path walRoot = new Path("file:///hbase/logroot");
     CommonFSUtils.setRootDir(conf, root);
-    assertEquals(CommonFSUtils.getRootDir(conf), root);
-    assertEquals(CommonFSUtils.getWALRootDir(conf), root);
+    assertEquals(root, CommonFSUtils.getRootDir(conf));
+    assertEquals(root, CommonFSUtils.getWALRootDir(conf));
     CommonFSUtils.setWALRootDir(conf, walRoot);
-    assertEquals(CommonFSUtils.getWALRootDir(conf), walRoot);
+    assertEquals(walRoot, CommonFSUtils.getWALRootDir(conf));
   }
 
   @Test(expected=IllegalStateException.class)
@@ -120,12 +120,12 @@ public class TestCommonFSUtils {
     CommonFSUtils.setRootDir(conf, new Path("file:///user/hbase"));
     Path testFile = new Path(CommonFSUtils.getRootDir(conf), "test/testfile");
     Path tmpFile = new Path("file:///test/testfile");
-    assertEquals(CommonFSUtils.removeWALRootPath(testFile, conf), "test/testfile");
-    assertEquals(CommonFSUtils.removeWALRootPath(tmpFile, conf), tmpFile.toString());
+    assertEquals("test/testfile", CommonFSUtils.removeWALRootPath(testFile, conf));
+    assertEquals(tmpFile.toString(), CommonFSUtils.removeWALRootPath(tmpFile, conf));
     CommonFSUtils.setWALRootDir(conf, new Path("file:///user/hbaseLogDir"));
-    assertEquals(CommonFSUtils.removeWALRootPath(testFile, conf), testFile.toString());
+    assertEquals(testFile.toString(), CommonFSUtils.removeWALRootPath(testFile, conf));
     Path logFile = new Path(CommonFSUtils.getWALRootDir(conf), "test/testlog");
-    assertEquals(CommonFSUtils.removeWALRootPath(logFile, conf), "test/testlog");
+    assertEquals("test/testlog", CommonFSUtils.removeWALRootPath(logFile, conf));
   }
 
   @Test(expected=NullPointerException.class)

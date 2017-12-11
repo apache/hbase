@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCellBuilder {

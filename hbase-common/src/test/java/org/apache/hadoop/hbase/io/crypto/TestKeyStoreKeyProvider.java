@@ -22,11 +22,11 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.util.Properties;
-
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.logging.Log;
@@ -52,7 +52,7 @@ public class TestKeyStoreKeyProvider {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    KEY = MessageDigest.getInstance("SHA-256").digest(ALIAS.getBytes());
+    KEY = MessageDigest.getInstance("SHA-256").digest(ALIAS.getBytes(StandardCharsets.UTF_8));
     // Create a JKECS store containing a test secret key
     KeyStore store = KeyStore.getInstance("JCEKS");
     store.load(null, PASSWORD.toCharArray());

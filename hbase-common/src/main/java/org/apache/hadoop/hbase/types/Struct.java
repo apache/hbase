@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.types;
 
 import java.util.Iterator;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * <p>
@@ -102,41 +102,56 @@ public class Struct implements DataType<Object[]> {
     boolean skippable = true;
     for (int i = 0; i < this.fields.length; i++) {
       DataType dt = this.fields[i];
-      if (!dt.isOrderPreserving()) preservesOrder = false;
+      if (!dt.isOrderPreserving()) {
+        preservesOrder = false;
+      }
       if (i < this.fields.length - 2 && !dt.isSkippable()) {
         throw new IllegalArgumentException("Field in position " + i
           + " is not skippable. Non-right-most struct fields must be skippable.");
       }
-      if (!dt.isSkippable()) skippable = false;
+      if (!dt.isSkippable()) {
+        skippable = false;
+      }
     }
     this.isOrderPreserving = preservesOrder;
     this.isSkippable = skippable;
   }
 
   @Override
-  public boolean isOrderPreserving() { return isOrderPreserving; }
+  public boolean isOrderPreserving() {
+    return isOrderPreserving;
+  }
 
   @Override
-  public Order getOrder() { return null; }
+  public Order getOrder() {
+    return null;
+  }
 
   @Override
-  public boolean isNullable() { return false; }
+  public boolean isNullable() {
+    return false;
+  }
 
   @Override
-  public boolean isSkippable() { return isSkippable; }
+  public boolean isSkippable() {
+    return isSkippable;
+  }
 
   @SuppressWarnings("unchecked")
   @Override
   public int encodedLength(Object[] val) {
     assert fields.length >= val.length;
     int sum = 0;
-    for (int i = 0; i < val.length; i++)
+    for (int i = 0; i < val.length; i++) {
       sum += fields[i].encodedLength(val[i]);
+    }
     return sum;
   }
 
   @Override
-  public Class<Object[]> encodedClass() { return Object[].class; }
+  public Class<Object[]> encodedClass() {
+    return Object[].class;
+  }
 
   /**
    * Retrieve an {@link Iterator} over the values encoded in {@code src}.
@@ -150,8 +165,9 @@ public class Struct implements DataType<Object[]> {
   public int skip(PositionedByteRange src) {
     StructIterator it = iterator(src);
     int skipped = 0;
-    while (it.hasNext())
+    while (it.hasNext()) {
       skipped += it.skip();
+    }
     return skipped;
   }
 
@@ -160,8 +176,9 @@ public class Struct implements DataType<Object[]> {
     int i = 0;
     Object[] ret = new Object[fields.length];
     Iterator<Object> it = iterator(src);
-    while (it.hasNext())
+    while (it.hasNext()) {
       ret[i++] = it.next();
+    }
     return ret;
   }
 
@@ -171,20 +188,25 @@ public class Struct implements DataType<Object[]> {
   public Object decode(PositionedByteRange src, int index) {
     assert index >= 0;
     StructIterator it = iterator(src.shallowCopy());
-    for (; index > 0; index--)
+    for (; index > 0; index--) {
       it.skip();
+    }
     return it.next();
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public int encode(PositionedByteRange dst, Object[] val) {
-    if (val.length == 0) return 0;
+    if (val.length == 0) {
+      return 0;
+    }
     assert fields.length >= val.length;
     int end, written = 0;
     // find the last occurrence of a non-null or null and non-nullable value
     for (end = val.length - 1; end > -1; end--) {
-      if (null != val[end] || (null == val[end] && !fields[end].isNullable())) break;
+      if (null != val[end] || (null == val[end] && !fields[end].isNullable())) {
+        break;
+      }
     }
     for (int i = 0; i <= end; i++) {
       written += fields[i].encode(dst, val[i]);

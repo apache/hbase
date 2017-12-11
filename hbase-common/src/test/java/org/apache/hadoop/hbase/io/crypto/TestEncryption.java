@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.security.Key;
-
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.logging.Log;

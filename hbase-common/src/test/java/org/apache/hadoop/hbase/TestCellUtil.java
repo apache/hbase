@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
@@ -44,7 +45,7 @@ public class TestCellUtil {
   /**
    * CellScannable used in test. Returns a {@link TestCellScanner}
    */
-  private class TestCellScannable implements CellScannable {
+  private static class TestCellScannable implements CellScannable {
     private final int cellsCount;
     TestCellScannable(final int cellsCount) {
       this.cellsCount = cellsCount;
@@ -58,7 +59,7 @@ public class TestCellUtil {
   /**
    * CellScanner used in test.
    */
-  private class TestCellScanner implements CellScanner {
+  private static class TestCellScanner implements CellScanner {
     private int count = 0;
     private Cell current = null;
     private final int cellsCount;
@@ -86,7 +87,7 @@ public class TestCellUtil {
   /**
    * Cell used in test. Has row only.
    */
-  private class TestCell implements Cell {
+  private static class TestCell implements Cell {
     private final byte [] row;
 
     TestCell(final int i) {
@@ -201,7 +202,6 @@ public class TestCellUtil {
 
   /**
    * Was overflowing if 100k or so lists of cellscanners to return.
-   * @throws IOException
    */
   @Test
   public void testCreateCellScannerOverflow() throws IOException {
@@ -222,7 +222,9 @@ public class TestCellUtil {
     consume(CellUtil.createCellScanner(cells), hundredK * 1);
     NavigableMap<byte [], List<Cell>> m = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     List<Cell> cellArray = new ArrayList<>(hundredK);
-    for (int i = 0; i < hundredK; i++) cellArray.add(new TestCell(i));
+    for (int i = 0; i < hundredK; i++) {
+      cellArray.add(new TestCell(i));
+    }
     m.put(new byte [] {'f'}, cellArray);
     consume(CellUtil.createCellScanner(m), hundredK * 1);
   }
@@ -252,7 +254,9 @@ public class TestCellUtil {
 
   private void consume(final CellScanner scanner, final int expected) throws IOException {
     int count = 0;
-    while (scanner.advance()) count++;
+    while (scanner.advance()) {
+      count++;
+    }
     Assert.assertEquals(expected, count);
   }
 
@@ -307,7 +311,8 @@ public class TestCellUtil {
   @Test
   public void testFindCommonPrefixInFlatKey() {
     // The whole key matching case
-    KeyValue kv1 = new KeyValue("r1".getBytes(), "f1".getBytes(), "q1".getBytes(), null);
+    KeyValue kv1 = new KeyValue("r1".getBytes(StandardCharsets.UTF_8),
+      "f1".getBytes(StandardCharsets.UTF_8), "q1".getBytes(StandardCharsets.UTF_8), null);
     Assert.assertEquals(kv1.getKeyLength(),
       PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, true));
     Assert.assertEquals(kv1.getKeyLength(),
@@ -315,30 +320,35 @@ public class TestCellUtil {
     Assert.assertEquals(kv1.getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, false));
     // The rk length itself mismatch
-    KeyValue kv2 = new KeyValue("r12".getBytes(), "f1".getBytes(), "q1".getBytes(), null);
+    KeyValue kv2 = new KeyValue("r12".getBytes(StandardCharsets.UTF_8),
+        "f1".getBytes(StandardCharsets.UTF_8), "q1".getBytes(StandardCharsets.UTF_8), null);
     Assert.assertEquals(1, PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv2, true, true));
     // part of rk is same
-    KeyValue kv3 = new KeyValue("r14".getBytes(), "f1".getBytes(), "q1".getBytes(), null);
-    Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + "r1".getBytes().length,
+    KeyValue kv3 = new KeyValue("r14".getBytes(StandardCharsets.UTF_8),
+        "f1".getBytes(StandardCharsets.UTF_8), "q1".getBytes(StandardCharsets.UTF_8), null);
+    Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + "r1".getBytes(StandardCharsets.UTF_8).length,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv2, kv3, true, true));
     // entire rk is same but different cf name
-    KeyValue kv4 = new KeyValue("r14".getBytes(), "f2".getBytes(), "q1".getBytes(), null);
+    KeyValue kv4 = new KeyValue("r14".getBytes(StandardCharsets.UTF_8),
+      "f2".getBytes(StandardCharsets.UTF_8), "q1".getBytes(StandardCharsets.UTF_8), null);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv3.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
-        + "f".getBytes().length, PrivateCellUtil.findCommonPrefixInFlatKey(kv3, kv4, false, true));
+        + "f".getBytes(StandardCharsets.UTF_8).length,
+        PrivateCellUtil.findCommonPrefixInFlatKey(kv3, kv4, false, true));
     // rk and family are same and part of qualifier
-    KeyValue kv5 = new KeyValue("r14".getBytes(), "f2".getBytes(), "q123".getBytes(), null);
+    KeyValue kv5 = new KeyValue("r14".getBytes(StandardCharsets.UTF_8),
+      "f2".getBytes(StandardCharsets.UTF_8), "q123".getBytes(StandardCharsets.UTF_8), null);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv3.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv4.getFamilyLength() + kv4.getQualifierLength(),
         PrivateCellUtil.findCommonPrefixInFlatKey(kv4, kv5, true, true));
     // rk, cf and q are same. ts differs
-    KeyValue kv6 = new KeyValue("rk".getBytes(), 1234L);
-    KeyValue kv7 = new KeyValue("rk".getBytes(), 1235L);
+    KeyValue kv6 = new KeyValue("rk".getBytes(StandardCharsets.UTF_8), 1234L);
+    KeyValue kv7 = new KeyValue("rk".getBytes(StandardCharsets.UTF_8), 1235L);
     // only last byte out of 8 ts bytes in ts part differs
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + 7,
         PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv7, true, true));
     // rk, cf, q and ts are same. Only type differs
-    KeyValue kv8 = new KeyValue("rk".getBytes(), 1234L, Type.Delete);
+    KeyValue kv8 = new KeyValue("rk".getBytes(StandardCharsets.UTF_8), 1234L, Type.Delete);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + KeyValue.TIMESTAMP_SIZE,
         PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, true));
@@ -354,7 +364,7 @@ public class TestCellUtil {
   @Test
   public void testToString() {
     byte [] row = Bytes.toBytes("row");
-    long ts = 123l;
+    long ts = 123L;
     // Make a KeyValue and a Cell and see if same toString result.
     KeyValue kv = new KeyValue(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
         ts, KeyValue.Type.Minimum, HConstants.EMPTY_BYTE_ARRAY);

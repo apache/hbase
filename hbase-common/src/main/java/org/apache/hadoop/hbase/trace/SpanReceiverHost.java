@@ -42,7 +42,7 @@ public class SpanReceiverHost {
 
   private static enum SingletonHolder {
     INSTANCE;
-    transient Object lock = new Object();
+    final transient Object lock = new Object();
     transient SpanReceiverHost host = null;
   }
 

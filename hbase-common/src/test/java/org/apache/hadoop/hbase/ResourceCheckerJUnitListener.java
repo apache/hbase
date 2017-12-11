@@ -87,7 +87,9 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class OpenFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (!JVM.isUnix()) return 0;
+      if (!JVM.isUnix()) {
+        return 0;
+      }
       JVM jvm = new JVM();
       return (int)jvm.getOpenFileDescriptorCount();
     }
@@ -101,16 +103,20 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class MaxFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (!JVM.isUnix()) return 0;
+      if (!JVM.isUnix()) {
+        return 0;
+      }
       JVM jvm = new JVM();
       return (int)jvm.getMaxFileDescriptorCount();
-     } 
-   }
+    }
+  }
 
   static class SystemLoadAverageResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (!JVM.isUnix()) return 0;
+      if (!JVM.isUnix()) {
+        return 0;
+      }
       return (int)(new JVM().getSystemLoadAverage()*100);
     }
   }
@@ -118,7 +124,9 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class ProcessCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (!JVM.isUnix()) return 0;
+      if (!JVM.isUnix()) {
+        return 0;
+      }
       return new JVM().getNumberOfRunningProcess();
     }
   }
@@ -126,7 +134,9 @@ public class ResourceCheckerJUnitListener extends RunListener {
   static class AvailableMemoryMBResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
     public int getVal(Phase phase) {
-      if (!JVM.isUnix()) return 0;
+      if (!JVM.isUnix()) {
+        return 0;
+      }
       return (int) (new JVM().getFreeMemory() / (1024L * 1024L));
     }
   }

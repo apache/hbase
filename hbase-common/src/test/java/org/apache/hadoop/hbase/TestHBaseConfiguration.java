@@ -192,10 +192,9 @@ public class TestHBaseConfiguration {
       }
       // Instantiate Hadoop CredentialProviderFactory
       try {
-        hadoopCredProviderFactory = hadoopCredProviderFactoryClz.newInstance();
-      } catch (InstantiationException e) {
-        return false;
-      } catch (IllegalAccessException e) {
+        hadoopCredProviderFactory =
+          hadoopCredProviderFactoryClz.getDeclaredConstructor().newInstance();
+      } catch (Exception e) {
         return false;
       }
 

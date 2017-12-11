@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertNotEquals;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -30,14 +32,11 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.assertNotEquals;
 
 public class TestKeyValue extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestKeyValue.class);
@@ -582,7 +581,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(kvA2.equals(deSerKV2));
   }
 
-  private class MockKeyValue implements Cell {
+  private static class MockKeyValue implements Cell {
     private final KeyValue kv;
 
     public MockKeyValue(KeyValue kv) {

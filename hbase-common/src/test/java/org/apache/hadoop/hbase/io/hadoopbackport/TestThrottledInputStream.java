@@ -16,9 +16,10 @@
  */
 package org.apache.hadoop.hbase.io.hadoopbackport;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

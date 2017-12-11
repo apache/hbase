@@ -16,6 +16,22 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.security.AccessController;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedAction;
+import java.security.Provider;
+import java.security.SecureRandom;
+import java.security.SecureRandomSpi;
+import java.security.Security;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -29,14 +45,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import javax.crypto.spec.SecretKeySpec;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStream;
-import java.security.*;
-
-import static org.junit.Assert.*;
-
 @Category({MiscTests.class, SmallTests.class})
 public class TestCommonsAES {
 
@@ -46,8 +54,8 @@ public class TestCommonsAES {
   public void testAESAlgorithm() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     Cipher aes = Encryption.getCipher(conf, "AES");
-    assertEquals(aes.getKeyLength(), CommonsCryptoAES.KEY_LENGTH);
-    assertEquals(aes.getIvLength(), CommonsCryptoAES.IV_LENGTH);
+    assertEquals(CommonsCryptoAES.KEY_LENGTH, aes.getKeyLength());
+    assertEquals(CommonsCryptoAES.IV_LENGTH, aes.getIvLength());
     Encryptor e = aes.getEncryptor();
     e.setKey(new SecretKeySpec(Bytes.fromHex("2b7e151628aed2a6abf7158809cf4f3c"), "AES"));
     e.setIv(Bytes.fromHex("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"));
@@ -82,8 +90,7 @@ public class TestCommonsAES {
     DefaultCipherProvider.getInstance().setConf(conf);
 
     AES aes = new AES(DefaultCipherProvider.getInstance());
-    assertEquals("AES did not find alternate RNG", aes.getRNG().getAlgorithm(),
-      "TestRNG");
+    assertEquals("AES did not find alternate RNG", "TestRNG", aes.getRNG().getAlgorithm());
   }
 
   static class TestProvider extends Provider {
@@ -91,6 +98,7 @@ public class TestCommonsAES {
     public TestProvider() {
       super("TEST", 1.0, "Test provider");
       AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @Override
         public Object run() {
           put("SecureRandom.TestRNG", TestCommonsAES.class.getName() + "$TestRNG");
           return null;

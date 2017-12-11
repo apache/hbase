@@ -24,8 +24,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Stores the group information of region server groups.

@@ -222,7 +222,8 @@ public class HBaseCommonTestingUtility {
         LOG.warn("Failed to delete " + dir.getAbsolutePath(), ex);
       }
     } while (ntries < 30);
-    return ntries < 30;
+
+    return false;
   }
 
   /**

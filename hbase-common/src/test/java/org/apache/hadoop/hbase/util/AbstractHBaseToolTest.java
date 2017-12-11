@@ -17,18 +17,21 @@
 
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.util.AbstractHBaseTool.EXIT_FAILURE;
+import static org.apache.hadoop.hbase.util.AbstractHBaseTool.EXIT_SUCCESS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.apache.hadoop.hbase.util.AbstractHBaseTool.EXIT_FAILURE;
-import static org.apache.hadoop.hbase.util.AbstractHBaseTool.EXIT_SUCCESS;
-import static org.junit.Assert.*;
 
 public class AbstractHBaseToolTest {
   static final class Options {
@@ -43,7 +46,7 @@ public class AbstractHBaseToolTest {
    * 2 deprecated options to test backward compatibility: -opt (old version of --optional) and
    * -bool (old version of --boolean).
    */
-  private class TestTool extends AbstractHBaseTool {
+  private static class TestTool extends AbstractHBaseTool {
     String requiredValue;
     String optionalValue;
     boolean booleanValue;

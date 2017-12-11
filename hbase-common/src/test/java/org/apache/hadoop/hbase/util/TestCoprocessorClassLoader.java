@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -87,8 +87,11 @@ public class TestCoprocessorClassLoader {
   private void checkingLibJarName(String jarName, String libPrefix) throws Exception {
     File tmpFolder = new File(ClassLoaderTestHelper.localDirPath(conf), "tmp");
     if (tmpFolder.exists()) { // Clean up the tmp folder
-      for (File f: tmpFolder.listFiles()) {
-        f.delete();
+      File[] files = tmpFolder.listFiles();
+      if (files != null) {
+        for (File f: files) {
+          f.delete();
+        }
       }
     }
     String className = "CheckingLibJarName";
@@ -102,10 +105,13 @@ public class TestCoprocessorClassLoader {
     ClassLoader classLoader = CoprocessorClassLoader.getClassLoader(path, parent, "112", conf);
     assertNotNull("Classloader should be created", classLoader);
     String fileToLookFor = "." + className + ".jar";
-    for (String f: tmpFolder.list()) {
-      if (f.endsWith(fileToLookFor) && f.contains(jarName)) {
-        // Cool, found it;
-        return;
+    String[] files = tmpFolder.list();
+    if (files != null) {
+      for (String f: files) {
+        if (f.endsWith(fileToLookFor) && f.contains(jarName)) {
+          // Cool, found it;
+          return;
+        }
       }
     }
     fail("Could not find the expected lib jar file");

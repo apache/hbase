@@ -28,7 +28,6 @@ import java.lang.management.RuntimeMXBean;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
-
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;

@@ -133,8 +133,8 @@ public class TestCipherProvider {
     Cipher a = Encryption.getCipher(conf, "TEST");
     assertNotNull(a);
     assertTrue(a.getProvider() instanceof MyCipherProvider);
-    assertEquals(a.getName(), "TEST");
-    assertEquals(a.getKeyLength(), 0);
+    assertEquals("TEST", a.getName());
+    assertEquals(0, a.getKeyLength());
   }
 
   @Test
@@ -149,7 +149,7 @@ public class TestCipherProvider {
     assertNotNull(a);
     assertTrue(a.getProvider() instanceof DefaultCipherProvider);
     assertEquals(a.getName(), algorithm);
-    assertEquals(a.getKeyLength(), AES.KEY_LENGTH);
+    assertEquals(AES.KEY_LENGTH, a.getKeyLength());
   }
 
 }

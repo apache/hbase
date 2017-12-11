@@ -24,6 +24,14 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.BaseConfigurable;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.LoadingCache;
@@ -31,13 +39,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Listenab
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.BaseConfigurable;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Provide an instance of a user. Allows custom {@link User} creation.
@@ -98,11 +99,11 @@ public class UserProvider extends BaseConfigurable {
           }
 
           // Provide the reload function that uses the executor thread.
-          public ListenableFuture<String[]> reload(final String k,
-                                                   String[] oldValue) throws Exception {
+          @Override
+          public ListenableFuture<String[]> reload(final String k, String[] oldValue)
+              throws Exception {
 
             return executor.submit(new Callable<String[]>() {
-
               @Override
               public String[] call() throws Exception {
                 return getGroupStrings(k);

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.nio;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -102,10 +103,10 @@ public class TestMultiByteBuff {
   public void testPutPrimitives() {
     ByteBuffer bb = ByteBuffer.allocate(10);
     SingleByteBuff s = new SingleByteBuff(bb);
-    s.putLong(-4465109508325701663l);
+    s.putLong(-4465109508325701663L);
     bb.rewind();
     long long1 = bb.getLong();
-    assertEquals(long1, -4465109508325701663l);
+    assertEquals(-4465109508325701663L, long1);
     s.position(8);
   }
 
@@ -235,18 +236,18 @@ public class TestMultiByteBuff {
     multi.putLong(l2);
     multi.rewind();
     ByteBuffer sub = multi.asSubByteBuffer(Bytes.SIZEOF_LONG);
-    assertTrue(bb1 == sub);
+    assertEquals(bb1, sub);
     assertEquals(l1, ByteBufferUtils.toLong(sub, sub.position()));
     multi.skip(Bytes.SIZEOF_LONG);
     sub = multi.asSubByteBuffer(Bytes.SIZEOF_LONG);
-    assertFalse(bb1 == sub);
-    assertFalse(bb2 == sub);
+    assertNotEquals(bb1, sub);
+    assertNotEquals(bb2, sub);
     assertEquals(l2, ByteBufferUtils.toLong(sub, sub.position()));
     multi.rewind();
     ObjectIntPair<ByteBuffer> p = new ObjectIntPair<>();
     multi.asSubByteBuffer(8, Bytes.SIZEOF_LONG, p);
-    assertFalse(bb1 == p.getFirst());
-    assertFalse(bb2 == p.getFirst());
+    assertNotEquals(bb1, p.getFirst());
+    assertNotEquals(bb2, p.getFirst());
     assertEquals(0, p.getSecond());
     assertEquals(l2, ByteBufferUtils.toLong(sub, p.getSecond()));
   }
@@ -291,7 +292,7 @@ public class TestMultiByteBuff {
     bres[2] = mbb1.get(4);
     bres[3] = mbb1.get(5);
     int expected = Bytes.toInt(bres);
-    assertEquals(res, expected);
+    assertEquals(expected, res);
   }
 
   @Test

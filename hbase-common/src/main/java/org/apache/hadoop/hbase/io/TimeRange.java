@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.io;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Represents an interval of version timestamps. Presumes timestamps between

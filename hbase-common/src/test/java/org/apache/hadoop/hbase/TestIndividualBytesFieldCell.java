@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -117,15 +118,16 @@ public class TestIndividualBytesFieldCell {
    * @param ic An instance of IndividualBytesFieldCell to compare.
    * @param kv An instance of KeyValue to compare.
    * @param withTags Whether to write tags.
-   * @throws IOException
    */
   private void testWriteIntoOutputStream(IndividualBytesFieldCell ic, KeyValue kv, boolean withTags)
           throws IOException {
     ByteArrayOutputStream outIC = new ByteArrayOutputStream(ic.getSerializedSize(withTags));
     ByteArrayOutputStream outKV = new ByteArrayOutputStream(kv.getSerializedSize(withTags));
 
-    assertEquals(kv.write(outKV, withTags), ic.write(outIC, withTags));  // compare the number of bytes written
-    assertArrayEquals(outKV.getBuffer(), outIC.getBuffer());             // compare the underlying byte array
+    // compare the number of bytes written
+    assertEquals(kv.write(outKV, withTags), ic.write(outIC, withTags));
+    // compare the underlying byte array
+    assertArrayEquals(outKV.getBuffer(), outIC.getBuffer());
   }
 
   /**
@@ -146,15 +148,21 @@ public class TestIndividualBytesFieldCell {
     byte[] value     = null;
     byte[] tags      = null;
 
-    Cell ic1 = new IndividualBytesFieldCell(row, family, qualifier, timestamp, type, seqId, value, tags);
+    Cell ic1 =
+        new IndividualBytesFieldCell(row, family, qualifier, timestamp, type, seqId, value, tags);
 
     Cell kv1 = new KeyValue(row, family, qualifier, timestamp, type, value, tags);
-    byte[] familyArrayInKV    = Bytes.copy(kv1.getFamilyArray()   , kv1.getFamilyOffset()   , kv1.getFamilyLength());
-    byte[] qualifierArrayInKV = Bytes.copy(kv1.getQualifierArray(), kv1.getQualifierOffset(), kv1.getQualifierLength());
-    byte[] valueArrayInKV     = Bytes.copy(kv1.getValueArray()    , kv1.getValueOffset()    , kv1.getValueLength());
-    byte[] tagsArrayInKV      = Bytes.copy(kv1.getTagsArray()     , kv1.getTagsOffset()     , kv1.getTagsLength());
+    byte[] familyArrayInKV =
+        Bytes.copy(kv1.getFamilyArray(), kv1.getFamilyOffset(), kv1.getFamilyLength());
+    byte[] qualifierArrayInKV =
+        Bytes.copy(kv1.getQualifierArray(), kv1.getQualifierOffset(), kv1.getQualifierLength());
+    byte[] valueArrayInKV =
+        Bytes.copy(kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength());
+    byte[] tagsArrayInKV =
+        Bytes.copy(kv1.getTagsArray(), kv1.getTagsOffset(), kv1.getTagsLength());
 
-    // getXXXArray() for family, qualifier, value and tags are supposed to return empty byte array, rather than null.
+    // getXXXArray() for family, qualifier, value and tags are supposed to return empty byte array,
+    // rather than null.
     assertArrayEquals(familyArrayInKV   , ic1.getFamilyArray());
     assertArrayEquals(qualifierArrayInKV, ic1.getQualifierArray());
     assertArrayEquals(valueArrayInKV    , ic1.getValueArray());

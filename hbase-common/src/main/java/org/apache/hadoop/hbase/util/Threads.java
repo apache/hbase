@@ -18,11 +18,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -31,9 +33,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
@@ -312,7 +314,8 @@ public class Threads {
           @Override
           public void printThreadInfo(PrintStream stream, String title) {
             try {
-              hadoop26Method.invoke(null, new PrintWriter(stream), title);
+              hadoop26Method.invoke(null, new PrintWriter(
+                  new OutputStreamWriter(stream, StandardCharsets.UTF_8)), title);
             } catch (IllegalAccessException | IllegalArgumentException e) {
               throw new RuntimeException(e);
             } catch (InvocationTargetException e) {

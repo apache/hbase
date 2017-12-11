@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HBase version of Hadoop's Configured class that doesn't initialize the
