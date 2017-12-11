@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@code String} of variable-length. Built on
@@ -32,7 +32,9 @@ public class OrderedString extends OrderedBytesBase<String> {
   public static final OrderedString ASCENDING = new OrderedString(Order.ASCENDING);
   public static final OrderedString DESCENDING = new OrderedString(Order.DESCENDING);
 
-  protected OrderedString(Order order) { super(order); }
+  protected OrderedString(Order order) {
+    super(order);
+  }
 
   @Override
   public int encodedLength(String val) {
@@ -41,7 +43,9 @@ public class OrderedString extends OrderedBytesBase<String> {
   }
 
   @Override
-  public Class<String> encodedClass() { return String.class; }
+  public Class<String> encodedClass() {
+    return String.class;
+  }
 
   @Override
   public String decode(PositionedByteRange src) {

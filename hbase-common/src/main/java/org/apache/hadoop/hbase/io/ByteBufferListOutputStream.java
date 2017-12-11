@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An OutputStream which writes data into ByteBuffers. It will try to get ByteBuffer, as and when

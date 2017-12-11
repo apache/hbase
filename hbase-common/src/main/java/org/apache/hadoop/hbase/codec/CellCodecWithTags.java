@@ -27,10 +27,10 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Basic Cell codec that just writes out all the individual elements of a Cell including the tags.
@@ -85,6 +85,7 @@ public class CellCodecWithTags implements Codec {
       super(in);
     }
 
+    @Override
     protected Cell parseCell() throws IOException {
       byte[] row = readByteArray(this.in);
       byte[] family = readByteArray(in);

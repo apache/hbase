@@ -29,11 +29,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 
-import org.apache.commons.logging.Log;
-
-import org.apache.yetus.audience.InterfaceAudience;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.apache.commons.logging.Log;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ReflectionUtils {

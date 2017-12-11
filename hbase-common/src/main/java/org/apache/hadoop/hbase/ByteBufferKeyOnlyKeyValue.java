@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is a key only Cell implementation which is identical to {@link KeyValue.KeyOnlyKeyValue}

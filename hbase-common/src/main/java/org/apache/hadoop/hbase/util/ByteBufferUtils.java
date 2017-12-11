@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -29,13 +28,14 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import sun.nio.ch.DirectBuffer;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility functions for working with byte buffers, such as reading/writing
@@ -245,27 +245,27 @@ public final class ByteBufferUtils {
       return 8;
     }
 
-    if (value < (1l << 4 * 8)) {
+    if (value < (1L << (4 * 8))) {
       // no more than 4 bytes
-      if (value < (1l << 2 * 8)) {
-        if (value < (1l << 1 * 8)) {
+      if (value < (1L << (2 * 8))) {
+        if (value < (1L << (1 * 8))) {
           return 1;
         }
         return 2;
       }
-      if (value < (1l << 3 * 8)) {
+      if (value < (1L << (3 * 8))) {
         return 3;
       }
       return 4;
     }
     // more than 4 bytes
-    if (value < (1l << 6 * 8)) {
-      if (value < (1l << 5 * 8)) {
+    if (value < (1L << (6 * 8))) {
+      if (value < (1L << (5 * 8))) {
         return 5;
       }
       return 6;
     }
-    if (value < (1l << 7 * 8)) {
+    if (value < (1L << (7 * 8))) {
       return 7;
     }
     return 8;
@@ -281,13 +281,13 @@ public final class ByteBufferUtils {
       return 4;
     }
 
-    if (value < (1 << 2 * 8)) {
-      if (value < (1 << 1 * 8)) {
+    if (value < (1 << (2 * 8))) {
+      if (value < (1 << (1 * 8))) {
         return 1;
       }
       return 2;
     }
-    if (value <= (1 << 3 * 8)) {
+    if (value <= (1 << (3 * 8))) {
       return 3;
     }
     return 4;
@@ -337,7 +337,7 @@ public final class ByteBufferUtils {
       throws IOException {
     long tmpLong = 0;
     for (int i = 0; i < fitInBytes; ++i) {
-      tmpLong |= (in.read() & 0xffl) << (8 * i);
+      tmpLong |= (in.read() & 0xffL) << (8 * i);
     }
     return tmpLong;
   }
@@ -350,7 +350,7 @@ public final class ByteBufferUtils {
   public static long readLong(ByteBuffer in, final int fitInBytes) {
     long tmpLength = 0;
     for (int i = 0; i < fitInBytes; ++i) {
-      tmpLength |= (in.get() & 0xffl) << (8l * i);
+      tmpLength |= (in.get() & 0xffL) << (8L * i);
     }
     return tmpLength;
   }

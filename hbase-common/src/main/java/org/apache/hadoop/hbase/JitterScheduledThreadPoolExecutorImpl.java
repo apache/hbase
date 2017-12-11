@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +28,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ScheduledThreadPoolExecutor that will add some jitter to the RunnableScheduledFuture.getDelay.
@@ -51,12 +51,13 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
     this.spread = spread;
   }
 
+  @Override
   protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(
       Runnable runnable, java.util.concurrent.RunnableScheduledFuture<V> task) {
     return new JitteredRunnableScheduledFuture<>(task);
   }
 
-
+  @Override
   protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(
       Callable<V> callable, java.util.concurrent.RunnableScheduledFuture<V> task) {
     return new JitteredRunnableScheduledFuture<>(task);

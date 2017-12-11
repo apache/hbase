@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,15 +41,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -402,7 +399,7 @@ public abstract class CommonFSUtils {
 
   private static boolean isValidWALRootDir(Path walDir, final Configuration c) throws IOException {
     Path rootDir = getRootDir(c);
-    if (walDir != rootDir) {
+    if (!walDir.equals(rootDir)) {
       if (walDir.toString().startsWith(rootDir.toString() + "/")) {
         throw new IllegalStateException("Illegal WAL directory specified. " +
             "WAL directories are not permitted to be under the root directory if set.");

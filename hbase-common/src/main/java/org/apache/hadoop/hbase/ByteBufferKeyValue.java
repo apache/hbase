@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -154,6 +154,7 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
     return this.seqId;
   }
 
+  @Override
   public void setSequenceId(long seqId) {
     this.seqId = seqId;
   }

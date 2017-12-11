@@ -18,10 +18,10 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An encoding context that is created by a writer's encoder, and is shared

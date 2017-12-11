@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The {@code Union} family of {@link DataType}s encode one of a fixed
@@ -48,7 +48,9 @@ public abstract class Union2<A, B> implements DataType<Object> {
   }
 
   @Override
-  public Order getOrder() { return null; }
+  public Order getOrder() {
+    return null;
+  }
 
   @Override
   public boolean isNullable() {

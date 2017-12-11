@@ -23,9 +23,9 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Encoding of KeyValue. It aims to be fast and efficient using assumptions:

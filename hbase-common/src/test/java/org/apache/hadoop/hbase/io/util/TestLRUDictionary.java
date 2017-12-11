@@ -81,7 +81,7 @@ public class TestLRUDictionary {
     rand.nextBytes(testBytes);
 
     // Verify that our randomly generated array doesn't exist in the dictionary
-    assertEquals(testee.findEntry(testBytes, 0, testBytes.length), -1);
+    assertEquals(-1, testee.findEntry(testBytes, 0, testBytes.length));
 
     // now since we looked up an entry, we should have added it to the
     // dictionary, so it isn't empty

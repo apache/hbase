@@ -53,7 +53,7 @@ public class TestByteBufferKeyValue {
 
   @Test
   public void testByteBufferBackedKeyValue() throws Exception {
-    KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1);
+    KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0L, Type.Put, row1);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
     ByteBufferCell offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
@@ -96,10 +96,10 @@ public class TestByteBufferKeyValue {
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
 
-    kvCell = new KeyValue(row1, fam2, qual2, 0l, Type.Put, row1);
+    kvCell = new KeyValue(row1, fam2, qual2, 0L, Type.Put, row1);
     buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0l);
+    offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
     assertEquals(
       FAM2,
       ByteBufferUtils.toStringBinary(offheapKV.getFamilyByteBuffer(),
@@ -112,7 +112,7 @@ public class TestByteBufferKeyValue {
     kvCell = new KeyValue(row1, fam1, nullQualifier, 0L, Type.Put, row1);
     buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0l);
+    offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
@@ -135,10 +135,10 @@ public class TestByteBufferKeyValue {
 
   @Test
   public void testByteBufferBackedKeyValueWithTags() throws Exception {
-    KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1, tags);
+    KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0L, Type.Put, row1, tags);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0l);
+    ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
@@ -175,7 +175,7 @@ public class TestByteBufferKeyValue {
 
   @Test
   public void testGetKeyMethods() throws Exception {
-    KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1, tags);
+    KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0L, Type.Put, row1, tags);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getKeyLength());
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), kvCell.getKeyOffset(),
       kvCell.getKeyLength());

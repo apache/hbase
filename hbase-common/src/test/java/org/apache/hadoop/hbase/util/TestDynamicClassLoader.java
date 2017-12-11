@@ -29,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
 import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**

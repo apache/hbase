@@ -55,16 +55,16 @@ public class TestCellComparator {
     kv2 = new KeyValue(row1, fam1, qual1, val);
     assertTrue((comparator.compareFamilies(kv1, kv2) > 0));
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, val);
-    kv2 = new KeyValue(row1, fam1, qual1, 2l, val);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, val);
+    kv2 = new KeyValue(row1, fam1, qual1, 2L, val);
     assertTrue((comparator.compare(kv1, kv2) > 0));
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Maximum);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Maximum);
     assertTrue((comparator.compare(kv1, kv2) > 0));
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
     assertTrue((CellUtil.equals(kv1, kv2)));
   }
 
@@ -80,18 +80,18 @@ public class TestCellComparator {
     assertTrue(
       (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, val);
-    kv2 = new KeyValue(row1, fam1, qual1, 2l, val);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, val);
+    kv2 = new KeyValue(row1, fam1, qual1, 2L, val);
     assertTrue(
       (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Maximum);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Maximum);
     assertTrue(
       (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
     assertTrue(
       (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) == 0);
   }

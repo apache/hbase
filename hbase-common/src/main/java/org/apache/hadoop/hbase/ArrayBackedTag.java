@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This is a {@link Tag} implementation in which value is backed by an on heap byte array.
@@ -100,6 +100,7 @@ public class ArrayBackedTag implements Tag {
   /**
    * @return The byte array backing this Tag.
    */
+  @Override
   public byte[] getValueArray() {
     return this.bytes;
   }
@@ -107,6 +108,7 @@ public class ArrayBackedTag implements Tag {
   /**
    * @return the tag type
    */
+  @Override
   public byte getType() {
     return this.type;
   }
@@ -114,6 +116,7 @@ public class ArrayBackedTag implements Tag {
   /**
    * @return Length of actual tag bytes within the backed buffer
    */
+  @Override
   public int getValueLength() {
     return this.length - INFRASTRUCTURE_SIZE;
   }
@@ -121,6 +124,7 @@ public class ArrayBackedTag implements Tag {
   /**
    * @return Offset of actual tag bytes within the backed buffer
    */
+  @Override
   public int getValueOffset() {
     return this.offset + INFRASTRUCTURE_SIZE;
   }

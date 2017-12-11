@@ -189,9 +189,9 @@ public abstract class AbstractByteRange implements ByteRange {
   public short getShort(int index) {
     int offset = this.offset + index;
     short n = 0;
-    n ^= bytes[offset] & 0xFF;
-    n <<= 8;
-    n ^= bytes[offset + 1] & 0xFF;
+    n = (short) ((n ^ bytes[offset]) & 0xFF);
+    n = (short) (n << 8);
+    n = (short) ((n ^ bytes[offset + 1]) & 0xFF);
     return n;
   }
 

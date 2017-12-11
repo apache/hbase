@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Provide access to all data block encoding algorithms. All of the algorithms
@@ -172,16 +172,13 @@ public enum DataBlockEncoding {
     return algorithm;
   }
 
-  protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName){
-      try {
-        return (DataBlockEncoder)Class.forName(fullyQualifiedClassName).newInstance();
-      } catch (InstantiationException e) {
-        throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException(e);
-      } catch (ClassNotFoundException e) {
-        throw new IllegalArgumentException(e);
-      }
+  protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName) {
+    try {
+      return (DataBlockEncoder) Class.forName(fullyQualifiedClassName).getDeclaredConstructor()
+          .newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }

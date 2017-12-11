@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without

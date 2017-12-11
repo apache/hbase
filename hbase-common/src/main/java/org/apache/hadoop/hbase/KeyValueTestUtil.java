@@ -22,10 +22,10 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 

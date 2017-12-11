@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * When deal with OutputStream which is not ByteBufferWriter type, wrap it with this class. We will
@@ -74,6 +74,7 @@ public class ByteBufferWriterOutputStream extends OutputStream
     this.os.write(b);
   }
 
+  @Override
   public void write(byte b[], int off, int len) throws IOException {
     this.os.write(b, off, len);
   }

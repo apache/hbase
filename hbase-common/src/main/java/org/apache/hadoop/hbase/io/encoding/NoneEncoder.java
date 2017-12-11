@@ -22,11 +22,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class NoneEncoder {

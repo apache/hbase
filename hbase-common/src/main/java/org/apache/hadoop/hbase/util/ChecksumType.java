@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.util;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Checksum types. The Checksum type is a one byte number

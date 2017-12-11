@@ -29,13 +29,13 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
@@ -257,7 +257,7 @@ public class EncodedDataBlock {
       }
       BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
       baos.writeTo(stream);
-      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.buf);
+      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.ourBytes);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +
@@ -268,11 +268,11 @@ public class EncodedDataBlock {
   }
 
   private static class BufferGrabbingByteArrayOutputStream extends ByteArrayOutputStream {
-    private byte[] buf;
+    private byte[] ourBytes;
 
     @Override
-    public void write(byte[] b, int off, int len) {
-      this.buf = b;
+    public synchronized void write(byte[] b, int off, int len) {
+      this.ourBytes = b;
     }
   }
 

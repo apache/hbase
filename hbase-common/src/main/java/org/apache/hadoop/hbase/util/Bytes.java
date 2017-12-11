@@ -36,21 +36,20 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
-
+import org.apache.yetus.audience.InterfaceAudience;
 import sun.misc.Unsafe;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -270,6 +269,7 @@ public class Bytes implements Comparable<Bytes> {
    * @return Positive if left is bigger than right, 0 if they are equal, and
    *         negative if left is smaller than right.
    */
+  @Override
   public int compareTo(Bytes that) {
     return BYTES_RAWCOMPARATOR.compare(
         this.bytes, this.offset, this.length,
@@ -1157,9 +1157,9 @@ public class Bytes implements Comparable<Bytes> {
       return UnsafeAccess.toShort(bytes, offset);
     } else {
       short n = 0;
-      n ^= bytes[offset] & 0xFF;
-      n <<= 8;
-      n ^= bytes[offset+1] & 0xFF;
+      n = (short) ((n ^ bytes[offset]) & 0xFF);
+      n = (short) (n << 8);
+      n = (short) ((n ^ bytes[offset+1]) & 0xFF);
       return n;
    }
   }
@@ -1533,8 +1533,8 @@ public class Bytes implements Comparable<Bytes> {
         final int stride = 8;
         final int minLength = Math.min(length1, length2);
         int strideLimit = minLength & ~(stride - 1);
-        final long offset1Adj = offset1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
-        final long offset2Adj = offset2 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        final long offset1Adj = (long) offset1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        final long offset2Adj = (long) offset2 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
         int i;
 
         /*

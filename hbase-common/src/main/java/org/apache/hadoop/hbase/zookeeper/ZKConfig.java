@@ -22,10 +22,11 @@ import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration.

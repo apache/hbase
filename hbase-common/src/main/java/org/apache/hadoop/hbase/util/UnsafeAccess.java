@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
@@ -326,7 +325,7 @@ public final class UnsafeAccess {
       destAddress = destAddress + BYTE_ARRAY_BASE_OFFSET + dest.arrayOffset();
       destBase = dest.array();
     }
-    long srcAddress = srcOffset + BYTE_ARRAY_BASE_OFFSET;
+    long srcAddress = (long) srcOffset + BYTE_ARRAY_BASE_OFFSET;
     unsafeCopy(src, srcAddress, destBase, destAddress, length);
   }
 
@@ -360,7 +359,7 @@ public final class UnsafeAccess {
       srcAddress = srcAddress + BYTE_ARRAY_BASE_OFFSET + src.arrayOffset();
       srcBase = src.array();
     }
-    long destAddress = destOffset + BYTE_ARRAY_BASE_OFFSET;
+    long destAddress = (long) destOffset + BYTE_ARRAY_BASE_OFFSET;
     unsafeCopy(srcBase, srcAddress, dest, destAddress, length);
   }
 
@@ -381,13 +380,13 @@ public final class UnsafeAccess {
     if (src.isDirect()) {
       srcAddress = srcOffset + ((DirectBuffer) src).address();
     } else {
-      srcAddress = srcOffset +  src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
+      srcAddress = (long) srcOffset +  src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
       srcBase = src.array();
     }
     if (dest.isDirect()) {
       destAddress = destOffset + ((DirectBuffer) dest).address();
     } else {
-      destAddress = destOffset + BYTE_ARRAY_BASE_OFFSET + dest.arrayOffset();
+      destAddress = (long) destOffset + BYTE_ARRAY_BASE_OFFSET + dest.arrayOffset();
       destBase = dest.array();
     }
     unsafeCopy(srcBase, srcAddress, destBase, destAddress, length);

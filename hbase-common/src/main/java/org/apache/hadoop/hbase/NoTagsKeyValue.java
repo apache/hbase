@@ -22,11 +22,11 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An extension of the KeyValue where the tags length is always 0 
+ * An extension of the KeyValue where the tags length is always 0
  */
 @InterfaceAudience.Private
 public class NoTagsKeyValue extends KeyValue {

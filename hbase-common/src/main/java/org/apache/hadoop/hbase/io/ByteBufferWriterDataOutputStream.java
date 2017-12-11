@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Our extension of DataOutputStream which implements ByteBufferWriter

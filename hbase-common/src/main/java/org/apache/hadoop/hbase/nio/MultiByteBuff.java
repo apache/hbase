@@ -24,10 +24,10 @@ import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -177,6 +177,7 @@ public class MultiByteBuff extends ByteBuff {
    * @param index
    * @return the int value at the given index
    */
+  @Override
   public int getInt(int index) {
     // Mostly the index specified will land within this current item. Short circuit for that
     int itemIndex;
@@ -207,6 +208,7 @@ public class MultiByteBuff extends ByteBuff {
    * @param index
    * @return the short value at the given index
    */
+  @Override
   public short getShort(int index) {
     // Mostly the index specified will land within this current item. Short circuit for that
     int itemIndex;
@@ -228,9 +230,9 @@ public class MultiByteBuff extends ByteBuff {
     ByteBuffer nextItem = items[itemIndex + 1];
     // Get available one byte from this item and remaining one from next
     short n = 0;
-    n ^= ByteBufferUtils.toByte(item, offsetInItem) & 0xFF;
-    n <<= 8;
-    n ^= ByteBufferUtils.toByte(nextItem, 0) & 0xFF;
+    n = (short) (n ^ (ByteBufferUtils.toByte(item, offsetInItem) & 0xFF));
+    n = (short) (n << 8);
+    n = (short) (n ^ (ByteBufferUtils.toByte(nextItem, 0) & 0xFF));
     return n;
   }
 
@@ -287,12 +289,12 @@ public class MultiByteBuff extends ByteBuff {
     // Get available bytes from this item and remaining from next
     short l = 0;
     for (int i = offsetInItem; i < item.capacity(); i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
+      l = (short) (l << 8);
+      l = (short) (l ^ (ByteBufferUtils.toByte(item, i) & 0xFF));
     }
     for (int i = 0; i < Bytes.SIZEOF_SHORT - remainingLen; i++) {
-      l <<= 8;
-      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
+      l = (short) (l << 8);
+      l = (short) (l ^ (ByteBufferUtils.toByte(item, i) & 0xFF));
     }
     return l;
   }
@@ -327,6 +329,7 @@ public class MultiByteBuff extends ByteBuff {
    * @param index
    * @return the long value at the given index
    */
+  @Override
   public long getLong(int index) {
     // Mostly the index specified will land within this current item. Short circuit for that
     int itemIndex;
@@ -520,9 +523,9 @@ public class MultiByteBuff extends ByteBuff {
       return this.curItem.getShort();
     }
     short n = 0;
-    n ^= get() & 0xFF;
-    n <<= 8;
-    n ^= get() & 0xFF;
+    n = (short) (n ^ (get() & 0xFF));
+    n = (short) (n << 8);
+    n = (short) (n ^ (get() & 0xFF));
     return n;
   }
 

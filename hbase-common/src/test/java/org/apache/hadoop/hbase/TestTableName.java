@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -54,22 +54,23 @@ public class TestTableName extends TestWatcher {
     return tableName;
   }
 
-  String emptyNames[] ={"", " "};
-  String invalidNamespace[] = {":a", "%:a"};
-  String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",
-      "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02"
-      , "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
-      "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
-  String illegalTableNames[] = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
-      "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
-      "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
+  String[] emptyNames = {"", " "};
+  String[] invalidNamespace = {":a", "%:a"};
+  String[] legalTableNames = {"foo", "with-dash_under.dot", "_under_start_ok",
+    "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02",
+    "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
+    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
+  String[] illegalTableNames = {".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
+    "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
+    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
 
 
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidNamespace() {
     for (String tn : invalidNamespace) {
       TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn));
-      fail("invalid namespace " + tn + " should have failed with IllegalArgumentException for namespace");
+      fail("invalid namespace " + tn
+          + " should have failed with IllegalArgumentException for namespace");
     }
   }
 
@@ -108,7 +109,7 @@ public class TestTableName extends TestWatcher {
     }
   }
 
-  class Names {
+  static class Names {
     String ns;
     byte[] nsb;
     String tn;
@@ -118,22 +119,30 @@ public class TestTableName extends TestWatcher {
 
     Names(String ns, String tn) {
       this.ns = ns;
-      nsb = ns.getBytes();
+      nsb = ns.getBytes(StandardCharsets.UTF_8);
       this.tn = tn;
-      tnb = tn.getBytes();
+      tnb = tn.getBytes(StandardCharsets.UTF_8);
       nn = this.ns + ":" + this.tn;
-      nnb = nn.getBytes();
+      nnb = nn.getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
     public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
 
       Names names = (Names) o;
 
-      if (!ns.equals(names.ns)) return false;
-      if (!tn.equals(names.tn)) return false;
+      if (!ns.equals(names.ns)) {
+        return false;
+      }
+      if (!tn.equals(names.tn)) {
+        return false;
+      }
 
       return true;
     }
@@ -147,16 +156,16 @@ public class TestTableName extends TestWatcher {
   }
 
   Names[] names = new Names[] {
-      new Names("n1", "n1"),
-      new Names("n2", "n2"),
-      new Names("table1", "table1"),
-      new Names("table2", "table2"),
-      new Names("table2", "table1"),
-      new Names("table1", "table2"),
-      new Names("n1", "table1"),
-      new Names("n1", "table1"),
-      new Names("n2", "table2"),
-      new Names("n2", "table2")
+    new Names("n1", "n1"),
+    new Names("n2", "n2"),
+    new Names("table1", "table1"),
+    new Names("table2", "table2"),
+    new Names("table2", "table1"),
+    new Names("table1", "table2"),
+    new Names("n1", "table1"),
+    new Names("n1", "table1"),
+    new Names("n2", "table2"),
+    new Names("n2", "table2")
   };
 
   @Test

@@ -30,7 +30,6 @@ import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.SecureRandomSpi;
 import java.security.Security;
-
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.io.IOUtils;
@@ -55,8 +54,8 @@ public class TestAES {
   public void testAESAlgorithm() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     Cipher aes = Encryption.getCipher(conf, "AES");
-    assertEquals(aes.getKeyLength(), AES.KEY_LENGTH);
-    assertEquals(aes.getIvLength(), AES.IV_LENGTH);
+    assertEquals(AES.KEY_LENGTH, aes.getKeyLength());
+    assertEquals(AES.IV_LENGTH, aes.getIvLength());
     Encryptor e = aes.getEncryptor();
     e.setKey(new SecretKeySpec(Bytes.fromHex("2b7e151628aed2a6abf7158809cf4f3c"), "AES"));
     e.setIv(Bytes.fromHex("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"));
@@ -91,8 +90,7 @@ public class TestAES {
     DefaultCipherProvider.getInstance().setConf(conf);
 
     AES aes = new AES(DefaultCipherProvider.getInstance());
-    assertEquals("AES did not find alternate RNG", aes.getRNG().getAlgorithm(),
-      "TestRNG");
+    assertEquals("AES did not find alternate RNG", "TestRNG", aes.getRNG().getAlgorithm());
   }
 
   static class TestProvider extends Provider {
@@ -100,6 +98,7 @@ public class TestAES {
     public TestProvider() {
       super("TEST", 1.0, "Test provider");
       AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @Override
         public Object run() {
           put("SecureRandom.TestRNG", TestAES.class.getName() + "$TestRNG");
           return null;

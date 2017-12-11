@@ -313,8 +313,8 @@ public class TestByteBufferUtils {
   public void testLongFitsIn() {
     assertEquals(1, ByteBufferUtils.longFitsIn(0));
     assertEquals(1, ByteBufferUtils.longFitsIn(1));
-    assertEquals(3, ByteBufferUtils.longFitsIn(1l << 16));
-    assertEquals(5, ByteBufferUtils.longFitsIn(1l << 32));
+    assertEquals(3, ByteBufferUtils.longFitsIn(1L << 16));
+    assertEquals(5, ByteBufferUtils.longFitsIn(1L << 32));
     assertEquals(8, ByteBufferUtils.longFitsIn(-1));
     assertEquals(8, ByteBufferUtils.longFitsIn(Long.MIN_VALUE));
     assertEquals(8, ByteBufferUtils.longFitsIn(Long.MAX_VALUE));
