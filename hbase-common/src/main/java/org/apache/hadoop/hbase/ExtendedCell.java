@@ -54,7 +54,7 @@ public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
     PrivateCellUtil.writeFlatKey(this, out);
 
     // Value
-    out.write(getValueArray());
+    out.write(getValueArray(), getValueOffset(), getValueLength());
 
     // Tags length and tags byte array
     if (withTags && getTagsLength() > 0) {
