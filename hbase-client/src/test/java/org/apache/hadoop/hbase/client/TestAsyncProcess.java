@@ -1137,7 +1137,7 @@ public class TestAsyncProcess {
     Assert.assertEquals(0, ht.getAutoFlushCount());
     Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
 
-    // After a little more that 10 ms we should see an automatic flush
+    // After a little more that 100 ms we should see an automatic flush
     // Flushing itself seems to take approx 1050 ms, so we wait for 2 seconds.
     Thread.sleep(2000);
     Assert.assertEquals(1, ht.getAutoFlushCount());

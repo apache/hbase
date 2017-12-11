@@ -351,7 +351,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
       this.writeBufferMaxLinger = Math.max(MIN_WRITE_BUFFER_MAX_LINGER, milliseconds);
     } else {
       // All values must be 0 or higher.
-      this.writeBufferMaxLinger = Math.max(0, milliseconds);
+      this.writeBufferMaxLinger = 0;
     }
 
     if (this.writeBufferMaxLinger == 0) {
