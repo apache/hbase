@@ -2275,7 +2275,10 @@ public class HRegionServer extends HasThread implements
     ReportRegionStateTransitionRequest request = builder.build();
     int tries = 0;
     long pauseTime = INIT_PAUSE_TIME_MS;
-    while (keepLooping()) {
+    // Keep looping till we get an error. We want to send reports even though server is going down.
+    // Only go down if clusterConnection is null. It is set to null almost as last thing as the
+    // HRegionServer does down.
+    while (this.clusterConnection != null && !this.clusterConnection.isClosed()) {
       RegionServerStatusService.BlockingInterface rss = rssStub;
       try {
         if (rss == null) {
@@ -2286,8 +2289,7 @@ public class HRegionServer extends HasThread implements
           rss.reportRegionStateTransition(null, request);
         if (response.hasErrorMessage()) {
           LOG.info("TRANSITION FAILED " + request + ": " + response.getErrorMessage());
-          // NOTE: Return mid-method!!!
-          return false;
+          break;
         }
         // Log if we had to retry else don't log unless TRACE. We want to
         // know if were successful after an attempt showed in logs as failed.
@@ -2319,7 +2321,6 @@ public class HRegionServer extends HasThread implements
         }
       }
     }
-    LOG.info("TRANSITION NOT REPORTED " + request);
     return false;
   }
 

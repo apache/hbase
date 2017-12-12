@@ -106,7 +106,7 @@ public class CreateTableProcedure
           break;
         case CREATE_TABLE_ASSIGN_REGIONS:
           setEnablingState(env, getTableName());
-          addChildProcedure(env.getAssignmentManager().createAssignProcedures(newRegions));
+          addChildProcedure(env.getAssignmentManager().createRoundRobinAssignProcedures(newRegions));
           setNextState(CreateTableState.CREATE_TABLE_UPDATE_DESC_CACHE);
           break;
         case CREATE_TABLE_UPDATE_DESC_CACHE:

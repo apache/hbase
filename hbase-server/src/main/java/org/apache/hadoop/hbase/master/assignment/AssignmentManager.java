@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -464,7 +465,7 @@ public class AssignmentManager implements ServerListener {
       proc = createAssignProcedure(metaRegionInfo, serverName);
     } else {
       LOG.debug("Assigning " + metaRegionInfo.getRegionNameAsString());
-      proc = createAssignProcedure(metaRegionInfo, false);
+      proc = createAssignProcedure(metaRegionInfo);
     }
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
   }
@@ -526,11 +527,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   public void assign(final RegionInfo regionInfo) throws IOException {
-    assign(regionInfo, true);
-  }
-
-  public void assign(final RegionInfo regionInfo, final boolean forceNewPlan) throws IOException {
-    AssignProcedure proc = createAssignProcedure(regionInfo, forceNewPlan);
+    AssignProcedure proc = createAssignProcedure(regionInfo);
     ProcedureSyncWait.submitAndWaitProcedure(master.getMasterProcedureExecutor(), proc);
   }
 
@@ -605,23 +602,84 @@ public class AssignmentManager implements ServerListener {
   //  RegionTransition procedures helpers
   // ============================================================================================
 
-  public AssignProcedure[] createAssignProcedures(final Collection<RegionInfo> regionInfo) {
-    return createAssignProcedures(regionInfo, false);
+  /**
+   * Create round-robin assigns. Use on table creation to distribute out regions across cluster.
+   * @return AssignProcedures made out of the passed in <code>hris</code> and a call
+   * to the balancer to populate the assigns with targets chosen using round-robin (default
+   * balancer scheme). If at assign-time, the target chosen is no longer up, thats fine,
+   * the AssignProcedure will ask the balancer for a new target, and so on.
+   */
+  public AssignProcedure[] createRoundRobinAssignProcedures(final List<RegionInfo> hris) {
+    if (hris.isEmpty()) {
+      return null;
+    }
+    try {
+      // Ask the balancer to assign our regions. Pass the regions en masse. The balancer can do
+      // a better job if it has all the assignments in the one lump.
+      Map<ServerName, List<RegionInfo>> assignments = getBalancer().roundRobinAssignment(hris,
+          this.master.getServerManager().createDestinationServersList(null));
+      // Return mid-method!
+      return createAssignProcedures(assignments, hris.size());
+    } catch (HBaseIOException hioe) {
+      LOG.warn("Failed roundRobinAssignment", hioe);
+    }
+    // If an error above, fall-through to this simpler assign. Last resort.
+    return createAssignProcedures(hris);
   }
 
-  public AssignProcedure[] createAssignProcedures(final Collection<RegionInfo> regionInfo,
-      final boolean forceNewPlan) {
-    if (regionInfo.isEmpty()) return null;
-    final AssignProcedure[] procs = new AssignProcedure[regionInfo.size()];
-    int index = 0;
-    for (RegionInfo hri: regionInfo) {
-      procs[index++] = createAssignProcedure(hri, forceNewPlan);
+  /**
+   * Create an array of AssignProcedures w/o specifying a target server.
+   * If no target server, at assign time, we will try to use the former location of the region
+   * if one exists. This is how we 'retain' the old location across a server restart.
+   * Used by {@link ServerCrashProcedure} assigning regions on a server that has crashed (SCP is
+   * also used across a cluster-restart just-in-case to ensure we do cleanup of any old WALs or
+   * server processes).
+   */
+  public AssignProcedure[] createAssignProcedures(final List<RegionInfo> hris) {
+    if (hris.isEmpty()) {
+      return null;
     }
-    return procs;
+    int index = 0;
+    AssignProcedure [] procedures = new AssignProcedure[hris.size()];
+    for (RegionInfo hri : hris) {
+      // Sort the procedures so meta and system regions are first in the returned array.
+      procedures[index++] = createAssignProcedure(hri);
+    }
+    if (procedures.length > 1) {
+      // Sort the procedures so meta and system regions are first in the returned array.
+      Arrays.sort(procedures, AssignProcedure.COMPARATOR);
+    }
+    return procedures;
+  }
+
+  // Make this static for the method below where we use it typing the AssignProcedure array we
+  // return as result.
+  private static final AssignProcedure [] ASSIGN_PROCEDURE_ARRAY_TYPE = new AssignProcedure[] {};
+
+  /**
+   * @param assignments Map of assignments from which we produce an array of AssignProcedures.
+   * @param size Count of assignments to make (the caller may know the total count)
+   * @return Assignments made from the passed in <code>assignments</code>
+   */
+  private AssignProcedure[] createAssignProcedures(Map<ServerName, List<RegionInfo>> assignments,
+      int size) {
+    List<AssignProcedure> procedures = new ArrayList<>(size > 0? size: 8/*Arbitrary*/);
+    for (Map.Entry<ServerName, List<RegionInfo>> e: assignments.entrySet()) {
+      for (RegionInfo ri: e.getValue()) {
+        AssignProcedure ap = createAssignProcedure(ri, e.getKey());
+        ap.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
+        procedures.add(ap);
+      }
+    }
+    if (procedures.size() > 1) {
+      // Sort the procedures so meta and system regions are first in the returned array.
+      procedures.sort(AssignProcedure.COMPARATOR);
+    }
+    return procedures.toArray(ASSIGN_PROCEDURE_ARRAY_TYPE);
   }
 
   // Needed for the following method so it can type the created Array we return
-  private static final UnassignProcedure [] UNASSIGNED_PROCEDURE_FOR_TYPE_INFO =
+  private static final UnassignProcedure [] UNASSIGN_PROCEDURE_ARRAY_TYPE =
       new UnassignProcedure[0];
 
   UnassignProcedure[] createUnassignProcedures(final Collection<RegionStateNode> nodes) {
@@ -634,7 +692,7 @@ public class AssignmentManager implements ServerListener {
       assert node.getRegionLocation() != null: node.toString();
       procs.add(createUnassignProcedure(node.getRegionInfo(), node.getRegionLocation(), false));
     }
-    return procs.toArray(UNASSIGNED_PROCEDURE_FOR_TYPE_INFO);
+    return procs.toArray(UNASSIGN_PROCEDURE_ARRAY_TYPE);
   }
 
   public MoveRegionProcedure[] createReopenProcedures(final Collection<RegionInfo> regionInfo) {
@@ -649,14 +707,6 @@ public class AssignmentManager implements ServerListener {
   }
 
   /**
-   * Called by things like EnableTableProcedure to get a list of AssignProcedure
-   * to assign the regions of the table.
-   */
-  public AssignProcedure[] createAssignProcedures(final TableName tableName) {
-    return createAssignProcedures(regionStates.getRegionsOfTable(tableName));
-  }
-
-  /**
    * Called by things like DisableTableProcedure to get a list of UnassignProcedure
    * to unassign the regions of the table.
    */
@@ -664,17 +714,8 @@ public class AssignmentManager implements ServerListener {
     return createUnassignProcedures(regionStates.getTableRegionStateNodes(tableName));
   }
 
-  /**
-   * Called by things like ModifyColumnFamilyProcedure to get a list of MoveRegionProcedure
-   * to reopen the regions of the table.
-   */
-  public MoveRegionProcedure[] createReopenProcedures(final TableName tableName) {
-    return createReopenProcedures(regionStates.getRegionsOfTable(tableName));
-  }
-
-  public AssignProcedure createAssignProcedure(final RegionInfo regionInfo,
-      final boolean forceNewPlan) {
-    AssignProcedure proc = new AssignProcedure(regionInfo, forceNewPlan);
+  public AssignProcedure createAssignProcedure(final RegionInfo regionInfo) {
+    AssignProcedure proc = new AssignProcedure(regionInfo);
     proc.setOwner(getProcedureEnvironment().getRequestUser().getShortName());
     return proc;
   }
@@ -686,7 +727,7 @@ public class AssignmentManager implements ServerListener {
     return proc;
   }
 
-  public UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
+  UnassignProcedure createUnassignProcedure(final RegionInfo regionInfo,
       final ServerName destinationServer, final boolean force) {
     // If destinationServer is null, figure it.
     ServerName sn = destinationServer != null? destinationServer:
@@ -954,7 +995,8 @@ public class AssignmentManager implements ServerListener {
         final RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(hri);
         LOG.info("META REPORTED: " + regionNode);
         if (!reportTransition(regionNode, serverNode, TransitionCode.OPENED, 0)) {
-          LOG.warn("META REPORTED but no procedure found (complete?)");
+          LOG.warn("META REPORTED but no procedure found (complete?); set location=" +
+              serverNode.getServerName());
           regionNode.setRegionLocation(serverNode.getServerName());
         } else if (LOG.isTraceEnabled()) {
           LOG.trace("META REPORTED: " + regionNode);
@@ -1157,19 +1199,18 @@ public class AssignmentManager implements ServerListener {
   public void joinCluster() throws IOException {
     final long startTime = System.currentTimeMillis();
 
-    LOG.info("Joining the cluster...");
+    LOG.info("Joining cluster...Loading hbase:meta content.");
 
     // Scan hbase:meta to build list of existing regions, servers, and assignment
     loadMeta();
 
     for (int i = 0; master.getServerManager().countOfRegionServers() < 1; ++i) {
-      LOG.info("waiting for RS to join");
+      LOG.info("Waiting for RegionServers to join; current count=" +
+          master.getServerManager().countOfRegionServers());
       Threads.sleep(250);
     }
-    LOG.info("RS joined. Num RS = " + master.getServerManager().countOfRegionServers());
+    LOG.info("Number of RegionServers=" + master.getServerManager().countOfRegionServers());
 
-    // This method will assign all user regions if a clean server startup or
-    // it will reconstruct master state and cleanup any leftovers from previous master process.
     boolean failover = processofflineServersWithOnlineRegions();
 
     // Start the RIT chore
@@ -1220,54 +1261,74 @@ public class AssignmentManager implements ServerListener {
     wakeMetaLoadedEvent();
   }
 
-  // TODO: the assumption here is that if RSs are crashing while we are executing this
-  // they will be handled by the SSH that are put in the ServerManager "queue".
-  // we can integrate this a bit better.
+  /**
+   * Look at what is in meta and the list of servers that have checked in and make reconciliation.
+   * We cannot tell definitively the difference between a clean shutdown and a cluster that has
+   * been crashed down. At this stage of a Master startup, they look the same: they have the
+   * same state in hbase:meta. We could do detective work probing ZK and the FS for old WALs to
+   * split but SCP does this already so just let it do its job.
+   * <p>>The profiles of clean shutdown and cluster crash-down are the same because on clean
+   * shutdown currently, we do not update hbase:meta with region close state (In AMv2, region
+   * state is kept in hbse:meta). Usually the master runs all region transitions as of AMv2 but on
+   * cluster controlled shutdown, the RegionServers close all their regions only reporting the
+   * final change to the Master. Currently this report is ignored. Later we could take it and
+   * update as many regions as we can before hbase:meta goes down or have the master run the
+   * close of all regions out on the cluster but we may never be able to achieve the proper state on
+   * all regions (at least not w/o lots of painful manipulations and waiting) so clean shutdown
+   * might not be possible especially on big clusters.... And clean shutdown will take time. Given
+   * this current state of affairs, we just run ServerCrashProcedure in both cases. It will always
+   * do the right thing.
+   * @return True if for sure this is a failover where a Master is starting up into an already
+   * running cluster.
+   */
+  // The assumption here is that if RSs are crashing while we are executing this
+  // they will be handled by the SSH that are put in the ServerManager deadservers "queue".
   private boolean processofflineServersWithOnlineRegions() {
-    boolean failover = !master.getServerManager().getDeadServers().isEmpty();
-
-    final Set<ServerName> offlineServersWithOnlineRegions = new HashSet<ServerName>();
-    final ArrayList<RegionInfo> regionsToAssign = new ArrayList<RegionInfo>();
-    long st, et;
-
-    st = System.currentTimeMillis();
+    boolean deadServers = !master.getServerManager().getDeadServers().isEmpty();
+    final Set<ServerName> offlineServersWithOnlineRegions = new HashSet<>();
+    int size = regionStates.getRegionStateNodes().size();
+    final List<RegionInfo> offlineRegionsToAssign = new ArrayList<>(size);
+    long startTime = System.currentTimeMillis();
+    // If deadservers then its a failover, else, we are not sure yet.
+    boolean failover = deadServers;
     for (RegionStateNode regionNode: regionStates.getRegionStateNodes()) {
+      // Region State can be OPEN even if we did controlled cluster shutdown; Master does not close
+      // the regions in this case. The RegionServer does the close so hbase:meta is state in
+      // hbase:meta is not updated -- Master does all updates -- and is left with OPEN as region
+      // state in meta. How to tell difference between ordered shutdown and crashed-down cluster
+      // then? We can't. Not currently. Perhaps if we updated hbase:meta with CLOSED on ordered
+      // shutdown. This would slow shutdown though and not all edits would make it in anyways.
+      // TODO: Examine.
+      // Because we can't be sure it an ordered shutdown, we run ServerCrashProcedure always.
+      // ServerCrashProcedure will try to retain old deploy when it goes to assign.
       if (regionNode.getState() == State.OPEN) {
         final ServerName serverName = regionNode.getRegionLocation();
         if (!master.getServerManager().isServerOnline(serverName)) {
           offlineServersWithOnlineRegions.add(serverName);
+        } else {
+          // Server is online. This a failover. Master is starting into already-running cluster.
+          failover = true;
         }
       } else if (regionNode.getState() == State.OFFLINE) {
         if (isTableEnabled(regionNode.getTable())) {
-          regionsToAssign.add(regionNode.getRegionInfo());
+          offlineRegionsToAssign.add(regionNode.getRegionInfo());
         }
       }
     }
-    et = System.currentTimeMillis();
-    LOG.info("[STEP-1] " + StringUtils.humanTimeDiff(et - st));
-
-    // kill servers with online regions
-    st = System.currentTimeMillis();
+    // Kill servers with online regions just-in-case. Runs ServerCrashProcedure.
     for (ServerName serverName: offlineServersWithOnlineRegions) {
       if (!master.getServerManager().isServerOnline(serverName)) {
-        LOG.info("KILL RS hosting regions but not online " + serverName +
-          " (master=" + master.getServerName() + ")");
+        LOG.info("KILL RegionServer=" + serverName + " hosting regions but not online.");
         killRegionServer(serverName);
       }
     }
-    et = System.currentTimeMillis();
-    LOG.info("[STEP-2] " + StringUtils.humanTimeDiff(et - st));
-
     setFailoverCleanupDone(true);
 
-    // assign offline regions
-    st = System.currentTimeMillis();
-    for (RegionInfo regionInfo: getOrderedRegions(regionsToAssign)) {
-      master.getMasterProcedureExecutor().submitProcedure(
-        createAssignProcedure(regionInfo, false));
+    // Assign offline regions. Uses round-robin.
+    if (offlineRegionsToAssign.size() > 0) {
+      master.getMasterProcedureExecutor().submitProcedures(master.getAssignmentManager().
+          createRoundRobinAssignProcedures(offlineRegionsToAssign));
     }
-    et = System.currentTimeMillis();
-    LOG.info("[STEP-3] " + StringUtils.humanTimeDiff(et - st));
 
     return failover;
   }
@@ -1367,27 +1428,6 @@ public class AssignmentManager implements ServerListener {
       if (!regionState.isOpened()) ritCount++;
     }
     return new Pair<Integer, Integer>(ritCount, states.size());
-  }
-
-  /**
-   * Used when assign regions, this method will put system regions in
-   * front of user regions
-   * @param regions
-   * @return A list of regions with system regions at front
-   */
-  public List<RegionInfo> getOrderedRegions(
-      final List<RegionInfo> regions) {
-    if (regions == null) return Collections.emptyList();
-
-    List<RegionInfo> systemList = new ArrayList<>();
-    List<RegionInfo> userList = new ArrayList<>();
-    for (RegionInfo hri : regions) {
-      if (hri.getTable().isSystemTable()) systemList.add(hri);
-      else userList.add(hri);
-    }
-    // Append userList to systemList
-    systemList.addAll(userList);
-    return systemList;
   }
 
   // ============================================================================================

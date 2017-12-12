@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -71,7 +71,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
         break;
       case MOVE_REGION_ASSIGN:
         AssignProcedure assignProcedure = plan.getDestination() == null ?
-            new AssignProcedure(plan.getRegionInfo(), true) :
+            new AssignProcedure(plan.getRegionInfo()):
             new AssignProcedure(plan.getRegionInfo(), plan.getDestination());
         addChildProcedure(assignProcedure);
         return Flow.NO_MORE_STATE;

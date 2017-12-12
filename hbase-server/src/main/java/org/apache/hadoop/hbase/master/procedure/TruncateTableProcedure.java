@@ -129,7 +129,7 @@ public class TruncateTableProcedure
           break;
         case TRUNCATE_TABLE_ASSIGN_REGIONS:
           CreateTableProcedure.setEnablingState(env, getTableName());
-          addChildProcedure(env.getAssignmentManager().createAssignProcedures(regions));
+          addChildProcedure(env.getAssignmentManager().createRoundRobinAssignProcedures(regions));
           setNextState(TruncateTableState.TRUNCATE_TABLE_POST_OPERATION);
           tableDescriptor = null;
           regions = null;
