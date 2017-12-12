@@ -60,9 +60,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -1354,11 +1354,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws IOException if any of the specifiers is not null,
    *    but failed to find the region
    */
-  private List<HRegion> getRegions(
-      final List<RegionSpecifier> regionSpecifiers) throws IOException {
+  private List<HRegion> getRegions(final List<RegionSpecifier> regionSpecifiers,
+      final CacheEvictionStatsBuilder stats) {
     List<HRegion> regions = Lists.newArrayListWithCapacity(regionSpecifiers.size());
     for (RegionSpecifier regionSpecifier: regionSpecifiers) {
-      regions.add(regionServer.getRegion(regionSpecifier.getValue().toByteArray()));
+      try {
+        regions.add(regionServer.getRegion(regionSpecifier.getValue().toByteArray()));
+      } catch (NotServingRegionException e) {
+        stats.addException(regionSpecifier.getValue().toByteArray(), e);
+      }
     }
     return regions;
   }
@@ -3436,19 +3440,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   @Override
   public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
-                                                             ClearRegionBlockCacheRequest request)
-    throws ServiceException {
+      ClearRegionBlockCacheRequest request) {
+    ClearRegionBlockCacheResponse.Builder builder =
+        ClearRegionBlockCacheResponse.newBuilder();
     CacheEvictionStatsBuilder stats = CacheEvictionStats.builder();
-    try {
-      List<HRegion> regions = getRegions(request.getRegionList());
-      for (HRegion region : regions) {
+    List<HRegion> regions = getRegions(request.getRegionList(), stats);
+    for (HRegion region : regions) {
+      try {
         stats = stats.append(this.regionServer.clearRegionBlockCache(region));
+      } catch (Exception e) {
+        stats.addException(region.getRegionInfo().getRegionName(), e);
       }
-    } catch (Exception e) {
-      throw new ServiceException(e);
     }
-    return ClearRegionBlockCacheResponse.newBuilder()
-        .setStats(ProtobufUtil.toCacheEvictionStats(stats.build()))
-        .build();
+    return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
   }
 }

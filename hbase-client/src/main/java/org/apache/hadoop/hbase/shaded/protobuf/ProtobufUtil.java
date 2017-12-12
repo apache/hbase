@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
@@ -152,6 +153,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamil
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -3415,15 +3417,35 @@ public final class ProtobufUtil {
         .collect(Collectors.toList());
   }
 
-  public static CacheEvictionStats toCacheEvictionStats(HBaseProtos.CacheEvictionStats cacheEvictionStats) {
-    return CacheEvictionStats.builder()
-        .withEvictedBlocks(cacheEvictionStats.getEvictedBlocks())
-        .withMaxCacheSize(cacheEvictionStats.getMaxCacheSize())
-        .build();
+  public static CacheEvictionStats toCacheEvictionStats(
+      HBaseProtos.CacheEvictionStats stats) throws IOException{
+    CacheEvictionStatsBuilder builder = CacheEvictionStats.builder();
+    builder.withEvictedBlocks(stats.getEvictedBlocks())
+        .withMaxCacheSize(stats.getMaxCacheSize());
+    if (stats.getExceptionCount() > 0) {
+      for (HBaseProtos.RegionExceptionMessage exception : stats.getExceptionList()) {
+        HBaseProtos.RegionSpecifier rs = exception.getRegion();
+        byte[] regionName = rs.getValue().toByteArray();
+        builder.addException(regionName, ProtobufUtil.toException(exception.getException()));
+      }
+    }
+    return builder.build();
   }
 
-  public static HBaseProtos.CacheEvictionStats toCacheEvictionStats(CacheEvictionStats cacheEvictionStats) {
-    return HBaseProtos.CacheEvictionStats.newBuilder()
+  public static HBaseProtos.CacheEvictionStats toCacheEvictionStats(
+      CacheEvictionStats cacheEvictionStats) {
+    HBaseProtos.CacheEvictionStats.Builder builder
+        = HBaseProtos.CacheEvictionStats.newBuilder();
+    for (Map.Entry<byte[], Throwable> entry : cacheEvictionStats.getExceptions().entrySet()) {
+      builder.addException(
+          RegionExceptionMessage.newBuilder()
+          .setRegion(RequestConverter.buildRegionSpecifier(
+                  RegionSpecifierType.REGION_NAME, entry.getKey()))
+          .setException(ResponseConverter.buildException(entry.getValue()))
+          .build()
+      );
+    }
+    return builder
         .setEvictedBlocks(cacheEvictionStats.getEvictedBlocks())
         .setMaxCacheSize(cacheEvictionStats.getMaxCacheSize())
         .build();

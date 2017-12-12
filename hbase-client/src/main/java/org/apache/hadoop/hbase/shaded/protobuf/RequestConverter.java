@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1507,10 +1506,14 @@ public final class RequestConverter {
    *
    * @return a ClearRegionBlockCacheRequest
    */
-  public static ClearRegionBlockCacheRequest buildClearRegionBlockCacheRequest(final byte[]
-                                                                                 regionName) {
-    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-    return ClearRegionBlockCacheRequest.newBuilder().addAllRegion(Lists.newArrayList(region)).build();
+  public static ClearRegionBlockCacheRequest
+      buildClearRegionBlockCacheRequest(List<RegionInfo> hris) {
+    ClearRegionBlockCacheRequest.Builder builder = ClearRegionBlockCacheRequest.newBuilder();
+    hris.forEach(
+      hri -> builder.addRegion(
+        buildRegionSpecifier(RegionSpecifierType.REGION_NAME, hri.getRegionName())
+      ));
+    return builder.build();
   }
 
   /**
