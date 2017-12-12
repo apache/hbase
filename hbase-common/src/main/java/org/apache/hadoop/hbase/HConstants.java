@@ -28,8 +28,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -586,7 +586,7 @@ public final class HConstants {
    * Special! Used in fake Cells only. Should never be the timestamp on an actual Cell returned to
    * a client.
    * @deprecated Should not be public since hbase-1.3.0. For internal use only. Move internal to
-   * Scanners flagged as special timestamp value never to be returned as timestamp on a Cell.
+   *   Scanners flagged as special timestamp value never to be returned as timestamp on a Cell.
    */
   @Deprecated
   public static final long OLDEST_TIMESTAMP = Long.MIN_VALUE;
@@ -1186,6 +1186,18 @@ public final class HConstants {
    */
   public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.address.port";
   public static final int DEFAULT_STATUS_MULTICAST_PORT = 16100;
+
+  /**
+   * The network interface name to use for the multicast messages.
+   */
+  public static final String STATUS_MULTICAST_NI_NAME = "hbase.status.multicast.ni.name";
+
+  /**
+   * The address to use for binding the local socket for sending multicast. Defaults to 0.0.0.0.
+   */
+  public static final String STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS =
+    "hbase.status.multicast.publisher.bind.address.ip";
+  public static final String DEFAULT_STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS = "0.0.0.0";
 
   public static final long NO_NONCE = 0;
 
