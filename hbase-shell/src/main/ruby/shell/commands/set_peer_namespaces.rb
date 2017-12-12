@@ -25,10 +25,10 @@ module Shell
         <<-EOF
   Set the replicable namespaces config for the specified peer.
 
-  Set a namespace in the peer config means that all tables in this
-  namespace will be replicated to the peer cluster. So if you already
-  have set a namespace in the peer config, then you can't set this
-  namespace's tables in the peer config again.
+  1. The replicate_all flag need to be false when set the replicable namespaces.
+  2. Set a namespace in the peer config means that all tables in this namespace
+     will be replicated to the peer cluster. If peer config already has a table,
+     then not allow set this table's namespace to the peer config.
 
   Examples:
 

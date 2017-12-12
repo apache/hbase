@@ -26,7 +26,10 @@ module Shell
   Set the replicate_all flag to true or false for the specified peer.
 
   If replicate_all flag is true, then all user tables (REPLICATION_SCOPE != 0)
-  will be replicate to peer cluster.
+  will be replicate to peer cluster. But you can use 'set_peer_exclude_namespaces'
+  to set which namespaces can't be replicated to peer cluster. And you can use
+  'set_peer_exclude_tableCFs' to set which tables can't be replicated to peer
+  cluster.
 
   If replicate_all flag is false, then all user tables cannot be replicate to
   peer cluster. Then you can use 'set_peer_namespaces' or 'append_peer_namespaces'
@@ -36,6 +39,9 @@ module Shell
 
   Notice: When you want to change a peer's replicate_all flag from false to true,
           you need clean the peer's NAMESPACES and TABLECFS config firstly.
+          When you want to change a peer's replicate_all flag from true to false,
+          you need clean the peer's EXCLUDE_NAMESPACES and EXCLUDE_TABLECFS
+          config firstly.
 
   Examples:
 

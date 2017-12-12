@@ -20,34 +20,31 @@
 
 module Shell
   module Commands
-    class SetPeerTableCFs < Command
+    class SetPeerExcludeTableCFs < Command
       def help
         <<-EOF
-  Set the replicable table-cf config for the specified peer.
+  Set the table-cfs which not replicated for the specified peer.
 
   Note:
-  1. The replicate_all flag need to be false when set the replicable table-cfs.
-  2. Can't set a table to table-cfs config if it's namespace already was in
-     namespaces config of this peer.
+  1. The replicate_all flag need to be true when set exclude table-cfs.
+  2. If peer config already has a exclude namespace, then not allow set any
+     exclude table of this namespace to the peer config.
 
   Examples:
 
-    # set table-cfs config is null, then the namespaces config decide which
-    # table to be replicated.
-    hbase> set_peer_tableCFs '1'
-    # set table / table-cf to be replicable for a peer, for a table without
-    # an explicit column-family list, all replicable column-families (with
-    # replication_scope == 1) will be replicated
-    hbase> set_peer_tableCFs '2',
-     { "ns1:table1" => [],
-     "ns2:table2" => ["cf1", "cf2"],
-     "ns3:table3" => ["cfA", "cfB"]}
+    # set exclude table-cfs to null
+    hbase> set_peer_exclude_tableCFs '1'
+    # set table / table-cf which not replicated for a peer, for a table without
+    # an explicit column-family list, all column-families will not be replicated
+    hbase> set_peer_exclude_tableCFs '2', { "ns1:table1" => [],
+                                    "ns2:table2" => ["cf1", "cf2"],
+                                    "ns3:table3" => ["cfA", "cfB"]}
 
   EOF
       end
 
-      def command(id, peer_table_cfs = nil)
-        replication_admin.set_peer_tableCFs(id, peer_table_cfs)
+      def command(id, exclude_peer_table_cfs = nil)
+        replication_admin.set_peer_exclude_tableCFs(id, exclude_peer_table_cfs)
       end
     end
   end

@@ -46,6 +46,8 @@ message ReplicationPeer {
   repeated bytes namespaces = 6;
   optional int64 bandwidth = 7;
   optional bool replicate_all = 8;
+  repeated TableCF exclude_table_cfs = 9;
+  repeated bytes exclude_namespaces = 10;
 }
 
 /**
