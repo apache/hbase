@@ -198,8 +198,8 @@ public class ZKNamespaceManager extends ZKListener {
       String path = n.getNode();
       String namespace = ZKUtil.getNodeName(path);
       byte[] nodeData = n.getData();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Updating namespace cache from node "+namespace+" with data: "+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Updating namespace cache from node " + namespace + " with data: " +
             Bytes.toStringBinary(nodeData));
       }
       NamespaceDescriptor ns =

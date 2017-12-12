@@ -321,8 +321,7 @@ public class ServerManager {
    * @param sl the server load on the server
    * @return true if the server is recorded, otherwise, false
    */
-  boolean checkAndRecordNewServer(
-      final ServerName serverName, final ServerLoad sl) {
+  boolean checkAndRecordNewServer(final ServerName serverName, final ServerLoad sl) {
     ServerName existingServer = null;
     synchronized (this.onlineServers) {
       existingServer = findServerWithSameHostnamePortWithLock(serverName);
@@ -343,7 +342,8 @@ public class ServerManager {
 
     // Note that we assume that same ts means same server, and don't expire in that case.
     //  TODO: ts can theoretically collide due to clock shifts, so this is a bit hacky.
-    if (existingServer != null && (existingServer.getStartcode() < serverName.getStartcode())) {
+    if (existingServer != null &&
+        (existingServer.getStartcode() < serverName.getStartcode())) {
       LOG.info("Triggering server recovery; existingServer " +
           existingServer + " looks stale, new server:" + serverName);
       expireServer(existingServer);
@@ -659,7 +659,9 @@ public class ServerManager {
     }
 
     if (!master.getAssignmentManager().isFailoverCleanupDone()) {
-      LOG.debug("AssignmentManager failover cleanup not done.");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("AssignmentManager failover cleanup not done.");
+      }
     }
 
     for (Map.Entry<ServerName, Boolean> entry : requeuedDeadServers.entrySet()) {
@@ -857,7 +859,7 @@ public class ServerManager {
     for (ServerListener listener: this.listeners) {
       listener.waiting();
     }
-    while (!this.master.isStopped() && count < maxToStart &&
+    while (!this.master.isStopped() && !isClusterShutdown() && count < maxToStart &&
         ((lastCountChange + interval) > now || timeout > slept || count < minToStart)) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime + interval < now) {
@@ -881,6 +883,10 @@ public class ServerManager {
       if (count != oldCount) {
         lastCountChange = now;
       }
+    }
+    // Did we exit the loop because cluster is going down?
+    if (isClusterShutdown()) {
+      this.master.stop("Cluster shutdown");
     }
     LOG.info("Finished wait on RegionServer count=" + count + "; waited=" + slept + "ms," +
         " expected min=" + minToStart + " server(s), max=" +  getStrForMax(maxToStart) + " server(s),"+
@@ -955,7 +961,6 @@ public class ServerManager {
     String statusStr = "Cluster shutdown requested of master=" + this.master.getServerName();
     LOG.info(statusStr);
     this.clusterShutdown.set(true);
-    this.master.stop(statusStr);
   }
 
   public boolean isClusterShutdown() {

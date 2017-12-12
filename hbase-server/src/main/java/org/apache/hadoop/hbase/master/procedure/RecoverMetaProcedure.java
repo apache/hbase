@@ -129,7 +129,7 @@ public class RecoverMetaProcedure
           if (failedMetaServer != null) {
             LOG.info(this + "; Assigning meta with new plan. previous meta server=" +
                 failedMetaServer);
-            metaAssignProcedure = master.getAssignmentManager().createAssignProcedure(hri, true);
+            metaAssignProcedure = master.getAssignmentManager().createAssignProcedure(hri);
           } else {
             // get server carrying meta from zk
             ServerName metaServer =

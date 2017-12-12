@@ -150,7 +150,7 @@ public class CloneSnapshotProcedure
           break;
         case CLONE_SNAPSHOT_ASSIGN_REGIONS:
           CreateTableProcedure.setEnablingState(env, getTableName());
-          addChildProcedure(env.getAssignmentManager().createAssignProcedures(newRegions));
+          addChildProcedure(env.getAssignmentManager().createRoundRobinAssignProcedures(newRegions));
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_UPDATE_DESC_CACHE);
           break;
         case CLONE_SNAPSHOT_UPDATE_DESC_CACHE:

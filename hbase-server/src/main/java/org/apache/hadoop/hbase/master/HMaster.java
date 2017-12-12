@@ -761,10 +761,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     /*
      * We are active master now... go initialize components we need to run.
-     * Note, there may be dross in zk from previous runs; it'll get addressed
-     * below after we determine if cluster startup or failover.
      */
-
     status.setStatus("Initializing Master file system");
 
     this.masterActiveTime = System.currentTimeMillis();
@@ -1173,12 +1170,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     super.stopServiceThreads();
     stopChores();
 
-    // Wait for all the remaining region servers to report in IFF we were
-    // running a cluster shutdown AND we were NOT aborting.
-    if (!isAborted() && this.serverManager != null &&
-        this.serverManager.isClusterShutdown()) {
-      this.serverManager.letRegionServersShutdown();
-    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Stopping service threads");
     }
@@ -3516,10 +3507,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public boolean recoverMeta() throws IOException {
     ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
+    LOG.info("Running RecoverMetaProcedure to ensure proper hbase:meta deploy.");
     long procId = procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
-    LOG.info("Waiting on RecoverMetaProcedure submitted with procId=" + procId);
     latch.await();
-    LOG.info("Default replica of hbase:meta, location=" +
+    LOG.info("hbase:meta (default replica) deployed at=" +
         getMetaTableLocator().getMetaRegionLocation(getZooKeeper()));
     return assignmentManager.isMetaInitialized();
   }

@@ -880,6 +880,9 @@ public class ProcedureExecutor<TEnvironment> {
   public void submitProcedures(final Procedure[] procs) {
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(isRunning(), "executor not running");
+    if (procs == null || procs.length <= 0) {
+      return;
+    }
 
     // Prepare procedure
     for (int i = 0; i < procs.length; ++i) {

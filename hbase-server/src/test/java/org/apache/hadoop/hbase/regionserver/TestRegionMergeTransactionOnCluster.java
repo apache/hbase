@@ -153,7 +153,7 @@ public class TestRegionMergeTransactionOnCluster {
     RegionStates regionStates = am.getRegionStates();
 
     // We should not be able to assign it again
-    am.assign(hri, true);
+    am.assign(hri);
     assertFalse("Merged region can't be assigned",
       regionStates.isRegionInTransition(hri));
 

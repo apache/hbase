@@ -89,6 +89,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -273,13 +274,15 @@ public abstract class AbstractTestDLS {
 
       // abort RS
       LOG.info("Aborting region server: " + hrs.getServerName());
+      int countBefore = cluster.getLiveRegionServerThreads().size();
       hrs.abort("testing");
 
       // wait for abort completes
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (cluster.getLiveRegionServerThreads().size() <= (NUM_RS - 1));
+          int count = cluster.getLiveRegionServerThreads().size();
+          return count <= (NUM_RS - 1);
         }
       });
 

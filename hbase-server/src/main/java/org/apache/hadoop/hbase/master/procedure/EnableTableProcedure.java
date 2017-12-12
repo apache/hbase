@@ -175,7 +175,8 @@ public class EnableTableProcedure
               currentMaxReplica + 1, regionReplicaCount);
           }
         }
-        // Assign all the table regions. (including region replicas if added)
+        // Assign all the table regions. (including region replicas if added).
+        // createAssignProcedure will try to retain old assignments if possible.
         addChildProcedure(env.getAssignmentManager().createAssignProcedures(regionsOfTable));
         setNextState(EnableTableState.ENABLE_TABLE_SET_ENABLED_TABLE_STATE);
         break;

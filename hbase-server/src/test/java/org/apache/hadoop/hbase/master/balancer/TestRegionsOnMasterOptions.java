@@ -178,6 +178,11 @@ public class TestRegionsOnMasterOptions {
       while (!cluster.getMaster().isInitialized()) {
         Threads.sleep(10);
       }
+      while (cluster.getMaster().getAssignmentManager().
+          computeRegionInTransitionStat().getTotalRITs() > 0) {
+        Threads.sleep(100);
+        LOG.info("Waiting on RIT to go to zero before calling balancer...");
+      }
       LOG.info("Cluster is up; running balancer");
       cluster.getMaster().balance();
       regions = cluster.getMaster().getRegions();

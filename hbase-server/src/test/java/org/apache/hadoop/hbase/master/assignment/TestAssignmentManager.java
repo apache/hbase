@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -216,7 +216,7 @@ public class TestAssignmentManager {
     final TableName tableName = TableName.valueOf("testAssignAndCrashBeforeResponse");
     final RegionInfo hri = createRegionInfo(tableName, 1);
     rsDispatcher.setMockRsExecutor(new HangThenRSCrashExecutor());
-    AssignProcedure proc = am.createAssignProcedure(hri, false);
+    AssignProcedure proc = am.createAssignProcedure(hri);
     waitOnFuture(submitProcedure(proc));
   }
 
@@ -226,7 +226,7 @@ public class TestAssignmentManager {
     final RegionInfo hri = createRegionInfo(tableName, 1);
     rsDispatcher.setMockRsExecutor(new HangOnCloseThenRSCrashExecutor());
     for (int i = 0; i < HangOnCloseThenRSCrashExecutor.TYPES_OF_FAILURE; i++) {
-      AssignProcedure assign = am.createAssignProcedure(hri, false);
+      AssignProcedure assign = am.createAssignProcedure(hri);
       waitOnFuture(submitProcedure(assign));
       UnassignProcedure unassign = am.createUnassignProcedure(hri,
           am.getRegionStates().getRegionServerOfRegion(hri), false);
@@ -243,7 +243,7 @@ public class TestAssignmentManager {
     // Loop a bunch of times so we hit various combos of exceptions.
     for (int i = 0; i < 10; i++) {
       LOG.info("" + i);
-      AssignProcedure proc = am.createAssignProcedure(hri, false);
+      AssignProcedure proc = am.createAssignProcedure(hri);
       waitOnFuture(submitProcedure(proc));
     }
   }
@@ -257,7 +257,7 @@ public class TestAssignmentManager {
     collectAssignmentManagerMetrics();
 
     rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 3));
-    waitOnFuture(submitProcedure(am.createAssignProcedure(hri, false)));
+    waitOnFuture(submitProcedure(am.createAssignProcedure(hri)));
 
     rsDispatcher.setMockRsExecutor(new SocketTimeoutRsExecutor(20, 1));
     // exception.expect(ServerCrashException.class);
@@ -285,7 +285,7 @@ public class TestAssignmentManager {
     // Test Assign operation failure
     rsDispatcher.setMockRsExecutor(executor);
     try {
-      waitOnFuture(submitProcedure(am.createAssignProcedure(hri, false)));
+      waitOnFuture(submitProcedure(am.createAssignProcedure(hri)));
       fail("unexpected assign completion");
     } catch (RetriesExhaustedException e) {
       // expected exception
@@ -294,7 +294,7 @@ public class TestAssignmentManager {
 
     // Assign the region (without problems)
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
-    waitOnFuture(submitProcedure(am.createAssignProcedure(hri, false)));
+    waitOnFuture(submitProcedure(am.createAssignProcedure(hri)));
 
     // TODO: Currently unassign just keeps trying until it sees a server crash.
     // There is no count on unassign.
@@ -345,7 +345,7 @@ public class TestAssignmentManager {
     // Test Assign operation failure
     rsDispatcher.setMockRsExecutor(executor);
     try {
-      waitOnFuture(submitProcedure(am.createAssignProcedure(hri, false)));
+      waitOnFuture(submitProcedure(am.createAssignProcedure(hri)));
       fail("unexpected assign completion");
     } catch (RetriesExhaustedException e) {
       // expected exception
@@ -388,7 +388,7 @@ public class TestAssignmentManager {
 
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
 
-    final Future<byte[]> futureA = submitProcedure(am.createAssignProcedure(hri, false));
+    final Future<byte[]> futureA = submitProcedure(am.createAssignProcedure(hri));
 
     // wait first assign
     waitOnFuture(futureA);
@@ -396,7 +396,7 @@ public class TestAssignmentManager {
     // Second should be a noop. We should recognize region is already OPEN internally
     // and skip out doing nothing.
     // wait second assign
-    final Future<byte[]> futureB = submitProcedure(am.createAssignProcedure(hri, false));
+    final Future<byte[]> futureB = submitProcedure(am.createAssignProcedure(hri));
     waitOnFuture(futureB);
     am.getRegionStates().isRegionInState(hri, State.OPEN);
     // TODO: What else can we do to ensure just a noop.
@@ -419,7 +419,7 @@ public class TestAssignmentManager {
     rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
 
     // assign the region first
-    waitOnFuture(submitProcedure(am.createAssignProcedure(hri, false)));
+    waitOnFuture(submitProcedure(am.createAssignProcedure(hri)));
 
     final Future<byte[]> futureA = submitProcedure(am.createUnassignProcedure(hri, null, false));
 
@@ -516,7 +516,7 @@ public class TestAssignmentManager {
 
   private AssignProcedure createAndSubmitAssign(TableName tableName, int regionId) {
     RegionInfo hri = createRegionInfo(tableName, regionId);
-    AssignProcedure proc = am.createAssignProcedure(hri, false);
+    AssignProcedure proc = am.createAssignProcedure(hri);
     master.getMasterProcedureExecutor().submitProcedure(proc);
     return proc;
   }

@@ -538,7 +538,7 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preAssign(regionInfo);
       }
       LOG.info(master.getClientIdAuditPrefix() + " assign " + regionInfo.getRegionNameAsString());
-      master.getAssignmentManager().assign(regionInfo, true);
+      master.getAssignmentManager().assign(regionInfo);
       if (master.cpHost != null) {
         master.cpHost.postAssign(regionInfo);
       }

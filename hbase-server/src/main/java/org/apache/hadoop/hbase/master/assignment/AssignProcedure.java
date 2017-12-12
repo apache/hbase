@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
+import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,6 +74,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 public class AssignProcedure extends RegionTransitionProcedure {
   private static final Log LOG = LogFactory.getLog(AssignProcedure.class);
 
+  /**
+   * Set to true when we need recalibrate -- choose a new target -- because original assign failed.
+   */
   private boolean forceNewPlan = false;
 
   /**
@@ -84,24 +88,24 @@ public class AssignProcedure extends RegionTransitionProcedure {
    */
   protected volatile ServerName targetServer;
 
+  /**
+   * Comparator that will sort AssignProcedures so meta assigns come first, then system table
+   * assigns and finally user space assigns.
+   */
+  public static final CompareAssignProcedure COMPARATOR = new CompareAssignProcedure();
+
   public AssignProcedure() {
     // Required by the Procedure framework to create the procedure on replay
     super();
   }
 
   public AssignProcedure(final RegionInfo regionInfo) {
-    this(regionInfo, false);
-  }
-
-  public AssignProcedure(final RegionInfo regionInfo, final boolean forceNewPlan) {
     super(regionInfo);
-    this.forceNewPlan = forceNewPlan;
     this.targetServer = null;
   }
 
   public AssignProcedure(final RegionInfo regionInfo, final ServerName destinationServer) {
     super(regionInfo);
-    this.forceNewPlan = false;
     this.targetServer = destinationServer;
   }
 
@@ -360,5 +364,33 @@ public class AssignProcedure extends RegionTransitionProcedure {
   @Override
   protected ProcedureMetrics getProcedureMetrics(MasterProcedureEnv env) {
     return env.getAssignmentManager().getAssignmentManagerMetrics().getAssignProcMetrics();
+  }
+
+  /**
+   * Sort AssignProcedures such that meta and system assigns come first before user-space assigns.
+   * Have to do it this way w/ distinct Comparator because Procedure is already Comparable on
+   * 'Env'(?).
+   */
+  public static class CompareAssignProcedure implements Comparator<AssignProcedure> {
+    @Override
+    public int compare(AssignProcedure left, AssignProcedure right) {
+      if (left.getRegionInfo().isMetaRegion()) {
+        if (right.getRegionInfo().isMetaRegion()) {
+          return RegionInfo.COMPARATOR.compare(left.getRegionInfo(), right.getRegionInfo());
+        }
+        return -1;
+      } else if (left.getRegionInfo().isMetaRegion()) {
+        return +1;
+      }
+      if (left.getRegionInfo().getTable().isSystemTable()) {
+        if (right.getRegionInfo().getTable().isSystemTable()) {
+          return RegionInfo.COMPARATOR.compare(left.getRegionInfo(), right.getRegionInfo());
+        }
+        return -1;
+      } else if (left.getRegionInfo().getTable().isSystemTable()) {
+        return +1;
+      }
+      return RegionInfo.COMPARATOR.compare(left.getRegionInfo(), right.getRegionInfo());
+    }
   }
 }
