@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
@@ -1460,32 +1461,37 @@ public class HBaseAdmin implements Admin {
     CacheEvictionStatsBuilder cacheEvictionStats = CacheEvictionStats.builder();
     List<Pair<RegionInfo, ServerName>> pairs =
       MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
-    for (Pair<RegionInfo, ServerName> pair: pairs) {
-      if (pair.getFirst().isOffline() || pair.getSecond() == null) {
-        continue;
-      }
-      try {
-        cacheEvictionStats = cacheEvictionStats.append(
-            clearBlockCache(pair.getSecond(), pair.getFirst()));
-      } catch (NotServingRegionException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to clear block cache for " + pair.getFirst() + " on " +
-              pair.getSecond() + ": " + StringUtils.stringifyException(e));
+    Map<ServerName, List<RegionInfo>> regionInfoByServerName =
+        pairs.stream()
+            .filter(pair -> !(pair.getFirst().isOffline()))
+            .filter(pair -> pair.getSecond() != null)
+            .collect(Collectors.groupingBy(pair -> pair.getSecond(),
+                Collectors.mapping(pair -> pair.getFirst(), Collectors.toList())));
+
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : regionInfoByServerName.entrySet()) {
+      CacheEvictionStats stats = clearBlockCache(entry.getKey(), entry.getValue());
+      cacheEvictionStats = cacheEvictionStats.append(stats);
+      if (stats.getExceptionCount() > 0) {
+        for (Map.Entry<byte[], Throwable> exception : stats.getExceptions().entrySet()) {
+          LOG.debug("Failed to clear block cache for "
+              + Bytes.toStringBinary(exception.getKey())
+              + " on " + entry.getKey() + ": ", exception.getValue());
         }
       }
     }
     return cacheEvictionStats.build();
   }
 
-  private CacheEvictionStats clearBlockCache(final ServerName sn, final RegionInfo hri)
+  private CacheEvictionStats clearBlockCache(final ServerName sn, final List<RegionInfo> hris)
       throws IOException {
     HBaseRpcController controller = rpcControllerFactory.newController();
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     ClearRegionBlockCacheRequest request =
-      RequestConverter.buildClearRegionBlockCacheRequest(hri.getRegionName());
+      RequestConverter.buildClearRegionBlockCacheRequest(hris);
+    ClearRegionBlockCacheResponse response;
     try {
-      return ProtobufUtil.toCacheEvictionStats(
-          admin.clearRegionBlockCache(controller, request).getStats());
+      response = admin.clearRegionBlockCache(controller, request);
+      return ProtobufUtil.toCacheEvictionStats(response.getStats());
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
     }

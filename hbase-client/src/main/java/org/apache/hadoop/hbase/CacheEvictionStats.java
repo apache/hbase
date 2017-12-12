@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
@@ -25,10 +30,12 @@ public final class CacheEvictionStats {
 
   private final long evictedBlocks;
   private final long maxCacheSize;
+  private final Map<byte[], Throwable> exceptions;
 
   CacheEvictionStats(CacheEvictionStatsBuilder builder) {
     this.evictedBlocks = builder.evictedBlocks;
     this.maxCacheSize = builder.maxCacheSize;
+    this.exceptions = builder.exceptions;
   }
 
   public long getEvictedBlocks() {
@@ -37,6 +44,21 @@ public final class CacheEvictionStats {
 
   public long getMaxCacheSize() {
     return maxCacheSize;
+  }
+
+  public Map<byte[], Throwable> getExceptions() {
+    return Collections.unmodifiableMap(exceptions);
+  }
+
+  public int getExceptionCount() {
+    return exceptions.size();
+  }
+
+  private String getFailedRegions() {
+    return exceptions.keySet().stream()
+        .map(regionName -> RegionInfo.prettyPrint(RegionInfo.encodeRegionName(regionName)))
+        .collect(Collectors.toList())
+        .toString();
   }
 
   @InterfaceAudience.Private
@@ -49,6 +71,8 @@ public final class CacheEvictionStats {
     return "CacheEvictionStats{" +
         "evictedBlocks=" + evictedBlocks +
         ", maxCacheSize=" + maxCacheSize +
+        ", failedRegionsSize=" + getExceptionCount() +
+        ", failedRegions=" + getFailedRegions() +
         '}';
   }
 }

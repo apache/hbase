@@ -242,8 +242,14 @@ message RegionServerInfo {
   optional VersionInfo version_info = 2;
 }
 
+message RegionExceptionMessage {
+  required RegionSpecifier region = 1;
+  required NameBytesPair exception = 2;
+}
+
 message CacheEvictionStats {
   optional int64 evicted_blocks = 1;
   optional int64 bytes_evicted = 2;
   optional int64 max_cache_size = 3;
+  repeated RegionExceptionMessage exception = 4;
 }
