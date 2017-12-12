@@ -127,7 +127,7 @@ public class RegionMover extends AbstractHBaseTool {
      *     or hostname:port.
      */
     public RegionMoverBuilder(String hostname) {
-      String[] splitHostname = hostname.split(":");
+      String[] splitHostname = hostname.toLowerCase().split(":");
       this.hostname = splitHostname[0];
       if (splitHostname.length == 2) {
         this.port = Integer.parseInt(splitHostname[1]);
@@ -409,7 +409,8 @@ public class RegionMover extends AbstractHBaseTool {
         counter++;
         continue;
       } else if (server.equals(currentServer)) {
-        LOG.info("Region " + region.getRegionNameAsString() + "already on target server=" + server);
+        LOG.info("Region " + region.getRegionNameAsString() +
+            " is already on target server=" + server);
         counter++;
         continue;
       }
@@ -805,7 +806,7 @@ public class RegionMover extends AbstractHBaseTool {
     while (i.hasNext()) {
       server = i.next();
       String[] splitServer = server.split(ServerName.SERVERNAME_SEPARATOR);
-      if (splitServer[0].equals(hostname) && splitServer[1].equals(portString)) {
+      if (splitServer[0].equalsIgnoreCase(hostname) && splitServer[1].equals(portString)) {
         i.remove();
         return server;
       }
@@ -828,7 +829,7 @@ public class RegionMover extends AbstractHBaseTool {
         admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
     ArrayList<String> regionServers = new ArrayList<>(serverInfo.size());
     for (ServerName server : serverInfo) {
-      regionServers.add(server.getServerName());
+      regionServers.add(server.getServerName().toLowerCase());
     }
     return regionServers;
   }
@@ -905,7 +906,7 @@ public class RegionMover extends AbstractHBaseTool {
       int maxWaitInSeconds =
           admin.getConfiguration().getInt(MOVE_WAIT_MAX_KEY, DEFAULT_MOVE_WAIT_MAX);
       try {
-        server = locator.waitMetaRegionLocation(zkw, maxWaitInSeconds * 1000).toString() + ",";
+        server = locator.waitMetaRegionLocation(zkw, maxWaitInSeconds * 1000).toString();
       } catch (InterruptedException e) {
         LOG.error("Interrupted while waiting for location of Meta", e);
       } finally {
@@ -926,8 +927,8 @@ public class RegionMover extends AbstractHBaseTool {
           byte[] startcode =
               result.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
           if (servername != null) {
-            server =
-                Bytes.toString(servername).replaceFirst(":", ",") + "," + Bytes.toLong(startcode);
+            server = Bytes.toString(servername).replaceFirst(":", ",").toLowerCase() + "," +
+                Bytes.toLong(startcode);
           }
         }
       } catch (IOException e) {
