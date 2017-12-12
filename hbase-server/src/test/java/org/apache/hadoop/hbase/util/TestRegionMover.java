@@ -107,7 +107,6 @@ public class TestRegionMover {
 
   /** Test to unload a regionserver first and then load it using no Ack mode
    * we check if some regions are loaded on the region server(since no ack is best effort)
-   * @throws Exception
    */
   @Test
   public void testLoadWithoutAck() throws Exception {
@@ -172,9 +171,30 @@ public class TestRegionMover {
   }
 
   /**
+   * Test that loading the same region set doesn't cause timeout loop during meta load.
+   */
+  @Test(timeout = 30000)
+  public void testRepeatedLoad() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HRegionServer regionServer = cluster.getRegionServer(0);
+    String rsName = regionServer.getServerName().getHostname();
+    int port = regionServer.getServerName().getPort();
+    String rs = rsName + ":" + Integer.toString(port);
+    RegionMoverBuilder rmBuilder = new RegionMoverBuilder(rs).ack(true);
+    RegionMover rm = rmBuilder.build();
+    rm.setConf(TEST_UTIL.getConfiguration());
+    rm.unload();
+    assertEquals(0, regionServer.getNumberOfOnlineRegions());
+    rmBuilder = new RegionMoverBuilder(rs).ack(true);
+    rm = rmBuilder.build();
+    rm.setConf(TEST_UTIL.getConfiguration());
+    rm.load();
+    rm.load(); //Repeat the same load. It should be very fast because all regions are already moved.
+  }
+
+  /**
    * To test that we successfully exclude a server from the unloading process We test for the number
    * of regions on Excluded server and also test that regions are unloaded successfully
-   * @throws Exception
    */
   @Test
   public void testExclude() throws Exception {
