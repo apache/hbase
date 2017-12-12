@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Helper for TableCFs Operations.
@@ -289,11 +290,8 @@ public final class ReplicationPeerConfigUtil {
 
     List<ByteString> namespacesList = peer.getNamespacesList();
     if (namespacesList != null && namespacesList.size() != 0) {
-      Set<String> namespaces = new HashSet<>();
-      for (ByteString namespace : namespacesList) {
-        namespaces.add(namespace.toStringUtf8());
-      }
-      peerConfig.setNamespaces(namespaces);
+      peerConfig.setNamespaces(
+        namespacesList.stream().map(ByteString::toStringUtf8).collect(Collectors.toSet()));
     }
 
     if (peer.hasBandwidth()) {
@@ -302,6 +300,19 @@ public final class ReplicationPeerConfigUtil {
 
     if (peer.hasReplicateAll()) {
       peerConfig.setReplicateAllUserTables(peer.getReplicateAll());
+    }
+
+    Map<TableName, ? extends Collection<String>> excludeTableCFsMap =
+        convert2Map(peer.getExcludeTableCfsList()
+            .toArray(new ReplicationProtos.TableCF[peer.getExcludeTableCfsCount()]));
+    if (excludeTableCFsMap != null) {
+      peerConfig.setExcludeTableCFsMap(excludeTableCFsMap);
+    }
+
+    List<ByteString> excludeNamespacesList = peer.getExcludeNamespacesList();
+    if (excludeNamespacesList != null && excludeNamespacesList.size() != 0) {
+      peerConfig.setExcludeNamespaces(
+        excludeNamespacesList.stream().map(ByteString::toStringUtf8).collect(Collectors.toSet()));
     }
 
     return peerConfig;
@@ -346,6 +357,20 @@ public final class ReplicationPeerConfigUtil {
 
     builder.setBandwidth(peerConfig.getBandwidth());
     builder.setReplicateAll(peerConfig.replicateAllUserTables());
+
+    ReplicationProtos.TableCF[] excludeTableCFs = convert(peerConfig.getExcludeTableCFsMap());
+    if (excludeTableCFs != null) {
+      for (int i = 0; i < excludeTableCFs.length; i++) {
+        builder.addExcludeTableCfs(excludeTableCFs[i]);
+      }
+    }
+    Set<String> excludeNamespaces = peerConfig.getExcludeNamespaces();
+    if (excludeNamespaces != null) {
+      for (String namespace : excludeNamespaces) {
+        builder.addExcludeNamespaces(ByteString.copyFromUtf8(namespace));
+      }
+    }
+
     return builder.build();
   }
 

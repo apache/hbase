@@ -294,6 +294,29 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
+    define_test 'set_peer_exclude_tableCFs: works with table-cfs map' do
+      cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
+      args = { CLUSTER_KEY => cluster_key }
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      peer = command(:list_peers).get(0)
+      assert_equal(@peer_id, peer.getPeerId)
+      assert_equal(cluster_key, peer.getPeerConfig.getClusterKey)
+
+      table_cfs = { 'table1' => [], 'table2' => ['cf1'],
+                    'ns3:table3' => ['cf1', 'cf2'] }
+      command(:set_peer_exclude_tableCFs, @peer_id, table_cfs)
+      assert_equal(1, command(:list_peers).length)
+      peer = command(:list_peers).get(0)
+      peer_config = peer.getPeerConfig
+      assert_equal(true, peer_config.replicateAllUserTables)
+      assert_tablecfs_equal(table_cfs, peer_config.getExcludeTableCFsMap)
+
+      # cleanup for future tests
+      replication_admin.remove_peer(@peer_id)
+    end
+
     define_test "set_peer_namespaces: works with namespaces array" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       namespaces = ["ns1", "ns2"]
@@ -390,6 +413,25 @@ module Hbase
       peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
                    replication_admin.show_peer_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test 'set_peer_exclude_namespaces: works with namespaces array' do
+      cluster_key = 'zk4,zk5,zk6:11000:/hbase-test'
+      namespaces = ['ns1', 'ns2']
+      namespaces_str = '!ns1;ns2'
+
+      args = { CLUSTER_KEY => cluster_key }
+      command(:add_peer, @peer_id, args)
+      command(:set_peer_exclude_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      peer_config = command(:list_peers).get(0).getPeerConfig
+      assert_equal(true, peer_config.replicateAllUserTables)
+      assert_equal(namespaces_str,
+                   replication_admin.show_peer_exclude_namespaces(peer_config))
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)

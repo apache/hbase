@@ -44,6 +44,8 @@ public class ReplicationPeerConfig {
   private long bandwidth = 0;
   // Default value is true, means replicate all user tables to peer cluster.
   private boolean replicateAllUserTables = true;
+  private Map<TableName, ? extends Collection<String>> excludeTableCFsMap = null;
+  private Set<String> excludeNamespaces = null;
 
   public ReplicationPeerConfig() {
     this.peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -121,16 +123,44 @@ public class ReplicationPeerConfig {
     return this;
   }
 
+  public Map<TableName, List<String>> getExcludeTableCFsMap() {
+    return (Map<TableName, List<String>>) excludeTableCFsMap;
+  }
+
+  public ReplicationPeerConfig setExcludeTableCFsMap(Map<TableName,
+                                              ? extends Collection<String>> tableCFsMap) {
+    this.excludeTableCFsMap = tableCFsMap;
+    return this;
+  }
+
+  public Set<String> getExcludeNamespaces() {
+    return this.excludeNamespaces;
+  }
+
+  public ReplicationPeerConfig setExcludeNamespaces(Set<String> namespaces) {
+    this.excludeNamespaces = namespaces;
+    return this;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("clusterKey=").append(clusterKey).append(",");
     builder.append("replicationEndpointImpl=").append(replicationEndpointImpl).append(",");
     builder.append("replicateAllUserTables=").append(replicateAllUserTables).append(",");
-    if (namespaces != null) {
-      builder.append("namespaces=").append(namespaces.toString()).append(",");
-    }
-    if (tableCFsMap != null) {
-      builder.append("tableCFs=").append(tableCFsMap.toString()).append(",");
+    if (replicateAllUserTables) {
+      if (excludeNamespaces != null) {
+        builder.append("excludeNamespaces=").append(excludeNamespaces.toString()).append(",");
+      }
+      if (excludeTableCFsMap != null) {
+        builder.append("excludeTableCFsMap=").append(excludeTableCFsMap.toString()).append(",");
+      }
+    } else {
+      if (namespaces != null) {
+        builder.append("namespaces=").append(namespaces.toString()).append(",");
+      }
+      if (tableCFsMap != null) {
+        builder.append("tableCFs=").append(tableCFsMap.toString()).append(",");
+      }
     }
     builder.append("bandwidth=").append(bandwidth);
     return builder.toString();
@@ -142,17 +172,22 @@ public class ReplicationPeerConfig {
    * @return true if the table need replicate to the peer cluster
    */
   public boolean needToReplicate(TableName table) {
-    // If null means user has explicitly not configured any namespaces and table CFs
-    // so all the tables data are applicable for replication
-    if (namespaces == null && tableCFsMap == null) {
+    if (replicateAllUserTables) {
+      if (excludeNamespaces != null && excludeNamespaces.contains(table.getNamespaceAsString())) {
+        return false;
+      }
+      if (excludeTableCFsMap != null && excludeTableCFsMap.containsKey(table)) {
+        return false;
+      }
       return true;
+    } else {
+      if (namespaces != null && namespaces.contains(table.getNamespaceAsString())) {
+        return true;
+      }
+      if (tableCFsMap != null && tableCFsMap.containsKey(table)) {
+        return true;
+      }
+      return false;
     }
-    if (namespaces != null && namespaces.contains(table.getNamespaceAsString())) {
-      return true;
-    }
-    if (tableCFsMap != null && tableCFsMap.containsKey(table)) {
-      return true;
-    }
-    return false;
   }
 }

@@ -118,15 +118,32 @@ public class ReplicationManager {
     return peers;
   }
 
-  private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws ReplicationException,
-      IOException {
+  /**
+   * If replicate_all flag is true, it means all user tables will be replicated to peer cluster.
+   * Then allow config exclude namespaces or exclude table-cfs which can't be replicated to
+   * peer cluster.
+   *
+   * If replicate_all flag is false, it means all user tables can't be replicated to peer cluster.
+   * Then allow to config namespaces or table-cfs which will be replicated to peer cluster.
+   */
+  private void checkPeerConfig(ReplicationPeerConfig peerConfig)
+      throws ReplicationException, IOException {
     if (peerConfig.replicateAllUserTables()) {
       if ((peerConfig.getNamespaces() != null && !peerConfig.getNamespaces().isEmpty())
           || (peerConfig.getTableCFsMap() != null && !peerConfig.getTableCFsMap().isEmpty())) {
-        throw new ReplicationException(
-          "Need clean namespaces or table-cfs config fisrtly when you want replicate all cluster");
+        throw new ReplicationException("Need clean namespaces or table-cfs config firstly"
+            + " when replicate_all flag is true");
       }
+      checkNamespacesAndTableCfsConfigConflict(peerConfig.getExcludeNamespaces(),
+        peerConfig.getExcludeTableCFsMap());
     } else {
+      if ((peerConfig.getExcludeNamespaces() != null && !peerConfig.getNamespaces().isEmpty())
+          || (peerConfig.getExcludeTableCFsMap() != null
+              && !peerConfig.getTableCFsMap().isEmpty())) {
+        throw new ReplicationException(
+            "Need clean exclude-namespaces or exclude-table-cfs config firstly"
+                + " when replicate_all flag is false");
+      }
       checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
         peerConfig.getTableCFsMap());
     }
@@ -134,17 +151,19 @@ public class ReplicationManager {
   }
 
   /**
-   * Set a namespace in the peer config means that all tables in this namespace
-   * will be replicated to the peer cluster.
+   * Set a namespace in the peer config means that all tables in this namespace will be replicated
+   * to the peer cluster.
+   * 1. If peer config already has a namespace, then not allow set any table of this namespace
+   *    to the peer config.
+   * 2. If peer config already has a table, then not allow set this table's namespace to the peer
+   *    config.
    *
-   * 1. If you already have set a namespace in the peer config, then you can't set any table
-   *    of this namespace to the peer config.
-   * 2. If you already have set a table in the peer config, then you can't set this table's
-   *    namespace to the peer config.
-   *
-   * @param namespaces
-   * @param tableCfs
-   * @throws ReplicationException
+   * Set a exclude namespace in the peer config means that all tables in this namespace can't be
+   * replicated to the peer cluster.
+   * 1. If peer config already has a exclude namespace, then not allow set any exclude table of
+   *    this namespace to the peer config.
+   * 2. If peer config already has a exclude table, then not allow set this table's namespace
+   *    as a exclude namespace.
    */
   private void checkNamespacesAndTableCfsConfigConflict(Set<String> namespaces,
       Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException {
@@ -157,8 +176,8 @@ public class ReplicationManager {
     for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
       TableName table = entry.getKey();
       if (namespaces.contains(table.getNamespaceAsString())) {
-        throw new ReplicationException(
-            "Table-cfs config conflict with namespaces config in peer");
+        throw new ReplicationException("Table-cfs " + table + " is conflict with namespaces "
+            + table.getNamespaceAsString() + " in peer config");
       }
     }
   }

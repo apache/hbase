@@ -381,8 +381,10 @@ Shell.load_command_group(
     set_peer_namespaces
     append_peer_namespaces
     remove_peer_namespaces
+    set_peer_exclude_namespaces
     show_peer_tableCFs
     set_peer_tableCFs
+    set_peer_exclude_tableCFs
     set_peer_bandwidth
     list_replicated_tables
     append_peer_tableCFs
