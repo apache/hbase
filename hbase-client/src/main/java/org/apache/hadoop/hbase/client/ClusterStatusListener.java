@@ -20,16 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBufInputStream;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramPacket;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -48,13 +38,23 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBufInputStream;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramPacket;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 /**
  * A class that receives the cluster status, and provide it as a set of service to the client.
@@ -104,7 +104,7 @@ class ClusterStatusListener implements Closeable {
      * Called to connect.
      *
      * @param conf Configuration to use.
-     * @throws IOException
+     * @throws IOException if failing to connect
      */
     void connect(Configuration conf) throws IOException;
   }
@@ -197,6 +197,7 @@ class ClusterStatusListener implements Closeable {
         HConstants.DEFAULT_STATUS_MULTICAST_BIND_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
+      String niName = conf.get(HConstants.STATUS_MULTICAST_NI_NAME);
 
       InetAddress ina;
       try {
@@ -219,7 +220,13 @@ class ClusterStatusListener implements Closeable {
         throw ExceptionUtil.asInterrupt(e);
       }
 
-      NetworkInterface ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
+      NetworkInterface ni;
+      if (niName != null) {
+        ni = NetworkInterface.getByName(niName);
+      } else {
+        ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
+      }
+
       channel.joinGroup(ina, ni, null, channel.newPromise());
     }
 

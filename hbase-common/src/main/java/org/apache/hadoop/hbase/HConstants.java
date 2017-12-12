@@ -28,8 +28,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -550,7 +550,8 @@ public final class HConstants {
   /**
    * Timestamp to use when we want to refer to the latest cell.
    *
-   * On client side, this is the timestamp set by default when no timestamp is specified, to refer to the latest.
+   * On client side, this is the timestamp set by default when no timestamp is specified,
+   * to refer to the latest.
    * On server side, this acts as a notation.
    * (1) For a cell of Put, which has this notation,
    *     its timestamp will be replaced with server's current time.
@@ -559,7 +560,8 @@ public final class HConstants {
    *        a. When the count of cell it gets is less than the count of cell to delete,
    *           the timestamp of Delete cell will be replaced with server's current time.
    *        b. When the count of cell it gets is equal to the count of cell to delete,
-   *           the timestamp of Delete cell will be replaced with the latest timestamp of cell it gets.
+   *           the timestamp of Delete cell will be replaced with the latest timestamp of cell it
+   *           gets.
    *       (c. It is invalid and an exception will be thrown,
    *           if the count of cell it gets is greater than the count of cell to delete,
    *           as the max version of Get is set to the count of cell to delete.)
@@ -576,7 +578,7 @@ public final class HConstants {
    * Special! Used in fake Cells only. Should never be the timestamp on an actual Cell returned to
    * a client.
    * @deprecated Should not be public since hbase-1.3.0. For internal use only. Move internal to
-   * Scanners flagged as special timestamp value never to be returned as timestamp on a Cell.
+   *   Scanners flagged as special timestamp value never to be returned as timestamp on a Cell.
    */
   @Deprecated
   public static final long OLDEST_TIMESTAMP = Long.MIN_VALUE;
@@ -1156,6 +1158,18 @@ public final class HConstants {
    */
   public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.address.port";
   public static final int DEFAULT_STATUS_MULTICAST_PORT = 16100;
+
+  /**
+   * The network interface name to use for the multicast messages.
+   */
+  public static final String STATUS_MULTICAST_NI_NAME = "hbase.status.multicast.ni.name";
+
+  /**
+   * The address to use for binding the local socket for sending multicast. Defaults to 0.0.0.0.
+   */
+  public static final String STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS =
+    "hbase.status.multicast.publisher.bind.address.ip";
+  public static final String DEFAULT_STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS = "0.0.0.0";
 
   public static final long NO_NONCE = 0;
 

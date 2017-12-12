@@ -21,22 +21,6 @@
 package org.apache.hadoop.hbase.master;
 
 
-import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
-import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.ChannelFactory;
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelException;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramPacket;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.InternetProtocolFamily;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.MessageToMessageEncoder;
-import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -58,9 +42,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -68,6 +49,25 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
+import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.ChannelFactory;
+import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelException;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOption;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.DatagramPacket;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.InternetProtocolFamily;
+import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
+import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.MessageToMessageEncoder;
+import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 
 /**
@@ -252,6 +252,9 @@ public class ClusterStatusPublisher extends ScheduledChore {
           HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
+      String bindAddress = conf.get(HConstants.STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS,
+        HConstants.DEFAULT_STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS);
+      String niName = conf.get(HConstants.STATUS_MULTICAST_NI_NAME);
 
       final InetAddress ina;
       try {
@@ -264,24 +267,34 @@ public class ClusterStatusPublisher extends ScheduledChore {
       final InetSocketAddress isa = new InetSocketAddress(mcAddress, port);
 
       InternetProtocolFamily family;
-      InetAddress localAddress;
-      if (ina instanceof Inet6Address) {
-        localAddress = Addressing.getIp6Address();
-        family = InternetProtocolFamily.IPv6;
-      }else{
-        localAddress = Addressing.getIp4Address();
-        family = InternetProtocolFamily.IPv4;
+      NetworkInterface ni;
+      if (niName != null) {
+        if (ina instanceof Inet6Address) {
+          family = InternetProtocolFamily.IPv6;
+        } else {
+          family = InternetProtocolFamily.IPv4;
+        }
+        ni = NetworkInterface.getByName(niName);
+      } else {
+        InetAddress localAddress;
+        if (ina instanceof Inet6Address) {
+          localAddress = Addressing.getIp6Address();
+          family = InternetProtocolFamily.IPv6;
+        } else {
+          localAddress = Addressing.getIp4Address();
+          family = InternetProtocolFamily.IPv4;
+        }
+        ni = NetworkInterface.getByInetAddress(localAddress);
       }
-      NetworkInterface ni = NetworkInterface.getByInetAddress(localAddress);
 
       Bootstrap b = new Bootstrap();
       b.group(group)
-      .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
-      .option(ChannelOption.SO_REUSEADDR, true)
-      .handler(new ClusterStatusEncoder(isa));
+        .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
+        .option(ChannelOption.SO_REUSEADDR, true)
+        .handler(new ClusterStatusEncoder(isa));
 
       try {
-        channel = (DatagramChannel) b.bind(new InetSocketAddress(0)).sync().channel();
+        channel = (DatagramChannel) b.bind(bindAddress, 0).sync().channel();
         channel.joinGroup(ina, ni, null, channel.newPromise()).sync();
         channel.connect(isa).sync();
       } catch (InterruptedException e) {
@@ -290,33 +303,34 @@ public class ClusterStatusPublisher extends ScheduledChore {
       }
     }
 
-    private static final class HBaseDatagramChannelFactory<T extends Channel> implements ChannelFactory<T> {
+    private static final class HBaseDatagramChannelFactory<T extends Channel>
+      implements ChannelFactory<T> {
       private final Class<? extends T> clazz;
       private InternetProtocolFamily family;
 
       HBaseDatagramChannelFactory(Class<? extends T> clazz, InternetProtocolFamily family) {
-          this.clazz = clazz;
-          this.family = family;
+        this.clazz = clazz;
+        this.family = family;
       }
 
       @Override
       public T newChannel() {
-          try {
-            return ReflectionUtils.instantiateWithCustomCtor(clazz.getName(),
-              new Class[] { InternetProtocolFamily.class }, new Object[] { family });
+        try {
+          return ReflectionUtils.instantiateWithCustomCtor(clazz.getName(),
+            new Class[] { InternetProtocolFamily.class }, new Object[] { family });
 
-          } catch (Throwable t) {
-              throw new ChannelException("Unable to create Channel from class " + clazz, t);
-          }
+        } catch (Throwable t) {
+          throw new ChannelException("Unable to create Channel from class " + clazz, t);
+        }
       }
 
       @Override
       public String toString() {
-          return StringUtil.simpleClassName(clazz) + ".class";
+        return StringUtil.simpleClassName(clazz) + ".class";
       }
-  }
+    }
 
-    private static class ClusterStatusEncoder extends MessageToMessageEncoder<ClusterStatus> {
+    private static final class ClusterStatusEncoder extends MessageToMessageEncoder<ClusterStatus> {
       final private InetSocketAddress isa;
 
       private ClusterStatusEncoder(InetSocketAddress isa) {
