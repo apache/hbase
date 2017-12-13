@@ -119,13 +119,23 @@ public class StoreFileScanner implements KeyValueScanner {
       ScanQueryMatcher matcher, long readPt, boolean isPrimaryReplica) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
-    for (StoreFile file : files) {
-      StoreFile.Reader r = file.createReader(canUseDrop);
-      r.setReplicaStoreFile(isPrimaryReplica);
-      StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
-          isCompaction, readPt);
-      scanner.setScanQueryMatcher(matcher);
-      scanners.add(scanner);
+    boolean succ = false;
+    try {
+      for (StoreFile file : files) {
+        StoreFile.Reader r = file.createReader(canUseDrop);
+        r.setReplicaStoreFile(isPrimaryReplica);
+        StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, usePread,
+            isCompaction, readPt);
+        scanner.setScanQueryMatcher(matcher);
+        scanners.add(scanner);
+      }
+      succ = true;
+    } finally {
+      if (!succ) {
+        for (StoreFileScanner scanner : scanners) {
+          scanner.close();
+        }
+      }
     }
     return scanners;
   }
