@@ -137,16 +137,26 @@ public class StoreFileScanner implements KeyValueScanner {
       file.initReader();
       sortedFiles.add(file);
     }
-    for (int i = 0, n = files.size(); i < n; i++) {
-      HStoreFile sf = sortedFiles.remove();
-      StoreFileScanner scanner;
-      if (usePread) {
-        scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
-      } else {
-        scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
-          canOptimizeForNonNullColumn);
+    boolean succ = false;
+    try {
+      for (int i = 0, n = files.size(); i < n; i++) {
+        HStoreFile sf = sortedFiles.remove();
+        StoreFileScanner scanner;
+        if (usePread) {
+          scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
+        } else {
+          scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
+              canOptimizeForNonNullColumn);
+        }
+        scanners.add(scanner);
       }
-      scanners.add(scanner);
+      succ = true;
+    } finally {
+      if (!succ) {
+        for (StoreFileScanner scanner : scanners) {
+          scanner.close();
+        }
+      }
     }
     return scanners;
   }
