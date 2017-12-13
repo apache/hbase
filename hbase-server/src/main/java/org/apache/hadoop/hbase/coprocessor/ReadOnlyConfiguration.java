@@ -88,7 +88,11 @@ class ReadOnlyConfiguration extends Configuration {
 
   @Override
   public void reloadConfiguration() {
-    throw new UnsupportedOperationException("Read-only Configuration");
+    // This is a write operation. We need to allow it though because if any Configuration in
+    // current JVM context calls addDefaultResource, this forces a reload of all Configurations
+    // (all Configurations are 'registered' by the default constructor. Rather than turn
+    // somersaults, let this 'write' operation through.
+    this.conf.reloadConfiguration();
   }
 
   @Override
