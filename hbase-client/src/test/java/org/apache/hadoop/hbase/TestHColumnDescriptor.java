@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -32,13 +34,17 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
 @Category({MiscTests.class, SmallTests.class})
 @Deprecated
 public class TestHColumnDescriptor {
+  @Rule
+  public ExpectedException expectedEx = ExpectedException.none();
   @Test
   public void testPb() throws DeserializationException {
     HColumnDescriptor hcd = new HColumnDescriptor(
@@ -87,15 +93,14 @@ public class TestHColumnDescriptor {
     assertEquals(v, deserializedHcd.getDFSReplication());
   }
 
+  /**
+   * Tests HColumnDescriptor with empty familyName
+   */
   @Test
-  /** Tests HColumnDescriptor with empty familyName*/
-  public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
-      throws Exception {
-    try {
-      new HColumnDescriptor("".getBytes());
-    } catch (IllegalArgumentException e) {
-      assertEquals("Column Family name can not be empty", e.getLocalizedMessage());
-    }
+  public void testHColumnDescriptorShouldThrowIAEWhenFamilyNameEmpty() throws Exception {
+    expectedEx.expect(IllegalArgumentException.class);
+    expectedEx.expectMessage("Column Family name can not be empty");
+    new HColumnDescriptor("".getBytes(StandardCharsets.UTF_8));
   }
 
   /**

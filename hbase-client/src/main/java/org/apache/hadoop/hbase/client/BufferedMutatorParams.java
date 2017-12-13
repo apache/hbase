@@ -151,6 +151,7 @@ public class BufferedMutatorParams implements Cloneable {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="CN_IDIOM_NO_SUPER_CALL",
     justification="The clone below is complete")
+  @Override
   public BufferedMutatorParams clone() {
     BufferedMutatorParams clone = new BufferedMutatorParams(this.tableName);
     clone.writeBufferSize = this.writeBufferSize;

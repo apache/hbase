@@ -168,7 +168,7 @@ public class RegionInfoBuilder {
         final byte[] endKey, final long regionId,
         final int replicaId, boolean offLine, byte[] regionName) {
       int result = Arrays.hashCode(regionName);
-      result ^= regionId;
+      result = (int) (result ^ regionId);
       result ^= Arrays.hashCode(checkStartKey(startKey));
       result ^= Arrays.hashCode(checkEndKey(endKey));
       result ^= Boolean.valueOf(offLine).hashCode();

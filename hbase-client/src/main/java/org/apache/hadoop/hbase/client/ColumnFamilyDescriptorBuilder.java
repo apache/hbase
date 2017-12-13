@@ -895,6 +895,7 @@ public class ColumnFamilyDescriptorBuilder {
      * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
      * We will also consider mvcc in versions. See HBASE-15968 for details.
      */
+    @Override
     public boolean isNewVersionBehavior() {
       return getStringOrDefault(NEW_VERSION_BEHAVIOR_BYTES,
           Boolean::parseBoolean, DEFAULT_NEW_VERSION_BEHAVIOR);

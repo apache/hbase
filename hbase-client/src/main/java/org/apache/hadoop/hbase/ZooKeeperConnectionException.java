@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class ZooKeeperConnectionException extends IOException {
-  private static final long serialVersionUID = 1L << 23 - 1L;
+  private static final long serialVersionUID = (1L << 23) - 1L;
   /** default constructor */
   public ZooKeeperConnectionException() {
     super();

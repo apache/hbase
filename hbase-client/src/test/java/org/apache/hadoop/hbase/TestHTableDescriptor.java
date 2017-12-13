@@ -108,7 +108,7 @@ public class TestHTableDescriptor {
     assertEquals(v, deserializedHtd.getMaxFileSize());
     assertTrue(deserializedHtd.isReadOnly());
     assertEquals(Durability.ASYNC_WAL, deserializedHtd.getDurability());
-    assertEquals(deserializedHtd.getRegionReplication(), 2);
+    assertEquals(2, deserializedHtd.getRegionReplication());
   }
 
   /**

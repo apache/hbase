@@ -153,7 +153,7 @@ class AsyncProcess {
   final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   final int numTries;
   @VisibleForTesting
-  int serverTrackerTimeout;
+  long serverTrackerTimeout;
   final long primaryCallTimeoutMicroseconds;
   /** Whether to log details for batch errors */
   final boolean logBatchErrorDetails;
@@ -204,9 +204,9 @@ class AsyncProcess {
     // If we keep hitting one server, the net effect will be the incremental backoff, and
     // essentially the same number of retries as planned. If we have to do faster retries,
     // we will do more retries in aggregate, but the user will be none the wiser.
-    this.serverTrackerTimeout = 0;
+    this.serverTrackerTimeout = 0L;
     for (int i = 0; i < this.numTries; ++i) {
-      serverTrackerTimeout += ConnectionUtils.getPauseTime(this.pause, i);
+      serverTrackerTimeout = serverTrackerTimeout + ConnectionUtils.getPauseTime(this.pause, i);
     }
 
     this.rpcCallerFactory = rpcCaller;

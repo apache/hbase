@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -33,8 +34,8 @@ public class TestDelayingRunner {
 
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
-  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
-  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
+  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes(StandardCharsets.UTF_8);
   private static HRegionInfo hri1 =
       new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
 

@@ -71,7 +71,7 @@ public class TestSnapshotFromAdmin {
       ignoreExpectedTime += HConstants.RETRY_BACKOFF[i] * pauseTime;
     }
     // the correct wait time, capping at the maxTime/tries + fudge room
-    final long time = pauseTime * 3 + ((maxWaitTime / numRetries) * 3) + 300;
+    final long time = pauseTime * 3L + ((maxWaitTime / numRetries) * 3) + 300L;
     assertTrue("Capped snapshot wait time isn't less that the uncapped backoff time "
         + "- further testing won't prove anything.", time < ignoreExpectedTime);
 

@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -155,7 +156,7 @@ public class HQuorumPeer {
     }
 
     File myIdFile = new File(dataDir, "myid");
-    PrintWriter w = new PrintWriter(myIdFile);
+    PrintWriter w = new PrintWriter(myIdFile, StandardCharsets.UTF_8.name());
     w.println(myId);
     w.close();
   }

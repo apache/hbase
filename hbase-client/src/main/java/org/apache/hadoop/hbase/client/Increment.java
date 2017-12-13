@@ -47,7 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class Increment extends Mutation implements Comparable<Row> {
-  private static final long HEAP_OVERHEAD =  ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private static final int HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
   private TimeRange tr = new TimeRange();
 
   /**
@@ -164,6 +164,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    *          client that is not interested in the result can save network bandwidth setting this
    *          to false.
    */
+  @Override
   public Increment setReturnResults(boolean returnResults) {
     super.setReturnResults(returnResults);
     return this;
@@ -173,6 +174,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @return current setting for returnResults
    */
   // This method makes public the superclasses's protected method.
+  @Override
   public boolean isReturnResults() {
     return super.isReturnResults();
   }

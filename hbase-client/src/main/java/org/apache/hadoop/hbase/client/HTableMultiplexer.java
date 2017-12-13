@@ -468,7 +468,7 @@ public class HTableMultiplexer {
     }
 
     public long getTotalBufferedCount() {
-      return queue.size() + currentProcessingCount.get();
+      return (long) queue.size() + currentProcessingCount.get();
     }
 
     public AtomicAverageCounter getAverageLatencyCounter() {

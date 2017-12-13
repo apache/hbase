@@ -58,6 +58,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     ComparatorProtos.BinaryComparator.Builder builder =
       ComparatorProtos.BinaryComparator.newBuilder();
@@ -87,6 +88,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof BinaryComparator)) return false;

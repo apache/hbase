@@ -237,6 +237,7 @@ public class DependentColumnFilter extends CompareFilter {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.DependentColumnFilter.Builder builder =
       FilterProtos.DependentColumnFilter.newBuilder();
@@ -288,6 +289,7 @@ public class DependentColumnFilter extends CompareFilter {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof DependentColumnFilter)) return false;

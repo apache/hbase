@@ -114,6 +114,7 @@ public class RowFilter extends CompareFilter {
  /**
   * @return The filter serialized using pb
   */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.RowFilter.Builder builder =
       FilterProtos.RowFilter.newBuilder();
@@ -152,6 +153,7 @@ public class RowFilter extends CompareFilter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof RowFilter)) return false;

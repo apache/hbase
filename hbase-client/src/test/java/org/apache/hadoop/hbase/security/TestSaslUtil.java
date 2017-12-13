@@ -40,20 +40,20 @@ public class TestSaslUtil {
     Map<String, String> props;
 
     props = SaslUtil.initSaslProperties("integrity");
-    assertEquals(props.get(Sasl.QOP), "auth-int");
+    assertEquals("auth-int", props.get(Sasl.QOP));
 
     props = SaslUtil.initSaslProperties("privacy,authentication");
-    assertEquals(props.get(Sasl.QOP), "auth-conf,auth");
+    assertEquals("auth-conf,auth", props.get(Sasl.QOP));
 
     props = SaslUtil.initSaslProperties("integrity,authentication,privacy");
-    assertEquals(props.get(Sasl.QOP), "auth-int,auth,auth-conf");
+    assertEquals("auth-int,auth,auth-conf", props.get(Sasl.QOP));
 
     exception.expect(IllegalArgumentException.class);
     props = SaslUtil.initSaslProperties("xyz");
-    assertEquals(props.get(Sasl.QOP), "auth");
+    assertEquals("auth", props.get(Sasl.QOP));
 
     exception.expect(IllegalArgumentException.class);
     props = SaslUtil.initSaslProperties("");
-    assertEquals(props.get(Sasl.QOP), "auth");
+    assertEquals("auth", props.get(Sasl.QOP));
   }
 }

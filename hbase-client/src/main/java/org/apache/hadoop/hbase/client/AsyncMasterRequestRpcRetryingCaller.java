@@ -67,6 +67,7 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
     });
   }
 
+  @Override
   public CompletableFuture<T> call() {
     doCall();
     return future;

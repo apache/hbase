@@ -300,6 +300,7 @@ public abstract class CompareFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof CompareFilter)) return false;

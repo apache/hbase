@@ -49,6 +49,7 @@ public class WhileMatchFilter extends FilterBase {
     return filter;
   }
 
+  @Override
   public void reset() throws IOException {
     this.filter.reset();
   }
@@ -110,6 +111,7 @@ public class WhileMatchFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.WhileMatchFilter.Builder builder =
       FilterProtos.WhileMatchFilter.newBuilder();
@@ -143,6 +145,7 @@ public class WhileMatchFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof WhileMatchFilter)) return false;
@@ -151,6 +154,7 @@ public class WhileMatchFilter extends FilterBase {
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 
+  @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);
   }

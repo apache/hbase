@@ -30,6 +30,7 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -131,7 +132,8 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoResultsHint() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
+        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
@@ -191,7 +193,8 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testSizeLimit() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
+      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
@@ -248,9 +251,14 @@ public class TestClientScanner {
   @Test
   @SuppressWarnings("unchecked")
   public void testCacheLimit() throws IOException {
-    KeyValue kv1 = new KeyValue("row1".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
-        Type.Maximum), kv2 = new KeyValue("row2".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
-        Type.Maximum), kv3 = new KeyValue("row3".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue("row1".getBytes(StandardCharsets.UTF_8),
+      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+        Type.Maximum);
+    KeyValue kv2 = new KeyValue("row2".getBytes(StandardCharsets.UTF_8),
+        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+        Type.Maximum);
+    KeyValue kv3 = new KeyValue("row3".getBytes(StandardCharsets.UTF_8),
+        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
         Type.Maximum);
     final Result[] results = new Result[] {Result.create(new Cell[] {kv1}),
         Result.create(new Cell[] {kv2}), Result.create(new Cell[] {kv3})};
@@ -323,7 +331,8 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoMoreResults() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
+      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
@@ -381,12 +390,14 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testMoreResults() throws IOException {
     final Result[] results1 = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
+        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
         Type.Maximum);
     results1[0] = Result.create(new Cell[] {kv1});
 
     final Result[] results2 = new Result[1];
-    KeyValue kv2 = new KeyValue("row2".getBytes(), "cf".getBytes(), "cq".getBytes(), 1,
+    KeyValue kv2 = new KeyValue("row2".getBytes(StandardCharsets.UTF_8),
+      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
         Type.Maximum);
     results2[0] = Result.create(new Cell[] {kv2});
 

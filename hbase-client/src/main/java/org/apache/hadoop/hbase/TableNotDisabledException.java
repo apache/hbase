@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class TableNotDisabledException extends DoNotRetryIOException {
-  private static final long serialVersionUID = 1L << 19 - 1L;
+  private static final long serialVersionUID = (1L << 19) - 1L;
   /** default constructor */
   public TableNotDisabledException() {
     super();

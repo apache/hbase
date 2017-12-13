@@ -263,6 +263,7 @@ public class FuzzyRowFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() {
     FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter.newBuilder();
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
@@ -457,45 +458,55 @@ public class FuzzyRowFilter extends FilterBase {
   /** Abstracts directional comparisons based on scan direction. */
   private enum Order {
     ASC {
+      @Override
       public boolean lt(int lhs, int rhs) {
         return lhs < rhs;
       }
 
+      @Override
       public boolean gt(int lhs, int rhs) {
         return lhs > rhs;
       }
 
+      @Override
       public byte inc(byte val) {
         // TODO: what about over/underflow?
         return (byte) (val + 1);
       }
 
+      @Override
       public boolean isMax(byte val) {
         return val == (byte) 0xff;
       }
 
+      @Override
       public byte min() {
         return 0;
       }
     },
     DESC {
+      @Override
       public boolean lt(int lhs, int rhs) {
         return lhs > rhs;
       }
 
+      @Override
       public boolean gt(int lhs, int rhs) {
         return lhs < rhs;
       }
 
+      @Override
       public byte inc(byte val) {
         // TODO: what about over/underflow?
         return (byte) (val - 1);
       }
 
+      @Override
       public boolean isMax(byte val) {
         return val == 0;
       }
 
+      @Override
       public byte min() {
         return (byte) 0xFF;
       }
@@ -618,6 +629,7 @@ public class FuzzyRowFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized are equal to the
    *         corresponding fields in other. Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FuzzyRowFilter)) return false;
