@@ -46,7 +46,7 @@ public class Permission extends VersionedWritable {
   public enum Action {
     READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A');
 
-    private byte code;
+    private final byte code;
     Action(char code) {
       this.code = (byte)code;
     }

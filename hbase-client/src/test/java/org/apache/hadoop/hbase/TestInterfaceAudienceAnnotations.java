@@ -75,14 +75,14 @@ public class TestInterfaceAudienceAnnotations {
   private static final Log LOG = LogFactory.getLog(TestInterfaceAudienceAnnotations.class);
 
   /** Selects classes with generated in their package name */
-  class GeneratedClassFilter implements ClassFinder.ClassFilter {
+  static class GeneratedClassFilter implements ClassFinder.ClassFilter {
     @Override
     public boolean isCandidateClass(Class<?> c) {
       return c.getPackage().getName().contains("generated");
     }
   }
 
-  class ShadedProtobufClassFilter implements ClassFinder.ClassFilter {
+  static class ShadedProtobufClassFilter implements ClassFinder.ClassFilter {
     @Override
     public boolean isCandidateClass(Class<?> c) {
       return c.getPackage().getName().
@@ -242,7 +242,7 @@ public class TestInterfaceAudienceAnnotations {
   }
 
   /** Selects classes that are declared public */
-  class PublicClassFilter implements ClassFinder.ClassFilter {
+  static class PublicClassFilter implements ClassFinder.ClassFilter {
     @Override
     public boolean isCandidateClass(Class<?> c) {
       int mod = c.getModifiers();
@@ -251,7 +251,7 @@ public class TestInterfaceAudienceAnnotations {
   }
 
   /** Selects paths (jars and class dirs) only from the main code, not test classes */
-  class MainCodeResourcePathFilter implements ClassFinder.ResourcePathFilter {
+  static class MainCodeResourcePathFilter implements ClassFinder.ResourcePathFilter {
     @Override
     public boolean isCandidatePath(String resourcePath, boolean isJar) {
       return !resourcePath.contains("test-classes") &&
@@ -268,7 +268,7 @@ public class TestInterfaceAudienceAnnotations {
    * - enclosing class is not an interface
    * - name starts with "__CLR"
    */
-  class CloverInstrumentationFilter implements ClassFinder.ClassFilter {
+  static class CloverInstrumentationFilter implements ClassFinder.ClassFilter {
     @Override
     public boolean isCandidateClass(Class<?> clazz) {
       boolean clover = false;

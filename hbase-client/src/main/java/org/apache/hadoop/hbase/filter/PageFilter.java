@@ -22,12 +22,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
  * Implementation of Filter interface that limits results to a specific page
  * size. It terminates scanning once the number of filter-passed rows is &gt;
@@ -75,16 +76,19 @@ public class PageFilter extends FilterBase {
   public ReturnCode filterCell(final Cell ignored) throws IOException {
     return ReturnCode.INCLUDE;
   }
-  
+
+  @Override
   public boolean filterAllRemaining() {
     return this.rowsAccepted >= this.pageSize;
   }
 
+  @Override
   public boolean filterRow() {
     this.rowsAccepted++;
     return this.rowsAccepted > this.pageSize;
   }
   
+  @Override
   public boolean hasFilterRow() {
     return true;
   }
@@ -99,6 +103,7 @@ public class PageFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.PageFilter.Builder builder =
       FilterProtos.PageFilter.newBuilder();
@@ -124,13 +129,18 @@ public class PageFilter extends FilterBase {
   }
 
   /**
-   * @param other
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @param o other Filter to compare with
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof PageFilter)) return false;
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof PageFilter)) {
+      return false;
+    }
 
     PageFilter other = (PageFilter)o;
     return this.getPageSize() == other.getPageSize();

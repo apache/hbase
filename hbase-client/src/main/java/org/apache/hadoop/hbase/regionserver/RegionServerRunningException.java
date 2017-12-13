@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class RegionServerRunningException extends IOException {
-  private static final long serialVersionUID = 1L << 31 - 1L;
+  private static final long serialVersionUID = (1L << 31) - 1L;
 
   /** Default Constructor */
   public RegionServerRunningException() {

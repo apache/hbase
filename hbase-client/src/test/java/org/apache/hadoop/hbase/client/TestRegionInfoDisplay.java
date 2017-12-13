@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -32,13 +35,11 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
-import java.io.IOException;
-
 @Category({MasterTests.class, SmallTests.class})
 public class TestRegionInfoDisplay {
   @Rule
-  public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-  withLookingForStuckThread(true).build();
+  public final TestRule timeout = CategoryBasedTimeout.builder()
+      .withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   @Rule public TestName name = new TestName();
 
   @Test
@@ -59,35 +60,36 @@ public class TestRegionInfoDisplay {
     .setReplicaId(1).build();
     checkEquality(ri, conf);
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
-    RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
+        RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
-    RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
+        RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
 
     RegionState state = RegionState.createForTesting(convert(ri), RegionState.State.OPEN);
     String descriptiveNameForDisplay =
-    RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
+        RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
     checkDescriptiveNameEquality(descriptiveNameForDisplay,state.toDescriptiveString(), startKey);
 
     conf.setBoolean("hbase.display.keys", true);
     Assert.assertArrayEquals(endKey, RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
     Assert.assertArrayEquals(startKey, RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
     Assert.assertEquals(state.toDescriptiveString(),
-    RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf));
+        RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf));
   }
 
   private void checkDescriptiveNameEquality(String descriptiveNameForDisplay, String origDesc,
-                                            byte[] startKey) {
+      byte[] startKey) {
     // except for the "hidden-start-key" substring everything else should exactly match
     String firstPart = descriptiveNameForDisplay.substring(0,
-    descriptiveNameForDisplay.indexOf(new String(RegionInfoDisplay.HIDDEN_START_KEY)));
+        descriptiveNameForDisplay.indexOf(
+        new String(RegionInfoDisplay.HIDDEN_START_KEY, StandardCharsets.UTF_8)));
     String secondPart = descriptiveNameForDisplay.substring(
-    descriptiveNameForDisplay.indexOf(new String(RegionInfoDisplay.HIDDEN_START_KEY)) +
-    RegionInfoDisplay.HIDDEN_START_KEY.length);
-    String firstPartOrig = origDesc.substring(0,
-    origDesc.indexOf(Bytes.toStringBinary(startKey)));
+        descriptiveNameForDisplay.indexOf(
+        new String(RegionInfoDisplay.HIDDEN_START_KEY, StandardCharsets.UTF_8)) +
+            RegionInfoDisplay.HIDDEN_START_KEY.length);
+    String firstPartOrig = origDesc.substring(0, origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
-    origDesc.indexOf(Bytes.toStringBinary(startKey)) +
-    Bytes.toStringBinary(startKey).length());
+        origDesc.indexOf(Bytes.toStringBinary(startKey)) +
+            Bytes.toStringBinary(startKey).length());
     assert(firstPart.equals(firstPartOrig));
     assert(secondPart.equals(secondPartOrig));
   }
@@ -118,8 +120,8 @@ public class TestRegionInfoDisplay {
   }
 
   private HRegionInfo convert(RegionInfo ri) {
-    HRegionInfo hri = new HRegionInfo(
-    ri.getTable(), ri.getStartKey(), ri.getEndKey(), ri.isSplit(), ri.getRegionId());
+    HRegionInfo hri =new HRegionInfo(ri.getTable(), ri.getStartKey(), ri.getEndKey(),
+        ri.isSplit(), ri.getRegionId());
     hri.setOffline(ri.isOffline());
     return hri;
   }

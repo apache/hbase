@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class holds the address and the user ticket, etc. The client connections
@@ -62,8 +63,7 @@ class ConnectionId {
       ConnectionId id = (ConnectionId) obj;
       return address.equals(id.address) &&
             ((ticket != null && ticket.equals(id.ticket)) ||
-             (ticket == id.ticket)) &&
-             this.serviceName == id.serviceName;
+             (ticket == id.ticket)) && Objects.equals(this.serviceName, id.serviceName);
     }
     return false;
   }
@@ -73,7 +73,7 @@ class ConnectionId {
     return hashCode(ticket,serviceName,address);
   }
 
-  public static int hashCode(User ticket, String serviceName, InetSocketAddress address){
+  public static int hashCode(User ticket, String serviceName, InetSocketAddress address) {
     return (address.hashCode() +
         PRIME * (PRIME * serviceName.hashCode() ^
             (ticket == null ? 0 : ticket.hashCode())));

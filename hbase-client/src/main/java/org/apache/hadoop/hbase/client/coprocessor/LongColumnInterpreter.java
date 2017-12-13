@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
                  EmptyMsg, LongMsg, LongMsg> {
 
+  @Override
   public Long getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
       throws IOException {
     if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG)
@@ -50,7 +51,7 @@ public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
     return PrivateCellUtil.getValueAsLong(kv);
   }
 
-   @Override
+  @Override
   public Long add(Long l1, Long l2) {
     if (l1 == null ^ l2 == null) {
       return (l1 == null) ? l2 : l1; // either of one is null.

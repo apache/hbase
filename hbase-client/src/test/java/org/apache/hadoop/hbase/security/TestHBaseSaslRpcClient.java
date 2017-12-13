@@ -30,8 +30,7 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Strings;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -100,8 +99,10 @@ public class TestHBaseSaslRpcClient {
   @Test
   public void testSaslClientCallbackHandler() throws UnsupportedCallbackException {
     final Token<? extends TokenIdentifier> token = createTokenMock();
-    when(token.getIdentifier()).thenReturn(DEFAULT_USER_NAME.getBytes());
-    when(token.getPassword()).thenReturn(DEFAULT_USER_PASSWORD.getBytes());
+    when(token.getIdentifier())
+      .thenReturn(DEFAULT_USER_NAME.getBytes(StandardCharsets.UTF_8));
+    when(token.getPassword())
+      .thenReturn(DEFAULT_USER_PASSWORD.getBytes(StandardCharsets.UTF_8));
 
     final NameCallback nameCallback = mock(NameCallback.class);
     final PasswordCallback passwordCallback = mock(PasswordCallback.class);
@@ -120,8 +121,10 @@ public class TestHBaseSaslRpcClient {
   @Test
   public void testSaslClientCallbackHandlerWithException() {
     final Token<? extends TokenIdentifier> token = createTokenMock();
-    when(token.getIdentifier()).thenReturn(DEFAULT_USER_NAME.getBytes());
-    when(token.getPassword()).thenReturn(DEFAULT_USER_PASSWORD.getBytes());
+    when(token.getIdentifier())
+      .thenReturn(DEFAULT_USER_NAME.getBytes(StandardCharsets.UTF_8));
+    when(token.getPassword())
+      .thenReturn(DEFAULT_USER_PASSWORD.getBytes(StandardCharsets.UTF_8));
     final SaslClientCallbackHandler saslClCallbackHandler = new SaslClientCallbackHandler(token);
     try {
       saslClCallbackHandler.handle(new Callback[] { mock(TextOutputCallback.class) });
@@ -291,8 +294,10 @@ public class TestHBaseSaslRpcClient {
       throws IOException {
     Token<? extends TokenIdentifier> token = createTokenMock();
     if (!Strings.isNullOrEmpty(principal) && !Strings.isNullOrEmpty(password)) {
-      when(token.getIdentifier()).thenReturn(DEFAULT_USER_NAME.getBytes());
-      when(token.getPassword()).thenReturn(DEFAULT_USER_PASSWORD.getBytes());
+      when(token.getIdentifier())
+        .thenReturn(DEFAULT_USER_NAME.getBytes(StandardCharsets.UTF_8));
+      when(token.getPassword())
+        .thenReturn(DEFAULT_USER_PASSWORD.getBytes(StandardCharsets.UTF_8));
     }
     return token;
   }

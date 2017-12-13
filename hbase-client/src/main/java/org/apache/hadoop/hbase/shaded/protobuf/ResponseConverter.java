@@ -417,7 +417,7 @@ public final class ResponseConverter {
 
   public static Map<String, Long> getScanMetrics(ScanResponse response) {
     Map<String, Long> metricMap = new HashMap<>();
-    if (response == null || !response.hasScanMetrics() || response.getScanMetrics() == null) {
+    if (response == null || !response.hasScanMetrics()) {
       return metricMap;
     }
 

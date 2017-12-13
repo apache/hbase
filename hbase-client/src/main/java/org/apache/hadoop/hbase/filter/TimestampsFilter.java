@@ -135,6 +135,7 @@ public class TimestampsFilter extends FilterBase {
    *
    * @throws IOException This will never happen.
    */
+  @Override
   public Cell getNextCellHint(Cell currentCell) throws IOException {
     if (!canHint) {
       return null;
@@ -172,6 +173,7 @@ public class TimestampsFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte[] toByteArray() {
     FilterProtos.TimestampsFilter.Builder builder =
         FilterProtos.TimestampsFilter.newBuilder();
@@ -203,6 +205,7 @@ public class TimestampsFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof TimestampsFilter)) return false;

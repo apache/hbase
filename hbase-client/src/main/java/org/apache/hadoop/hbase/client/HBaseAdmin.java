@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +24,7 @@ import com.google.protobuf.RpcController;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -313,7 +313,8 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables) throws IOException {
+  public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables)
+      throws IOException {
     return executeCallable(new MasterCallable<List<TableDescriptor>>(getConnection(),
         getRpcControllerFactory()) {
       @Override
@@ -327,7 +328,8 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public TableDescriptor getDescriptor(TableName tableName) throws TableNotFoundException, IOException {
+  public TableDescriptor getDescriptor(TableName tableName)
+      throws TableNotFoundException, IOException {
     return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, rpcControllerFactory,
        operationTimeout, rpcTimeout);
   }
@@ -377,7 +379,8 @@ public class HBaseAdmin implements Admin {
       protected List<TableDescriptor> rpcCall() throws Exception {
         GetTableDescriptorsRequest req =
             RequestConverter.buildGetTableDescriptorsRequest(tableNames);
-          return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(), req));
+          return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(),
+              req));
       }
     });
   }
@@ -547,20 +550,23 @@ public class HBaseAdmin implements Admin {
   static HTableDescriptor getHTableDescriptor(final TableName tableName, Connection connection,
       RpcRetryingCallerFactory rpcCallerFactory, final RpcControllerFactory rpcControllerFactory,
       int operationTimeout, int rpcTimeout) throws IOException {
-    if (tableName == null) return null;
+    if (tableName == null) {
+      return null;
+    }
     HTableDescriptor htd =
         executeCallable(new MasterCallable<HTableDescriptor>(connection, rpcControllerFactory) {
-      @Override
-      protected HTableDescriptor rpcCall() throws Exception {
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(tableName);
-        GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
-        if (!htds.getTableSchemaList().isEmpty()) {
-          return new ImmutableHTableDescriptor(ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0)));
-        }
-        return null;
-      }
-    }, rpcCallerFactory, operationTimeout, rpcTimeout);
+          @Override
+          protected HTableDescriptor rpcCall() throws Exception {
+            GetTableDescriptorsRequest req =
+                RequestConverter.buildGetTableDescriptorsRequest(tableName);
+            GetTableDescriptorsResponse htds = master.getTableDescriptors(getRpcController(), req);
+            if (!htds.getTableSchemaList().isEmpty()) {
+              return new ImmutableHTableDescriptor(
+                  ProtobufUtil.toTableDescriptor(htds.getTableSchemaList().get(0)));
+            }
+            return null;
+          }
+        }, rpcCallerFactory, operationTimeout, rpcTimeout);
     if (htd != null) {
       return new ImmutableHTableDescriptor(htd);
     }
@@ -1146,7 +1152,6 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   *
    * @param sn
    * @return List of {@link HRegionInfo}.
    * @throws IOException
@@ -1573,9 +1578,8 @@ public class HBaseAdmin implements Admin {
   public boolean cleanerChoreSwitch(final boolean on) throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override public Boolean rpcCall() throws Exception {
-        return master.setCleanerChoreRunning(getRpcController(), RequestConverter
-                                                                   .buildSetCleanerChoreRunningRequest(
-                                                                     on)).getPrevValue();
+        return master.setCleanerChoreRunning(getRpcController(),
+            RequestConverter.buildSetCleanerChoreRunningRequest(on)).getPrevValue();
       }
     });
   }
@@ -1584,10 +1588,8 @@ public class HBaseAdmin implements Admin {
   public boolean runCleanerChore() throws IOException {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override public Boolean rpcCall() throws Exception {
-        return master
-                 .runCleanerChore(getRpcController(), RequestConverter
-                                                        .buildRunCleanerChoreRequest())
-                 .getCleanerChoreRan();
+        return master.runCleanerChore(getRpcController(),
+            RequestConverter.buildRunCleanerChoreRequest()).getCleanerChoreRan();
       }
     });
   }
@@ -1597,8 +1599,7 @@ public class HBaseAdmin implements Admin {
     return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
       @Override public Boolean rpcCall() throws Exception {
         return master.isCleanerChoreEnabled(getRpcController(),
-                                            RequestConverter.buildIsCleanerChoreEnabledRequest())
-                     .getValue();
+            RequestConverter.buildIsCleanerChoreEnabledRequest()).getValue();
       }
     });
   }
@@ -1676,7 +1677,8 @@ public class HBaseAdmin implements Admin {
     byte[][] encodedNameofRegionsToMerge = new byte[nameofRegionsToMerge.length][];
     for(int i = 0; i < nameofRegionsToMerge.length; i++) {
       encodedNameofRegionsToMerge[i] = HRegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ?
-        nameofRegionsToMerge[i] : HRegionInfo.encodeRegionName(nameofRegionsToMerge[i]).getBytes();
+        nameofRegionsToMerge[i] : HRegionInfo.encodeRegionName(nameofRegionsToMerge[i])
+          .getBytes(StandardCharsets.UTF_8);
     }
 
     TableName tableName = null;
@@ -1774,7 +1776,7 @@ public class HBaseAdmin implements Admin {
   public Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint)
       throws IOException {
     byte[] encodedNameofRegionToSplit = HRegionInfo.isEncodedRegionName(regionName) ?
-        regionName : HRegionInfo.encodeRegionName(regionName).getBytes();
+        regionName : HRegionInfo.encodeRegionName(regionName).getBytes(StandardCharsets.UTF_8);
     Pair<RegionInfo, ServerName> pair = getRegion(regionName);
     if (pair != null) {
       if (pair.getFirst() != null &&
@@ -2355,10 +2357,9 @@ public class HBaseAdmin implements Admin {
       protected HTableDescriptor[] rpcCall() throws Exception {
         GetTableDescriptorsRequest req =
             RequestConverter.buildGetTableDescriptorsRequest(tableNames);
-          return ProtobufUtil.toTableDescriptorList(master.getTableDescriptors(getRpcController(), req))
-                  .stream()
-                  .map(ImmutableHTableDescriptor::new)
-                  .toArray(HTableDescriptor[]::new);
+        return ProtobufUtil
+            .toTableDescriptorList(master.getTableDescriptors(getRpcController(), req)).stream()
+            .map(ImmutableHTableDescriptor::new).toArray(HTableDescriptor[]::new);
       }
     });
   }
@@ -2746,8 +2747,8 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public byte[] execProcedureWithReturn(String signature, String instance, Map<String, String> props)
-      throws IOException {
+  public byte[] execProcedureWithReturn(String signature, String instance, Map<String,
+      String> props) throws IOException {
     ProcedureDescription desc = ProtobufUtil.buildProcedureDescription(signature, instance, props);
     final ExecProcedureRequest request =
         ExecProcedureRequest.newBuilder().setProcedure(desc).build();
@@ -2833,7 +2834,8 @@ public class HBaseAdmin implements Admin {
   private Future<Void> internalRestoreSnapshotAsync(final String snapshotName,
       final TableName tableName, final boolean restoreAcl)
       throws IOException, RestoreSnapshotException {
-    final SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
+    final SnapshotProtos.SnapshotDescription snapshot =
+        SnapshotProtos.SnapshotDescription.newBuilder()
         .setName(snapshotName).setTable(tableName.getNameAsString()).build();
 
     // actually restore the snapshot
@@ -2977,9 +2979,8 @@ public class HBaseAdmin implements Admin {
       try {
         internalDeleteSnapshot(snapshot);
       } catch (IOException ex) {
-        LOG.info(
-          "Failed to delete snapshot " + snapshot.getName() + " for table " + snapshot.getTableNameAsString(),
-          ex);
+        LOG.info("Failed to delete snapshot " + snapshot.getName() + " for table "
+                + snapshot.getTableNameAsString(), ex);
       }
     }
   }
@@ -3991,7 +3992,8 @@ public class HBaseAdmin implements Admin {
               getRpcControllerFactory()) {
       @Override
       public List<ServerName> rpcCall() throws ServiceException {
-        ListDecommissionedRegionServersRequest req = ListDecommissionedRegionServersRequest.newBuilder().build();
+        ListDecommissionedRegionServersRequest req =
+            ListDecommissionedRegionServersRequest.newBuilder().build();
         List<ServerName> servers = new ArrayList<>();
         for (HBaseProtos.ServerName server : master
             .listDecommissionedRegionServers(getRpcController(), req).getServerNameList()) {

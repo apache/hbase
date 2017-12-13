@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -68,15 +69,15 @@ public class SaslUtil {
   }
 
   static String encodeIdentifier(byte[] identifier) {
-    return new String(Base64.encodeBase64(identifier));
+    return new String(Base64.encodeBase64(identifier), StandardCharsets.UTF_8);
   }
 
   static byte[] decodeIdentifier(String identifier) {
-    return Base64.decodeBase64(identifier.getBytes());
+    return Base64.decodeBase64(identifier.getBytes(StandardCharsets.UTF_8));
   }
 
   static char[] encodePassword(byte[] password) {
-    return new String(Base64.encodeBase64(password)).toCharArray();
+    return new String(Base64.encodeBase64(password), StandardCharsets.UTF_8).toCharArray();
   }
 
   /**

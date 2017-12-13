@@ -86,6 +86,7 @@ public class Append extends Mutation {
    *          A client that is not interested in the result can save network
    *          bandwidth setting this to false.
    */
+  @Override
   public Append setReturnResults(boolean returnResults) {
     super.setReturnResults(returnResults);
     return this;
@@ -95,6 +96,7 @@ public class Append extends Mutation {
    * @return current setting for returnResults
    */
   // This method makes public the superclasses's protected method.
+  @Override
   public boolean isReturnResults() {
     return super.isReturnResults();
   }

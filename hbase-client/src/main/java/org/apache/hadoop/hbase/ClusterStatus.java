@@ -185,7 +185,7 @@ public class ClusterStatus {
     int count = 0;
     if (liveServers != null && !liveServers.isEmpty()) {
       for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-        count += e.getValue().getNumberOfRegions();
+        count = count + e.getValue().getNumberOfRegions();
       }
     }
     return count;
@@ -217,9 +217,7 @@ public class ClusterStatus {
     return hbaseVersion;
   }
 
-  /**
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -238,16 +236,13 @@ public class ClusterStatus {
       getMasterInfoPort() == other.getMasterInfoPort();
   }
 
-  /**
-   * @see java.lang.Object#hashCode()
-   */
+  @Override
   public int hashCode() {
     return Objects.hashCode(hbaseVersion, liveServers, deadServers, master, backupMasters,
       clusterId, masterInfoPort);
   }
 
   /**
-   *
    * @return the object version number
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    */
@@ -352,6 +347,7 @@ public class ClusterStatus {
     return masterInfoPort;
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     sb.append("Master: " + master);

@@ -87,7 +87,8 @@ public class RandomRowFilter extends FilterBase {
   public boolean filterRow() {
     return filterOutRow;
   }
-  
+
+  @Override
   public boolean hasFilterRow() {
     return true;
   }
@@ -115,6 +116,7 @@ public class RandomRowFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     FilterProtos.RandomRowFilter.Builder builder =
       FilterProtos.RandomRowFilter.newBuilder();
@@ -144,6 +146,7 @@ public class RandomRowFilter extends FilterBase {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof RandomRowFilter)) return false;

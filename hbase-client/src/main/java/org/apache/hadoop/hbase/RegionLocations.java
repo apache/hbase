@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Container for holding a list of {@link HRegionLocation}'s that correspond to the

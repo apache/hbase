@@ -120,6 +120,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   /**
    * @return Return a short, printable name for this region (usually encoded name) for us logging.
    */
+  @Override
   public String getShortNameToLog() {
     return prettyPrint(this.getEncodedName());
   }
@@ -189,7 +190,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
-    result ^= this.regionId;
+    result = (int) (result ^ this.regionId);
     result ^= Arrays.hashCode(this.startKey);
     result ^= Arrays.hashCode(this.endKey);
     result ^= Boolean.valueOf(this.offLine).hashCode();
@@ -473,6 +474,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   }
 
   /** @return the regionId */
+  @Override
   public long getRegionId(){
     return regionId;
   }
@@ -481,6 +483,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    * @return the regionName as an array of bytes.
    * @see #getRegionNameAsString()
    */
+  @Override
   public byte [] getRegionName(){
     return regionName;
   }
@@ -488,6 +491,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   /**
    * @return Region name as a String for use in logging, etc.
    */
+  @Override
   public String getRegionNameAsString() {
     if (RegionInfo.hasEncodedName(this.regionName)) {
       // new format region names already have their encoded name.
@@ -500,7 +504,10 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
     return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
   }
 
-  /** @return the encoded region name */
+  /**
+   * @return the encoded region name
+   */
+  @Override
   public synchronized String getEncodedName() {
     if (this.encodedName == null) {
       this.encodedName = RegionInfo.encodeRegionName(this.regionName);
@@ -508,6 +515,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
     return this.encodedName;
   }
 
+  @Override
   public synchronized byte [] getEncodedNameAsBytes() {
     if (this.encodedNameAsBytes == null) {
       this.encodedNameAsBytes = Bytes.toBytes(getEncodedName());
@@ -515,12 +523,18 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
     return this.encodedNameAsBytes;
   }
 
-  /** @return the startKey */
+  /**
+   * @return the startKey
+   */
+  @Override
   public byte [] getStartKey(){
     return startKey;
   }
 
-  /** @return the endKey */
+  /**
+   * @return the endKey
+   */
+  @Override
   public byte [] getEndKey(){
     return endKey;
   }
@@ -529,6 +543,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    * Get current table name of the region
    * @return TableName
    */
+  @Override
   public TableName getTable() {
     // This method name should be getTableName but there was already a method getTableName
     // that returned a byte array.  It is unfortunate given everywhere else, getTableName returns
@@ -546,6 +561,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    * ["b","z"] it will return false.
    * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
    */
+  @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
     if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
       throw new IllegalArgumentException(
@@ -561,8 +577,9 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   }
 
   /**
-   * Return true if the given row falls in this region.
+   * @return true if the given row falls in this region.
    */
+  @Override
   public boolean containsRow(byte[] row) {
     return Bytes.compareTo(row, startKey) >= 0 &&
       (Bytes.compareTo(row, endKey) < 0 ||
@@ -576,7 +593,10 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
     return isMetaRegion();
   }
 
-  /** @return true if this region is a meta region */
+  /**
+   * @return true if this region is a meta region
+   */
+  @Override
   public boolean isMetaRegion() {
      return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTable());
   }
@@ -589,8 +609,9 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   }
 
   /**
-   * @return True if has been split and has daughters.
+   * @return true if has been split and has daughters.
    */
+  @Override
   public boolean isSplit() {
     return this.split;
   }
@@ -603,8 +624,9 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   }
 
   /**
-   * @return True if this region is offline.
+   * @return true if this region is offline.
    */
+  @Override
   public boolean isOffline() {
     return this.offLine;
   }
@@ -619,8 +641,9 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
   }
 
   /**
-   * @return True if this is a split parent region.
+   * @return true if this is a split parent region.
    */
+  @Override
   public boolean isSplitParent() {
     if (!isSplit()) return false;
     if (!isOffline()) {
@@ -633,6 +656,7 @@ public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
    * Returns the region replica id
    * @return returns region replica id
    */
+  @Override
   public int getReplicaId() {
     return replicaId;
   }

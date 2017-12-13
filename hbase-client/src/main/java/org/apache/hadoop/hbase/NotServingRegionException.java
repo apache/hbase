@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class NotServingRegionException extends IOException {
-  private static final long serialVersionUID = 1L << 17 - 1L;
+  private static final long serialVersionUID = (1L << 17) - 1L;
 
   /** default constructor */
   public NotServingRegionException() {

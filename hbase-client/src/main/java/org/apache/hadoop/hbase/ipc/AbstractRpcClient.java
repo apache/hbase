@@ -243,7 +243,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       return null;
     }
     try {
-      return (Codec) Class.forName(className).newInstance();
+      return (Codec) Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed getting codec " + className, e);
     }
@@ -271,7 +271,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       return null;
     }
     try {
-      return (CompressionCodec) Class.forName(className).newInstance();
+      return (CompressionCodec) Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed getting compressor " + className, e);
     }

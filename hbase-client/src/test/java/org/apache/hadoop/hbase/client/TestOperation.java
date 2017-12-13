@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -94,13 +95,14 @@ public class TestOperation {
 
   private static String COL_NAME_1 = "col1";
   private static ColumnPrefixFilter COL_PRE_FILTER =
-      new ColumnPrefixFilter(COL_NAME_1.getBytes());
+      new ColumnPrefixFilter(COL_NAME_1.getBytes(StandardCharsets.UTF_8));
   private static String STR_COL_PRE_FILTER =
       COL_PRE_FILTER.getClass().getSimpleName() + " " + COL_NAME_1;
 
   private static String COL_NAME_2 = "col2";
   private static ColumnRangeFilter CR_FILTER = new ColumnRangeFilter(
-      COL_NAME_1.getBytes(), true, COL_NAME_2.getBytes(), false);
+      COL_NAME_1.getBytes(StandardCharsets.UTF_8), true,
+      COL_NAME_2.getBytes(StandardCharsets.UTF_8), false);
   private static String STR_CR_FILTER = CR_FILTER.getClass().getSimpleName()
       + " [" + COL_NAME_1 + ", " + COL_NAME_2 + ")";
 
@@ -119,25 +121,28 @@ public class TestOperation {
 
   private static String STOP_ROW_KEY = "stop";
   private static InclusiveStopFilter IS_FILTER =
-      new InclusiveStopFilter(STOP_ROW_KEY.getBytes());
+      new InclusiveStopFilter(STOP_ROW_KEY.getBytes(StandardCharsets.UTF_8));
   private static String STR_IS_FILTER =
       IS_FILTER.getClass().getSimpleName() + " " + STOP_ROW_KEY;
 
   private static String PREFIX = "prefix";
   private static PrefixFilter PREFIX_FILTER =
-      new PrefixFilter(PREFIX.getBytes());
+      new PrefixFilter(PREFIX.getBytes(StandardCharsets.UTF_8));
   private static String STR_PREFIX_FILTER = "PrefixFilter " + PREFIX;
 
   private static byte[][] PREFIXES = {
-      "0".getBytes(), "1".getBytes(), "2".getBytes()};
+      "0".getBytes(StandardCharsets.UTF_8), "1".getBytes(StandardCharsets.UTF_8),
+      "2".getBytes(StandardCharsets.UTF_8)};
   private static MultipleColumnPrefixFilter MCP_FILTER =
       new MultipleColumnPrefixFilter(PREFIXES);
   private static String STR_MCP_FILTER =
       MCP_FILTER.getClass().getSimpleName() + " (3/3): [0, 1, 2]";
 
   private static byte[][] L_PREFIXES = {
-    "0".getBytes(), "1".getBytes(), "2".getBytes(), "3".getBytes(),
-    "4".getBytes(), "5".getBytes(), "6".getBytes(), "7".getBytes()};
+    "0".getBytes(StandardCharsets.UTF_8), "1".getBytes(StandardCharsets.UTF_8),
+    "2".getBytes(StandardCharsets.UTF_8), "3".getBytes(StandardCharsets.UTF_8),
+    "4".getBytes(StandardCharsets.UTF_8), "5".getBytes(StandardCharsets.UTF_8),
+    "6".getBytes(StandardCharsets.UTF_8), "7".getBytes(StandardCharsets.UTF_8)};
   private static MultipleColumnPrefixFilter L_MCP_FILTER =
       new MultipleColumnPrefixFilter(L_PREFIXES);
   private static String STR_L_MCP_FILTER =
@@ -167,7 +172,7 @@ public class TestOperation {
       FIRST_KEY_ONLY_FILTER.getClass().getSimpleName();
 
   private static CompareOp CMP_OP = CompareOp.EQUAL;
-  private static byte[] CMP_VALUE = "value".getBytes();
+  private static byte[] CMP_VALUE = "value".getBytes(StandardCharsets.UTF_8);
   private static BinaryComparator BC = new BinaryComparator(CMP_VALUE);
   private static DependentColumnFilter DC_FILTER =
       new DependentColumnFilter(FAMILY, QUALIFIER, true, CMP_OP, BC);
@@ -451,4 +456,3 @@ public class TestOperation {
   }
 
 }
-

@@ -72,6 +72,7 @@ public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
     });
   }
 
+  @Override
   CompletableFuture<T> call() {
     doCall();
     return future;
