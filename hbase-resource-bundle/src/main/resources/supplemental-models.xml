@@ -1867,7 +1867,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </project>
   </supplement>
   <supplement>
-    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha4 -->
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-beta1 -->
       <groupId>org.codehaus.woodstox</groupId>
       <artifactId>stax2-api</artifactId>
       <version>3.1.4</version>
@@ -2366,7 +2366,7 @@ Mozilla Public License Version 2.0
     means any form of the work other than Source Code Form.
 
 1.7. "Larger Work"
-    means a work that combines Covered Software with other material, in 
+    means a work that combines Covered Software with other material, in
     a separate file or files, that is not Covered Software.
 
 1.8. "License"
