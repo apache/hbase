@@ -234,6 +234,30 @@ function hadoopcheck_filefilter
   fi
 }
 
+## @description  Parse args to detect if QUICK_HADOOPCHECK mode is enabled.
+## @audience     private
+## @stability    evolving
+function hadoopcheck_parse_args
+{
+  declare i
+
+  for i in "$@"; do
+    case ${i} in
+      --quick-hadoopcheck)
+        QUICK_HADOOPCHECK=true
+      ;;
+    esac
+  done
+}
+
+## @description  Adds QUICK_HADOOPCHECK env variable to DOCKER_EXTRAARGS.
+## @audience     private
+## @stability    evolving
+function hadoopcheck_docker_support
+{
+  DOCKER_EXTRAARGS=("${DOCKER_EXTRAARGS[@]}" "--env=QUICK_HADOOPCHECK=${QUICK_HADOOPCHECK}")
+}
+
 ## @description  hadoopcheck test
 ## @audience     private
 ## @stability    evolving
@@ -260,18 +284,23 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
+  hbase_common_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    yetus_info "setting Hadoop versions to test based on branch-1-ish rules."
-    hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
+    yetus_info "Setting Hadoop versions to test based on branch-1-ish rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.4.1 2.5.2 2.6.5 2.7.4"
+    else
+      hbase_hadoop2_versions="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 ${hbase_common_hadoop2_versions}"
+    fi
     hbase_hadoop3_versions=""
-  elif [[ ${PATCH_BRANCH} = branch-2* ]]; then
-    yetus_info "setting Hadoop versions to test based on branch-2-ish rules."
-    hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
-    hbase_hadoop3_versions="3.0.0-alpha4"
   else # master or a feature branch
-    yetus_info "setting Hadoop versions to test based on master/feature branch rules."
-    hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4"
-    hbase_hadoop3_versions="3.0.0-alpha4"
+    yetus_info "Setting Hadoop versions to test based on branch-2/master/feature branch rules."
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop2_versions="2.6.5 2.7.4"
+    else
+      hbase_hadoop2_versions="${hbase_common_hadoop2_versions}"
+    fi
+    hbase_hadoop3_versions="3.0.0-beta1"
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
