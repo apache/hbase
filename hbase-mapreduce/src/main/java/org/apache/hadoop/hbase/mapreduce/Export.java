@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -29,13 +29,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Export an HBase table.
@@ -78,7 +78,7 @@ public class Export extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     if (!ExportUtils.isValidArguements(args)) {
-      ExportUtils.usage("Wrong number of arguments: " + ArrayUtils.length(args));
+      ExportUtils.usage("Wrong number of arguments: " + ArrayUtils.getLength(args));
       System.err.println("   -D " + JOB_NAME_CONF_KEY
               + "=jobName - use the specified mapreduce job name for the export");
       System.err.println("For MR performance consider the following properties:");

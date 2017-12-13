@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.util.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -61,12 +61,12 @@ public class IndividualBytesFieldCell implements ExtendedCell {
 
   public IndividualBytesFieldCell(byte[] row, byte[] family, byte[] qualifier,
                                   long timestamp, KeyValue.Type type, long seqId, byte[] value, byte[] tags) {
-    this(row, 0, ArrayUtils.length(row),
-            family, 0, ArrayUtils.length(family),
-            qualifier, 0, ArrayUtils.length(qualifier),
+    this(row, 0, ArrayUtils.getLength(row),
+            family, 0, ArrayUtils.getLength(family),
+            qualifier, 0, ArrayUtils.getLength(qualifier),
             timestamp, type, seqId,
-            value, 0, ArrayUtils.length(value),
-            tags, 0, ArrayUtils.length(tags));
+            value, 0, ArrayUtils.getLength(value),
+            tags, 0, ArrayUtils.getLength(tags));
   }
 
   public IndividualBytesFieldCell(byte[] row, int rOffset, int rLength,
