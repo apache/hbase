@@ -152,7 +152,8 @@ public class TestRemoteHTableRetries {
       public void run() throws Exception {
         Put put = new Put(ROW_1);
         put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
-        remoteTable.checkAndPut(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1, put );
+        remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
+            .ifEquals(VALUE_1).thenPut(put);
       }
     });
     verify(client, times(RETRIES)).put(anyString(), anyString(), any());
@@ -166,7 +167,9 @@ public class TestRemoteHTableRetries {
         Put put = new Put(ROW_1);
         put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
         Delete delete= new Delete(ROW_1);
-        remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1,  VALUE_1, delete );
+        //remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1,  VALUE_1, delete );
+        remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
+            .ifEquals(VALUE_1).thenDelete(delete);
       }
     });
   }

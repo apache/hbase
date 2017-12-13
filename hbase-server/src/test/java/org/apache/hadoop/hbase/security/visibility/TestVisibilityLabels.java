@@ -569,12 +569,12 @@ public abstract class TestVisibilityLabels {
       Put put = new Put(row1);
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET + " & " + CONFIDENTIAL));
-      table.checkAndPut(row1, fam, qual, null, put);
+      table.checkAndMutate(row1, fam).qualifier(qual).ifNotExists().thenPut(put);
       byte[] row2 = Bytes.toBytes("row2");
       put = new Put(row2);
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET));
-      table.checkAndPut(row2, fam, qual, null, put);
+      table.checkAndMutate(row2, fam).qualifier(qual).ifNotExists().thenPut(put);
 
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(SECRET));

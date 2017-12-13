@@ -382,11 +382,11 @@ public class TestRegionServerMetrics {
 
     Put pTwo = new Put(row);
     pTwo.addColumn(cf, qualifier, valTwo);
-    table.checkAndPut(row, cf, qualifier, valOne, pTwo);
+    table.checkAndMutate(row, cf).qualifier(qualifier).ifEquals(valOne).thenPut(pTwo);
 
     Put pThree = new Put(row);
     pThree.addColumn(cf, qualifier, valThree);
-    table.checkAndPut(row, cf, qualifier, valOne, pThree);
+    table.checkAndMutate(row, cf).qualifier(qualifier).ifEquals(valOne).thenPut(pThree);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertCounter("checkMutateFailedCount", 1);

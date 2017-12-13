@@ -1892,8 +1892,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.table.put(put);
       RowMutations mutations = new RowMutations(bytes);
       mutations.add(put);
-      this.table.checkAndMutate(bytes, FAMILY_NAME, getQualifier(), CompareOperator.EQUAL, bytes,
-          mutations);
+      this.table.checkAndMutate(bytes, FAMILY_NAME).qualifier(getQualifier())
+          .ifEquals(bytes).thenMutate(mutations);
     }
   }
 
@@ -1909,7 +1909,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Put put = new Put(bytes);
       put.addColumn(FAMILY_NAME, getQualifier(), bytes);
       this.table.put(put);
-      this.table.checkAndPut(bytes, FAMILY_NAME, getQualifier(), CompareOperator.EQUAL, bytes, put);
+      this.table.checkAndMutate(bytes, FAMILY_NAME).qualifier(getQualifier())
+          .ifEquals(bytes).thenPut(put);
     }
   }
 
@@ -1927,8 +1928,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.table.put(put);
       Delete delete = new Delete(put.getRow());
       delete.addColumn(FAMILY_NAME, getQualifier());
-      this.table.checkAndDelete(bytes, FAMILY_NAME, getQualifier(),
-        CompareOperator.EQUAL, bytes, delete);
+      this.table.checkAndMutate(bytes, FAMILY_NAME).qualifier(getQualifier())
+          .ifEquals(bytes).thenDelete(delete);
     }
   }
 

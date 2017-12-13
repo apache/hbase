@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -124,8 +123,8 @@ public class TestCheckAndMutate {
 
       // put the same row again with C column deleted
       RowMutations rm = makeRowMutationsWithColumnCDeleted();
-      boolean res = table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"),
-        CompareOperator.EQUAL, Bytes.toBytes("a"), rm);
+      boolean res = table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+          .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
       assertTrue(res);
 
       // get row back and assert the values
@@ -134,8 +133,41 @@ public class TestCheckAndMutate {
       //Test that we get a region level exception
       try {
         rm = getBogusRowMutations();
-        table.checkAndMutate(ROWKEY, FAMILY, Bytes.toBytes("A"), CompareOperator.EQUAL,
-            Bytes.toBytes("a"), rm);
+        table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+            .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
+        fail("Expected NoSuchColumnFamilyException");
+      } catch (RetriesExhaustedWithDetailsException e) {
+        try {
+          throw e.getCause(0);
+        } catch (NoSuchColumnFamilyException e1) {
+          // expected
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testCheckAndMutateWithBuilder() throws Throwable {
+    try (Table table = createTable()) {
+      // put one row
+      putOneRow(table);
+      // get row back and assert the values
+      getOneRowAndAssertAllExist(table);
+
+      // put the same row again with C column deleted
+      RowMutations rm = makeRowMutationsWithColumnCDeleted();
+      boolean res = table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+          .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
+      assertTrue(res);
+
+      // get row back and assert the values
+      getOneRowAndAssertAllButCExist(table);
+
+      //Test that we get a region level exception
+      try {
+        rm = getBogusRowMutations();
+        table.checkAndMutate(ROWKEY, FAMILY).qualifier(Bytes.toBytes("A"))
+            .ifEquals(Bytes.toBytes("a")).thenMutate(rm);
         fail("Expected NoSuchColumnFamilyException");
       } catch (RetriesExhaustedWithDetailsException e) {
         try {

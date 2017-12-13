@@ -905,7 +905,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
             d.addColumns(TEST_FAMILY1, TEST_Q1, 120);
-            t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
+            t.checkAndMutate(TEST_ROW1, TEST_FAMILY1).qualifier(TEST_Q1)
+                .ifEquals(ZERO).thenDelete(d);
           }
         }
         return null;
@@ -941,7 +942,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(row);
             d.addColumn(TEST_FAMILY1, q1, 120);
-            t.checkAndDelete(row, TEST_FAMILY1, q1, value, d);
+            t.checkAndMutate(row, TEST_FAMILY1).qualifier(q1).ifEquals(value).thenDelete(d);
           }
         }
         return null;
@@ -958,7 +959,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(row);
             d.addColumns(TEST_FAMILY1, TEST_Q1);
-            t.checkAndDelete(row, TEST_FAMILY1, TEST_Q1, value, d);
+            t.checkAndMutate(row, TEST_FAMILY1).qualifier(TEST_Q1).ifEquals(value).thenDelete(d);
             fail(user.getShortName() + " should not be allowed to do checkAndDelete");
           } catch (Exception e) {
           }

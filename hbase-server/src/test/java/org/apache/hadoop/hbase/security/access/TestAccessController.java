@@ -934,8 +934,8 @@ public class TestAccessController extends SecureTestUtil {
         d.addFamily(TEST_FAMILY);
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE);) {
-          t.checkAndDelete(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
-              Bytes.toBytes("test_value"), d);
+          t.checkAndMutate(TEST_ROW, TEST_FAMILY).qualifier(TEST_QUALIFIER)
+              .ifEquals(Bytes.toBytes("test_value")).thenDelete(d);
         }
         return null;
       }
@@ -949,9 +949,9 @@ public class TestAccessController extends SecureTestUtil {
         Put p = new Put(TEST_ROW);
         p.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
         try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(TEST_TABLE);) {
-          t.checkAndPut(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
-              Bytes.toBytes("test_value"), p);
+            Table t = conn.getTable(TEST_TABLE)) {
+          t.checkAndMutate(TEST_ROW, TEST_FAMILY).qualifier(TEST_QUALIFIER)
+              .ifEquals(Bytes.toBytes("test_value")).thenPut(p);
         }
         return null;
       }

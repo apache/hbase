@@ -22,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -301,7 +300,7 @@ public class TestRegionServerReadRequestMetrics {
     put = new Put(ROW1);
     put.addColumn(CF1, COL2, VAL2);
     boolean checkAndPut =
-      table.checkAndPut(ROW1, CF1, COL2, CompareOperator.EQUAL, VAL2, put);
+        table.checkAndMutate(ROW1, CF1).qualifier(COL2).ifEquals(VAL2).thenPut(put);
     resultCount = checkAndPut ? 1 : 0;
     testReadRequests(resultCount, 1, 0);
 
@@ -318,7 +317,7 @@ public class TestRegionServerReadRequestMetrics {
     RowMutations rm = new RowMutations(ROW1);
     rm.add(put);
     boolean checkAndMutate =
-      table.checkAndMutate(ROW1, CF1, COL1, CompareOperator.EQUAL, VAL1, rm);
+        table.checkAndMutate(ROW1, CF1).qualifier(COL1).ifEquals(VAL1).thenMutate(rm);
     resultCount = checkAndMutate ? 1 : 0;
     testReadRequests(resultCount, 1, 0);
   }

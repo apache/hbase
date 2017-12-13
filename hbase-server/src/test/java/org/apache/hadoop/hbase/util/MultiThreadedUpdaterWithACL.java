@@ -233,9 +233,9 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           } else if (m instanceof Append) {
             table.append((Append) m);
           } else if (m instanceof Put) {
-            table.checkAndPut(row, cf, q, v, (Put) m);
+            table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenPut((Put) m);
           } else if (m instanceof Delete) {
-            table.checkAndDelete(row, cf, q, v, (Delete) m);
+            table.checkAndMutate(row, cf).qualifier(q).ifEquals(v).thenDelete((Delete) m);
           } else {
             throw new IllegalArgumentException("unsupported mutation "
                 + m.getClass().getSimpleName());
