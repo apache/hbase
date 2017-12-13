@@ -7672,9 +7672,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     byte[] columnFamily = store.getColumnFamilyDescriptor().getName();
     List<Cell> toApply = new ArrayList<>(deltas.size());
     // Get previous values for all columns in this family.
-    List<Cell> currentValues = get(mutation, store, deltas,
-        null/*Default IsolationLevel*/,
-        op == Operation.INCREMENT? ((Increment)mutation).getTimeRange(): null);
+    TimeRange tr = null;
+    switch (op) {
+      case INCREMENT:
+        tr = ((Increment)mutation).getTimeRange();
+        break;
+      case APPEND:
+        tr = ((Append)mutation).getTimeRange();
+        break;
+      default:
+        break;
+    }
+    List<Cell> currentValues = get(mutation, store, deltas,null, tr);
     // Iterate the input columns and update existing values if they were found, otherwise
     // add new column initialized to the delta amount
     int currentValuesIndex = 0;

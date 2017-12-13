@@ -856,8 +856,13 @@ public final class ProtobufUtil {
           throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.APPEND : type.name();
-    return toDelta((Bytes row) -> new Append(row.get(), row.getOffset(), row.getLength()),
+    Append append = toDelta((Bytes row) -> new Append(row.get(), row.getOffset(), row.getLength()),
             Append::add, proto, cellScanner);
+    if (proto.hasTimeRange()) {
+      TimeRange timeRange = protoToTimeRange(proto.getTimeRange());
+      append.setTimeRange(timeRange.getMin(), timeRange.getMax());
+    }
+    return append;
   }
 
   /**
@@ -1340,6 +1345,10 @@ public final class ProtobufUtil {
       TimeRange timeRange = ((Increment) mutation).getTimeRange();
       setTimeRange(builder, timeRange);
     }
+    if (type == MutationType.APPEND) {
+      TimeRange timeRange = ((Append) mutation).getTimeRange();
+      setTimeRange(builder, timeRange);
+    }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[],List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
@@ -1397,6 +1406,9 @@ public final class ProtobufUtil {
     builder.setAssociatedCellCount(mutation.size());
     if (mutation instanceof Increment) {
       setTimeRange(builder, ((Increment)mutation).getTimeRange());
+    }
+    if (mutation instanceof Append) {
+      setTimeRange(builder, ((Append)mutation).getTimeRange());
     }
     if (nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
