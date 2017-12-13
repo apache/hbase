@@ -363,8 +363,8 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
    */
   private void safeQueueUpdate(RowMutations mutate) throws ReplicationException, IOException{
     try (Table replicationTable = getOrBlockOnReplicationTable()) {
-      boolean updateSuccess = replicationTable.checkAndMutate(mutate.getRow(),
-          CF_QUEUE, COL_QUEUE_OWNER, CompareOperator.EQUAL, serverNameBytes, mutate);
+      boolean updateSuccess = replicationTable.checkAndMutate(mutate.getRow(), CF_QUEUE)
+          .qualifier(COL_QUEUE_OWNER).ifEquals(serverNameBytes).thenMutate(mutate);
       if (!updateSuccess) {
         throw new ReplicationException("Failed to update Replication Table because we lost queue " +
             " ownership");
@@ -408,9 +408,9 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
     // server. If it is not then another RS has already claimed it. If it is we set ourselves as the
     // new owner and update the queue's history
     try (Table replicationTable = getOrBlockOnReplicationTable()) {
-      boolean success = replicationTable.checkAndMutate(queue.getRow(),
-          CF_QUEUE, COL_QUEUE_OWNER, CompareOperator.EQUAL, Bytes.toBytes(originalServer),
-          claimAndRenameQueue);
+      boolean success = replicationTable.checkAndMutate(queue.getRow(), CF_QUEUE)
+          .qualifier(COL_QUEUE_OWNER).ifEquals(Bytes.toBytes(originalServer))
+          .thenMutate(claimAndRenameQueue);
       return success;
     }
   }

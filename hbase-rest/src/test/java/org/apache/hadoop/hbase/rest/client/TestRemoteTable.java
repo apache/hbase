@@ -481,17 +481,18 @@ public class TestRemoteTable {
     assertEquals(1, remoteTable.existsAll(Collections.singletonList(get)).length);
     Delete delete = new Delete(ROW_1);
 
-    remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1, delete);
+    remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
+        .ifEquals(VALUE_1).thenDelete(delete);
     assertFalse(remoteTable.exists(get));
 
     Put put = new Put(ROW_1);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     remoteTable.put(put);
 
-    assertTrue(remoteTable.checkAndPut(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1,
-        put));
-    assertFalse(remoteTable.checkAndPut(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_2,
-        put));
+    assertTrue(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
+        .ifEquals(VALUE_1).thenPut(put));
+    assertFalse(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
+        .ifEquals(VALUE_2).thenPut(put));
   }
   
   /**

@@ -214,6 +214,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value, Put put)
   throws IOException {
     throw new UnsupportedOperationException();
@@ -228,6 +229,7 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
                              CompareOperator compareOp, byte[] value, Put put)
   throws IOException {
@@ -260,9 +262,15 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
                                 CompareOperator compareOp, byte[] value, Delete delete)
   throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
     throw new UnsupportedOperationException();
   }
 
@@ -344,10 +352,9 @@ public class RegionAsTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-                                CompareOperator compareOp,
-                                byte[] value, RowMutations mutation)
-  throws IOException {
+      CompareOperator compareOp, byte[] value, RowMutations mutation) throws IOException {
     throw new UnsupportedOperationException();
   }
 

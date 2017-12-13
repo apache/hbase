@@ -240,6 +240,10 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
      */
     CheckAndMutateBuilder ifNotExists();
 
+    /**
+     * Check for equality.
+     * @param value the expected value
+     */
     default CheckAndMutateBuilder ifEquals(byte[] value) {
       return ifMatches(CompareOperator.EQUAL, value);
     }

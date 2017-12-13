@@ -76,6 +76,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+
 /**
  * HTable interface to remote tables accessed via REST gateway
  */
@@ -666,7 +668,13 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Put put) throws IOException {
+    return doCheckAndPut(row, family, qualifier, value, put);
+  }
+
+  private boolean doCheckAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {
     // column to check-the-value
     put.add(new KeyValue(row, family, qualifier, value));
@@ -681,7 +689,7 @@ public class RemoteHTable implements Table {
 
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.put(sb.toString(),
-        Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+          Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
       case 200:
@@ -710,6 +718,7 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
                              CompareOperator compareOp, byte[] value, Put put) throws IOException {
     throw new IOException("checkAndPut for non-equal comparison not implemented");
@@ -717,6 +726,11 @@ public class RemoteHTable implements Table {
 
   @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Delete delete) throws IOException {
+    return doCheckAndDelete(row, family, qualifier, value, delete);
+  }
+
+  private boolean doCheckAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
     Put put = new Put(row);
     put.setFamilyCellMap(delete.getFamilyCellMap());
@@ -732,7 +746,7 @@ public class RemoteHTable implements Table {
 
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.put(sb.toString(),
-        Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+          Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
       int code = response.getCode();
       switch (code) {
       case 200:
@@ -761,9 +775,29 @@ public class RemoteHTable implements Table {
   }
 
   @Override
+  @Deprecated
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
                                 CompareOperator compareOp, byte[] value, Delete delete) throws IOException {
     throw new IOException("checkAndDelete for non-equal comparison not implemented");
+  }
+
+  @Override
+  public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
+    return new CheckAndMutateBuilderImpl(row, family);
+  }
+
+  @Override
+  @Deprecated
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
+    throw new UnsupportedOperationException("checkAndMutate not implemented");
+  }
+
+  @Override
+  @Deprecated
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
+    throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
 
   @Override
@@ -836,19 +870,6 @@ public class RemoteHTable implements Table {
       byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
       throws ServiceException, Throwable {
     throw new UnsupportedOperationException("batchCoprocessorService not implemented");
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
-    throw new UnsupportedOperationException("checkAndMutate not implemented");
-  }
-
-  @Override
-  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOperator compareOp, byte[] value, RowMutations rm) throws IOException {
-    throw new UnsupportedOperationException("checkAndMutate not implemented");
   }
 
   @Override
@@ -931,6 +952,64 @@ public class RemoteHTable implements Table {
       return URLEncoder.encode(new String(row, "UTF-8"), "UTF-8");
     } catch (UnsupportedEncodingException e) {
       throw new IllegalStateException("URLEncoder doesn't support UTF-8", e);
+    }
+  }
+
+  private class CheckAndMutateBuilderImpl implements CheckAndMutateBuilder {
+
+    private final byte[] row;
+    private final byte[] family;
+    private byte[] qualifier;
+    private byte[] value;
+
+    CheckAndMutateBuilderImpl(byte[] row, byte[] family) {
+      this.row = Preconditions.checkNotNull(row, "row is null");
+      this.family = Preconditions.checkNotNull(family, "family is null");
+    }
+
+    @Override
+    public CheckAndMutateBuilder qualifier(byte[] qualifier) {
+      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
+          " an empty byte array, or just do not call this method if you want a null qualifier");
+      return this;
+    }
+
+    @Override
+    public CheckAndMutateBuilder ifNotExists() {
+      throw new UnsupportedOperationException("CheckAndMutate for non-equal comparison "
+          + "not implemented");
+    }
+
+    @Override
+    public CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value) {
+      if (compareOp == CompareOperator.EQUAL) {
+        this.value = Preconditions.checkNotNull(value, "value is null");
+        return this;
+      } else {
+        throw new UnsupportedOperationException("CheckAndMutate for non-equal comparison " +
+            "not implemented");
+      }
+    }
+
+    @Override
+    public CheckAndMutateBuilder ifEquals(byte[] value) {
+      this.value = Preconditions.checkNotNull(value, "value is null");
+      return this;
+    }
+
+    @Override
+    public boolean thenPut(Put put) throws IOException {
+      return doCheckAndPut(row, family, qualifier, value, put);
+    }
+
+    @Override
+    public boolean thenDelete(Delete delete) throws IOException {
+      return doCheckAndDelete(row, family, qualifier, value, delete);
+    }
+
+    @Override
+    public boolean thenMutate(RowMutations mutation) throws IOException {
+      throw new UnsupportedOperationException("thenMutate not implemented");
     }
   }
 }

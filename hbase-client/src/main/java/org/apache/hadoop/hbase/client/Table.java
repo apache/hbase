@@ -259,9 +259,11 @@ public interface Table extends Closeable {
    * @param put data to put if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
+  @Deprecated
   boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-    byte[] value, Put put) throws IOException;
+      byte[] value, Put put) throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected
@@ -281,12 +283,11 @@ public interface Table extends Closeable {
    * @param put data to put if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   *  {@link #checkAndPut(byte[], byte[], byte[], CompareOperator, byte[], Put)}}
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
   @Deprecated
   boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-    CompareFilter.CompareOp compareOp, byte[] value, Put put) throws IOException;
+      CompareFilter.CompareOp compareOp, byte[] value, Put put) throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected
@@ -306,9 +307,11 @@ public interface Table extends Closeable {
    * @param put data to put if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
-  boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-                      CompareOperator op, byte[] value, Put put) throws IOException;
+  @Deprecated
+  boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+      byte[] value, Put put) throws IOException;
 
   /**
    * Deletes the specified cells/row.
@@ -356,7 +359,9 @@ public interface Table extends Closeable {
    * @param delete data to delete if check succeeds
    * @throws IOException e
    * @return true if the new delete was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
+  @Deprecated
   boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
     byte[] value, Delete delete) throws IOException;
 
@@ -378,8 +383,7 @@ public interface Table extends Closeable {
    * @param delete data to delete if check succeeds
    * @throws IOException e
    * @return true if the new delete was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   *  {@link #checkAndDelete(byte[], byte[], byte[], byte[], Delete)}
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
   @Deprecated
   boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
@@ -403,9 +407,73 @@ public interface Table extends Closeable {
    * @param delete data to delete if check succeeds
    * @throws IOException e
    * @return true if the new delete was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
+  @Deprecated
   boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
                          CompareOperator op, byte[] value, Delete delete) throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
+   * adds the Put/Delete/RowMutations.
+   * <p>
+   * Use the returned {@link CheckAndMutateBuilder} to construct your request and then execute it.
+   * This is a fluent style API, the code is like:
+   *
+   * <pre>
+   * <code>
+   * table.checkAndMutate(row, family).qualifier(qualifier).ifNotExists().thenPut(put);
+   * </code>
+   * </pre>
+   */
+  CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family);
+  /**
+   * A helper class for sending checkAndMutate request.
+   */
+  interface CheckAndMutateBuilder {
+
+    /**
+     * @param qualifier column qualifier to check.
+     */
+    CheckAndMutateBuilder qualifier(byte[] qualifier);
+
+    /**
+     * Check for lack of column.
+     */
+    CheckAndMutateBuilder ifNotExists();
+
+    /**
+     * Check for equality.
+     * @param value the expected value
+     */
+    default CheckAndMutateBuilder ifEquals(byte[] value) {
+      return ifMatches(CompareOperator.EQUAL, value);
+    }
+
+    /**
+     * @param compareOp comparison operator to use
+     * @param value the expected value
+     */
+    CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value);
+
+    /**
+     * @param put data to put if check succeeds
+     * @return {@code true} if the new put was executed, {@code false} otherwise.
+     */
+    boolean thenPut(Put put) throws IOException;
+
+    /**
+     * @param delete data to delete if check succeeds
+     * @return {@code true} if the new delete was executed, {@code false} otherwise.
+     */
+    boolean thenDelete(Delete delete) throws IOException;
+    /**
+     * @param mutation mutations to perform if check succeeds
+     * @return true if the new mutation was executed, false otherwise.
+     */
+    boolean thenMutate(RowMutations mutation) throws IOException;
+
+  }
 
   /**
    * Performs multiple mutations atomically on a single row. Currently
@@ -649,8 +717,7 @@ public interface Table extends Closeable {
    * @param mutation  mutations to perform if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
-   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
-   * {@link #checkAndMutate(byte[], byte[], byte[], CompareOperator, byte[], RowMutations)}
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
   @Deprecated
   boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
@@ -674,7 +741,9 @@ public interface Table extends Closeable {
    * @param mutation  mutations to perform if check succeeds
    * @throws IOException e
    * @return true if the new put was executed, false otherwise
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use {@link #checkAndMutate(byte[], byte[])}
    */
+  @Deprecated
   boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
                          byte[] value, RowMutations mutation) throws IOException;
 

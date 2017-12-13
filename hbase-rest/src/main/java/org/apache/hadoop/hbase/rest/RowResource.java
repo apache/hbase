@@ -509,8 +509,8 @@ public class RowResource extends ResourceBase {
           return Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
               .entity("Bad request: The column to put and check do not match." + CRLF).build();
         } else {
-          retValue = table.checkAndPut(key, valueToPutParts[0], valueToPutParts[1],
-            valueToCheckCell.getValue(), put);
+          retValue = table.checkAndMutate(key, valueToPutParts[0]).qualifier(valueToPutParts[1])
+            .ifEquals(valueToCheckCell.getValue()).thenPut(put);
         }
       } else {
         servlet.getMetrics().incrementFailedPutRequests(1);
@@ -630,15 +630,15 @@ public class RowResource extends ResourceBase {
           if(cellModelCount == 1) {
             delete.addColumns(parts[0], parts[1]);
           }
-          retValue = table.checkAndDelete(key, parts[0], parts[1],
-            valueToDeleteCell.getValue(), delete);
+          retValue = table.checkAndMutate(key, parts[0]).qualifier(parts[1])
+              .ifEquals(valueToDeleteCell.getValue()).thenDelete(delete);
         } else {
           // The case of empty qualifier.
           if(cellModelCount == 1) {
             delete.addColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
           }
-          retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
-            valueToDeleteCell.getValue(), delete);
+          retValue = table.checkAndMutate(key, parts[0])
+              .ifEquals(valueToDeleteCell.getValue()).thenDelete(delete);
         }
       } else {
         servlet.getMetrics().incrementFailedDeleteRequests(1);

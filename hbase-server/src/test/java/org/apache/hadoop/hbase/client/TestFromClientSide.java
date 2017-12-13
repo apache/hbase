@@ -1296,19 +1296,19 @@ public class TestFromClientSide {
     table.append(append);
     getTestNull(table, ROW, FAMILY, VALUE);
 
-    // Work for checkAndMutate, checkAndPut, checkAndDelete
+    // Work for checkAndMutate using thenPut, thenMutate and thenDelete
     put = new Put(ROW);
     put.addColumn(FAMILY, null, Bytes.toBytes("checkAndPut"));
     table.put(put);
-    table.checkAndPut(ROW, FAMILY, null, VALUE, put);
+    table.checkAndMutate(ROW, FAMILY).ifEquals(VALUE).thenPut(put);
 
     RowMutations mutate = new RowMutations(ROW);
     mutate.add(new Put(ROW).addColumn(FAMILY, null, Bytes.toBytes("checkAndMutate")));
-    table.checkAndMutate(ROW, FAMILY, null, CompareOperator.EQUAL, Bytes.toBytes("checkAndPut"), mutate);
+    table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndPut")).thenMutate(mutate);
 
     delete = new Delete(ROW);
     delete.addColumns(FAMILY, null);
-    table.checkAndDelete(ROW, FAMILY, null, Bytes.toBytes("checkAndMutate"), delete);
+    table.checkAndMutate(ROW, FAMILY).ifEquals(Bytes.toBytes("checkAndMutate")).thenDelete(delete);
   }
 
   @Test
@@ -4790,22 +4790,23 @@ public class TestFromClientSide {
     put1.addColumn(FAMILY, QUALIFIER, VALUE);
 
     // row doesn't exist, so using non-null value should be considered "not match".
-    boolean ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put1);
+    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifEquals(VALUE).thenPut(put1);
     assertEquals(ok, false);
 
-    // row doesn't exist, so using "null" to check for existence should be considered "match".
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put1);
+    // row doesn't exist, so using "ifNotExists" should be considered "match".
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put1);
     assertEquals(ok, true);
 
-    // row now exists, so using "null" to check for existence should be considered "not match".
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put1);
+    // row now exists, so using "ifNotExists" should be considered "not match".
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put1);
     assertEquals(ok, false);
 
     Put put2 = new Put(ROW);
     put2.addColumn(FAMILY, QUALIFIER, value2);
 
     // row now exists, use the matching value to check
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifEquals(VALUE).thenPut(put2);
     assertEquals(ok, true);
 
     Put put3 = new Put(anotherrow);
@@ -4813,8 +4814,8 @@ public class TestFromClientSide {
 
     // try to do CheckAndPut on different rows
     try {
-        ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, value2, put3);
-        fail("trying to check and modify different rows should have failed.");
+      table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifEquals(value2).thenPut(put3);
+      fail("trying to check and modify different rows should have failed.");
     } catch(Exception e) {}
 
   }
@@ -4834,53 +4835,71 @@ public class TestFromClientSide {
     Put put3 = new Put(ROW);
     put3.addColumn(FAMILY, QUALIFIER, value3);
 
-    // row doesn't exist, so using "null" to check for existence should be considered "match".
-    boolean ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put2);
+    // row doesn't exist, so using "ifNotExists" should be considered "match".
+    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER).ifNotExists().thenPut(put2);
     assertEquals(ok, true);
 
     // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value1, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER, value1).thenPut(put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value1, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.EQUAL, value1).thenPut(put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value1, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value1).thenPut(put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value1, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS, value1).thenPut(put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value1, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS_OR_EQUAL, value1).thenPut(put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value1, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.NOT_EQUAL, value1).thenPut(put3);
     assertEquals(ok, true);
 
     // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value4, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS, value4).thenPut(put3);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value4, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS_OR_EQUAL, value4).thenPut(put3);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value4, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.EQUAL, value4).thenPut(put3);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value4, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER, value4).thenPut(put3);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value4, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value4).thenPut(put3);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value4, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.NOT_EQUAL, value4).thenPut(put2);
     assertEquals(ok, true);
 
     // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
     // turns out "match"
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value2, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER, value2).thenPut(put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value2, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.NOT_EQUAL, value2).thenPut(put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value2, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS, value2).thenPut(put2);
     assertEquals(ok, false);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value2, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value2).thenPut(put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value2, put2);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS_OR_EQUAL, value2).thenPut(put2);
     assertEquals(ok, true);
-    ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value2, put3);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.EQUAL, value2).thenPut(put3);
     assertEquals(ok, true);
   }
 
@@ -4898,7 +4917,8 @@ public class TestFromClientSide {
     Delete delete = new Delete(ROW);
     delete.addColumns(FAMILY, QUALIFIER);
 
-    boolean ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, value1, delete);
+    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifEquals(value1).thenDelete(delete);
     assertEquals(ok, true);
   }
 
@@ -4924,55 +4944,73 @@ public class TestFromClientSide {
 
     // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
     // turns out "match"
-    boolean ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value1, delete);
+    boolean ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER, value1).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value1, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.EQUAL, value1).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value1, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value1).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value1, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS, value1).thenDelete(delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value1, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS_OR_EQUAL, value1).thenDelete(delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value1, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.NOT_EQUAL, value1).thenDelete(delete);
     assertEquals(ok, true);
 
     // cell = "cccc", using "dddd" to compare only LARGER/LARGER_OR_EQUAL/NOT_EQUAL
     // turns out "match"
     table.put(put3);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value4, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS, value4).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value4, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS_OR_EQUAL, value4).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value4, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.EQUAL, value4).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value4, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER, value4).thenDelete(delete);
     assertEquals(ok, true);
     table.put(put3);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value4, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value4).thenDelete(delete);
     assertEquals(ok, true);
     table.put(put3);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value4, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.NOT_EQUAL, value4).thenDelete(delete);
     assertEquals(ok, true);
 
     // cell = "bbbb", using "bbbb" to compare only GREATER_OR_EQUAL/LESS_OR_EQUAL/EQUAL
     // turns out "match"
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER, value2, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER, value2).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.NOT_EQUAL, value2, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.NOT_EQUAL, value2).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS, value2, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS, value2).thenDelete(delete);
     assertEquals(ok, false);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.GREATER_OR_EQUAL, value2, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.GREATER_OR_EQUAL, value2).thenDelete(delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.LESS_OR_EQUAL, value2, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.LESS_OR_EQUAL, value2).thenDelete(delete);
     assertEquals(ok, true);
     table.put(put2);
-    ok = table.checkAndDelete(ROW, FAMILY, QUALIFIER, CompareOperator.EQUAL, value2, delete);
+    ok = table.checkAndMutate(ROW, FAMILY).qualifier(QUALIFIER)
+        .ifMatches(CompareOperator.EQUAL, value2).thenDelete(delete);
     assertEquals(ok, true);
   }
 

@@ -317,9 +317,13 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     checkReadOnlyMode();
     Table htable = getTable(table);
     try {
-      return htable.checkAndPut(byteBufferToByteArray(row), byteBufferToByteArray(family),
-        byteBufferToByteArray(qualifier), (value == null) ? null : byteBufferToByteArray(value),
-        putFromThrift(put));
+      Table.CheckAndMutateBuilder builder = htable.checkAndMutate(byteBufferToByteArray(row),
+          byteBufferToByteArray(family)).qualifier(byteBufferToByteArray(qualifier));
+      if (value == null) {
+        return builder.ifNotExists().thenPut(putFromThrift(put));
+      } else {
+        return builder.ifEquals(byteBufferToByteArray(value)).thenPut(putFromThrift(put));
+      }
     } catch (IOException e) {
       throw getTIOError(e);
     } finally {
@@ -374,9 +378,10 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
           throws TIOError, TException {
     checkReadOnlyMode();
     try (final Table htable = getTable(table)) {
-      return htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family),
-          byteBufferToByteArray(qualifier), compareOpFromThrift(compareOp),
-          byteBufferToByteArray(value), rowMutationsFromThrift(rowMutations));
+      return htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family))
+          .qualifier(byteBufferToByteArray(qualifier))
+          .ifMatches(compareOpFromThrift(compareOp), byteBufferToByteArray(value))
+          .thenMutate(rowMutationsFromThrift(rowMutations));
     } catch (IOException e) {
       throw getTIOError(e);
     }
@@ -388,13 +393,14 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     checkReadOnlyMode();
     Table htable = getTable(table);
     try {
+      Table.CheckAndMutateBuilder mutateBuilder =
+          htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family))
+              .qualifier(byteBufferToByteArray(qualifier));
       if (value == null) {
-        return htable.checkAndDelete(byteBufferToByteArray(row), byteBufferToByteArray(family),
-          byteBufferToByteArray(qualifier), null, deleteFromThrift(deleteSingle));
+        return mutateBuilder.ifNotExists().thenDelete(deleteFromThrift(deleteSingle));
       } else {
-        return htable.checkAndDelete(byteBufferToByteArray(row), byteBufferToByteArray(family),
-          byteBufferToByteArray(qualifier), byteBufferToByteArray(value),
-          deleteFromThrift(deleteSingle));
+        return mutateBuilder.ifEquals(byteBufferToByteArray(value))
+            .thenDelete(deleteFromThrift(deleteSingle));
       }
     } catch (IOException e) {
       throw getTIOError(e);

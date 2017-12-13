@@ -1891,8 +1891,13 @@ public class ThriftServerRunner implements Runnable {
       try {
         table = getTable(tableName);
         byte[][] famAndQf = CellUtil.parseColumn(getBytes(column));
-        return table.checkAndPut(getBytes(row), famAndQf[0], famAndQf[1],
-          value != null ? getBytes(value) : HConstants.EMPTY_BYTE_ARRAY, put);
+        Table.CheckAndMutateBuilder mutateBuilder =
+            table.checkAndMutate(getBytes(row), famAndQf[0]).qualifier(famAndQf[1]);
+        if (value != null) {
+          return mutateBuilder.ifEquals(getBytes(value)).thenPut(put);
+        } else {
+          return mutateBuilder.ifNotExists().thenPut(put);
+        }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw getIOError(e);

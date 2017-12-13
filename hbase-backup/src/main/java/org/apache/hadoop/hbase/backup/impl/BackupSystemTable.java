@@ -577,10 +577,11 @@ public final class BackupSystemTable implements Closeable {
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForStartBackupSession();
       // First try to put if row does not exist
-      if (!table.checkAndPut(ACTIVE_SESSION_ROW, SESSIONS_FAMILY, ACTIVE_SESSION_COL, null, put)) {
+      if (!table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
+          .ifNotExists().thenPut(put)) {
         // Row exists, try to put if value == ACTIVE_SESSION_NO
-        if (!table.checkAndPut(ACTIVE_SESSION_ROW, SESSIONS_FAMILY, ACTIVE_SESSION_COL,
-          ACTIVE_SESSION_NO, put)) {
+        if (!table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
+            .ifEquals(ACTIVE_SESSION_NO).thenPut(put)) {
           throw new IOException("There is an active backup exclusive operation");
         }
       }
@@ -598,8 +599,8 @@ public final class BackupSystemTable implements Closeable {
 
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForStopBackupSession();
-      if (!table.checkAndPut(ACTIVE_SESSION_ROW, SESSIONS_FAMILY, ACTIVE_SESSION_COL,
-        ACTIVE_SESSION_YES, put)) {
+      if (!table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
+          .ifEquals(ACTIVE_SESSION_YES).thenPut(put)) {
         throw new IOException("There is no active backup exclusive operation");
       }
     }

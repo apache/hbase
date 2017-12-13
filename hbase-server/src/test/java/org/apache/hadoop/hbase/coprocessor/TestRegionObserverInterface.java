@@ -256,7 +256,7 @@ public class TestRegionObserverInterface {
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
         tableName, new Boolean[] { false, false, false });
-      table.checkAndPut(Bytes.toBytes(0), A, A, A, p);
+      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenPut(p);
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut" },
         tableName, new Boolean[] { true, true, true });
@@ -279,7 +279,7 @@ public class TestRegionObserverInterface {
         SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
             "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
         tableName, new Boolean[] { false, false, false });
-      table.checkAndDelete(Bytes.toBytes(0), A, A, A, d);
+      table.checkAndMutate(Bytes.toBytes(0), A).qualifier(A).ifEquals(A).thenDelete(d);
       verifyMethodResult(
         SimpleRegionObserver.class, new String[] { "hadPreCheckAndDelete",
             "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete" },
