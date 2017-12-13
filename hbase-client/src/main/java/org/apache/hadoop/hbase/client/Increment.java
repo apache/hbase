@@ -138,6 +138,8 @@ public class Increment extends Mutation implements Comparable<Row> {
    * periods of time (ie. counters that are partitioned by time).  By setting
    * the range of valid times for this increment, you can potentially gain
    * some performance with a more optimal Get operation.
+   * Be careful adding the time range to this class as you will update the old cell if the
+   * time range doesn't include the latest cells.
    * <p>
    * This range is used as [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive

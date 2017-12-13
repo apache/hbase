@@ -1952,7 +1952,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       AuthResult authResult = null;
       User user = getActiveUser(c);
       if (checkCoveringPermission(user, OpType.APPEND, c.getEnvironment(), append.getRow(),
-          append.getFamilyCellMap(), HConstants.LATEST_TIMESTAMP, Action.WRITE)) {
+          append.getFamilyCellMap(), append.getTimeRange().getMax(), Action.WRITE)) {
         authResult = AuthResult.allow(OpType.APPEND.toString(), "Covering cell set",
             user, Action.WRITE, table, append.getFamilyCellMap());
       } else {

@@ -24,9 +24,11 @@ import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -42,6 +44,42 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class Append extends Mutation {
+  private static final long HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private TimeRange tr = new TimeRange();
+
+  /**
+   * Sets the TimeRange to be used on the Get for this append.
+   * <p>
+   * This is useful for when you have counters that only last for specific
+   * periods of time (ie. counters that are partitioned by time).  By setting
+   * the range of valid times for this append, you can potentially gain
+   * some performance with a more optimal Get operation.
+   * Be careful adding the time range to this class as you will update the old cell if the
+   * time range doesn't include the latest cells.
+   * <p>
+   * This range is used as [minStamp, maxStamp).
+   * @param minStamp minimum timestamp value, inclusive
+   * @param maxStamp maximum timestamp value, exclusive
+   * @return this
+   */
+  public Append setTimeRange(long minStamp, long maxStamp) {
+    tr = new TimeRange(minStamp, maxStamp);
+    return this;
+  }
+
+  /**
+   * Gets the TimeRange used for this append.
+   * @return TimeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
+  }
+
+  @Override
+  protected long extraHeapSize(){
+    return HEAP_OVERHEAD;
+  }
+
   /**
    * @param returnResults
    *          True (default) if the append operation should return the results.
@@ -77,6 +115,7 @@ public class Append extends Mutation {
   public Append(Append a) {
     this.row = a.getRow();
     this.ts = a.getTimeStamp();
+    this.tr = a.getTimeRange();
     this.familyMap.putAll(a.getFamilyCellMap());
     for (Map.Entry<String, byte[]> entry : a.getAttributesMap().entrySet()) {
       this.setAttribute(entry.getKey(), entry.getValue());
