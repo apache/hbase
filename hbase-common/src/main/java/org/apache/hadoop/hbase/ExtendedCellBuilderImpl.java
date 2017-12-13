@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ArrayUtils;
 
 @InterfaceAudience.Private
 public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
@@ -49,7 +49,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setRow(final byte[] row) {
-    return setRow(row, 0, ArrayUtils.length(row));
+    return setRow(row, 0, ArrayUtils.getLength(row));
   }
 
   @Override
@@ -62,7 +62,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setFamily(final byte[] family) {
-    return setFamily(family, 0, ArrayUtils.length(family));
+    return setFamily(family, 0, ArrayUtils.getLength(family));
   }
 
   @Override
@@ -75,7 +75,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setQualifier(final byte[] qualifier) {
-    return setQualifier(qualifier, 0, ArrayUtils.length(qualifier));
+    return setQualifier(qualifier, 0, ArrayUtils.getLength(qualifier));
   }
 
   @Override
@@ -106,7 +106,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setValue(final byte[] value) {
-    return setValue(value, 0, ArrayUtils.length(value));
+    return setValue(value, 0, ArrayUtils.getLength(value));
   }
 
   @Override
@@ -119,7 +119,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
 
   @Override
   public ExtendedCellBuilder setTags(final byte[] tags) {
-    return setTags(tags, 0, ArrayUtils.length(tags));
+    return setTags(tags, 0, ArrayUtils.getLength(tags));
   }
 
   @Override

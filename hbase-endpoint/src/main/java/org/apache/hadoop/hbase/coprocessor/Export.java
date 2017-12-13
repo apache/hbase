@@ -27,6 +27,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -60,7 +62,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
-import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
@@ -107,7 +108,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   static Map<byte[], Response> run(final Configuration conf, final String[] args) throws Throwable {
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
     if (!ExportUtils.isValidArguements(args)) {
-      ExportUtils.usage("Wrong number of arguments: " + ArrayUtils.length(otherArgs));
+      ExportUtils.usage("Wrong number of arguments: " + ArrayUtils.getLength(otherArgs));
       return null;
     }
     Triple<TableName, Scan, Path> arguments = ExportUtils.getArgumentsFromCommandLine(conf, otherArgs);
