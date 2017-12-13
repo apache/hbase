@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedSet;
@@ -171,6 +172,30 @@ public class MockMasterServices extends MockNoopMasterServices {
         ServerName.valueOf("localhost", 100 + i, 1), ServerLoad.EMPTY_SERVERLOAD);
     }
     this.procedureExecutor.getEnvironment().setEventReady(initialized, true);
+  }
+
+  /**
+   * Call this restart method only after running MockMasterServices#start()
+   * The RSs can be differentiated by the port number, see
+   * ServerName in MockMasterServices#start() method above.
+   * Restart of region server will have new startcode in server name
+   *
+   * @param serverName Server name to be restarted
+   */
+  public void restartRegionServer(ServerName serverName) throws IOException {
+    List<ServerName> onlineServers = serverManager.getOnlineServersList();
+    long startCode = -1;
+    for (ServerName s : onlineServers) {
+      if (s.getAddress().equals(serverName.getAddress())) {
+        startCode = s.getStartcode() + 1;
+        break;
+      }
+    }
+    if (startCode == -1) {
+      return;
+    }
+    ServerName sn = ServerName.valueOf(serverName.getAddress().toString(), startCode);
+    serverManager.regionServerReport(sn, ServerLoad.EMPTY_SERVERLOAD);
   }
 
   @Override
