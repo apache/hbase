@@ -19,17 +19,20 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.Cell;
-
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 @Category({ SmallTests.class, ClientTests.class })
 public class TestPut {
@@ -66,7 +69,7 @@ public class TestPut {
 
   // HBASE-14882
   @Test
-  public void testAddImmutable() {
+  public void testAddImmutable() throws IOException {
     byte[] row        = Bytes.toBytes("immutable-row");
     byte[] family     = Bytes.toBytes("immutable-family");
 
@@ -77,9 +80,24 @@ public class TestPut {
     byte[] value1     = Bytes.toBytes("immutable-value-1");
     long   ts1        = 5000L;
 
-    Put put = new Put(row, true);  // "true" indicates that the input row is immutable
-    put.addImmutable(family, qualifier0, value0);
-    put.addImmutable(family, qualifier1, ts1, value1);
+    // "true" indicates that the input row is immutable
+    Put put = new Put(row, true);
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(row)
+            .setFamily(family)
+            .setQualifier(qualifier0)
+            .setTimestamp(put.getTimeStamp())
+            .setType(CellBuilder.DataType.Put)
+            .setValue(value0)
+            .build())
+        .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(row)
+            .setFamily(family)
+            .setQualifier(qualifier1)
+            .setTimestamp(ts1)
+            .setType(CellBuilder.DataType.Put)
+            .setValue(value1)
+            .build());
 
     // Verify the cell of family:qualifier0
     Cell cell0 = put.get(family, qualifier0).get(0);

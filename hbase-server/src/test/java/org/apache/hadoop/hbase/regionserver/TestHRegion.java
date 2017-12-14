@@ -74,6 +74,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -6274,9 +6277,26 @@ public class TestHRegion {
     final HRegion region = initHRegion(tableName, a, c, method, CONF, false, fam1);
 
     Mutation[] mutations = new Mutation[] {
-        new Put(a).addImmutable(fam1, null, null),
-        new Put(c).addImmutable(fam1, null, null), // this is outside the region boundary
-        new Put(b).addImmutable(fam1, null, null),
+        new Put(a)
+            .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(a)
+              .setFamily(fam1)
+              .setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(CellBuilder.DataType.Put)
+              .build()),
+        // this is outside the region boundary
+        new Put(c).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(c)
+              .setFamily(fam1)
+              .setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(CellBuilder.DataType.Put)
+              .build()),
+        new Put(b).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(b)
+              .setFamily(fam1)
+              .setTimestamp(HConstants.LATEST_TIMESTAMP)
+              .setType(CellBuilder.DataType.Put)
+              .build())
     };
 
     OperationStatus[] status = region.batchMutate(mutations);
@@ -6307,8 +6327,18 @@ public class TestHRegion {
       @Override
       public Void call() throws Exception {
         Mutation[] mutations = new Mutation[] {
-            new Put(a).addImmutable(fam1, null, null),
-            new Put(b).addImmutable(fam1, null, null),
+            new Put(a).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setRow(a)
+                .setFamily(fam1)
+                .setTimestamp(HConstants.LATEST_TIMESTAMP)
+                .setType(CellBuilder.DataType.Put)
+                .build()),
+            new Put(b).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setRow(b)
+                .setFamily(fam1)
+                .setTimestamp(HConstants.LATEST_TIMESTAMP)
+                .setType(CellBuilder.DataType.Put)
+                .build()),
         };
 
         // this will wait for the row lock, and it will eventually succeed

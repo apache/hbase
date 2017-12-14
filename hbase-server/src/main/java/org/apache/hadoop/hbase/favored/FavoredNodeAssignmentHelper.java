@@ -35,6 +35,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -176,8 +179,14 @@ public class FavoredNodeAssignmentHelper {
     if (favoredNodeList != null) {
       put = MetaTableAccessor.makePutFromRegionInfo(regionInfo);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
-      put.addImmutable(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
-          EnvironmentEdgeManager.currentTime(), favoredNodes);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY)
+          .setQualifier(FAVOREDNODES_QUALIFIER)
+          .setTimestamp(EnvironmentEdgeManager.currentTime())
+          .setType(CellBuilder.DataType.Put)
+          .setValue(favoredNodes)
+          .build());
       LOG.debug("Create the region " + regionInfo.getRegionNameAsString() +
                  " with favored nodes " + favoredNodeList);
     }

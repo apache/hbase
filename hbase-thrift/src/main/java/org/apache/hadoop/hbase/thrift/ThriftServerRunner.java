@@ -42,7 +42,6 @@ import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.SaslServer;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
@@ -50,6 +49,9 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1327,6 +1329,7 @@ public class ThriftServerRunner implements Runnable {
         }
 
         // I apologize for all this mess :)
+        CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
         for (Mutation m : mutations) {
           byte[][] famAndQf = CellUtil.parseColumn(getBytes(m.column));
           if (m.isDelete) {
@@ -1342,9 +1345,15 @@ public class ThriftServerRunner implements Runnable {
               LOG.warn("No column qualifier specified. Delete is the only mutation supported "
                   + "over the whole column family.");
             } else {
-              put.addImmutable(famAndQf[0], famAndQf[1],
-                  m.value != null ? getBytes(m.value)
-                      : HConstants.EMPTY_BYTE_ARRAY);
+              put.add(builder.clear()
+                  .setRow(put.getRow())
+                  .setFamily(famAndQf[0])
+                  .setQualifier(famAndQf[1])
+                  .setTimestamp(put.getTimeStamp())
+                  .setType(CellBuilder.DataType.Put)
+                  .setValue(m.value != null ? getBytes(m.value)
+                      : HConstants.EMPTY_BYTE_ARRAY)
+                  .build());
             }
             put.setDurability(m.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
           }
@@ -1378,7 +1387,7 @@ public class ThriftServerRunner implements Runnable {
         throws IOError, IllegalArgument, TException {
       List<Put> puts = new ArrayList<>();
       List<Delete> deletes = new ArrayList<>();
-
+      CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
       for (BatchMutation batch : rowBatches) {
         byte[] row = getBytes(batch.row);
         List<Mutation> mutations = batch.mutations;
@@ -1403,9 +1412,19 @@ public class ThriftServerRunner implements Runnable {
                   + "over the whole column family.");
             }
             if (famAndQf.length == 2) {
-              put.addImmutable(famAndQf[0], famAndQf[1],
-                  m.value != null ? getBytes(m.value)
-                      : HConstants.EMPTY_BYTE_ARRAY);
+              try {
+                put.add(builder.clear()
+                    .setRow(put.getRow())
+                    .setFamily(famAndQf[0])
+                    .setQualifier(famAndQf[1])
+                    .setTimestamp(put.getTimeStamp())
+                    .setType(CellBuilder.DataType.Put)
+                    .setValue(m.value != null ? getBytes(m.value)
+                        : HConstants.EMPTY_BYTE_ARRAY)
+                    .build());
+              } catch (IOException e) {
+                throw new IllegalArgumentException(e);
+              }
             } else {
               throw new IllegalArgumentException("Invalid famAndQf provided.");
             }
@@ -1877,12 +1896,17 @@ public class ThriftServerRunner implements Runnable {
         addAttributes(put, attributes);
 
         byte[][] famAndQf = CellUtil.parseColumn(getBytes(mput.column));
-
-        put.addImmutable(famAndQf[0], famAndQf[1], mput.value != null ? getBytes(mput.value)
-            : HConstants.EMPTY_BYTE_ARRAY);
-
+        put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(put.getRow())
+            .setFamily(famAndQf[0])
+            .setQualifier(famAndQf[1])
+            .setTimestamp(put.getTimeStamp())
+            .setType(CellBuilder.DataType.Put)
+            .setValue(mput.value != null ? getBytes(mput.value)
+                : HConstants.EMPTY_BYTE_ARRAY)
+            .build());
         put.setDurability(mput.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      } catch (IllegalArgumentException e) {
+      } catch (IOException | IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       }

@@ -37,6 +37,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -165,8 +168,14 @@ public class AccessControlLists {
     for (Permission.Action action : actionSet) {
       value[index++] = action.code();
     }
-
-    p.addImmutable(ACL_LIST_FAMILY, key, value);
+    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(p.getRow())
+        .setFamily(ACL_LIST_FAMILY)
+        .setQualifier(key)
+        .setTimestamp(p.getTimeStamp())
+        .setType(CellBuilder.DataType.Put)
+        .setValue(value)
+        .build());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Writing permission with rowKey "+
           Bytes.toString(rowKey)+" "+
@@ -744,7 +753,7 @@ public class AccessControlLists {
         // Deserialize the table permissions from the KV
         // TODO: This can be improved. Don't build UsersAndPermissions just to unpack it again,
         // use the builder
-        AccessControlProtos.UsersAndPermissions.Builder builder = 
+        AccessControlProtos.UsersAndPermissions.Builder builder =
             AccessControlProtos.UsersAndPermissions.newBuilder();
         if (tag.hasArray()) {
           ProtobufUtil.mergeFrom(builder, tag.getValueArray(), tag.getValueOffset(), tag.getValueLength());

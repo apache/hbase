@@ -230,7 +230,9 @@ public final class SnapshotTestingUtils {
         }
       });
     }
-
+    for (byte[] b : snapshotFamilies) {
+      LOG.info("[CHIA] " + Bytes.toStringBinary(b));
+    }
     // Verify that there are store files in the specified families
     if (nonEmptyTestFamilies != null) {
       for (final byte[] familyName: nonEmptyTestFamilies) {
