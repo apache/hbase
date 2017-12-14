@@ -967,21 +967,28 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
 
     // Start the MiniHBaseCluster
-    return startMiniHBaseCluster(numMasters, numSlaves, masterClass,
+    return startMiniHBaseCluster(numMasters, numSlaves, null, masterClass,
       regionserverClass, create, withWALDir);
   }
 
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)
-      throws IOException, InterruptedException{
-    return startMiniHBaseCluster(numMasters, numSlaves, null, null, false, false);
+      throws IOException, InterruptedException {
+     return startMiniHBaseCluster(numMasters, numSlaves, null);
+  }
+
+  public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves,
+      List<Integer> rsPorts) throws IOException, InterruptedException {
+    return startMiniHBaseCluster(numMasters, numSlaves, rsPorts, null, null, false, false);
   }
 
   /**
    * Starts up mini hbase cluster.  Usually used after call to
    * {@link #startMiniCluster(int, int)} when doing stepped startup of clusters.
    * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
-   * @param numMasters
-   * @param numSlaves
+   * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
+   *                restart where for sure the regionservers come up on same address+port (but
+   *                just with different startcode); by default mini hbase clusters choose new
+   *                arbitrary ports on each cluster start.
    * @param create Whether to create a
    * root or data directory path or not; will overwrite if exists already.
    * @return Reference to the hbase mini hbase cluster.
@@ -990,7 +997,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @see {@link #startMiniCluster()}
    */
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
-        final int numSlaves, Class<? extends HMaster> masterClass,
+        final int numSlaves, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
         boolean create, boolean withWALDir)
   throws IOException, InterruptedException {
@@ -1015,7 +1022,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Configuration c = new Configuration(this.conf);
     TraceUtil.initTracer(c);
     this.hbaseCluster =
-        new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
+        new MiniHBaseCluster(c, numMasters, numSlaves, rsPorts, masterClass, regionserverClass);
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
