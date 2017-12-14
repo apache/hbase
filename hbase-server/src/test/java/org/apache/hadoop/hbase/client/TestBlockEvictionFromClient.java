@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -64,7 +66,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -201,7 +202,6 @@ public class TestBlockEvictionFromClient {
       assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
       // data was in memstore so don't expect any changes
       // flush the data
-      System.out.println("Flushing cache in problematic area");
       // Should create one Hfile with 2 blocks
       region.flush(true);
       // Load cache
@@ -597,10 +597,14 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       LOG.info("About to SPLIT on " + Bytes.toString(ROW1));
       TEST_UTIL.getAdmin().split(tableName, ROW1);
-      List<RegionInfo> tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
       // Wait for splits
-      while (tableRegions.size() != 2) {
-        tableRegions = TEST_UTIL.getAdmin().getRegions(tableName);
+      Collection<ServerName> regionServers = TEST_UTIL.getAdmin().getRegionServers();
+      Iterator<ServerName> serverItr = regionServers.iterator();
+      serverItr.hasNext();
+      ServerName rs = serverItr.next();
+      List<RegionInfo> onlineRegions = TEST_UTIL.getAdmin().getRegions(rs);
+      while (onlineRegions.size() != 2) {
+        onlineRegions = TEST_UTIL.getAdmin().getRegions(rs);
         Thread.sleep(100);
         LOG.info("Waiting on SPLIT to complete...");
       }
@@ -862,7 +866,7 @@ public class TestBlockEvictionFromClient {
     testScanWithCompactionInternals(name.getMethodName(), false);
   }
 
-  @Ignore @Test
+  @Test
   public void testReverseScanWithCompaction() throws IOException, InterruptedException {
     testScanWithCompactionInternals(name.getMethodName(), true);
   }
