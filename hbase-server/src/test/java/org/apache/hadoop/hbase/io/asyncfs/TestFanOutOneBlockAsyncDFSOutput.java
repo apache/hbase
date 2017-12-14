@@ -39,6 +39,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -102,8 +103,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     for (;;) {
       try {
         FanOutOneBlockAsyncDFSOutput out =
-          FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, new Path("/ensureDatanodeAlive"),
-            true, true, (short) 3, FS.getDefaultBlockSize(), EVENT_LOOP_GROUP, CHANNEL_CLASS);
+            FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, new Path("/ensureDatanodeAlive"),
+              true, true, (short) 3, FS.getDefaultBlockSize(), EVENT_LOOP_GROUP, CHANNEL_CLASS);
         out.close();
         break;
       } catch (IOException e) {
@@ -112,8 +113,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     }
   }
 
-  static void writeAndVerify(EventLoop eventLoop, DistributedFileSystem dfs, Path f,
-      final FanOutOneBlockAsyncDFSOutput out)
+  static void writeAndVerify(FileSystem fs, Path f, AsyncFSOutput out)
       throws IOException, InterruptedException, ExecutionException {
     List<CompletableFuture<Long>> futures = new ArrayList<>();
     byte[] b = new byte[10];
@@ -130,10 +130,10 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       assertEquals((i + 1) * b.length, futures.get(2 * i + 1).join().longValue());
     }
     out.close();
-    assertEquals(b.length * 10, dfs.getFileStatus(f).getLen());
+    assertEquals(b.length * 10, fs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];
     rand.setSeed(12345);
-    try (FSDataInputStream in = dfs.open(f)) {
+    try (FSDataInputStream in = fs.open(f)) {
       for (int i = 0; i < 10; i++) {
         in.readFully(actual);
         rand.nextBytes(b);
@@ -149,7 +149,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
       false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
-    writeAndVerify(eventLoop, FS, f, out);
+    writeAndVerify(FS, f, out);
   }
 
   @Test
@@ -193,7 +193,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
     Thread.sleep(READ_TIMEOUT_MS * 2);
     // the connection to datanode should still alive.
-    writeAndVerify(eventLoop, FS, f, out);
+    writeAndVerify(FS, f, out);
   }
 
   /**
@@ -220,7 +220,7 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     Field xceiverServerDaemonField = DataNode.class.getDeclaredField("dataXceiverServer");
     xceiverServerDaemonField.setAccessible(true);
     Class<?> xceiverServerClass =
-      Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
+        Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
     Method numPeersMethod = xceiverServerClass.getDeclaredMethod("getNumPeers");
     numPeersMethod.setAccessible(true);
     // make one datanode broken
