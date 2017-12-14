@@ -572,6 +572,10 @@ public class ServerManager {
     if (!master.isServerCrashProcessingEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
+      // Even we delay expire this server, we still need to handle Meta's RIT
+      // that are against the crashed server; since when we do RecoverMetaProcedure,
+      // the SCP is not enable yet and Meta's RIT may be suspend forever. See HBase-19287
+      master.getAssignmentManager().handleMetaRITOnCrashedServer(serverName);
       this.queuedDeadServers.add(serverName);
       return;
     }
