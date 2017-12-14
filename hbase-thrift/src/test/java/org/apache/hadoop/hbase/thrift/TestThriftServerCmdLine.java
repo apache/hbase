@@ -164,7 +164,7 @@ public class TestThriftServerCmdLine {
     port = HBaseTestingUtility.randomFreePort();
     args.add("-" + ThriftServer.PORT_OPTION);
     args.add(String.valueOf(port));
-    args.add("-infoport");
+    args.add("-" + ThriftServer.INFOPORT_OPTION);
     int infoPort = HBaseTestingUtility.randomFreePort();
     args.add(String.valueOf(infoPort));
 
