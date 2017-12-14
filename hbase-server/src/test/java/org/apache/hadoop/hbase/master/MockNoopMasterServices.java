@@ -212,14 +212,9 @@ public class MockNoopMasterServices implements MasterServices, Server {
     return null;
   }
 
-  private boolean serverCrashProcessingEnabled = true;
-
-  public void setServerCrashProcessingEnabled(boolean b) {
-    serverCrashProcessingEnabled = b;
-  }
   @Override
   public boolean isServerCrashProcessingEnabled() {
-    return serverCrashProcessingEnabled;
+    return true;
   }
 
   @Override

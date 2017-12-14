@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -71,7 +70,6 @@ import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashException;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
@@ -80,7 +78,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
@@ -1325,7 +1322,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   public void submitServerCrash(final ServerName serverName, final boolean shouldSplitWal) {
-    boolean carryingMeta = isCarryingMeta(serverName);
+    boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(serverName);
     ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
     procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(), serverName,
       shouldSplitWal, carryingMeta));
@@ -1855,32 +1852,5 @@ public class AssignmentManager implements ServerListener {
       regionNode.offline();
     }*/
     master.getServerManager().expireServer(serverNode.getServerName());
-  }
-
-  /**
-   * Handle RIT of meta region against crashed server
-   * Only used when ServerCrashProcedure is not enabled.
-   *
-   * @param serverName Server that has already crashed
-   */
-  public void handleMetaRITOnCrashedServer(ServerName serverName) {
-    RegionInfo hri = RegionReplicaUtil
-        .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
-            RegionInfo.DEFAULT_REPLICA_ID);
-    RegionState regionStateNode = getRegionStates().getRegionState(hri);
-    if (!regionStateNode.getServerName().equals(serverName)) {
-      return;
-    }
-    // meta has been assigned to crashed server.
-    LOG.info("Meta has been assigned to crashed server: " + serverName + "; will do re-assign");
-    // handle failure and wake event
-    RegionTransitionProcedure rtp = getRegionStates().getRegionTransitionProcedure(hri);
-    // Not need to consider for REGION_TRANSITION_QUEUE step
-    if (rtp != null && rtp.isMeta()
-        && rtp.getTransitionState() == RegionTransitionState.REGION_TRANSITION_DISPATCH) {
-      LOG.info("Re-do rit procedure: " + rtp.toString());
-      rtp.remoteCallFailed(master.getMasterProcedureExecutor().getEnvironment(), serverName,
-          new ServerCrashException(rtp.getProcId(), serverName));
-    }
   }
 }
