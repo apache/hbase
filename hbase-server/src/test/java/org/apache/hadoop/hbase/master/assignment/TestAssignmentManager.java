@@ -444,6 +444,34 @@ public class TestAssignmentManager {
     assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
+  /**
+   * It is possible that when AM send assign meta request to a RS successfully,
+   * but RS can not send back any response, which cause master startup hangs forever
+   */
+  @Test
+  public void testAssignMetaAndCrashBeforeResponse() throws Exception {
+    tearDown();
+    // See setUp(), start HBase until set up meta
+    UTIL = new HBaseTestingUtility();
+    this.executor = Executors.newSingleThreadScheduledExecutor();
+    setupConfiguration(UTIL.getConfiguration());
+    master = new MockMasterServices(UTIL.getConfiguration(), this.regionsToRegionServers);
+    rsDispatcher = new MockRSProcedureDispatcher(master);
+    master.start(NSERVERS, rsDispatcher);
+    am = master.getAssignmentManager();
+
+    // Assign meta
+    master.setServerCrashProcessingEnabled(false);
+    rsDispatcher.setMockRsExecutor(new HangThenRSRestartExecutor());
+    am.assign(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    assertEquals(true, am.isMetaInitialized());
+
+    // set it back as default, see setUpMeta()
+    master.setServerCrashProcessingEnabled(true);
+    am.wakeMetaLoadedEvent();
+    am.setFailoverCleanupDone(true);
+  }
+
   private Future<byte[]> submitProcedure(final Procedure proc) {
     return ProcedureSyncWait.submitProcedure(master.getMasterProcedureExecutor(), proc);
   }
@@ -525,6 +553,14 @@ public class TestAssignmentManager {
 
   private void doCrash(final ServerName serverName) {
     this.am.submitServerCrash(serverName, false/*No WALs here*/);
+  }
+
+  private void doRestart(final ServerName serverName) {
+    try {
+      this.master.restartRegionServer(serverName);
+    } catch (IOException e) {
+      LOG.warn("Can not restart RS with new startcode");
+    }
   }
 
   private class NoopRsExecutor implements MockRSExecutor {
@@ -672,6 +708,37 @@ public class TestAssignmentManager {
         public void run() {
           LOG.info("Sending in CRASH of " + server);
           doCrash(server);
+        }
+      }, 1, TimeUnit.SECONDS);
+      return null;
+    }
+  }
+
+  /**
+   * Takes open request and then returns nothing so acts like a RS that went zombie.
+   * No response (so proc is stuck/suspended on the Master and won't wake up.).
+   * Different with HangThenRSCrashExecutor,  HangThenRSCrashExecutor will create
+   * ServerCrashProcedure to handle the server crash. However, this HangThenRSRestartExecutor
+   * will restart RS directly, situation for RS crashed when SCP is not enabled.
+   */
+  private class HangThenRSRestartExecutor extends GoodRsExecutor {
+    private int invocations;
+
+    @Override
+    protected RegionOpeningState execOpenRegion(final ServerName server, RegionOpenInfo openReq)
+        throws IOException {
+      if (this.invocations++ > 0) {
+        // Return w/o problem the second time through here.
+        return super.execOpenRegion(server, openReq);
+      }
+      // The procedure on master will just hang forever because nothing comes back
+      // from the RS in this case.
+      LOG.info("Return null response from serverName=" + server + "; means STUCK...TODO timeout");
+      executor.schedule(new Runnable() {
+        @Override
+        public void run() {
+          LOG.info("Restarting RS of " + server);
+          doRestart(server);
         }
       }, 1, TimeUnit.SECONDS);
       return null;
