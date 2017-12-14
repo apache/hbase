@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.util.MovingAverage;
+import org.apache.hadoop.hbase.util.WindowMovingAverage;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +80,8 @@ public abstract class ScheduledChore implements Runnable {
    * command can cause many chores to stop together.
    */
   private final Stoppable stopper;
+
+  private final MovingAverage<Void> timeMeasurement = new WindowMovingAverage();
 
   interface ChoreServicer {
     /**
@@ -183,7 +187,12 @@ public abstract class ScheduledChore implements Runnable {
         if (!initialChoreComplete) {
           initialChoreComplete = initialChore();
         } else {
-          chore();
+          timeMeasurement.measure(() -> {
+            chore();
+            return null;
+          });
+          LOG.info(String.format("%s average execution time: %.2f ns.", getName(),
+            timeMeasurement.getAverageTime()));
         }
       } catch (Throwable t) {
         if (LOG.isErrorEnabled()) LOG.error("Caught error", t);
