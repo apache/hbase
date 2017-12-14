@@ -427,13 +427,18 @@ public class BucketCache implements BlockCache, HeapSize {
 
     if (backingMap.containsKey(cacheKey)) {
       Cacheable existingBlock = getBlock(cacheKey, false, false, false);
-      if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
-        throw new RuntimeException("Cached block contents differ, which should not have happened."
-            + "cacheKey:" + cacheKey);
+      try {
+        if (BlockCacheUtil.compareCacheBlock(cachedItem, existingBlock) != 0) {
+          throw new RuntimeException("Cached block contents differ, which should not have happened."
+              + "cacheKey:" + cacheKey);
+        }
+        String msg = "Caching an already cached block: " + cacheKey;
+        msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
+        LOG.warn(msg);
+      } finally {
+        // return the block since we need to decrement the count
+        returnBlock(cacheKey, existingBlock);
       }
-       String msg = "Caching an already cached block: " + cacheKey;
-       msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
-       LOG.warn(msg);
       return;
     }
 
