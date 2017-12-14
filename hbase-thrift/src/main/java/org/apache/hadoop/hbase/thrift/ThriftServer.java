@@ -52,6 +52,7 @@ public class ThriftServer {
   static final String COMPACT_OPTION = "compact";
   static final String FRAMED_OPTION = "framed";
   static final String PORT_OPTION = "port";
+  static final String INFOPORT_OPTION = "infoport";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   private static final int DEFAULT_LISTEN_PORT = 9090;
@@ -117,7 +118,7 @@ public class ThriftServer {
     options.addOption("f", FRAMED_OPTION, false, "Use framed transport");
     options.addOption("c", COMPACT_OPTION, false, "Use the compact protocol");
     options.addOption("h", "help", false, "Print help information");
-    options.addOption(null, "infoport", true, "Port for web UI");
+    options.addOption(null, INFOPORT_OPTION, true, "Port for web UI");
 
     options.addOption("m", MIN_WORKERS_OPTION, true,
         "The minimum number of worker threads for " +
@@ -162,13 +163,14 @@ public class ThriftServer {
 
     // check for user-defined info server port setting, if so override the conf
     try {
-      if (cmd.hasOption("infoport")) {
-        String val = cmd.getOptionValue("infoport");
+      if (cmd.hasOption(INFOPORT_OPTION)) {
+        String val = cmd.getOptionValue(INFOPORT_OPTION);
         conf.setInt("hbase.thrift.info.port", Integer.parseInt(val));
         LOG.debug("Web UI port set to " + val);
       }
     } catch (NumberFormatException e) {
-      LOG.error("Could not parse the value provided for the infoport option", e);
+      LOG.error("Could not parse the value provided for the " + INFOPORT_OPTION +
+        " option", e);
       printUsageAndExit(options, -1);
     }
 
