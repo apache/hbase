@@ -380,7 +380,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   @Override
   public DatanodeInfo[] getPipeline() {
-    return locations;
+    State state = this.state;
+    return state == State.STREAMING || state == State.CLOSING ? locations : new DatanodeInfo[0];
   }
 
   private void flushBuffer(CompletableFuture<Long> future, ByteBuf dataBuf,

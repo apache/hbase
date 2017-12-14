@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 
 import com.lmax.disruptor.RingBuffer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.management.MemoryType;
@@ -55,6 +56,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -67,13 +69,16 @@ import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.apache.hadoop.hbase.wal.WALProvider.WriterBase;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
@@ -222,6 +227,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   volatile W writer;
 
+  // Last time to check low replication on hlog's pipeline
+  private long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
+
   protected volatile boolean closed = false;
 
   protected final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -230,7 +238,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * an IllegalArgumentException if used to compare paths from different wals.
    */
   final Comparator<Path> LOG_NAME_COMPARATOR =
-      (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
+    (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
 
   private static final class WalProps {
 
@@ -256,8 +264,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * Map of WAL log file to properties. The map is sorted by the log file creation timestamp
    * (contained in the log file name).
    */
-  protected ConcurrentNavigableMap<Path, WalProps> walFile2Props = new ConcurrentSkipListMap<>(
-      LOG_NAME_COMPARATOR);
+  protected ConcurrentNavigableMap<Path, WalProps> walFile2Props =
+    new ConcurrentSkipListMap<>(LOG_NAME_COMPARATOR);
 
   /**
    * Map of {@link SyncFuture}s keyed by Handler objects. Used so we reuse SyncFutures.
@@ -311,8 +319,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // be stuck and make no progress if the buffer is filled with appends only and there is no
     // sync. If no sync, then the handlers will be outstanding just waiting on sync completion
     // before they return.
-    int preallocatedEventCount = this.conf.getInt("hbase.regionserver.wal.disruptor.event.count",
-      1024 * 16);
+    int preallocatedEventCount =
+      this.conf.getInt("hbase.regionserver.wal.disruptor.event.count", 1024 * 16);
     checkArgument(preallocatedEventCount >= 0,
       "hbase.regionserver.wal.disruptor.event.count must > 0");
     int floor = Integer.highestOneBit(preallocatedEventCount);
@@ -346,12 +354,12 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
 
     // If prefix is null||empty then just name it wal
-    this.walFilePrefix = prefix == null || prefix.isEmpty() ? "wal"
-        : URLEncoder.encode(prefix, "UTF8");
+    this.walFilePrefix =
+      prefix == null || prefix.isEmpty() ? "wal" : URLEncoder.encode(prefix, "UTF8");
     // we only correctly differentiate suffices when numeric ones start with '.'
     if (suffix != null && !(suffix.isEmpty()) && !(suffix.startsWith(WAL_FILE_NAME_DELIMITER))) {
-      throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER
-          + "' but instead was '" + suffix + "'");
+      throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER +
+        "' but instead was '" + suffix + "'");
     }
     // Now that it exists, set the storage policy for the entire directory of wal files related to
     // this FSHLog instance
@@ -398,8 +406,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     // (it costs a little x'ing bocks)
     final long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
       CommonFSUtils.getDefaultBlockSize(this.fs, this.walDir));
-    this.logrollsize = (long) (blocksize
-        * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
+    this.logrollsize =
+      (long) (blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
 
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if (maxLogsDefined) {
@@ -408,9 +416,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
       Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
-    LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize="
-        + StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix="
-        + walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
+    LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize=" +
+      StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix=" +
+      walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
     this.slowSyncNs = TimeUnit.MILLISECONDS
         .toNanos(conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS));
     this.walSyncTimeoutNs = TimeUnit.MILLISECONDS
@@ -588,8 +596,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     int logCount = getNumRolledLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
       Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
-      regions = this.sequenceIdAccounting
-          .findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
+      regions =
+        this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     }
     if (regions != null) {
       StringBuilder sb = new StringBuilder();
@@ -599,8 +607,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         }
         sb.append(Bytes.toStringBinary(regions[i]));
       }
-      LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs + "; forcing flush of "
-          + regions.length + " regions(s): " + sb.toString());
+      LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
+        "; forcing flush of " + regions.length + " regions(s): " + sb.toString());
     }
     return regions;
   }
@@ -688,8 +696,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         this.walFile2Props.put(oldPath,
           new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
         this.totalLogSize.addAndGet(oldFileLen);
-        LOG.info("Rolled WAL " + CommonFSUtils.getPath(oldPath) + " with entries=" + oldNumEntries
-            + ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " + newPathString);
+        LOG.info("Rolled WAL " + CommonFSUtils.getPath(oldPath) + " with entries=" + oldNumEntries +
+          ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " + newPathString);
       } else {
         LOG.info("New WAL " + newPathString);
       }
@@ -755,8 +763,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         newPath = replaceWriter(oldPath, newPath, nextWriter);
         tellListenersAboutPostLogRoll(oldPath, newPath);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Create new " + implClassName + " writer with pipeline: "
-              + Arrays.toString(getPipeline()));
+          LOG.debug("Create new " + implClassName + " writer with pipeline: " +
+            Arrays.toString(getPipeline()));
         }
         // Can we delete any of the old log files?
         if (getNumRolledLogFiles() > 0) {
@@ -766,8 +774,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
         // If the underlying FileSystem can't do what we ask, treat as IO failure so
         // we'll abort.
-        throw new IOException("Underlying FileSystem can't meet stream requirements. See RS log " +
-            "for details.", exception);
+        throw new IOException(
+            "Underlying FileSystem can't meet stream requirements. See RS log " + "for details.",
+            exception);
       } finally {
         closeBarrier.endOp();
       }
@@ -843,8 +852,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
           }
         }
       }
-      LOG.debug("Moved " + files.length + " WAL file(s) to " +
-          CommonFSUtils.getPath(this.walArchiveDir));
+      LOG.debug(
+        "Moved " + files.length + " WAL file(s) to " + CommonFSUtils.getPath(this.walArchiveDir));
     }
     LOG.info("Closed WAL: " + toString());
   }
@@ -979,8 +988,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   @Override
   public String toString() {
-    return implClassName + " " + walFilePrefix + ":" + walFileSuffix + "(num "
-        + filenum + ")";
+    return implClassName + " " + walFilePrefix + ":" + walFileSuffix + "(num " + filenum + ")";
   }
 
   /**
@@ -1023,8 +1031,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;
 
-  protected abstract W createWriterInstance(Path path) throws IOException,
-      CommonFSUtils.StreamLacksCapabilityException;
+  protected abstract W createWriterInstance(Path path)
+      throws IOException, CommonFSUtils.StreamLacksCapabilityException;
 
   /**
    * @return old wal file size
@@ -1033,6 +1041,27 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       throws IOException;
 
   protected abstract void doShutdown() throws IOException;
+
+  protected abstract boolean doCheckLogLowReplication();
+
+  public void checkLogLowReplication(long checkInterval) {
+    long now = EnvironmentEdgeManager.currentTime();
+    if (now - lastTimeCheckLowReplication < checkInterval) {
+      return;
+    }
+    // Will return immediately if we are in the middle of a WAL log roll currently.
+    if (!rollWriterLock.tryLock()) {
+      return;
+    }
+    try {
+      lastTimeCheckLowReplication = now;
+      if (doCheckLogLowReplication()) {
+        requestLogRoll(true);
+      }
+    } finally {
+      rollWriterLock.unlock();
+    }
+  }
 
   /**
    * This method gets the pipeline for the current WAL.
@@ -1045,4 +1074,68 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    */
   @VisibleForTesting
   abstract int getLogReplication();
+
+  private static void split(final Configuration conf, final Path p) throws IOException {
+    FileSystem fs = FSUtils.getWALFileSystem(conf);
+    if (!fs.exists(p)) {
+      throw new FileNotFoundException(p.toString());
+    }
+    if (!fs.getFileStatus(p).isDirectory()) {
+      throw new IOException(p + " is not a directory");
+    }
+
+    final Path baseDir = FSUtils.getWALRootDir(conf);
+    Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    if (conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
+      AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
+      archiveDir = new Path(archiveDir, p.getName());
+    }
+    WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
+  }
+
+  private static void usage() {
+    System.err.println("Usage: AbstractFSWAL <ARGS>");
+    System.err.println("Arguments:");
+    System.err.println(" --dump  Dump textual representation of passed one or more files");
+    System.err.println("         For example: " +
+      "AbstractFSWAL --dump hdfs://example.com:9000/hbase/WALs/MACHINE/LOGFILE");
+    System.err.println(" --split Split the passed directory of WAL logs");
+    System.err.println(
+      "         For example: AbstractFSWAL --split hdfs://example.com:9000/hbase/WALs/DIR");
+  }
+
+  /**
+   * Pass one or more log file names and it will either dump out a text version on
+   * <code>stdout</code> or split the specified log files.
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length < 2) {
+      usage();
+      System.exit(-1);
+    }
+    // either dump using the WALPrettyPrinter or split, depending on args
+    if (args[0].compareTo("--dump") == 0) {
+      WALPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
+    } else if (args[0].compareTo("--perf") == 0) {
+      LOG.fatal("Please use the WALPerformanceEvaluation tool instead. i.e.:");
+      LOG.fatal(
+        "\thbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation --iterations " + args[1]);
+      System.exit(-1);
+    } else if (args[0].compareTo("--split") == 0) {
+      Configuration conf = HBaseConfiguration.create();
+      for (int i = 1; i < args.length; i++) {
+        try {
+          Path logPath = new Path(args[i]);
+          FSUtils.setFsDefault(conf, logPath);
+          split(conf, logPath);
+        } catch (IOException t) {
+          t.printStackTrace(System.err);
+          System.exit(-1);
+        }
+      }
+    } else {
+      usage();
+      System.exit(-1);
+    }
+  }
 }

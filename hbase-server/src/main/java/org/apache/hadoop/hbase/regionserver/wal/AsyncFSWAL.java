@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.Nam
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -536,7 +535,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         if (waitingConsumePayloadsGatingSequence.get() == waitingConsumePayloads.getCursor()) {
           // we will give up consuming so if there are some unsynced data we need to issue a sync.
           if (writer.getLength() > fileLengthAtLastSync && !syncFutures.isEmpty() &&
-              syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync) {
+            syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync) {
             // no new data in the ringbuffer and we have at least one sync request
             sync(writer);
           }
@@ -564,8 +563,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   public long append(RegionInfo hri, WALKeyImpl key, WALEdit edits, boolean inMemstore)
       throws IOException {
-    long txid = stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
-        waitingConsumePayloads);
+    long txid =
+      stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, waitingConsumePayloads);
     if (shouldScheduleConsumer()) {
       consumeExecutor.execute(consumer);
     }
@@ -745,5 +744,13 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   int getLogReplication() {
     return getPipeline().length;
+  }
+
+  @Override
+  protected boolean doCheckLogLowReplication() {
+    // not like FSHLog, AsyncFSOutput will fail immediately if there are errors writing to DNs, so
+    // typically there is no 'low replication' state, only a 'broken' state.
+    AsyncFSOutput output = this.fsOut;
+    return output != null && output.getPipeline().length == 0;
   }
 }

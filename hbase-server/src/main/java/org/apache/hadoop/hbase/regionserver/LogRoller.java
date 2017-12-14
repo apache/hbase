@@ -27,16 +27,16 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
@@ -122,14 +122,11 @@ public class LogRoller extends HasThread implements Closeable {
     try {
       for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
         WAL wal = entry.getKey();
-        boolean neeRollAlready = entry.getValue();
-        if(wal instanceof FSHLog && !neeRollAlready) {
-          FSHLog hlog = (FSHLog)wal;
-          if ((now - hlog.getLastTimeCheckLowReplication())
-              > this.checkLowReplicationInterval) {
-            hlog.checkLogRoll();
-          }
+        boolean needRollAlready = entry.getValue();
+        if (needRollAlready || !(wal instanceof AbstractFSWAL)) {
+          continue;
         }
+        ((AbstractFSWAL<?>) wal).checkLogLowReplication(checkLowReplicationInterval);
       }
     } catch (Throwable e) {
       LOG.warn("Failed checking low replication", e);
