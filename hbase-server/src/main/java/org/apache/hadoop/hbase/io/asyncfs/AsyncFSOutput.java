@@ -62,6 +62,11 @@ public interface AsyncFSOutput extends Closeable {
   int buffered();
 
   /**
+   * Whether the stream is broken.
+   */
+  boolean isBroken();
+
+  /**
    * Return current pipeline. Empty array if no pipeline.
    */
   DatanodeInfo[] getPipeline();

@@ -241,7 +241,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, file,
       true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS);
-    TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(eventLoop, FS, file, out);
+    TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(FS, file, out);
   }
 
   @Test

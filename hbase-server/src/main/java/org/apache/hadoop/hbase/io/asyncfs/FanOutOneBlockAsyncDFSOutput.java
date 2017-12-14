@@ -380,8 +380,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   @Override
   public DatanodeInfo[] getPipeline() {
-    State state = this.state;
-    return state == State.STREAMING || state == State.CLOSING ? locations : new DatanodeInfo[0];
+    return locations;
   }
 
   private void flushBuffer(CompletableFuture<Long> future, ByteBuf dataBuf,
@@ -568,5 +567,10 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
     block.setNumBytes(ackedBlockLength);
     completeFile(client, namenode, src, clientName, block, fileId);
+  }
+
+  @Override
+  public boolean isBroken() {
+    return state == State.BROKEN;
   }
 }

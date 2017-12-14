@@ -751,6 +751,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     // not like FSHLog, AsyncFSOutput will fail immediately if there are errors writing to DNs, so
     // typically there is no 'low replication' state, only a 'broken' state.
     AsyncFSOutput output = this.fsOut;
-    return output != null && output.getPipeline().length == 0;
+    return output != null && output.isBroken();
   }
 }
