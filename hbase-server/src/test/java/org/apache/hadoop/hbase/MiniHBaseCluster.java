@@ -77,10 +77,19 @@ public class MiniHBaseCluster extends HBaseCluster {
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers)
       throws IOException, InterruptedException {
-    this(conf, numMasters, numRegionServers, null, null);
+    this(conf, numMasters, numRegionServers, null, null, null);
   }
 
+  /**
+   * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
+   *   restart where for sure the regionservers come up on same address+port (but
+   *   just with different startcode); by default mini hbase clusters choose new
+   *   arbitrary ports on each cluster start.
+   * @throws IOException
+   * @throws InterruptedException
+   */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
+         List<Integer> rsPorts,
          Class<? extends HMaster> masterClass,
          Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
       throws IOException, InterruptedException {
@@ -93,7 +102,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     // Hadoop 2
     CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
 
-    init(numMasters, numRegionServers, masterClass, regionserverClass);
+    init(numMasters, numRegionServers, rsPorts, masterClass, regionserverClass);
     this.initialClusterStatus = getClusterStatus();
   }
 
@@ -207,7 +216,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     }
   }
 
-  private void init(final int nMasterNodes, final int nRegionNodes,
+  private void init(final int nMasterNodes, final int nRegionNodes, List<Integer> rsPorts,
                  Class<? extends HMaster> masterClass,
                  Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws IOException, InterruptedException {
@@ -224,8 +233,11 @@ public class MiniHBaseCluster extends HBaseCluster {
           masterClass, regionserverClass);
 
       // manually add the regionservers as other users
-      for (int i=0; i<nRegionNodes; i++) {
+      for (int i = 0; i < nRegionNodes; i++) {
         Configuration rsConf = HBaseConfiguration.create(conf);
+        if (rsPorts != null) {
+          rsConf.setInt(HConstants.REGIONSERVER_PORT, rsPorts.get(i));
+        }
         User user = HBaseTestingUtility.getDifferentUser(rsConf,
             ".hfs."+index++);
         hbaseCluster.addRegionServer(rsConf, i, user);
