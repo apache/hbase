@@ -25,7 +25,6 @@ import com.lmax.disruptor.TimeoutException;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -42,25 +41,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -155,10 +147,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private final int closeErrorsTolerated;
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
-
-  // Last time to check low replication on hlog's pipeline
-  private volatile long lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
-
 
   /**
    * Exception handler to pass the disruptor ringbuffer. Same as native implementation only it logs
@@ -627,14 +615,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   /**
    * Schedule a log roll if needed.
    */
-  public void checkLogRoll() {
+  private void checkLogRoll() {
     // Will return immediately if we are in the middle of a WAL log roll currently.
     if (!rollWriterLock.tryLock()) {
       return;
     }
     boolean lowReplication;
     try {
-      lowReplication = checkLowReplication();
+      lowReplication = doCheckLogLowReplication();
     } finally {
       rollWriterLock.unlock();
     }
@@ -646,9 +634,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   /**
    * @return true if number of replicas for the WAL is lower than threshold
    */
-  private boolean checkLowReplication() {
+  protected boolean doCheckLogLowReplication() {
     boolean logRollNeeded = false;
-    this.lastTimeCheckLowReplication = EnvironmentEdgeManager.currentTime();
     // if the number of replicas in HDFS has fallen below the configured
     // value, then roll logs.
     try {
@@ -766,24 +753,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   public static final long FIXED_OVERHEAD = ClassSize
       .align(ClassSize.OBJECT + (5 * ClassSize.REFERENCE) + ClassSize.ATOMIC_INTEGER
           + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
-
-  private static void split(final Configuration conf, final Path p) throws IOException {
-    FileSystem fs = FSUtils.getWALFileSystem(conf);
-    if (!fs.exists(p)) {
-      throw new FileNotFoundException(p.toString());
-    }
-    if (!fs.getFileStatus(p).isDirectory()) {
-      throw new IOException(p + " is not a directory");
-    }
-
-    final Path baseDir = FSUtils.getWALRootDir(conf);
-    Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    if (conf.getBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR,
-      AbstractFSWALProvider.DEFAULT_SEPARATE_OLDLOGDIR)) {
-      archiveDir = new Path(archiveDir, p.getName());
-    }
-    WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
-  }
 
   /**
    * This class is used coordinating two threads holding one thread at a 'safe point' while the
@@ -1118,52 +1087,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
   }
 
-  private static void usage() {
-    System.err.println("Usage: FSHLog <ARGS>");
-    System.err.println("Arguments:");
-    System.err.println(" --dump  Dump textual representation of passed one or more files");
-    System.err.println("         For example: "
-        + "FSHLog --dump hdfs://example.com:9000/hbase/WALs/MACHINE/LOGFILE");
-    System.err.println(" --split Split the passed directory of WAL logs");
-    System.err.println(
-      "         For example: " + "FSHLog --split hdfs://example.com:9000/hbase/WALs/DIR");
-  }
-
-  /**
-   * Pass one or more log file names and it will either dump out a text version on
-   * <code>stdout</code> or split the specified log files.
-   */
-  public static void main(String[] args) throws IOException {
-    if (args.length < 2) {
-      usage();
-      System.exit(-1);
-    }
-    // either dump using the WALPrettyPrinter or split, depending on args
-    if (args[0].compareTo("--dump") == 0) {
-      WALPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
-    } else if (args[0].compareTo("--perf") == 0) {
-      LOG.fatal("Please use the WALPerformanceEvaluation tool instead. i.e.:");
-      LOG.fatal(
-        "\thbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation --iterations " + args[1]);
-      System.exit(-1);
-    } else if (args[0].compareTo("--split") == 0) {
-      Configuration conf = HBaseConfiguration.create();
-      for (int i = 1; i < args.length; i++) {
-        try {
-          Path logPath = new Path(args[i]);
-          FSUtils.setFsDefault(conf, logPath);
-          split(conf, logPath);
-        } catch (IOException t) {
-          t.printStackTrace(System.err);
-          System.exit(-1);
-        }
-      }
-    } else {
-      usage();
-      System.exit(-1);
-    }
-  }
-
   /**
    * This method gets the pipeline for the current WAL.
    */
@@ -1175,13 +1098,5 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
     }
     return new DatanodeInfo[0];
-  }
-
-  /**
-   *
-   * @return last time on checking low replication
-   */
-  public long getLastTimeCheckLowReplication() {
-    return this.lastTimeCheckLowReplication;
   }
 }
