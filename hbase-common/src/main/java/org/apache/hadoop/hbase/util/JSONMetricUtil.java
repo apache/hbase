@@ -43,7 +43,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.codehaus.jettison.json.JSONException;
 
 public final class JSONMetricUtil {
 
@@ -180,7 +179,7 @@ public final class JSONMetricUtil {
   }
 
   public static String getCommmand() throws MalformedObjectNameException,
-  IOException, JSONException {
+  IOException {
     RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
     return runtimeBean.getSystemProperties().get("sun.java.command");
   }
