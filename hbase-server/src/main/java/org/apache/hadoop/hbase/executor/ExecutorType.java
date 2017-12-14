@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.executor;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,11 +48,11 @@ public enum ExecutorType {
   RS_COMPACTED_FILES_DISCHARGER (29),
   RS_OPEN_PRIORITY_REGION    (30);
 
-  ExecutorType(int value) {}
+  ExecutorType(int value) {
+  }
 
   /**
-   * @param serverName
-   * @return Conflation of the executor type and the passed servername.
+   * @return Conflation of the executor type and the passed {@code serverName}.
    */
   String getExecutorName(String serverName) {
     return this.toString() + "-" + serverName.replace("%", "%%");

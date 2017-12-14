@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.executor;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -295,20 +293,18 @@ public enum EventType {
   }
 
   public static EventType get(final int code) {
-    // Is this going to be slow?  Its used rare but still...
-    for (EventType et: EventType.values()) {
-      if (et.getCode() == code) return et;
+    // Is this going to be slow? Its used rare but still...
+    for (EventType et : EventType.values()) {
+      if (et.getCode() == code) {
+        return et;
+      }
     }
     throw new IllegalArgumentException("Unknown code " + code);
   }
 
   public boolean isOnlineSchemaChangeSupported() {
-    return (
-      this.equals(EventType.C_M_ADD_FAMILY) ||
-      this.equals(EventType.C_M_DELETE_FAMILY) ||
-      this.equals(EventType.C_M_MODIFY_FAMILY) ||
-      this.equals(EventType.C_M_MODIFY_TABLE)
-    );
+    return this.equals(EventType.C_M_ADD_FAMILY) || this.equals(EventType.C_M_DELETE_FAMILY) ||
+      this.equals(EventType.C_M_MODIFY_FAMILY) || this.equals(EventType.C_M_MODIFY_TABLE);
   }
 
   ExecutorType getExecutorServiceType() {
