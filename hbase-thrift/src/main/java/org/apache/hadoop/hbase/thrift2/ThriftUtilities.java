@@ -28,6 +28,9 @@ import java.util.Map;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
@@ -115,7 +118,7 @@ public class ThriftUtilities {
     if (in.isSetAuthorizations()) {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
-    
+
     if (!in.isSetColumns()) {
       return out;
     }
@@ -217,20 +220,35 @@ public class ThriftUtilities {
     }
 
     for (TColumnValue columnValue : in.getColumnValues()) {
-      if (columnValue.isSetTimestamp()) {
-        out.addImmutable(
-            columnValue.getFamily(), columnValue.getQualifier(), columnValue.getTimestamp(),
-            columnValue.getValue());
-      } else {
-        out.addImmutable(
-            columnValue.getFamily(), columnValue.getQualifier(), columnValue.getValue());
+      try {
+        if (columnValue.isSetTimestamp()) {
+          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setRow(out.getRow())
+              .setFamily(columnValue.getFamily())
+              .setQualifier(columnValue.getQualifier())
+              .setTimestamp(columnValue.getTimestamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(columnValue.getValue())
+              .build());
+        } else {
+          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+              .setRow(out.getRow())
+              .setFamily(columnValue.getFamily())
+              .setQualifier(columnValue.getQualifier())
+              .setTimestamp(out.getTimeStamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(columnValue.getValue())
+              .build());
+        }
+      } catch (IOException e) {
+        throw new IllegalArgumentException((e));
       }
     }
 
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
-    
+
     if (in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
@@ -437,7 +455,7 @@ public class ThriftUtilities {
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
-    
+
     if (in.isSetAuthorizations()) {
       out.setAuthorizations(new Authorizations(in.getAuthorizations().getLabels()));
     }
@@ -484,7 +502,7 @@ public class ThriftUtilities {
     if (in.isSetDurability()) {
       out.setDurability(durabilityFromThrift(in.getDurability()));
     }
-    
+
     if(in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
@@ -505,7 +523,7 @@ public class ThriftUtilities {
     if (append.isSetDurability()) {
       out.setDurability(durabilityFromThrift(append.getDurability()));
     }
-    
+
     if(append.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(append.getCellVisibility().getExpression()));
     }

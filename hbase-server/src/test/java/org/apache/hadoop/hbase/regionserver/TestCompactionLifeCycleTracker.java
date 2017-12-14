@@ -28,7 +28,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -143,11 +147,29 @@ public class TestCompactionLifeCycleTracker {
             .addCoprocessor(CompactionObserver.class.getName()).build());
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
-        table.put(new Put(Bytes.toBytes(i)).addImmutable(CF1, QUALIFIER, Bytes.toBytes(i)));
+        byte[] row = Bytes.toBytes(i);
+        table.put(new Put(row)
+                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                        .setRow(row)
+                        .setFamily(CF1)
+                        .setQualifier(QUALIFIER)
+                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
+                        .setType(CellBuilder.DataType.Put)
+                        .setValue(Bytes.toBytes(i))
+                        .build()));
       }
       UTIL.getAdmin().flush(NAME);
       for (int i = 100; i < 200; i++) {
-        table.put(new Put(Bytes.toBytes(i)).addImmutable(CF1, QUALIFIER, Bytes.toBytes(i)));
+        byte[] row = Bytes.toBytes(i);
+        table.put(new Put(row)
+                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                        .setRow(row)
+                        .setFamily(CF1)
+                        .setQualifier(QUALIFIER)
+                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
+                        .setType(CellBuilder.DataType.Put)
+                        .setValue(Bytes.toBytes(i))
+                        .build()));
       }
       UTIL.getAdmin().flush(NAME);
     }

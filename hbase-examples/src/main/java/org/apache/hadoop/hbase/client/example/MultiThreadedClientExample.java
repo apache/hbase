@@ -22,6 +22,9 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -218,7 +221,14 @@ public class MultiThreadedClientExample extends Configured implements Tool {
         for (int i = 0; i < 30; i++) {
           byte[] rk = Bytes.toBytes(ThreadLocalRandom.current().nextLong());
           Put p = new Put(rk);
-          p.addImmutable(FAMILY, QUAL, value);
+          p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setRow(rk)
+                .setFamily(FAMILY)
+                .setQualifier(QUAL)
+                .setTimestamp(p.getTimeStamp())
+                .setType(CellBuilder.DataType.Put)
+                .setValue(value)
+                .build());
           puts.add(p);
         }
 
@@ -248,7 +258,14 @@ public class MultiThreadedClientExample extends Configured implements Tool {
         byte[] value = Bytes.toBytes(Double.toString(ThreadLocalRandom.current().nextDouble()));
         byte[] rk = Bytes.toBytes(ThreadLocalRandom.current().nextLong());
         Put p = new Put(rk);
-        p.addImmutable(FAMILY, QUAL, value);
+        p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setRow(rk)
+                .setFamily(FAMILY)
+                .setQualifier(QUAL)
+                .setTimestamp(p.getTimeStamp())
+                .setType(CellBuilder.DataType.Put)
+                .setValue(value)
+                .build());
         t.put(p);
       }
       return true;

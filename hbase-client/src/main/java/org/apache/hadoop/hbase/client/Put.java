@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -182,20 +181,12 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * See {@link #addColumn(byte[], byte[], byte[])}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
    */
+  @Deprecated
   public Put addImmutable(byte [] family, byte [] qualifier, byte [] value) {
     return addImmutable(family, qualifier, this.ts, value);
-  }
-
-  /**
-   * This expects that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
-   * that should not be exposed publicly.
-   */
-  @InterfaceAudience.Private
-  public Put addImmutable(byte[] family, byte [] qualifier, byte [] value, Tag[] tag) {
-    return addImmutable(family, qualifier, this.ts, value, tag);
   }
 
   /**
@@ -221,7 +212,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * See {@link #addColumn(byte[], byte[], long, byte[])}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
    */
+  @Deprecated
   public Put addImmutable(byte [] family, byte [] qualifier, long ts, byte [] value) {
     // Family can not be null, otherwise NullPointerException is thrown when putting the cell into familyMap
     if (family == null) {
@@ -237,39 +231,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     list.add(new IndividualBytesFieldCell(this.row, family, qualifier, ts, KeyValue.Type.Put, value));
     return this;
   }
-
-  /**
-   * This expects that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
-   * that should not be exposed publicly.
-   */
-  @InterfaceAudience.Private
-  public Put addImmutable(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag) {
-    List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
-    list.add(kv);
-    return this;
-  }
-
-  /**
-   * This expects that the underlying arrays won't change. It's intended
-   * for usage internal HBase to and for advanced client applications.
-   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
-   * that should not be exposed publicly.
-   */
-  @InterfaceAudience.Private
-  public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value,
-                          Tag[] tag) {
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-    List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
-    list.add(kv);
-    return this;
-  }
-
 
   /**
    * Add the specified column and value, with the specified timestamp as
@@ -294,7 +255,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * See {@link #addColumn(byte[], ByteBuffer, long, ByteBuffer)}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #add(Cell)} and {@link org.apache.hadoop.hbase.CellBuilder} instead
    */
+  @Deprecated
   public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
@@ -313,7 +277,18 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @return this
    * @throws java.io.IOException e
    */
-  public Put add(Cell kv) throws IOException{
+  public Put add(Cell kv) throws IOException {
+    // Family can not be null, otherwise NullPointerException is thrown when putting
+    // the cell into familyMap
+    if (kv.getFamilyArray() == null) {
+      throw new IllegalArgumentException("Family cannot be null");
+    }
+
+    // Check timestamp
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
+
     byte [] family = CellUtil.cloneFamily(kv);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put

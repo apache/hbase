@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -149,7 +152,14 @@ public class TestMultiRespectsLimits {
 
     for (byte[] col:cols) {
       Put p = new Put(row);
-      p.addImmutable(FAMILY, col, value);
+      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(row)
+              .setFamily(FAMILY)
+              .setQualifier(col)
+              .setTimestamp(p.getTimeStamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(value)
+              .build());
       t.put(p);
     }
 

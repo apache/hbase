@@ -23,10 +23,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -178,12 +180,24 @@ public class RegionStateStore {
     } else if (regionLocation != null && !regionLocation.equals(lastHost)) {
       // Ideally, if no regionLocation, write null to the hbase:meta but this will confuse clients
       // currently; they want a server to hit. TODO: Make clients wait if no location.
-      put.addImmutable(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId),
-          Bytes.toBytes(regionLocation.getServerName()));
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(put.getRow())
+          .setFamily(HConstants.CATALOG_FAMILY)
+          .setQualifier(getServerNameColumn(replicaId))
+          .setTimestamp(put.getTimeStamp())
+          .setType(CellBuilder.DataType.Put)
+          .setValue(Bytes.toBytes(regionLocation.getServerName()))
+          .build());
       info.append(", regionLocation=").append(regionLocation);
     }
-    put.addImmutable(HConstants.CATALOG_FAMILY, getStateColumn(replicaId),
-      Bytes.toBytes(state.name()));
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(put.getRow())
+        .setFamily(HConstants.CATALOG_FAMILY)
+        .setQualifier(getStateColumn(replicaId))
+        .setTimestamp(put.getTimeStamp())
+        .setType(CellBuilder.DataType.Put)
+        .setValue(Bytes.toBytes(state.name()))
+        .build());
     LOG.info(info);
 
     final boolean serialReplication = hasSerialReplicationScope(regionInfo.getTable());

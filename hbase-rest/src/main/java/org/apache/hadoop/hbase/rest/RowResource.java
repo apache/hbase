@@ -39,6 +39,9 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -238,7 +241,14 @@ public class RowResource extends ResourceBase {
               .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
               .build();
           }
-          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(put.getRow())
+              .setFamily(parts[0])
+              .setQualifier(parts[1])
+              .setTimestamp(cell.getTimestamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(cell.getValue())
+              .build());
         }
         puts.add(put);
         if (LOG.isTraceEnabled()) {
@@ -306,7 +316,14 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
-      put.addImmutable(parts[0], parts[1], timestamp, message);
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(put.getRow())
+        .setFamily(parts[0])
+        .setQualifier(parts[1])
+        .setTimestamp(timestamp)
+        .setType(CellBuilder.DataType.Put)
+        .setValue(message)
+        .build());
       table = servlet.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isTraceEnabled()) {
@@ -496,8 +513,14 @@ public class RowResource extends ResourceBase {
                     .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
                     .build();
           }
-          put.addImmutable(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
-
+          put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(put.getRow())
+              .setFamily(parts[0])
+              .setQualifier(parts[1])
+              .setTimestamp(cell.getTimestamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(cell.getValue())
+              .build());
           if(Bytes.equals(col,
                   valueToCheckCell.getColumn())) {
             valueToPutCell = cell;

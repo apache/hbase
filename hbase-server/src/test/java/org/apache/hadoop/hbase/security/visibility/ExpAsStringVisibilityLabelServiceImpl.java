@@ -38,6 +38,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
@@ -101,8 +104,16 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
     Put p = new Put(user);
+    CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     for (byte[] auth : authLabels) {
-      p.addImmutable(LABELS_TABLE_FAMILY, auth, DUMMY_VALUE);
+      p.add(builder.clear()
+          .setRow(p.getRow())
+          .setFamily(LABELS_TABLE_FAMILY)
+          .setQualifier(auth)
+          .setTimestamp(p.getTimeStamp())
+          .setType(CellBuilder.DataType.Put)
+          .setValue(DUMMY_VALUE)
+          .build());
     }
     this.labelsRegion.put(p);
     // This is a testing impl and so not doing any caching

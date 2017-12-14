@@ -1342,35 +1342,80 @@ public class MetaTableAccessor {
     return delete;
   }
 
-  public static Put makeBarrierPut(byte[] encodedRegionName, long seq, byte[] tableName) {
+  public static Put makeBarrierPut(byte[] encodedRegionName, long seq, byte[] tableName)
+      throws IOException {
     byte[] seqBytes = Bytes.toBytes(seq);
-    return new Put(encodedRegionName)
-        .addImmutable(HConstants.REPLICATION_BARRIER_FAMILY, seqBytes, seqBytes)
-        .addImmutable(HConstants.REPLICATION_META_FAMILY, tableNameCq, tableName);
+    Put put = new Put(encodedRegionName);
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(put.getRow())
+            .setFamily(HConstants.REPLICATION_BARRIER_FAMILY)
+            .setQualifier(seqBytes)
+            .setTimestamp(put.getTimeStamp())
+            .setType(CellBuilder.DataType.Put)
+            .setValue(seqBytes)
+            .build())
+       .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(put.getRow())
+            .setFamily(HConstants.REPLICATION_META_FAMILY)
+            .setQualifier(tableNameCq)
+            .setTimestamp(put.getTimeStamp())
+            .setType(CellBuilder.DataType.Put)
+            .setValue(tableName)
+            .build());
+    return put;
   }
 
 
-  public static Put makeDaughterPut(byte[] encodedRegionName, byte[] value) {
-    return new Put(encodedRegionName).addImmutable(HConstants.REPLICATION_META_FAMILY,
-        daughterNameCq, value);
+  public static Put makeDaughterPut(byte[] encodedRegionName, byte[] value) throws IOException {
+    Put put = new Put(encodedRegionName);
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(put.getRow())
+            .setFamily(HConstants.REPLICATION_META_FAMILY)
+            .setQualifier(daughterNameCq)
+            .setTimestamp(put.getTimeStamp())
+            .setType(CellBuilder.DataType.Put)
+            .setValue(value)
+            .build());
+    return put;
   }
 
-  public static Put makeParentPut(byte[] encodedRegionName, byte[] value) {
-    return new Put(encodedRegionName).addImmutable(HConstants.REPLICATION_META_FAMILY,
-        parentNameCq, value);
+  public static Put makeParentPut(byte[] encodedRegionName, byte[] value) throws IOException {
+    Put put = new Put(encodedRegionName);
+    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+            .setRow(put.getRow())
+            .setFamily(HConstants.REPLICATION_META_FAMILY)
+            .setQualifier(parentNameCq)
+            .setTimestamp(put.getTimeStamp())
+            .setType(CellBuilder.DataType.Put)
+            .setValue(value)
+            .build());
+    return put;
   }
 
   /**
    * Adds split daughters to the Put
    */
-  public static Put addDaughtersToPut(Put put, RegionInfo splitA, RegionInfo splitB) {
+  public static Put addDaughtersToPut(Put put, RegionInfo splitA, RegionInfo splitB)
+      throws IOException {
     if (splitA != null) {
-      put.addImmutable(
-        HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER, RegionInfo.toByteArray(splitA));
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setRow(put.getRow())
+                .setFamily(HConstants.CATALOG_FAMILY)
+                .setQualifier(HConstants.SPLITA_QUALIFIER)
+                .setTimestamp(put.getTimeStamp())
+                .setType(CellBuilder.DataType.Put)
+                .setValue(RegionInfo.toByteArray(splitA))
+                .build());
     }
     if (splitB != null) {
-      put.addImmutable(
-        HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER, RegionInfo.toByteArray(splitB));
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+                .setRow(put.getRow())
+                .setFamily(HConstants.CATALOG_FAMILY)
+                .setQualifier(HConstants.SPLITB_QUALIFIER)
+                .setTimestamp(put.getTimeStamp())
+                .setType(CellBuilder.DataType.Put)
+                .setValue(RegionInfo.toByteArray(splitB))
+                .build());
     }
     return put;
   }
@@ -1658,10 +1703,22 @@ public class MetaTableAccessor {
 
       // Put for parent
       Put putOfMerged = makePutFromRegionInfo(mergedRegion, time);
-      putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
-        RegionInfo.toByteArray(regionA));
-      putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
-          RegionInfo.toByteArray(regionB));
+      putOfMerged.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(putOfMerged.getRow())
+              .setFamily(HConstants.CATALOG_FAMILY)
+              .setQualifier(HConstants.MERGEA_QUALIFIER)
+              .setTimestamp(putOfMerged.getTimeStamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(RegionInfo.toByteArray(regionA))
+              .build())
+          .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(putOfMerged.getRow())
+              .setFamily(HConstants.CATALOG_FAMILY)
+              .setQualifier(HConstants.MERGEB_QUALIFIER)
+              .setTimestamp(putOfMerged.getTimeStamp())
+              .setType(CellBuilder.DataType.Put)
+              .setValue(RegionInfo.toByteArray(regionB))
+              .build());
 
       // Deletes for merging regions
       Delete deleteA = makeDeleteFromRegionInfo(regionA, time);
@@ -1898,10 +1955,15 @@ public class MetaTableAccessor {
       Map<String, Long> positions) throws IOException {
     List<Put> puts = new ArrayList<>(positions.entrySet().size());
     for (Map.Entry<String, Long> entry : positions.entrySet()) {
-      long value = Math.abs(entry.getValue());
       Put put = new Put(Bytes.toBytes(entry.getKey()));
-      put.addImmutable(HConstants.REPLICATION_POSITION_FAMILY, Bytes.toBytes(peerId),
-          Bytes.toBytes(value));
+      put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(put.getRow())
+          .setFamily(HConstants.REPLICATION_POSITION_FAMILY)
+          .setQualifier(Bytes.toBytes(peerId))
+          .setTimestamp(put.getTimeStamp())
+          .setType(CellBuilder.DataType.Put)
+          .setValue(Bytes.toBytes(Math.abs(entry.getValue())))
+          .build());
       puts.add(put);
     }
     getMetaHTable(connection).put(puts);
@@ -2062,31 +2124,73 @@ public class MetaTableAccessor {
 
   public static Put addRegionInfo(final Put p, final RegionInfo hri)
     throws IOException {
-    p.addImmutable(getCatalogFamily(), HConstants.REGIONINFO_QUALIFIER,
-        RegionInfo.toByteArray(hri));
+    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setRow(p.getRow())
+        .setFamily(getCatalogFamily())
+        .setQualifier(HConstants.REGIONINFO_QUALIFIER)
+        .setTimestamp(p.getTimeStamp())
+        .setType(CellBuilder.DataType.Put)
+        .setValue(RegionInfo.toByteArray(hri))
+        .build());
     return p;
   }
 
   public static Put addLocation(final Put p, final ServerName sn, long openSeqNum,
-      long time, int replicaId){
+      long time, int replicaId) throws IOException {
     if (time <= 0) {
       time = EnvironmentEdgeManager.currentTime();
     }
-    p.addImmutable(getCatalogFamily(), getServerColumn(replicaId), time,
-      Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), time,
-      Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), time,
-      Bytes.toBytes(openSeqNum));
-    return p;
+    CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    return p.add(builder.clear()
+              .setRow(p.getRow())
+              .setFamily(getCatalogFamily())
+              .setQualifier(getServerColumn(replicaId))
+              .setTimestamp(time)
+              .setType(CellBuilder.DataType.Put)
+              .setValue(Bytes.toBytes(sn.getAddress().toString()))
+              .build())
+            .add(builder.clear()
+              .setRow(p.getRow())
+              .setFamily(getCatalogFamily())
+              .setQualifier(getStartCodeColumn(replicaId))
+              .setTimestamp(time)
+              .setType(CellBuilder.DataType.Put)
+              .setValue(Bytes.toBytes(sn.getStartcode()))
+              .build())
+            .add(builder.clear()
+              .setRow(p.getRow())
+              .setFamily(getCatalogFamily())
+              .setQualifier(getSeqNumColumn(replicaId))
+              .setTimestamp(time)
+              .setType(CellBuilder.DataType.Put)
+              .setValue(Bytes.toBytes(openSeqNum))
+              .build());
   }
 
-  public static Put addEmptyLocation(final Put p, int replicaId) {
+  public static Put addEmptyLocation(final Put p, int replicaId) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
-    p.addImmutable(getCatalogFamily(), getServerColumn(replicaId), now, null);
-    p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), now, null);
-    p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), now, null);
-    return p;
+    CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    return p.add(builder.clear()
+                .setRow(p.getRow())
+                .setFamily(getCatalogFamily())
+                .setQualifier(getServerColumn(replicaId))
+                .setTimestamp(now)
+                .setType(CellBuilder.DataType.Put)
+                .build())
+            .add(builder.clear()
+                .setRow(p.getRow())
+                .setFamily(getCatalogFamily())
+                .setQualifier(getStartCodeColumn(replicaId))
+                .setTimestamp(now)
+                .setType(CellBuilder.DataType.Put)
+                .build())
+            .add(builder.clear()
+                .setRow(p.getRow())
+                .setFamily(getCatalogFamily())
+                .setQualifier(getSeqNumColumn(replicaId))
+                .setTimestamp(now)
+                .setType(CellBuilder.DataType.Put)
+                .build());
   }
 
   private static String mutationsToString(List<? extends Mutation> mutations) throws IOException {
@@ -2103,13 +2207,19 @@ public class MetaTableAccessor {
     return p.getClass().getSimpleName() + p.toJSON();
   }
 
-  public static Put addSequenceNum(final Put p, long openSeqNum, long time, int replicaId) {
+  public static Put addSequenceNum(final Put p, long openSeqNum, long time,
+      int replicaId) throws IOException {
     if (time <= 0) {
       time = EnvironmentEdgeManager.currentTime();
     }
-    p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), time,
-      Bytes.toBytes(openSeqNum));
-    return p;
+    return p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setRow(p.getRow())
+              .setFamily(HConstants.CATALOG_FAMILY)
+              .setQualifier(getSeqNumColumn(replicaId))
+              .setTimestamp(time)
+              .setType(CellBuilder.DataType.Put)
+              .setValue(Bytes.toBytes(openSeqNum))
+              .build());
   }
 
   /**

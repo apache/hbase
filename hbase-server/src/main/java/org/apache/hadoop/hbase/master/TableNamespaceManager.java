@@ -26,6 +26,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZKNamespaceManager;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -149,10 +153,16 @@ public class TableNamespaceManager {
     if (nsTable == null) {
       throw new IOException(this.getClass().getName() + " isn't ready to serve");
     }
-    Put p = new Put(Bytes.toBytes(ns.getName()));
-    p.addImmutable(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-        HTableDescriptor.NAMESPACE_COL_DESC_BYTES,
-        ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray());
+    byte[] row = Bytes.toBytes(ns.getName());
+    Put p = new Put(row, true);
+    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+          .setRow(row)
+          .setFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
+          .setQualifier(TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
+          .setTimestamp(p.getTimeStamp())
+          .setType(CellBuilder.DataType.Put)
+          .setValue(ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray())
+          .build());
     nsTable.put(p);
   }
 
