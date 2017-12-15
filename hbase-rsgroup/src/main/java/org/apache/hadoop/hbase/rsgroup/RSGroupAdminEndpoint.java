@@ -358,7 +358,6 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     groupAdminServer.prepareRSGroupForTable(desc);
-    assignTableToGroup(desc);
   }
 
   // Remove table from its RSGroup.
@@ -374,7 +373,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                               HTableDescriptor desc,
                               HRegionInfo[] regions) throws IOException {
-
+    assignTableToGroup(desc);
   }
 
   @Override
