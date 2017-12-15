@@ -74,12 +74,12 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     bufferedSize = 0L;
     Iterator<CompletableFuture<Void>> toCompleteIter = toComplete.iterator();
     for (CompletableFuture<?> future : table.batch(toSend)) {
+      CompletableFuture<Void> toCompleteFuture = toCompleteIter.next();
       future.whenComplete((r, e) -> {
-        CompletableFuture<Void> f = toCompleteIter.next();
         if (e != null) {
-          f.completeExceptionally(e);
+          toCompleteFuture.completeExceptionally(e);
         } else {
-          f.complete(null);
+          toCompleteFuture.complete(null);
         }
       });
     }
