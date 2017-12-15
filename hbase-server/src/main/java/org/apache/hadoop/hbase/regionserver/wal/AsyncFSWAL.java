@@ -146,7 +146,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   public static final String ASYNC_WAL_USE_SHARED_EVENT_LOOP =
     "hbase.wal.async.use-shared-event-loop";
-  public static final boolean DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP = true;
+  public static final boolean DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP = false;
 
   private final EventLoopGroup eventLoopGroup;
 
