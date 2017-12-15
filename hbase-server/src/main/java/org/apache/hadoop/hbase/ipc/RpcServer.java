@@ -42,7 +42,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -67,7 +66,6 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
@@ -83,8 +81,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
  * An RPC server that hosts protobuf described Services.
  *
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class RpcServer implements RpcServerInterface,
     ConfigurationObserver {
   // LOG is being used in CallRunner and the log level is being changed in tests
@@ -255,13 +252,13 @@ public abstract class RpcServer implements RpcServerInterface,
    * @param bindAddress Where to listen
    * @param conf
    * @param scheduler
+   * @param reservoirEnabled Enable ByteBufferPool or not.
    */
   public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler)
-      throws IOException {
-    if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
+      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
+    if (reservoirEnabled) {
       int poolBufSize = conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY,
           ByteBufferPool.DEFAULT_BUFFER_SIZE);
       // The max number of buffers to be pooled in the ByteBufferPool. The default value been

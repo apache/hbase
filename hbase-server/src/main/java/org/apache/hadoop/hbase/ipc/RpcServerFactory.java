@@ -44,9 +44,15 @@ public class RpcServerFactory {
   }
 
   public static RpcServer createRpcServer(final Server server, final String name,
+      final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
+      Configuration conf, RpcScheduler scheduler) throws IOException {
+    return createRpcServer(server, name, services, bindAddress, conf, scheduler, true);
+  }
+
+  public static RpcServer createRpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
       final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler) throws IOException {
+      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
     String rpcServerClass = conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
         NettyRpcServer.class.getName());
     StringBuilder servicesList = new StringBuilder();
@@ -59,7 +65,7 @@ public class RpcServerFactory {
     LOG.info("Creating " + rpcServerClass + " hosting " + servicesList);
     return ReflectionUtils.instantiateWithCustomCtor(rpcServerClass,
         new Class[] { Server.class, String.class, List.class,
-            InetSocketAddress.class, Configuration.class, RpcScheduler.class },
-        new Object[] { server, name, services, bindAddress, conf, scheduler });
+          InetSocketAddress.class, Configuration.class, RpcScheduler.class, boolean.class },
+        new Object[] { server, name, services, bindAddress, conf, scheduler, reservoirEnabled });
   }
 }

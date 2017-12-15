@@ -73,7 +73,7 @@ public class TestBlockingIPC extends AbstractTestIPC {
     TestFailingRpcServer(Server server, String name,
         List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
         Configuration conf, RpcScheduler scheduler) throws IOException {
-      super(server, name, services, bindAddress, conf, scheduler);
+      super(server, name, services, bindAddress, conf, scheduler, true);
     }
 
     final class FailingConnection extends SimpleServerRpcConnection {
