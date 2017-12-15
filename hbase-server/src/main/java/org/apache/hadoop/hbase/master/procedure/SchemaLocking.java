@@ -143,6 +143,8 @@ class SchemaLocking {
       LockedResourceType.TABLE);
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
+    addToLockedResources(lockedResources, peerLocks, Function.identity(),
+      LockedResourceType.PEER);
     return lockedResources;
   }
 
@@ -164,6 +166,9 @@ class SchemaLocking {
         break;
       case REGION:
         queue = regionLocks.get(resourceName);
+        break;
+      case PEER:
+        queue = peerLocks.get(resourceName);
         break;
       default:
         queue = null;
