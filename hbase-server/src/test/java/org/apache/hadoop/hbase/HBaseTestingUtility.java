@@ -3282,7 +3282,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
                   ServerName serverName =
                       ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + "," +
                           Bytes.toLong(startCode));
-                  if (getHBaseCluster().isKilledRS(serverName)) {
+                  if (!getHBaseClusterInterface().isDistributedCluster()
+                      && getHBaseCluster().isKilledRS(serverName)) {
                     return false;
                   }
                 }
