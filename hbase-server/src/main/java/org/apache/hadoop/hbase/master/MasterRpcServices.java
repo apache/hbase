@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
@@ -1626,12 +1627,27 @@ public class MasterRpcServices extends RSRpcServices
       TableName tableName = RegionInfo.getTable(regionName);
       // if the region is a mob region, do the mob file compaction.
       if (MobUtils.isMobRegionName(tableName, regionName)) {
+        checkHFileFormatVersionForMob();
         return compactMob(request, tableName);
       } else {
         return super.compactRegion(controller, request);
       }
     } catch (IOException ie) {
       throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * check configured hfile format version before to do compaction
+   * @throws IOException throw IOException
+   */
+  private void checkHFileFormatVersionForMob() throws IOException {
+    if (HFile.getFormatVersion(master.getConfiguration()) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+      LOG.error("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+          + " is required for MOB compaction. Compaction will not run.");
+      throw new IOException("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+          + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
+          + " accordingly.");
     }
   }
 
