@@ -42,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -59,7 +60,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
  * An RPC server with Netty4 implementation.
  * @since 2.0.0
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
 public class NettyRpcServer extends RpcServer {
 
   public static final Log LOG = LogFactory.getLog(NettyRpcServer.class);
@@ -71,9 +72,9 @@ public class NettyRpcServer extends RpcServer {
   private final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
-      InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler)
-      throws IOException {
-    super(server, name, services, bindAddress, conf, scheduler);
+      InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
+      boolean reservoirEnabled) throws IOException {
+    super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
     EventLoopGroup eventLoopGroup;
     Class<? extends ServerChannel> channelClass;
