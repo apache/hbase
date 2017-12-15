@@ -15,12 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.master.replication;
 
-package org.apache.hadoop.hbase.procedure2;
+import java.io.IOException;
 
-import org.apache.yetus.audience.InterfaceAudience;
+public class DummyModifyPeerProcedure extends ModifyPeerProcedure {
 
-@InterfaceAudience.Private
-public enum LockedResourceType {
-  SERVER, NAMESPACE, TABLE, REGION, PEER
+  public DummyModifyPeerProcedure() {
+  }
+
+  public DummyModifyPeerProcedure(String peerId) {
+    super(peerId);
+  }
+
+  @Override
+  public PeerOperationType getPeerOperationType() {
+    return PeerOperationType.ADD;
+  }
+
+  @Override
+  protected boolean updatePeerStorage() throws IOException {
+    return true;
+  }
+
 }
