@@ -73,7 +73,7 @@ public class WALFactory implements WALFileLengthProvider {
    * Maps between configuration names for providers and implementation classes.
    */
   static enum Providers {
-    defaultProvider(FSHLogProvider.class),
+    defaultProvider(AsyncFSWALProvider.class),
     filesystem(FSHLogProvider.class),
     multiwal(RegionGroupingProvider.class),
     asyncfs(AsyncFSWALProvider.class);
