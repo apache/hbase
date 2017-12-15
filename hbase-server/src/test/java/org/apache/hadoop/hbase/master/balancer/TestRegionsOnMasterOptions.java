@@ -18,12 +18,15 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
@@ -195,15 +198,6 @@ public class TestRegionsOnMasterOptions {
         // If masterCount == SYSTEM_REGIONS, means master only carrying system regions and should
         // still only carry system regions post crash.
         assertEquals(masterCount, mNewActualCount);
-      }
-      // Disable balancer and wait till RIT done else cluster won't go down.
-      TEST_UTIL.getAdmin().balancerSwitch(false, true);
-      while (true) {
-        if (!TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-            isMetaRegionInTransition()) {
-          break;
-        }
-        Threads.sleep(10);
       }
     } finally {
       LOG.info("Running shutdown of cluster");
