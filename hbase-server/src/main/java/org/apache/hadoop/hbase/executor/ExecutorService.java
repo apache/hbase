@@ -178,7 +178,7 @@ public class ExecutorService {
       // name the threads for this threadpool
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
       tfb.setNameFormat(this.name + "-%d");
-      // TODO: Should these executors be daemon threads?
+      tfb.setDaemon(true);
       this.threadPoolExecutor.setThreadFactory(tfb.build());
     }
 
