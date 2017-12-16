@@ -243,6 +243,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> flushRegionServer(ServerName sn) {
+    return wrap(rawAdmin.flushRegionServer(sn));
+  }
+
+  @Override
   public CompletableFuture<Void> compact(TableName tableName,
       CompactType compactType) {
     return wrap(rawAdmin.compact(tableName, compactType));

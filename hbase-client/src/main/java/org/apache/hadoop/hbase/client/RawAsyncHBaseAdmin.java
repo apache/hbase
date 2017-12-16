@@ -827,22 +827,51 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
               .toStringBinary(regionName)));
           return;
         }
-
-        RegionInfo regionInfo = location.getRegion();
-        this.<Void> newAdminCaller()
-            .serverName(serverName)
-            .action(
-              (controller, stub) -> this.<FlushRegionRequest, FlushRegionResponse, Void> adminCall(
-                controller, stub, RequestConverter.buildFlushRegionRequest(regionInfo
-                    .getRegionName()), (s, c, req, done) -> s.flushRegion(c, req, done),
-                resp -> null)).call().whenComplete((ret, err2) -> {
+        flush(serverName, location.getRegion())
+          .whenComplete((ret, err2) -> {
               if (err2 != null) {
                 future.completeExceptionally(err2);
               } else {
                 future.complete(ret);
               }
-            });
+          });
       });
+    return future;
+  }
+
+  private CompletableFuture<Void> flush(final ServerName serverName, final RegionInfo regionInfo) {
+    return this.<Void> newAdminCaller()
+            .serverName(serverName)
+            .action(
+              (controller, stub) -> this.<FlushRegionRequest, FlushRegionResponse, Void> adminCall(
+                controller, stub, RequestConverter.buildFlushRegionRequest(regionInfo
+                  .getRegionName()), (s, c, req, done) -> s.flushRegion(c, req, done),
+                resp -> null))
+            .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> flushRegionServer(ServerName sn) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegions(sn).whenComplete((hRegionInfos, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      List<CompletableFuture<Void>> compactFutures = new ArrayList<>();
+      if (hRegionInfos != null) {
+        hRegionInfos.forEach(region -> compactFutures.add(flush(sn, region)));
+      }
+      CompletableFuture
+        .allOf(compactFutures.toArray(new CompletableFuture<?>[compactFutures.size()]))
+        .whenComplete((ret, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          } else {
+            future.complete(ret);
+          }
+        });
+    });
     return future;
   }
 

@@ -295,6 +295,12 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flushRegion(byte[] regionName);
 
   /**
+   * Flush all region on the region server.
+   * @param serverName server to flush
+   */
+  CompletableFuture<Void> flushRegionServer(ServerName serverName);
+
+  /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
    * was sent to HBase and may need some time to finish the compact operation.
    * @param tableName table to compact
