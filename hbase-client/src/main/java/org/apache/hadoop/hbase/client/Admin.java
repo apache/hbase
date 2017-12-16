@@ -826,6 +826,13 @@ public interface Admin extends Abortable, Closeable {
   void flushRegion(byte[] regionName) throws IOException;
 
   /**
+   * Flush all regions on the region server. Synchronous operation.
+   * @param serverName the region server name to flush
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flushRegionServer(ServerName serverName) throws IOException;
+
+  /**
    * Compact a table. Asynchronous operation in that this method requests that a
    * Compaction run and then it returns. It does not wait on the completion of Compaction
    * (it can take a while).

@@ -1182,21 +1182,28 @@ public class HBaseAdmin implements Admin {
     if (regionServerPair.getSecond() == null) {
       throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
     }
-    final RegionInfo hRegionInfo = regionServerPair.getFirst();
+    final RegionInfo regionInfo = regionServerPair.getFirst();
     ServerName serverName = regionServerPair.getSecond();
-    final AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
-    Callable<Void> callable = new Callable<Void>() {
-      @Override
-      public Void call() throws Exception {
-        // TODO: There is no timeout on this controller. Set one!
-        HBaseRpcController controller = rpcControllerFactory.newController();
-        FlushRegionRequest request =
-            RequestConverter.buildFlushRegionRequest(hRegionInfo.getRegionName());
-        admin.flushRegion(controller, request);
-        return null;
-      }
-    };
-    ProtobufUtil.call(callable);
+    flush(this.connection.getAdmin(serverName), regionInfo);
+  }
+
+  private void flush(AdminService.BlockingInterface admin, final RegionInfo info)
+    throws IOException {
+    ProtobufUtil.call(() -> {
+      // TODO: There is no timeout on this controller. Set one!
+      HBaseRpcController controller = rpcControllerFactory.newController();
+      FlushRegionRequest request =
+        RequestConverter.buildFlushRegionRequest(info.getRegionName());
+      admin.flushRegion(controller, request);
+      return null;
+    });
+  }
+
+  @Override
+  public void flushRegionServer(ServerName serverName) throws IOException {
+    for (RegionInfo region : getRegions(serverName)) {
+      flush(this.connection.getAdmin(serverName), region);
+    }
   }
 
   /**
