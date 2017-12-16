@@ -609,8 +609,11 @@ public class SplitTableRegionProcedure
     // Shutdown the pool
     threadPool.shutdown();
 
-    // Wait for all the tasks to finish
-    long fileSplitTimeout = conf.getLong("hbase.master.fileSplitTimeout", 30000);
+    // Wait for all the tasks to finish.
+    // When splits ran on the RegionServer, how-long-to-wait-configuration was named
+    // hbase.regionserver.fileSplitTimeout. If set, use its value.
+    long fileSplitTimeout = conf.getLong("hbase.master.fileSplitTimeout",
+        conf.getLong("hbase.regionserver.fileSplitTimeout", 600000));
     try {
       boolean stillRunning = !threadPool.awaitTermination(fileSplitTimeout, TimeUnit.MILLISECONDS);
       if (stillRunning) {

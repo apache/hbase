@@ -402,12 +402,18 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
     this.coprocessorHost = new WALCoprocessorHost(this, conf);
 
-    // Get size to roll log at. Roll at 95% of HDFS block size so we avoid crossing HDFS blocks
-    // (it costs a little x'ing bocks)
+    // Schedule a WAL roll when the WAL is 50% of the HDFS block size. Scheduling at 50% of block
+    // size should make it so WAL rolls before we get to the end-of-block (Block transitions cost
+    // some latency). In hbase-1 we did this differently. We scheduled a roll when we hit 95% of
+    // the block size but experience from the field has it that this was not enough time for the
+    // roll to happen before end-of-block. So the new accounting makes WALs of about the same
+    // size as those made in hbase-1 (to prevent surprise), we now have default block size as
+    // 2 times the DFS default: i.e. 2 * DFS default block size rolling at 50% full will generally
+    // make similar size logs to 1 * DFS default block size rolling at 95% full. See HBASE-19148.
     final long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
-      CommonFSUtils.getDefaultBlockSize(this.fs, this.walDir));
+      CommonFSUtils.getDefaultBlockSize(this.fs, this.walDir) * 2);
     this.logrollsize =
-      (long) (blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
+      (long) (blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.5f));
 
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if (maxLogsDefined) {
