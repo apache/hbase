@@ -109,7 +109,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   private static User USER1, USER2;
 
   private enum Counters {
-    ROWS_VIS_EXP_1, ROWS_VIS_EXP_2, ROWS_VIS_EXP_3, ROWS_VIS_EXP_4;
+    ROWS_VIS_EXP_1, ROWS_VIS_EXP_2, ROWS_VIS_EXP_3, ROWS_VIS_EXP_4
   }
 
   @Override

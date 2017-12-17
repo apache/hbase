@@ -110,7 +110,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   @Test
   public void testIngest() throws Exception {
     runIngestTest(JUNIT_RUN_TIME, 100, 10, 1024, 10, 20);
-  };
+  }
 
   @Override
   protected void initTable() throws IOException {

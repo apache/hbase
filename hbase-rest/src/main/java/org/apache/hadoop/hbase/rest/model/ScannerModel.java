@@ -107,7 +107,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
 
   private byte[] startRow = HConstants.EMPTY_START_ROW;
-  private byte[] endRow = HConstants.EMPTY_END_ROW;;
+  private byte[] endRow = HConstants.EMPTY_END_ROW;
   private List<byte[]> columns = new ArrayList<>();
   private int batch = Integer.MAX_VALUE;
   private long startTime = 0;

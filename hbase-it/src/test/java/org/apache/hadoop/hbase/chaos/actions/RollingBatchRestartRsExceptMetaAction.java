@@ -38,6 +38,5 @@ public class RollingBatchRestartRsExceptMetaAction extends RollingBatchRestartRs
     List<ServerName> servers = super.selectServers();
     servers.remove(metaServer);
     return servers;
-  };
-
+  }
 }

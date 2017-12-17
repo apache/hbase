@@ -1194,7 +1194,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         for (int i = startRow; i < lastRow; i++) {
           if (i % everyN != 0) continue;
           long startTime = System.nanoTime();
-          try (TraceScope scope = TraceUtil.createTrace("test row");){
+          try (TraceScope scope = TraceUtil.createTrace("test row")){
             testRow(i);
           }
           if ( (i - startRow) > opts.measureAfter) {

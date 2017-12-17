@@ -164,8 +164,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
     try (Connection conn = util.getConnection();
          Admin admin = conn.getAdmin();
-         BackupAdmin client = new BackupAdminImpl(conn);) {
-
+         BackupAdmin client = new BackupAdminImpl(conn)) {
       // #0- insert some data to table TABLE_NAME1, TABLE_NAME2
       loadData(TABLE_NAME1, rowsInBatch);
       loadData(TABLE_NAME2, rowsInBatch);

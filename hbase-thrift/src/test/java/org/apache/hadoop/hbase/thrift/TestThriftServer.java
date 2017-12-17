@@ -210,7 +210,7 @@ public class TestThriftServer {
     int currentCountDeleteTable = getCurrentCount("deleteTable_num_ops", 2, metrics);
     int currentCountDisableTable = getCurrentCount("disableTable_num_ops", 2, metrics);
     createTestTables(handler);
-    dropTestTables(handler);;
+    dropTestTables(handler);
     metricsHelper.assertCounter("createTable_num_ops", currentCountCreateTable + 2,
       metrics.getSource());
     metricsHelper.assertCounter("deleteTable_num_ops", currentCountDeleteTable + 2,

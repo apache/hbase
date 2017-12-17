@@ -56,12 +56,12 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
   @Override
   public void updateFsReadTime(long t) {
     fsReadTimeHisto.add(t);
-  };
+  }
 
   @Override
   public void updateFsPReadTime(long t) {
     fsPReadTimeHisto.add(t);
-  };
+  }
 
   @Override
   public void updateFsWriteTime(long t) {
@@ -80,5 +80,4 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
 
     metricsRegistry.snapshot(mrb, all);
   }
-
 }

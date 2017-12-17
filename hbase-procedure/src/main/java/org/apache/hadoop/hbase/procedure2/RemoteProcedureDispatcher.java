@@ -371,5 +371,5 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
     public DelayedTask(final FutureTask<Void> task, final long delay, final TimeUnit unit) {
       super(task, EnvironmentEdgeManager.currentTime() + unit.toMillis(delay));
     }
-  };
+  }
 }

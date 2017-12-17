@@ -649,7 +649,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     slotsCache.offer(slot);
   }
 
-  private enum PushType { INSERT, UPDATE, DELETE };
+  private enum PushType { INSERT, UPDATE, DELETE }
 
   private long pushData(final PushType type, final ByteSlot slot,
       final long procId, final long[] subProcIds) {

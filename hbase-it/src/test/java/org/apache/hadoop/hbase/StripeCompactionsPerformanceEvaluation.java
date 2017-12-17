@@ -346,5 +346,5 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     public boolean verify(byte[] rowKey, byte[] cf, Set<byte[]> columnSet) {
       return true;
     }
-  };
+  }
 }

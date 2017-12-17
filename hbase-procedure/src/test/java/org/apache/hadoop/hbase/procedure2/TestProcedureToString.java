@@ -32,7 +32,7 @@ public class TestProcedureToString {
   /**
    * A do-nothing environment for BasicProcedure.
    */
-  static class BasicProcedureEnv {};
+  static class BasicProcedureEnv {}
 
   /**
    * A do-nothing basic procedure just for testing toString.

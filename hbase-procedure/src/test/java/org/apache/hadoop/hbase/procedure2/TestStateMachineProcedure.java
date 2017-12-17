@@ -149,7 +149,8 @@ public class TestStateMachineProcedure {
     assertEquals(TEST_FAILURE_EXCEPTION, cause);
   }
 
-  public enum TestSMProcedureState { STEP_1, STEP_2 };
+  public enum TestSMProcedureState { STEP_1, STEP_2 }
+
   public static class TestSMProcedure
       extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
     protected Flow executeFromState(TestProcEnv env, TestSMProcedureState state) {

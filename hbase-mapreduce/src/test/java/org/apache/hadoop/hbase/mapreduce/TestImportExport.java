@@ -185,7 +185,7 @@ public class TestImportExport {
    */
   @Test
   public void testSimpleCase() throws Throwable {
-    try (Table t = UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILYA, 3);) {
+    try (Table t = UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILYA, 3)) {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, QUAL, now, QUAL);
       p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
@@ -203,37 +203,37 @@ public class TestImportExport {
       t.put(p);
     }
 
-      String[] args = new String[] {
-          // Only export row1 & row2.
-          "-D" + TableInputFormat.SCAN_ROW_START + "=\\x32row1",
-          "-D" + TableInputFormat.SCAN_ROW_STOP + "=\\x32row3",
-          name.getMethodName(),
-          FQ_OUTPUT_DIR,
-          "1000", // max number of key versions per key to export
+    String[] args = new String[] {
+      // Only export row1 & row2.
+      "-D" + TableInputFormat.SCAN_ROW_START + "=\\x32row1",
+      "-D" + TableInputFormat.SCAN_ROW_STOP + "=\\x32row3",
+      name.getMethodName(),
+      FQ_OUTPUT_DIR,
+      "1000", // max number of key versions per key to export
+    };
+    assertTrue(runExport(args));
+
+    final String IMPORT_TABLE = name.getMethodName() + "import";
+    try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3)) {
+      args = new String[] {
+        "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
+        IMPORT_TABLE,
+        FQ_OUTPUT_DIR
       };
-      assertTrue(runExport(args));
+      assertTrue(runImport(args));
 
-      final String IMPORT_TABLE = name.getMethodName() + "import";
-      try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3);) {
-        args = new String[] {
-            "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
-            IMPORT_TABLE,
-            FQ_OUTPUT_DIR
-        };
-        assertTrue(runImport(args));
-
-        Get g = new Get(ROW1);
-        g.setMaxVersions();
-        Result r = t.get(g);
-        assertEquals(3, r.size());
-        g = new Get(ROW2);
-        g.setMaxVersions();
-        r = t.get(g);
-        assertEquals(3, r.size());
-        g = new Get(ROW3);
-        r = t.get(g);
-        assertEquals(0, r.size());
-      }
+      Get g = new Get(ROW1);
+      g.setMaxVersions();
+      Result r = t.get(g);
+      assertEquals(3, r.size());
+      g = new Get(ROW2);
+      g.setMaxVersions();
+      r = t.get(g);
+      assertEquals(3, r.size());
+      g = new Get(ROW3);
+      r = t.get(g);
+      assertEquals(0, r.size());
+    }
   }
 
   /**
@@ -267,7 +267,7 @@ public class TestImportExport {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR + name));
     String IMPORT_TABLE = name;
-    try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3);) {
+    try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3)) {
       String[] args = new String[] {
               "-Dhbase.import.version=0.94" ,
               IMPORT_TABLE, FQ_OUTPUT_DIR
@@ -297,8 +297,7 @@ public class TestImportExport {
               .build())
             .build();
     UTIL.getAdmin().createTable(desc);
-    try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
-
+    try (Table t = UTIL.getConnection().getTable(desc.getTableName())) {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, QUAL, now, QUAL);
       p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
@@ -329,8 +328,7 @@ public class TestImportExport {
               .build())
             .build();
     UTIL.getAdmin().createTable(desc);
-    try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
-
+    try (Table t = UTIL.getConnection().getTable(desc.getTableName())) {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, QUAL, now, QUAL);
       p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
@@ -363,7 +361,7 @@ public class TestImportExport {
               .build())
             .build();
     UTIL.getAdmin().createTable(desc);
-    try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
+    try (Table t = UTIL.getConnection().getTable(desc.getTableName())) {
       args = new String[] {
           IMPORT_TABLE,
           FQ_OUTPUT_DIR
@@ -717,8 +715,7 @@ public class TestImportExport {
   public void testDurability() throws Throwable {
     // Create an export table.
     String exportTableName = name.getMethodName() + "export";
-    try (Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);) {
-
+    try (Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3)) {
       // Insert some data
       Put put = new Put(ROW1);
       put.addColumn(FAMILYA, QUAL, now, QUAL);

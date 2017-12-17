@@ -80,7 +80,7 @@ public class TestCopyTable {
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
     try (Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
-         Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);) {
+         Table t2 = TEST_UTIL.createTable(tableName2, FAMILY)) {
       // put rows into the first table
       for (int i = 0; i < 10; i++) {
         Put p = new Put(Bytes.toBytes("row" + i));
