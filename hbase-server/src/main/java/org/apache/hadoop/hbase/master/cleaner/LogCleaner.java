@@ -163,7 +163,9 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
         LOG.warn("Failed to clean oldwals with exception: " + e);
         succeed = false;
       } finally {
-        context.setResult(succeed);
+        if (context != null) {
+          context.setResult(succeed);
+        }
         if (interrupted) {
           // Restore interrupt status
           Thread.currentThread().interrupt();
