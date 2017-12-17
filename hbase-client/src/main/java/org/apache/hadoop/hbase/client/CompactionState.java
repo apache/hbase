@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -23,5 +24,5 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public enum CompactionState {
-  NONE, MINOR, MAJOR, MAJOR_AND_MINOR;
+  NONE, MINOR, MAJOR, MAJOR_AND_MINOR
 }

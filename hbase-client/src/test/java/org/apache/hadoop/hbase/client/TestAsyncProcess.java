@@ -659,7 +659,7 @@ public class TestAsyncProcess {
 
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF, true);
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
-    try (BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);) {
+    try (BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap)) {
       mutator.mutate(puts);
       mutator.flush();
       List<AsyncRequestFuture> reqs = ap.allReqs;

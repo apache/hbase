@@ -483,6 +483,6 @@ public class ClusterStatus {
     BACKUP_MASTERS, /** status about backup masters */
     MASTER_COPROCESSORS, /** status about master coprocessors */
     REGIONS_IN_TRANSITION, /** status about regions in transition */
-    MASTER_INFO_PORT; /** master info port **/
+    MASTER_INFO_PORT /** master info port **/
   }
 }

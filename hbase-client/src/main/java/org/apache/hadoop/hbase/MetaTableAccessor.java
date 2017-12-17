@@ -332,7 +332,7 @@ public class MetaTableAccessor {
       parsedInfo = parseRegionInfoFromRegionName(regionName);
       row = getMetaKeyForRegion(parsedInfo);
     } catch (Exception parseEx) {
-      ; // Ignore. This is used with tableName passed as regionName.
+      // Ignore. This is used with tableName passed as regionName.
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);

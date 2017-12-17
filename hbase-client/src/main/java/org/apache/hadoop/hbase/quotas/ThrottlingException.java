@@ -67,7 +67,7 @@ public class ThrottlingException extends QuotaExceededException {
       int index = msg.indexOf(MSG_TYPE[i]);
       if (index >= 0) {
         String waitTimeStr = msg.substring(index + MSG_TYPE[i].length() + MSG_WAIT.length());
-        type = Type.values()[i];;
+        type = Type.values()[i];
         waitInterval = timeFromString(waitTimeStr);
         break;
       }
