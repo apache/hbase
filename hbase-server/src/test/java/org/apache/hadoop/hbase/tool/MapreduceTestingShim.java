@@ -126,7 +126,7 @@ abstract public class MapreduceTestingShim {
     public String obtainMROutputDirProp() {
       return "mapred.output.dir";
     }
-  };
+  }
 
   private static class MapreduceV2Shim extends MapreduceTestingShim {
     public JobContext newJobContext(Configuration jobConf) {
@@ -166,6 +166,5 @@ abstract public class MapreduceTestingShim {
       // from Hadoop 0.23.x.  If we use the source directly we break the hadoop 1.x compile.
       return "mapreduce.output.fileoutputformat.outputdir";
     }
-  };
-
+  }
 }

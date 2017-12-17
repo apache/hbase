@@ -262,7 +262,7 @@ public abstract class AbstractTestDLS {
     master.balanceSwitch(false);
 
     try (ZKWatcher zkw = new ZKWatcher(conf, "table-creation", null);
-        Table ht = installTable(zkw, numRegionsToCreate);) {
+        Table ht = installTable(zkw, numRegionsToCreate)) {
       HRegionServer hrs = findRSToKill(false);
       List<RegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       makeWAL(hrs, regions, numLogLines, 100);

@@ -87,7 +87,7 @@ public class TestCacheConfig {
       LOG.info("Deserialized " + b);
       return cacheable;
     }
-  };
+  }
 
   static class IndexCacheEntry extends DataCacheEntry {
     private static IndexCacheEntry SINGLETON = new IndexCacheEntry();
@@ -118,7 +118,7 @@ public class TestCacheConfig {
     @Override
     public String toString() {
       return "size=" + SIZE + ", type=" + getBlockType();
-    };
+    }
 
     @Override
     public long heapSize() {
@@ -149,7 +149,7 @@ public class TestCacheConfig {
     public MemoryType getMemoryType() {
       return MemoryType.EXCLUSIVE;
     }
-  };
+  }
 
   static class MetaCacheEntry extends DataCacheEntry {
     @Override

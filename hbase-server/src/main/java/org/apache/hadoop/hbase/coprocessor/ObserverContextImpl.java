@@ -58,7 +58,7 @@ public class ObserverContextImpl<E extends CoprocessorEnvironment> implements Ob
 
   public boolean isBypassable() {
     return this.bypassable;
-  };
+  }
 
   public void bypass() {
     if (!this.bypassable) {

@@ -52,7 +52,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWALMethods {
-  private static final byte[] TEST_REGION = Bytes.toBytes("test_region");;
+  private static final byte[] TEST_REGION = Bytes.toBytes("test_region");
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
 

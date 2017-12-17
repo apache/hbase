@@ -90,7 +90,7 @@ public class TestSplitOrMergeStatus {
     assertFalse(results[0]);
     admin.split(t.getName());
     while ((count = admin.getTableRegions(tableName).size()) == originalCount) {
-      Threads.sleep(1);;
+      Threads.sleep(1);
     }
     count = admin.getTableRegions(tableName).size();
     assertTrue(originalCount < count);
@@ -110,7 +110,7 @@ public class TestSplitOrMergeStatus {
     admin.split(t.getName());
     int postSplitCount = -1;
     while ((postSplitCount = admin.getTableRegions(tableName).size()) == originalCount) {
-      Threads.sleep(1);;
+      Threads.sleep(1);
     }
     assertTrue("originalCount=" + originalCount + ", newCount=" + postSplitCount,
         originalCount != postSplitCount);

@@ -222,7 +222,7 @@ public class TestVisibilityLabelsReplication {
     try (Table table = writeData(TABLE_NAME, "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL
             + ")&(" + TOPSECRET + ")", "(" + PRIVATE + "|" + CONFIDENTIAL + ")&(" + PUBLIC + "|"
             + TOPSECRET + ")", "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
-        CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);) {
+        CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET)) {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL, PRIVATE, TOPSECRET,
           UNICODE_VIS_TAG));
@@ -250,7 +250,7 @@ public class TestVisibilityLabelsReplication {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row4, 0, row4.length));
-      try (Table table2 = TEST_UTIL1.getConnection().getTable(TABLE_NAME);) {
+      try (Table table2 = TEST_UTIL1.getConnection().getTable(TABLE_NAME)) {
         s = new Scan();
         // Ensure both rows are replicated
         scanner = table2.getScanner(s);

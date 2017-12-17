@@ -71,7 +71,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
   private Map<TableName, Procedure> procMap = new HashMap<>();
   private boolean stopped;
 
-  public MasterFlushTableProcedureManager() {};
+  public MasterFlushTableProcedureManager() {}
 
   @Override
   public void stop(String why) {

@@ -75,7 +75,7 @@ public class TestMultiLogThreshold {
   }
 
   private enum ActionType {
-    REGION_ACTIONS, ACTIONS;
+    REGION_ACTIONS, ACTIONS
   }
 
   /**

@@ -78,7 +78,7 @@ public class IOTestProvider implements WALProvider {
     append,
     sync,
     fileroll,
-    none;
+    none
   }
 
   private FSHLog log = null;

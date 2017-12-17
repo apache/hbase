@@ -203,7 +203,7 @@ public class TestStoreScanner {
                       PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK3_BOUNDARY]):
                         PrivateCellUtil.createFirstOnRow(CELL_GRID[CELL_GRID_BLOCK2_BOUNDARY]);
     }
-  };
+  }
 
   private static final int CELL_WITH_VERSIONS_BLOCK2_BOUNDARY = 4;
 
@@ -243,7 +243,7 @@ public class TestStoreScanner {
       return PrivateCellUtil
           .createFirstOnRow(CELL_WITH_VERSIONS[CELL_WITH_VERSIONS_BLOCK2_BOUNDARY]);
     }
-  };
+  }
 
   private static class CellWithVersionsNoOptimizeStoreScanner extends StoreScanner {
     // Count of how often optimize is called and of how often it does an optimize.
@@ -269,7 +269,7 @@ public class TestStoreScanner {
     public Cell getNextIndexedKey() {
       return null;
     }
-  };
+  }
 
   @Test
   public void testWithColumnCountGetFilter() throws Exception {

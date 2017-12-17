@@ -3429,7 +3429,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       }
       if (this.serverManager.addServerToDrainList(server)) {
         serversAdded.add(server);
-      };
+      }
     }
     // Move the regions off the decommissioned servers.
     if (offload) {

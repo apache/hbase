@@ -228,7 +228,7 @@ public class TestMasterNoCluster {
       while (!master.serviceStarted) Threads.sleep(10);
       // Fake master that there are regionservers out there.  Report in.
       for (int i = 0; i < sns.length; i++) {
-        RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();;
+        RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
         ServerName sn = ServerName.parseVersionedServerName(sns[i].getVersionedBytes());
         request.setServer(ProtobufUtil.toServerName(sn));
         request.setLoad(ServerMetricsBuilder.toServerLoad(ServerMetricsBuilder.of(sn)));

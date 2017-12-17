@@ -59,6 +59,6 @@ public abstract class MobCompactionRequest {
     /**
      * All of mob files are selected.
      */
-    ALL_FILES;
+    ALL_FILES
   }
 }

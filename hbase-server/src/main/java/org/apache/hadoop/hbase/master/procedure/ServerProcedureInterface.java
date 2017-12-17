@@ -30,7 +30,7 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface ServerProcedureInterface {
   public enum ServerOperationType {
     CRASH_HANDLER
-  };
+  }
 
   /**
    * @return Name of this server instance.

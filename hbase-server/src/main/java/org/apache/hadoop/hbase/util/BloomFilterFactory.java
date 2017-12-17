@@ -229,4 +229,4 @@ public final class BloomFilterFactory {
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }
-};
+}

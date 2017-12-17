@@ -31,5 +31,5 @@ public enum Operator {
 
   public String toString() {
     return String.valueOf(this.rep);
-  };
+  }
 }

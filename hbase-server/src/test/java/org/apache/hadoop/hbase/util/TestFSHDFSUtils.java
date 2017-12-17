@@ -47,7 +47,7 @@ public class TestFSHDFSUtils {
     Configuration conf = HTU.getConfiguration();
     conf.setInt("hbase.lease.recovery.first.pause", 10);
     conf.setInt("hbase.lease.recovery.pause", 10);
-  };
+  }
   private FSHDFSUtils fsHDFSUtils = new FSHDFSUtils();
   private static Path FILE = new Path(HTU.getDataTestDir(), "file.txt");
   long startTime = -1;

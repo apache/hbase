@@ -73,7 +73,7 @@ public class ProcessBasedLocalHBaseCluster {
       ProcessBasedLocalHBaseCluster.class);
 
   private List<String> daemonPidFiles =
-      Collections.synchronizedList(new ArrayList<String>());;
+      Collections.synchronizedList(new ArrayList<String>());
 
   private boolean shutdownHookInstalled;
 

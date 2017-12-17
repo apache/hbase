@@ -293,7 +293,7 @@ public class TestRegionReplicaFailover {
           } catch (Throwable e) {
             ex.compareAndSet(null, e);
           }
-        };
+        }
       };
 
       aborter.start();

@@ -223,7 +223,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   @Override
   public void checkTasks() {
     rescan(Long.MAX_VALUE);
-  };
+  }
 
   /**
    * signal the workers that a task was resubmitted by creating the RESCAN node.
@@ -554,7 +554,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       /**
        * task completed with error
        */
-      ERR();
+      ERR()
     }
 
     /**

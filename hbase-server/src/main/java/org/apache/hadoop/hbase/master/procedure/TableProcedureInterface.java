@@ -33,7 +33,7 @@ public interface TableProcedureInterface {
     CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
     REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,
       REGION_GC, MERGED_REGIONS_GC/* region operations */
-  };
+  }
 
   /**
    * @return the name of the table the procedure is operating on

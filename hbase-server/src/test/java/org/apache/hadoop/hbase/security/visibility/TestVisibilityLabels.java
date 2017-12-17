@@ -375,7 +375,7 @@ public abstract class TestVisibilityLabels {
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     waitForLabelsRegionAvailability(rs.getRegionServer());
     try (Table table = createTableAndWriteDataWithLabels(tableName, "(" + SECRET + "|" + CONFIDENTIAL
-        + ")", PRIVATE);) {
+        + ")", PRIVATE)) {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(s);
@@ -425,7 +425,7 @@ public abstract class TestVisibilityLabels {
       }
     };
     SUPERUSER.runAs(action);
-    try (Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME);) {
+    try (Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME)) {
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
       ResultScanner scanner = ht.getScanner(scan);
@@ -616,7 +616,7 @@ public abstract class TestVisibilityLabels {
   @Test
   public void testLabelsWithAppend() throws Throwable {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    try (Table table = TEST_UTIL.createTable(tableName, fam);) {
+    try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] val = Bytes.toBytes("a");
       Put put = new Put(row1);

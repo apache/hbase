@@ -349,7 +349,7 @@ public class TestWALObserver {
         // Make a new wal for new region open.
         final WALFactory wals2 = new WALFactory(conf, null,
             ServerName.valueOf(currentTest.getMethodName()+"2", 16010, System.currentTimeMillis()).toString());
-        WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION, null);;
+        WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION, null);
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
             hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
         long seqid2 = region.getOpenSeqNum();

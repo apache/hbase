@@ -834,7 +834,7 @@ public class HFileBlock implements Cacheable {
       INIT,
       WRITING,
       BLOCK_READY
-    };
+    }
 
     /** Writer state. Used to ensure the correct usage protocol. */
     private State state = State.INIT;

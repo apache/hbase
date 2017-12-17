@@ -352,7 +352,7 @@ public class TestHRegionFileSystem {
 
     // Create a Region
     String familyName = "cf";
-    ;
+
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
 

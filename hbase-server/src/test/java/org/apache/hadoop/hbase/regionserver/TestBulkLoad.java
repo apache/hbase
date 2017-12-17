@@ -120,7 +120,7 @@ public class TestBulkLoad {
                   walKey.setWriteEntry(we);
                 }
                 return 01L;
-              };
+              }
     });
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1)
         .bulkLoadHFiles(familyPaths, false, null);
@@ -145,7 +145,7 @@ public class TestBulkLoad {
                   walKey.setWriteEntry(we);
                 }
                 return 01L;
-              };
+              }
     });
     testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
     verify(log).sync(anyLong());
@@ -164,7 +164,7 @@ public class TestBulkLoad {
                   walKey.setWriteEntry(we);
                 }
                 return 01L;
-              };
+              }
             });
     testRegionWithFamilies(family1, family2).bulkLoadHFiles(withFamilyPathsFor(family1, family2),
             false, null);
@@ -184,7 +184,7 @@ public class TestBulkLoad {
                   walKey.setWriteEntry(we);
                 }
                 return 01L;
-              };
+              }
     });
     TableName tableName = TableName.valueOf("test", "test");
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1, family2)

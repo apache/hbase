@@ -542,7 +542,7 @@ public class TestSplitLogManager {
             }
           }
         }
-      };
+      }
     }.start();
 
     slm.splitLogDistributed(logDirPath);

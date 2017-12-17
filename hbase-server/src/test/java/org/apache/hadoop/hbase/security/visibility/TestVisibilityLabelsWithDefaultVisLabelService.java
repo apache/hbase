@@ -222,7 +222,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   public void testVisibilityLabelsOnWALReplay() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     try (Table table = createTableAndWriteDataWithLabels(tableName,
-        "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE);) {
+        "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE)) {
       List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
           .getRegionServerThreads();
       for (RegionServerThread rsThread : regionServerThreads) {

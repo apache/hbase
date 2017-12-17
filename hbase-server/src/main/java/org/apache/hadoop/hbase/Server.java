@@ -103,7 +103,7 @@ public interface Server extends Abortable, Stoppable {
       // If an exception, just return null
     }
     return fs;
-  };
+  }
 
   /**
    * @return True is the server is Stopping

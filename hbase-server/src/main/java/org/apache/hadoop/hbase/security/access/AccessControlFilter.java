@@ -55,7 +55,7 @@ class AccessControlFilter extends FilterBase {
     CHECK_TABLE_AND_CF_ONLY,
     /** Cell permissions can override table or CF permissions */
     CHECK_CELL_DEFAULT,
-  };
+  }
 
   private TableAuthManager authManager;
   private TableName table;

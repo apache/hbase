@@ -348,9 +348,9 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName);) {
+            Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
-          try (ResultScanner scanner1 = table.getScanner(s1);) {
+          try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
             assertTrue("User having table level access should be able to scan all "
                 + "the data in the table.", next1.length == 3);
@@ -364,9 +364,9 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName);) {
+            Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
-          try (ResultScanner scanner1 = table.getScanner(s1);) {
+          try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
             assertTrue("User having column family level access should be able to scan all "
                 + "the data belonging to that family.", next1.length == 2);
@@ -380,10 +380,10 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName);) {
+            Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           s1.addFamily(TEST_FAMILY_2);
-          try (ResultScanner scanner1 = table.getScanner(s1);) {
+          try (ResultScanner scanner1 = table.getScanner(s1)) {
             scanner1.next();
           }
         }
@@ -395,9 +395,9 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName);) {
+            Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
-          try (ResultScanner scanner1 = table.getScanner(s1);) {
+          try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
             assertTrue("User having column qualifier level access should be able to scan "
                 + "that column family qualifier data.", next1.length == 1);
@@ -411,10 +411,10 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName);) {
+            Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           s1.addFamily(TEST_FAMILY_2);
-          try (ResultScanner scanner1 = table.getScanner(s1);) {
+          try (ResultScanner scanner1 = table.getScanner(s1)) {
             scanner1.next();
           }
         }
@@ -426,10 +426,10 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName);) {
+            Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           s1.addColumn(TEST_FAMILY, Q2);
-          try (ResultScanner scanner1 = table.getScanner(s1);) {
+          try (ResultScanner scanner1 = table.getScanner(s1)) {
             scanner1.next();
           }
         }

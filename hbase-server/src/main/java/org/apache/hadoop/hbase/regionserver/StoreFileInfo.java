@@ -552,8 +552,7 @@ public class StoreFileInfo {
     if (link != o.link && link != null && !link.equals(o.link)) return false;
 
     return true;
-  };
-
+  }
 
   @Override
   public int hashCode() {

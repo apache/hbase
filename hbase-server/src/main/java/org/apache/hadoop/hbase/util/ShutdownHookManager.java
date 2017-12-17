@@ -64,7 +64,7 @@ abstract public class ShutdownHookManager {
       
       return Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
     }
-  };
+  }
 
   private static class ShutdownHookManagerV2 extends ShutdownHookManager {
     public void addShutdownHook(Thread shutdownHookThread, int priority) {
@@ -91,6 +91,5 @@ abstract public class ShutdownHookManager {
         throw new RuntimeException("we could not use ShutdownHookManager", ex);
       }
     }
-  };
-
+  }
 }

@@ -77,7 +77,7 @@ public class TestProcedure {
     public void sendGlobalBarrierComplete() {
       completedProcedure.countDown();
     }
-  };
+  }
 
   /**
    * With a single member, verify ordered execution.  The Coordinator side is run in a separate

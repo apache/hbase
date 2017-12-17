@@ -116,7 +116,7 @@ public class TestAssignProcedure {
       // Happens after the code we are testing has been called.
       this.remoteCallFailedWasCalled.set(true);
     }
-  };
+  }
 
   /**
    * Test that we deal with ServerCrashProcedure zero'ing out the targetServer in the

@@ -186,7 +186,7 @@ public class RegionAsTable implements Table {
     public ScanMetrics getScanMetrics() {
       throw new UnsupportedOperationException();
     }
-  };
+  }
 
   @Override
   public ResultScanner getScanner(Scan scan) throws IOException {

@@ -337,5 +337,5 @@ abstract public class Subprocedure implements Callable<Void> {
 
     @Override
     public void cleanup(Exception e) {}
-  };
+  }
 }

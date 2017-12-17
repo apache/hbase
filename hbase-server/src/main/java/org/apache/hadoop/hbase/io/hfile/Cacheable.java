@@ -73,6 +73,6 @@ public interface Cacheable extends HeapSize {
    * exclusive memory area of this Cacheable.
    */
   public static enum MemoryType {
-    SHARED, EXCLUSIVE;
+    SHARED, EXCLUSIVE
   }
 }

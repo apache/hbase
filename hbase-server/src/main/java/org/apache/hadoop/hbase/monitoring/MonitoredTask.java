@@ -29,7 +29,7 @@ public interface MonitoredTask extends Cloneable {
     RUNNING,
     WAITING,
     COMPLETE,
-    ABORTED;
+    ABORTED
   }
 
   long getStartTime();

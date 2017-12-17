@@ -444,7 +444,7 @@ public class TestFlushSnapshotFromClient {
             .toString(ProtobufUtil.createHBaseProtosSnapshotDesc(ss)));
         toBeSubmitted.countDown();
       }
-    };
+    }
 
     // build descriptions
     SnapshotDescription[] descs = new SnapshotDescription[ssNum];

@@ -182,8 +182,8 @@ public class TestMetaWithReplicas {
       util.getAdmin().deleteTable(TABLE);
     }
     ServerName master = null;
-    try (Connection c = ConnectionFactory.createConnection(util.getConfiguration());) {
-      try (Table htable = util.createTable(TABLE, FAMILIES);) {
+    try (Connection c = ConnectionFactory.createConnection(util.getConfiguration())) {
+      try (Table htable = util.createTable(TABLE, FAMILIES)) {
         util.getAdmin().flush(TableName.META_TABLE_NAME);
         Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
             30000) * 6);
@@ -219,7 +219,7 @@ public class TestMetaWithReplicas {
       Get get = null;
       Result r = null;
       byte[] row = "test".getBytes();
-      try (Table htable = c.getTable(TABLE);) {
+      try (Table htable = c.getTable(TABLE)) {
         Put put = new Put(row);
         put.addColumn("foo".getBytes(), row, row);
         BufferedMutator m = c.getBufferedMutator(TABLE);
@@ -237,7 +237,7 @@ public class TestMetaWithReplicas {
         ((ClusterConnection)c).clearRegionCache();
       }
       conf.setBoolean(HConstants.USE_META_REPLICAS, false);
-      try (Table htable = c.getTable(TABLE);) {
+      try (Table htable = c.getTable(TABLE)) {
         r = htable.get(get);
         assertTrue(Arrays.equals(r.getRow(), row));
       }
@@ -252,7 +252,7 @@ public class TestMetaWithReplicas {
       TEST_UTIL.getAdmin().disableTable(tableName);
       TEST_UTIL.getAdmin().deleteTable(tableName);
     }
-    try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES);) {
+    try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES)) {
       byte[] row = "test".getBytes();
       ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
       // check that metalookup pool would get created
@@ -440,7 +440,7 @@ public class TestMetaWithReplicas {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
     try (ClusterConnection conn = (ClusterConnection)
-        ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());) {
+        ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       RegionLocations rl = conn.
           locateRegion(TableName.META_TABLE_NAME, Bytes.toBytes(""), false, true);
       HRegionLocation hrl = rl.getRegionLocation(1);

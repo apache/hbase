@@ -208,7 +208,7 @@ public class TestSnapshotFileCache {
       files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
       return files;
     }
-  };
+  }
 
   private SnapshotMock.SnapshotBuilder createAndTestSnapshotV1(final SnapshotFileCache cache,
       final String name, final boolean tmp, final boolean removeOnExit) throws IOException {

@@ -290,7 +290,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    */
   @VisibleForTesting
   protected void beforeWaitOnSafePoint() {
-  };
+  }
 
   @Override
   protected void doAppend(Writer writer, FSWALEntry entry) throws IOException {

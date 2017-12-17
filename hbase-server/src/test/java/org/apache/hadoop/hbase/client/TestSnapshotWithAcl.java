@@ -87,7 +87,7 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
       }
       return null;
     }
-  };
+  }
 
   static class AccessWriteAction implements AccessTestAction {
     private TableName tableName;

@@ -212,7 +212,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           throw new RuntimeException(e.getCause());
         }
       }
-    };
+    }
 
     Object createObject(ClientProtocol instance, String src, FsPermission masked, String clientName,
         EnumSetWritable<CreateFlag> flag, boolean createParent, short replication, long blockSize,
