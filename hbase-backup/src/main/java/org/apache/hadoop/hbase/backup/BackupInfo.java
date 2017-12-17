@@ -62,7 +62,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * Backup session states
    */
   public static enum BackupState {
-    RUNNING, COMPLETE, FAILED, ANY;
+    RUNNING, COMPLETE, FAILED, ANY
   }
 
   /**
@@ -70,7 +70,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * BackupState.RUNNING
    */
   public static enum BackupPhase {
-    REQUEST, SNAPSHOT, PREPARE_INCREMENTAL, SNAPSHOTCOPY, INCREMENTAL_COPY, STORE_MANIFEST;
+    REQUEST, SNAPSHOT, PREPARE_INCREMENTAL, SNAPSHOTCOPY, INCREMENTAL_COPY, STORE_MANIFEST
   }
 
   /**

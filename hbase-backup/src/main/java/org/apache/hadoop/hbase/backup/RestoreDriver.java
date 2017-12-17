@@ -147,7 +147,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     String tableMapping =
         cmd.hasOption(OPTION_TABLE_MAPPING) ? cmd.getOptionValue(OPTION_TABLE_MAPPING) : null;
     try (final Connection conn = ConnectionFactory.createConnection(conf);
-        BackupAdmin client = new BackupAdminImpl(conn);) {
+        BackupAdmin client = new BackupAdminImpl(conn)) {
       // Check backup set
       if (cmd.hasOption(OPTION_SET)) {
         String setName = cmd.getOptionValue(OPTION_SET);

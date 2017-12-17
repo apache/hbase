@@ -92,7 +92,7 @@ public class RestoreTablesClient {
     ArrayList<TableName> disabledTableList = new ArrayList<>();
 
     // check if the tables already exist
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       for (TableName tableName : tTableArray) {
         if (admin.tableExists(tableName)) {
           existTableList.add(tableName);

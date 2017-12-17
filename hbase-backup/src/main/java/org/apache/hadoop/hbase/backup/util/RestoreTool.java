@@ -125,7 +125,7 @@ public class RestoreTool {
 
   void modifyTableSync(Connection conn, TableDescriptor desc) throws IOException {
 
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       admin.modifyTable(desc);
       int attempt = 0;
       int maxAttempts = 600;
@@ -156,7 +156,7 @@ public class RestoreTool {
   public void incrementalRestoreTable(Connection conn, Path tableBackupPath, Path[] logDirs,
       TableName[] tableNames, TableName[] newTableNames, String incrBackupId) throws IOException {
 
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       if (tableNames.length != newTableNames.length) {
         throw new IOException("Number of source tables and target tables does not match!");
       }
@@ -474,7 +474,7 @@ public class RestoreTool {
   private void checkAndCreateTable(Connection conn, Path tableBackupPath, TableName tableName,
       TableName targetTableName, ArrayList<Path> regionDirList, TableDescriptor htd,
       boolean truncateIfExists) throws IOException {
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       boolean createNew = false;
       if (admin.tableExists(targetTableName)) {
         if (truncateIfExists) {

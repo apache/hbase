@@ -144,7 +144,7 @@ public final class BackupCommands {
       conn = ConnectionFactory.createConnection(getConf());
       if (requiresNoActiveSession()) {
         // Check active session
-        try (BackupSystemTable table = new BackupSystemTable(conn);) {
+        try (BackupSystemTable table = new BackupSystemTable(conn)) {
           List<BackupInfo> sessions = table.getBackupInfos(BackupState.RUNNING);
 
           if (sessions.size() > 0) {
@@ -158,7 +158,7 @@ public final class BackupCommands {
       }
       if (requiresConsistentState()) {
         // Check failed delete
-        try (BackupSystemTable table = new BackupSystemTable(conn);) {
+        try (BackupSystemTable table = new BackupSystemTable(conn)) {
           String[] ids = table.getListOfBackupIdsFromDeleteOperation();
 
           if (ids != null && ids.length > 0) {
@@ -332,8 +332,7 @@ public final class BackupCommands {
         System.setProperty("mapreduce.job.queuename", queueName);
       }
 
-      try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
-
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         BackupRequest.Builder builder = new BackupRequest.Builder();
         BackupRequest request =
             builder
@@ -471,7 +470,7 @@ public final class BackupCommands {
       super.execute();
 
       String backupId = args[1];
-      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         BackupInfo info = sysTable.readBackupInfo(backupId);
         if (info == null) {
           System.out.println("ERROR: " + backupId + " does not exist");
@@ -512,7 +511,7 @@ public final class BackupCommands {
       super.execute();
 
       String backupId = (args == null || args.length <= 1) ? null : args[1];
-      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         BackupInfo info = null;
 
         if (backupId != null) {
@@ -569,7 +568,7 @@ public final class BackupCommands {
       String[] args = cmdline.getArgs();
       String[] backupIds = new String[args.length - 1];
       System.arraycopy(args, 1, backupIds, 0, backupIds.length);
-      try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + (args.length -1));
       } catch (IOException e) {
@@ -606,8 +605,7 @@ public final class BackupCommands {
 
       Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
       try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
-
+          final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         // Failed backup
         BackupInfo backupInfo;
         List<BackupInfo> list = sysTable.getBackupInfos(BackupState.RUNNING);
@@ -658,7 +656,7 @@ public final class BackupCommands {
       BackupSystemTable.restoreFromSnapshot(conn);
       // Finish previous failed session
       sysTable.finishBackupExclusiveOperation();
-      try (BackupAdmin admin = new BackupAdminImpl(conn);) {
+      try (BackupAdmin admin = new BackupAdminImpl(conn)) {
         admin.deleteBackups(backupIds);
       }
       System.out.println("DELETE operation finished OK: " + StringUtils.join(backupIds));
@@ -682,7 +680,7 @@ public final class BackupCommands {
       sysTable.finishBackupExclusiveOperation();
       // Finish previous failed session
       sysTable.finishMergeOperation();
-      try (BackupAdmin admin = new BackupAdminImpl(conn);) {
+      try (BackupAdmin admin = new BackupAdminImpl(conn)) {
         admin.mergeBackups(backupIds);
       }
       System.out.println("MERGE operation finished OK: " + StringUtils.join(backupIds));
@@ -734,7 +732,7 @@ public final class BackupCommands {
       }
       Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
       try (final Connection conn = ConnectionFactory.createConnection(conf);
-          final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+          final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         admin.mergeBackups(backupIds);
       }
     }
@@ -781,7 +779,7 @@ public final class BackupCommands {
       if (backupRootPath == null) {
         // Load from backup system table
         super.execute();
-        try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+        try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
           history = sysTable.getBackupHistory(n, tableNameFilter, tableSetFilter);
         }
       } else {
@@ -905,7 +903,7 @@ public final class BackupCommands {
 
       // List all backup set names
       // does not expect any args
-      try (BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         List<BackupSet> list = admin.listBackupSets();
         for (BackupSet bs : list) {
           System.out.println(bs);
@@ -921,7 +919,7 @@ public final class BackupCommands {
       super.execute();
 
       String setName = args[2];
-      try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+      try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
         List<TableName> tables = sysTable.describeBackupSet(setName);
         BackupSet set = tables == null ? null : new BackupSet(setName, tables);
         if (set == null) {
@@ -940,7 +938,7 @@ public final class BackupCommands {
       super.execute();
 
       String setName = args[2];
-      try (final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         boolean result = admin.deleteBackupSet(setName);
         if (result) {
           System.out.println("Delete set " + setName + " OK.");
@@ -960,7 +958,7 @@ public final class BackupCommands {
       String setName = args[2];
       String[] tables = args[3].split(",");
       TableName[] tableNames = toTableNames(tables);
-      try (final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         admin.removeFromBackupSet(setName, tableNames);
       }
     }
@@ -986,7 +984,7 @@ public final class BackupCommands {
       for (int i = 0; i < tables.length; i++) {
         tableNames[i] = TableName.valueOf(tables[i]);
       }
-      try (final BackupAdminImpl admin = new BackupAdminImpl(conn);) {
+      try (final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         admin.addToBackupSet(setName, tableNames);
       }
 

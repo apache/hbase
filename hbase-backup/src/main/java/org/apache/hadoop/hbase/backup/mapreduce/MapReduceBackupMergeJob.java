@@ -223,7 +223,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       String backupRoot) throws IOException {
 
     // Delete from backup system table
-    try (BackupSystemTable table = new BackupSystemTable(conn);) {
+    try (BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
         table.deleteBackupInfo(backupId);
       }
@@ -286,7 +286,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     Set<TableName> allSet = new HashSet<TableName>();
 
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        BackupSystemTable table = new BackupSystemTable(conn);) {
+        BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
         BackupInfo bInfo = table.readBackupInfo(backupId);
 

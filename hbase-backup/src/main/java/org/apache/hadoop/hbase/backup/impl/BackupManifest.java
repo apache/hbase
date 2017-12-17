@@ -485,7 +485,7 @@ public class BackupManifest {
         new Path(HBackupFileSystem.getBackupPath(backupImage.getRootDir(),
           backupImage.getBackupId()), MANIFEST_FILE_NAME);
     try (FSDataOutputStream out =
-        manifestFilePath.getFileSystem(conf).create(manifestFilePath, true);) {
+        manifestFilePath.getFileSystem(conf).create(manifestFilePath, true)) {
       out.write(data);
     } catch (IOException e) {
       throw new BackupException(e.getMessage());

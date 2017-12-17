@@ -51,7 +51,7 @@ public class TestBackupDeleteRestore extends TestBackupBase {
     int numRows = TEST_UTIL.countRows(table1);
     HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
     // delete row
-    try (Table table = TEST_UTIL.getConnection().getTable(table1);) {
+    try (Table table = TEST_UTIL.getConnection().getTable(table1)) {
       Delete delete = new Delete("row0".getBytes());
       table.delete(delete);
       hba.flush(table1);

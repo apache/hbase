@@ -176,8 +176,7 @@ public final class BackupSystemTable implements Closeable {
   }
 
   private void checkSystemTable() throws IOException {
-    try (Admin admin = connection.getAdmin();) {
-
+    try (Admin admin = connection.getAdmin()) {
       verifyNamespaceExists(admin);
 
       if (!admin.tableExists(tableName)) {
@@ -317,7 +316,7 @@ public final class BackupSystemTable implements Closeable {
           LOG.debug("found bulk loaded file : " + tbl + " " + Bytes.toString(fam) + " " + path);
         }
       }
-      ;
+
       return mapForSrc;
     }
   }
@@ -1546,7 +1545,7 @@ public final class BackupSystemTable implements Closeable {
   }
 
   public static void snapshot(Connection conn) throws IOException {
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       Configuration conf = conn.getConfiguration();
       admin.snapshot(BackupSystemTable.getSnapshotName(conf), BackupSystemTable.getTableName(conf));
     }
@@ -1555,7 +1554,7 @@ public final class BackupSystemTable implements Closeable {
   public static void restoreFromSnapshot(Connection conn) throws IOException {
     Configuration conf = conn.getConfiguration();
     LOG.debug("Restoring " + BackupSystemTable.getTableNameAsString(conf) + " from snapshot");
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       String snapshotName = BackupSystemTable.getSnapshotName(conf);
       if (snapshotExists(admin, snapshotName)) {
         admin.disableTable(BackupSystemTable.getTableName(conf));
@@ -1589,7 +1588,7 @@ public final class BackupSystemTable implements Closeable {
   public static void deleteSnapshot(Connection conn) throws IOException {
     Configuration conf = conn.getConfiguration();
     LOG.debug("Deleting " + BackupSystemTable.getSnapshotName(conf) + " from the system");
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       String snapshotName = BackupSystemTable.getSnapshotName(conf);
       if (snapshotExists(admin, snapshotName)) {
         admin.deleteSnapshot(snapshotName);

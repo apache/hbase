@@ -121,8 +121,7 @@ public class FullTableBackupClient extends TableBackupClient {
    */
   @Override
   public void execute() throws IOException {
-    try (Admin admin = conn.getAdmin();) {
-
+    try (Admin admin = conn.getAdmin()) {
       // Begin BACKUP
       beginBackup(backupManager, backupInfo);
       String savedStartCode = null;

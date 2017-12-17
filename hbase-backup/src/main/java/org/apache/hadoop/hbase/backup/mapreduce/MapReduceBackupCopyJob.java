@@ -298,7 +298,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       long totalBytesExpected = 0;
       int totalRecords = 0;
       Path fileListingPath = getFileListingPath();
-      try (SequenceFile.Writer writer = getWriter(fileListingPath);) {
+      try (SequenceFile.Writer writer = getWriter(fileListingPath)) {
         List<Path> srcFiles = getSourceFiles();
         if (srcFiles.size() == 0) {
           return fileListingPath;

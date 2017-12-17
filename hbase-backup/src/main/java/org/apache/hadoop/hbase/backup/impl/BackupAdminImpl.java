@@ -459,7 +459,7 @@ public class BackupAdminImpl implements BackupAdmin {
   public void addToBackupSet(String name, TableName[] tables) throws IOException {
     String[] tableNames = new String[tables.length];
     try (final BackupSystemTable table = new BackupSystemTable(conn);
-        final Admin admin = conn.getAdmin();) {
+        final Admin admin = conn.getAdmin()) {
       for (int i = 0; i < tables.length; i++) {
         tableNames[i] = tables[i].getNameAsString();
         if (!admin.tableExists(TableName.valueOf(tableNames[i]))) {
@@ -561,7 +561,7 @@ public class BackupAdminImpl implements BackupAdmin {
         outputFs.mkdirs(targetTableBackupDirPath);
       }
       ArrayList<TableName> nonExistingTableList = null;
-      try (Admin admin = conn.getAdmin();) {
+      try (Admin admin = conn.getAdmin()) {
         for (TableName tableName : tableList) {
           if (!admin.tableExists(tableName)) {
             if (nonExistingTableList == null) {
@@ -615,7 +615,7 @@ public class BackupAdminImpl implements BackupAdmin {
 
   @Override
   public void mergeBackups(String[] backupIds) throws IOException {
-    try (final BackupSystemTable sysTable = new BackupSystemTable(conn);) {
+    try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
       checkIfValidForMerge(backupIds, sysTable);
       BackupMergeJob job = BackupRestoreFactory.getBackupMergeJob(conn.getConfiguration());
       job.run(backupIds);

@@ -349,7 +349,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
 
   protected boolean tableExists(TableName table, Connection conn) throws IOException {
-    try (Admin admin = conn.getAdmin();) {
+    try (Admin admin = conn.getAdmin()) {
       return admin.tableExists(table);
     }
   }

@@ -267,8 +267,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
       conf.set(FAILURE_PHASE_KEY, phase.toString());
 
-      try (BackupAdmin bAdmin = new BackupAdminImpl(conn);)
-      {
+      try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
         String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
         bAdmin.mergeBackups(backups);
         Assert.fail("Expected IOException");
@@ -306,7 +305,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     conf.unset(FAILURE_PHASE_KEY);
     conf.unset(BackupRestoreFactory.HBASE_BACKUP_MERGE_IMPL_CLASS);
 
-    try (BackupAdmin bAdmin = new BackupAdminImpl(conn);) {
+    try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
       String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
       bAdmin.mergeBackups(backups);
     }

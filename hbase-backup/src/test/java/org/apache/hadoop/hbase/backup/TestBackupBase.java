@@ -194,7 +194,7 @@ public class TestBackupBase {
     public void execute() throws IOException
     {
       // Get the stage ID to fail on
-      try (Admin admin = conn.getAdmin();) {
+      try (Admin admin = conn.getAdmin()) {
         // Begin BACKUP
         beginBackup(backupManager, backupInfo);
         failStageIf(Stage.stage_0);

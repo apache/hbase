@@ -146,7 +146,7 @@ public abstract class TableBackupClient {
       }
       LOG.debug("Trying to delete snapshot: " + snapshotName);
 
-      try (Admin admin = conn.getAdmin();) {
+      try (Admin admin = conn.getAdmin()) {
         admin.deleteSnapshot(snapshotName);
       }
       LOG.debug("Deleting the snapshot " + snapshotName + " for backup " + backupInfo.getBackupId()

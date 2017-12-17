@@ -92,11 +92,9 @@ public class IncrementalBackupManager extends BackupManager {
     HashMap<String, String> props = new HashMap<String, String>();
     props.put("backupRoot", backupInfo.getBackupRootDir());
 
-    try (Admin admin = conn.getAdmin();) {
-
+    try (Admin admin = conn.getAdmin()) {
       admin.execProcedure(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE,
         LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, props);
-
     }
     newTimestamps = readRegionServerLastLogRollResult();
 
