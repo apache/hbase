@@ -52,15 +52,15 @@ public class ClassFinder {
 
   public interface ResourcePathFilter {
     boolean isCandidatePath(String resourcePath, boolean isJar);
-  };
+  }
 
   public interface FileNameFilter {
     boolean isCandidateFile(String fileName, String absFilePath);
-  };
+  }
 
   public interface ClassFilter {
     boolean isCandidateClass(Class<?> c);
-  };
+  }
 
   public static class Not implements ResourcePathFilter, FileNameFilter, ClassFilter {
     private ResourcePathFilter resourcePathFilter;
@@ -301,5 +301,5 @@ public class ClassFinder {
               && (null == nameFilter
                 || nameFilter.isCandidateFile(file.getName(), file.getAbsolutePath())));
     }
-  };
-};
+  }
+}

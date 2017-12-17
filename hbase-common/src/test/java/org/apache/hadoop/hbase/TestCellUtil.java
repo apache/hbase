@@ -54,7 +54,7 @@ public class TestCellUtil {
     public CellScanner cellScanner() {
       return new TestCellScanner(this.cellsCount);
     }
-  };
+  }
 
   /**
    * CellScanner used in test.
@@ -203,7 +203,7 @@ public class TestCellUtil {
     public DataType getType() {
       return PrivateCellUtil.toDataType(getTypeByte());
     }
-  };
+  }
 
   /**
    * Was overflowing if 100k or so lists of cellscanners to return.

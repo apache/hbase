@@ -64,7 +64,7 @@ public class ClassTestFinder extends ClassFinder {
     public boolean isCandidatePath(String resourcePath, boolean isJar) {
       return !hadoopCompactRe.matcher(resourcePath).find();
     }
-  };
+  }
 
   /*
   * A class is considered as a test class if:
@@ -116,5 +116,5 @@ public class ClassTestFinder extends ClassFinder {
       }
       return false;
     }
-  };
-};
+  }
+}

@@ -419,4 +419,4 @@ public class TestClassFinder {
     method.invoke(urlClassLoader, new Object[] { jarFile.toURI().toURL() });
     return jarFile.getAbsolutePath();
   }
-};
+}

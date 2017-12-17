@@ -94,7 +94,7 @@ public class TagCompressionContext {
       while (pos < endOffset) {
         int tagLen = ByteBufferUtils.readAsInt(in, pos, Tag.TAG_LENGTH_SIZE);
         pos += Tag.TAG_LENGTH_SIZE;
-        Dictionary.write(out, in, pos, tagLen, tagDict);;
+        Dictionary.write(out, in, pos, tagLen, tagDict);
         pos += tagLen;
       }
     }
