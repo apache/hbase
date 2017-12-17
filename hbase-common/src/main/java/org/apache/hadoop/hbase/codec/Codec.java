@@ -48,7 +48,7 @@ public interface Codec {
    * Decoder/CellScanner runs off the end of the cell block. Do this rather than require the user
    * call close explicitly.
    */
-  interface Decoder extends CellScanner {};
+  interface Decoder extends CellScanner {}
 
   Decoder getDecoder(InputStream is);
   Decoder getDecoder(ByteBuff buf);
