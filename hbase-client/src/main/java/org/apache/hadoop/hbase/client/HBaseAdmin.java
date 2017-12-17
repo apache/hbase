@@ -3082,7 +3082,7 @@ public class HBaseAdmin implements Admin {
                 CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request);
             return this.master.execMasterService(getRpcController(), csr);
           }
-        };) {
+        }) {
           // TODO: Are we retrying here? Does not seem so. We should use RetryingRpcCaller
           callable.prepare(false);
           int operationTimeout = connection.getConnectionConfiguration().getOperationTimeout();
@@ -3619,7 +3619,7 @@ public class HBaseAdmin implements Admin {
       return "Operation: " + getOperationType() + ", "
           + "Table Name: " + tableName.getNameWithNamespaceInclAsString();
 
-    };
+    }
 
     protected abstract class TableWaitForStateCallable implements WaitForStateCallable {
       @Override
