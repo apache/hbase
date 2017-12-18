@@ -401,7 +401,7 @@ mvn -Dhadoop.profile=3.0 ...
 The above will build against whatever explicit hadoop 3.y version we have in our _pom.xml_ as our '3.0' version.
 Tests may not all pass so you may need to pass `-DskipTests` unless you are inclined to fix the failing tests.
 
-To pick a particular Hadoop 3.y release, you'd set e.g. `-Dhadoop-three.version=3.0.0-alpha1`.
+To pick a particular Hadoop 3.y release, you'd set hadoop-three.version property e.g. `-Dhadoop-three.version=3.0.0`.
 
 [[build.protobuf]]
 ==== Build Protobuf
