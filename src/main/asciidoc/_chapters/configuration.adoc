@@ -221,7 +221,8 @@ Use the following legend to interpret this table:
 |Hadoop-2.7.0 | X | X | X | X
 |Hadoop-2.7.1+ | NT | S | S | S
 |Hadoop-2.8.0 | X | X | X | X
-|Hadoop-3.0.0-alphax | NT | NT | NT | NT
+|Hadoop-2.8.1 | X | X | X | X
+|Hadoop-3.0.0 | NT | NT | NT | NT
 |===
 
 .Hadoop Pre-2.6.1 and JDK 1.8 Kerberos
@@ -349,7 +350,7 @@ to _false_. For example:
   </property>
 </configuration>
 ----
- 
+
 [[distributed]]
 === Distributed
 

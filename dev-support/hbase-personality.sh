@@ -300,7 +300,7 @@ function hadoopcheck_rebuild
     else
       hbase_hadoop2_versions="${hbase_common_hadoop2_versions}"
     fi
-    hbase_hadoop3_versions="3.0.0-beta1"
+    hbase_hadoop3_versions="3.0.0"
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"

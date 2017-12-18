@@ -1126,7 +1126,7 @@ under the License.
     </project>
   </supplement>
   <supplement>
-    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-csv</artifactId>
       <version>1.0</version>
@@ -1211,7 +1211,7 @@ under the License.
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <version>2.7.1</version>
@@ -1296,7 +1296,7 @@ under the License.
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core4</artifactId>
       <version>4.0.1-incubating</version>
@@ -1612,7 +1612,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>com.codahale.metrics</groupId>
       <artifactId>metrics-core</artifactId>
       <version>3.0.1</version>
@@ -1626,7 +1626,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>com.nimbusds</groupId>
       <artifactId>nimbus-jose-jwt</artifactId>
       <version>3.9</version>
@@ -1640,7 +1640,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>com.squareup.okhttp</groupId>
       <artifactId>okhttp</artifactId>
       <version>2.4.0</version>
@@ -1654,7 +1654,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>com.squareup.okio</groupId>
       <artifactId>okio</artifactId>
       <version>1.4.0</version>
@@ -1668,7 +1668,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>com.twitter</groupId>
       <artifactId>hpack</artifactId>
       <version>0.11.0</version>
@@ -1682,7 +1682,7 @@ Copyright 2006 Envoi Solutions LLC
     </project>
   </supplement>
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>net.minidev</groupId>
       <artifactId>json-smart</artifactId>
       <version>1.1.1</version>
@@ -1697,7 +1697,7 @@ Copyright 2006 Envoi Solutions LLC
   </supplement>
 
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>de.ruedigermoeller</groupId>
       <artifactId>fst</artifactId>
       <version>2.24</version>
@@ -1716,7 +1716,7 @@ Copyright 2006 Envoi Solutions LLC
   </supplement>
 
   <supplement>
-    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>org.objenesis</groupId>
       <artifactId>objenesis</artifactId>
       <version>2.1</version>
@@ -1867,7 +1867,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </project>
   </supplement>
   <supplement>
-    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-beta1 -->
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0 -->
       <groupId>org.codehaus.woodstox</groupId>
       <artifactId>stax2-api</artifactId>
       <version>3.1.4</version>
