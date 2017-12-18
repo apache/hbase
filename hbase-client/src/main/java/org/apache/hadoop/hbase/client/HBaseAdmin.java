@@ -227,7 +227,7 @@ public class HBaseAdmin implements Admin {
 
   private ClusterConnection connection;
 
-  private volatile Configuration conf;
+  private final Configuration conf;
   private final long pause;
   private final int numRetries;
   private final int syncWaitTimeout;
