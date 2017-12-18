@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -111,7 +112,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
           .setFamily(LABELS_TABLE_FAMILY)
           .setQualifier(auth)
           .setTimestamp(p.getTimeStamp())
-          .setType(CellBuilder.DataType.Put)
+          .setType(DataType.Put)
           .setValue(DUMMY_VALUE)
           .build());
     }

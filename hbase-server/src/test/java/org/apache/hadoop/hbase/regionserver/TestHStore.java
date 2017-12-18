@@ -59,7 +59,6 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
@@ -69,9 +68,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -1049,13 +1048,13 @@ public class TestHStore {
     long seqId = 100;
     long timestamp = System.currentTimeMillis();
     Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qf1).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
+        .setQualifier(qf1).setTimestamp(timestamp).setType(Cell.DataType.Put)
         .setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell0, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.emptyList());
 
     Cell cell1 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qf2).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.DataType.Put)
         .setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell1, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
@@ -1063,7 +1062,7 @@ public class TestHStore {
     seqId = 101;
     timestamp = System.currentTimeMillis();
     Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
-        .setQualifier(qf2).setTimestamp(timestamp).setType(CellBuilder.DataType.Put)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.DataType.Put)
         .setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell2, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1, cell2));
@@ -1118,7 +1117,7 @@ public class TestHStore {
   private Cell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId, byte[] value)
       throws IOException {
     Cell c = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qualifier).setTimestamp(ts).setType(CellBuilder.DataType.Put)
+        .setQualifier(qualifier).setTimestamp(ts).setType(Cell.DataType.Put)
         .setValue(value).build();
     PrivateCellUtil.setSequenceId(c, sequenceId);
     return c;

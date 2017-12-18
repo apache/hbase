@@ -46,7 +46,7 @@ public class TestPBCell {
   @Test
   public void testRoundTrip() {
     final Cell cell = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam"),
-      Bytes.toBytes("qual"), Bytes.toBytes("val"));
+        Bytes.toBytes("qual"), Bytes.toBytes("val"));
     CellProtos.Cell c = ProtobufUtil.toCell(cell), decoded;
     PositionedByteRange pbr = new SimplePositionedByteRange(c.getSerializedSize());
     pbr.setPosition(0);
@@ -54,6 +54,7 @@ public class TestPBCell {
     pbr.setPosition(0);
     decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
-    assertTrue(CellUtil.equals(cell, ProtobufUtil.toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
+    assertTrue(CellUtil.equals(cell, ProtobufUtil
+        .toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
   }
 }

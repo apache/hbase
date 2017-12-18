@@ -38,13 +38,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -676,7 +677,7 @@ public final class ProtobufUtil {
                   .setFamily(family)
                   .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
                   .setTimestamp(ts)
-                  .setType(CellBuilder.DataType.Put)
+                  .setType(DataType.Put)
                   .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
                   .setTags(allTagsBytes)
                   .build());
@@ -696,7 +697,7 @@ public final class ProtobufUtil {
                   .setFamily(family)
                   .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
                   .setTimestamp(ts)
-                  .setType(CellBuilder.DataType.Put)
+                  .setType(DataType.Put)
                   .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
                   .build());
             }

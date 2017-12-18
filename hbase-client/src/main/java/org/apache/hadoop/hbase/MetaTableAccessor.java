@@ -37,6 +37,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -72,7 +73,6 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 
@@ -1361,7 +1361,7 @@ public class MetaTableAccessor {
             .setFamily(HConstants.REPLICATION_BARRIER_FAMILY)
             .setQualifier(seqBytes)
             .setTimestamp(put.getTimeStamp())
-            .setType(CellBuilder.DataType.Put)
+            .setType(DataType.Put)
             .setValue(seqBytes)
             .build())
        .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
@@ -1369,7 +1369,7 @@ public class MetaTableAccessor {
             .setFamily(HConstants.REPLICATION_META_FAMILY)
             .setQualifier(tableNameCq)
             .setTimestamp(put.getTimeStamp())
-            .setType(CellBuilder.DataType.Put)
+            .setType(DataType.Put)
             .setValue(tableName)
             .build());
     return put;
@@ -1383,7 +1383,7 @@ public class MetaTableAccessor {
             .setFamily(HConstants.REPLICATION_META_FAMILY)
             .setQualifier(daughterNameCq)
             .setTimestamp(put.getTimeStamp())
-            .setType(CellBuilder.DataType.Put)
+            .setType(DataType.Put)
             .setValue(value)
             .build());
     return put;
@@ -1396,7 +1396,7 @@ public class MetaTableAccessor {
             .setFamily(HConstants.REPLICATION_META_FAMILY)
             .setQualifier(parentNameCq)
             .setTimestamp(put.getTimeStamp())
-            .setType(CellBuilder.DataType.Put)
+            .setType(DataType.Put)
             .setValue(value)
             .build());
     return put;
@@ -1413,7 +1413,7 @@ public class MetaTableAccessor {
                 .setFamily(HConstants.CATALOG_FAMILY)
                 .setQualifier(HConstants.SPLITA_QUALIFIER)
                 .setTimestamp(put.getTimeStamp())
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .setValue(RegionInfo.toByteArray(splitA))
                 .build());
     }
@@ -1423,7 +1423,7 @@ public class MetaTableAccessor {
                 .setFamily(HConstants.CATALOG_FAMILY)
                 .setQualifier(HConstants.SPLITB_QUALIFIER)
                 .setTimestamp(put.getTimeStamp())
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .setValue(RegionInfo.toByteArray(splitB))
                 .build());
     }
@@ -1732,7 +1732,7 @@ public class MetaTableAccessor {
               .setFamily(HConstants.CATALOG_FAMILY)
               .setQualifier(HConstants.MERGEA_QUALIFIER)
               .setTimestamp(putOfMerged.getTimeStamp())
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(RegionInfo.toByteArray(regionA))
               .build())
           .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
@@ -1740,7 +1740,7 @@ public class MetaTableAccessor {
               .setFamily(HConstants.CATALOG_FAMILY)
               .setQualifier(HConstants.MERGEB_QUALIFIER)
               .setTimestamp(putOfMerged.getTimeStamp())
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(RegionInfo.toByteArray(regionB))
               .build());
 
@@ -1985,7 +1985,7 @@ public class MetaTableAccessor {
           .setFamily(HConstants.REPLICATION_POSITION_FAMILY)
           .setQualifier(Bytes.toBytes(peerId))
           .setTimestamp(put.getTimeStamp())
-          .setType(CellBuilder.DataType.Put)
+          .setType(DataType.Put)
           .setValue(Bytes.toBytes(Math.abs(entry.getValue())))
           .build());
       puts.add(put);
@@ -2153,7 +2153,7 @@ public class MetaTableAccessor {
         .setFamily(getCatalogFamily())
         .setQualifier(HConstants.REGIONINFO_QUALIFIER)
         .setTimestamp(p.getTimeStamp())
-        .setType(CellBuilder.DataType.Put)
+        .setType(DataType.Put)
         .setValue(RegionInfo.toByteArray(hri))
         .build());
     return p;
@@ -2170,7 +2170,7 @@ public class MetaTableAccessor {
               .setFamily(getCatalogFamily())
               .setQualifier(getServerColumn(replicaId))
               .setTimestamp(time)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(Bytes.toBytes(sn.getAddress().toString()))
               .build())
             .add(builder.clear()
@@ -2178,7 +2178,7 @@ public class MetaTableAccessor {
               .setFamily(getCatalogFamily())
               .setQualifier(getStartCodeColumn(replicaId))
               .setTimestamp(time)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(Bytes.toBytes(sn.getStartcode()))
               .build())
             .add(builder.clear()
@@ -2186,7 +2186,7 @@ public class MetaTableAccessor {
               .setFamily(getCatalogFamily())
               .setQualifier(getSeqNumColumn(replicaId))
               .setTimestamp(time)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(Bytes.toBytes(openSeqNum))
               .build());
   }
@@ -2199,21 +2199,21 @@ public class MetaTableAccessor {
                 .setFamily(getCatalogFamily())
                 .setQualifier(getServerColumn(replicaId))
                 .setTimestamp(now)
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .build())
             .add(builder.clear()
                 .setRow(p.getRow())
                 .setFamily(getCatalogFamily())
                 .setQualifier(getStartCodeColumn(replicaId))
                 .setTimestamp(now)
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .build())
             .add(builder.clear()
                 .setRow(p.getRow())
                 .setFamily(getCatalogFamily())
                 .setQualifier(getSeqNumColumn(replicaId))
                 .setTimestamp(now)
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .build());
   }
 
@@ -2241,7 +2241,7 @@ public class MetaTableAccessor {
               .setFamily(HConstants.CATALOG_FAMILY)
               .setQualifier(getSeqNumColumn(replicaId))
               .setTimestamp(time)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(Bytes.toBytes(openSeqNum))
               .build());
   }

@@ -102,7 +102,7 @@ public final class MobUtils {
   static {
     List<Tag> tags = new ArrayList<>();
     tags.add(MobConstants.MOB_REF_TAG);
-    REF_DELETE_MARKER_TAG_BYTES = Tag.fromList(tags);
+    REF_DELETE_MARKER_TAG_BYTES = TagUtil.fromList(tags);
   }
 
   /**
@@ -502,7 +502,7 @@ public final class MobUtils {
     // find the original mob files by this table name. For details please see cloning
     // snapshot for mob files.
     tags.add(tableNameTag);
-    return createMobRefCell(cell, fileName, Tag.fromList(tags));
+    return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
   }
 
   public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {

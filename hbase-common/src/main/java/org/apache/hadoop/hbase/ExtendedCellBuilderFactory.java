@@ -24,25 +24,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ExtendedCellBuilderFactory {
 
-  public static ExtendedCellBuilder create(CellBuilderType type) {
-    return create(type, true);
-  }
-
   /**
    * Allows creating a cell with the given CellBuilderType.
    * @param type the type of CellBuilder(DEEP_COPY or SHALLOW_COPY).
-   * @param allowSeqIdUpdate if seqId can be updated. CPs are not allowed to update
-   *        the seqId
    * @return the cell that is created
    */
-  public static ExtendedCellBuilder create(CellBuilderType type, boolean allowSeqIdUpdate) {
+  public static ExtendedCellBuilder create(CellBuilderType type) {
     switch (type) {
       case SHALLOW_COPY:
-        // CPs are not allowed to update seqID and they always use DEEP_COPY. So we have not
-        // passing 'allowSeqIdUpdate' to IndividualBytesFieldCellBuilder
         return new IndividualBytesFieldCellBuilder();
       case DEEP_COPY:
-        return new KeyValueBuilder(allowSeqIdUpdate);
+        return new KeyValueBuilder();
       default:
         throw new UnsupportedOperationException("The type:" + type + " is unsupported");
     }

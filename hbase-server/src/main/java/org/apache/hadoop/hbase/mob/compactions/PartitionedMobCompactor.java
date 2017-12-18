@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -131,7 +132,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     tags.add(MobConstants.MOB_REF_TAG);
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, tableName.getName());
     tags.add(tableNameTag);
-    this.refCellTags = Tag.fromList(tags);
+    this.refCellTags = TagUtil.fromList(tags);
     cryptoContext = EncryptionUtil.createEncryptionContext(copyOfConf, column);
   }
 

@@ -131,4 +131,50 @@ public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
    * @param ts buffer containing the timestamp value
    */
   void setTimestamp(byte[] ts) throws IOException;
+
+  /**
+   * A region-specific unique monotonically increasing sequence ID given to each Cell. It always
+   * exists for cells in the memstore but is not retained forever. It will be kept for
+   * {@link HConstants#KEEP_SEQID_PERIOD} days, but generally becomes irrelevant after the cell's
+   * row is no longer involved in any operations that require strict consistency.
+   * @return seqId (always &gt; 0 if exists), or 0 if it no longer exists
+   */
+  long getSequenceId();
+
+  /**
+   * Contiguous raw bytes representing tags that may start at any index in the containing array.
+   * @return the tags byte array
+   */
+  byte[] getTagsArray();
+
+  /**
+   * @return the first offset where the tags start in the Cell
+   */
+  int getTagsOffset();
+
+  /**
+   * HBase internally uses 2 bytes to store tags length in Cell. As the tags length is always a
+   * non-negative number, to make good use of the sign bit, the max of tags length is defined 2 *
+   * Short.MAX_VALUE + 1 = 65535. As a result, the return type is int, because a short is not
+   * capable of handling that. Please note that even if the return type is int, the max tags length
+   * is far less than Integer.MAX_VALUE.
+   * @return the total length of the tags in the Cell.
+   */
+  int getTagsLength();
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * Note : This does not expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
+   * {@link KeyValue.Type#Minimum}
+   */
+  @Override
+  default DataType getType() {
+    return PrivateCellUtil.toDataType(getTypeByte());
+  }
+
+  /**
+   * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
+   */
+  byte getTypeByte();
 }

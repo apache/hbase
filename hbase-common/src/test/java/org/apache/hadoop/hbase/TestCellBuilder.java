@@ -41,7 +41,7 @@ public class TestCellBuilder {
             .setRow(row)
             .setFamily(family)
             .setQualifier(qualifier)
-            .setType(CellBuilder.DataType.Put)
+            .setType(Cell.DataType.Put)
             .setValue(value)
             .build();
     row[0] = NEW_DATA;
@@ -64,7 +64,7 @@ public class TestCellBuilder {
             .setRow(row)
             .setFamily(family)
             .setQualifier(qualifier)
-            .setType(CellBuilder.DataType.Put)
+            .setType(Cell.DataType.Put)
             .setValue(value)
             .build();
     row[0] = NEW_DATA;

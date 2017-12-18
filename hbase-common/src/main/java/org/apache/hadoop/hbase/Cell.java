@@ -133,8 +133,7 @@ public interface Cell {
 
   /**
    * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
-   * @deprecated since 2.0.0, use appropriate {@link CellUtil#isDelete} or
-   *    {@link CellUtil#isPut(Cell)} methods instead. This will be removed in 3.0.0.
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Use {@link #getType()}.
    */
   @Deprecated
   byte getTypeByte();
@@ -148,7 +147,9 @@ public interface Cell {
    * {@link HConstants#KEEP_SEQID_PERIOD} days, but generally becomes irrelevant after the cell's
    * row is no longer involved in any operations that require strict consistency.
    * @return seqId (always &gt; 0 if exists), or 0 if it no longer exists
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
    */
+  @Deprecated
   long getSequenceId();
 
   //7) Value
@@ -173,12 +174,16 @@ public interface Cell {
   /**
    * Contiguous raw bytes representing tags that may start at any index in the containing array.
    * @return the tags byte array
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
    */
+  @Deprecated
   byte[] getTagsArray();
 
   /**
    * @return the first offset where the tags start in the Cell
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
    */
+  @Deprecated
   int getTagsOffset();
 
   /**
@@ -190,6 +195,39 @@ public interface Cell {
    * less than Integer.MAX_VALUE.
    *
    * @return the total length of the tags in the Cell.
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
    */
+  @Deprecated
   int getTagsLength();
+
+  /**
+   * Returns the type of cell in a human readable format using {@link DataType}
+   * @return The data type this cell: one of Put, Delete, etc
+   */
+  DataType getType();
+
+  /**
+   * The valid types for user to build the cell. Currently, This is subset of {@link KeyValue.Type}.
+   */
+  public enum DataType {
+    Put((byte) 4),
+
+    Delete((byte) 8),
+
+    DeleteFamilyVersion((byte) 10),
+
+    DeleteColumn((byte) 12),
+
+    DeleteFamily((byte) 14);
+
+    private final byte code;
+
+    DataType(final byte c) {
+      this.code = c;
+    }
+
+    public byte getCode() {
+      return this.code;
+    }
+  }
 }

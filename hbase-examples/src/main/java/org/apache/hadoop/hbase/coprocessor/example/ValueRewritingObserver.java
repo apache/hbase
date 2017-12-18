@@ -22,7 +22,6 @@ import java.util.Optional;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
-import org.apache.hadoop.hbase.CellBuilder.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -89,7 +88,7 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
               cellBuilder.setFamily(CellUtil.cloneFamily(c));
               cellBuilder.setQualifier(CellUtil.cloneQualifier(c));
               cellBuilder.setTimestamp(c.getTimestamp());
-              cellBuilder.setType(DataType.Put);
+              cellBuilder.setType(Cell.DataType.Put);
               // Make sure each cell gets a unique value
               byte[] clonedValue = new byte[replacedValue.length];
               System.arraycopy(replacedValue, 0, clonedValue, 0, replacedValue.length);

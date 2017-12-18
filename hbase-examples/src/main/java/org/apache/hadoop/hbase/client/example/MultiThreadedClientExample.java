@@ -19,10 +19,22 @@
 package org.apache.hadoop.hbase.client.example;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.TableName;
@@ -38,18 +50,6 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -226,7 +226,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
                 .setFamily(FAMILY)
                 .setQualifier(QUAL)
                 .setTimestamp(p.getTimeStamp())
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .setValue(value)
                 .build());
           puts.add(p);
@@ -263,7 +263,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
                 .setFamily(FAMILY)
                 .setQualifier(QUAL)
                 .setTimestamp(p.getTimeStamp())
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .setValue(value)
                 .build());
         t.put(p);

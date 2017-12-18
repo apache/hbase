@@ -198,6 +198,11 @@ public class TestCellUtil {
       // TODO Auto-generated method stub
       return 0;
     }
+
+    @Override
+    public DataType getType() {
+      return PrivateCellUtil.toDataType(getTypeByte());
+    }
   };
 
   /**
@@ -612,6 +617,11 @@ public class TestCellUtil {
     @Override
     public int getTagsLength() {
       return this.kv.getTagsLength();
+    }
+
+    @Override
+    public DataType getType() {
+      return PrivateCellUtil.toDataType(getTypeByte());
     }
   }
 }

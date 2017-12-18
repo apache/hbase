@@ -38,13 +38,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.ExtendedCellBuilder;
-import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RawCellBuilder;
+import org.apache.hadoop.hbase.RawCellBuilderFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Append;
@@ -184,10 +183,9 @@ public class RegionCoprocessorHost
     }
 
     @Override
-    public ExtendedCellBuilder getCellBuilder() {
-      // do not allow seqId update.
+    public RawCellBuilder getCellBuilder() {
       // We always do a DEEP_COPY only
-      return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY, false);
+      return RawCellBuilderFactory.create();
     }
   }
 

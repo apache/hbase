@@ -24,8 +24,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -87,7 +88,7 @@ public class TestPut {
             .setFamily(family)
             .setQualifier(qualifier0)
             .setTimestamp(put.getTimeStamp())
-            .setType(CellBuilder.DataType.Put)
+            .setType(DataType.Put)
             .setValue(value0)
             .build())
         .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
@@ -95,7 +96,7 @@ public class TestPut {
             .setFamily(family)
             .setQualifier(qualifier1)
             .setTimestamp(ts1)
-            .setType(CellBuilder.DataType.Put)
+            .setType(DataType.Put)
             .setValue(value1)
             .build());
 

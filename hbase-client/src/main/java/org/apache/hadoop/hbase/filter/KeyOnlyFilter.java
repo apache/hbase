@@ -195,6 +195,11 @@ public class KeyOnlyFilter extends FilterBase {
     }
 
     @Override
+    public DataType getType() {
+      return cell.getType();
+    }
+
+    @Override
     public long getSequenceId() {
       return 0;
     }
@@ -305,6 +310,11 @@ public class KeyOnlyFilter extends FilterBase {
     @Override
     public long getSequenceId() {
       return 0;
+    }
+
+    @Override
+    public DataType getType() {
+      return cell.getType();
     }
 
     @Override
