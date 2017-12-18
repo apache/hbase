@@ -67,7 +67,7 @@ Timestamp::
 [[conceptual.view]]
 == Conceptual View
 
-You can read a very understandable explanation of the HBase data model in the blog post link:http://jimbojw.com/wiki/index.php?title=Understanding_Hbase_and_BigTable[Understanding HBase and BigTable] by Jim R. Wilson.
+You can read a very understandable explanation of the HBase data model in the blog post link:http://jimbojw.com/#understanding%20hbase[Understanding HBase and BigTable] by Jim R. Wilson.
 Another good explanation is available in the PDF link:http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf[Introduction to Basic Schema Design] by Amandeep Khurana.
 
 It may help to read different perspectives to get a solid understanding of HBase schema design.
@@ -275,11 +275,11 @@ Operations are applied via link:http://hbase.apache.org/apidocs/org/apache/hadoo
 === Get
 
 link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] returns attributes for a specified row.
-Gets are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get(org.apache.hadoop.hbase.client.Get)[Table.get].
+Gets are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get-org.apache.hadoop.hbase.client.Get-[Table.get]
 
 === Put
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)[Table.put] (non-writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List,%20java.lang.Object%5B%5D)[Table.batch] (non-writeBuffer).
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put-org.apache.hadoop.hbase.client.Put-[Table.put] (non-writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[Table.batch] (non-writeBuffer)
 
 [[scan]]
 === Scans
@@ -316,7 +316,7 @@ Note that generally the easiest way to specify a specific stop point for a scan 
 === Delete
 
 link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html[Delete] removes a row from a table.
-Deletes are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)[Table.delete].
+Deletes are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete-org.apache.hadoop.hbase.client.Delete-[Table.delete].
 
 HBase does not modify data in place, and so deletes are handled by creating new markers called _tombstones_.
 These tombstones, along with the dead values, are cleaned up on major compactions.
@@ -389,8 +389,8 @@ The below discussion of link:http://hbase.apache.org/apidocs/org/apache/hadoop/h
 
 By default, i.e. if you specify no explicit version, when doing a `get`, the cell whose version has the largest value is returned (which may or may not be the latest one written, see later). The default behavior can be modified in the following ways:
 
-* to return more than one version, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()[Get.setMaxVersions()]
-* to return versions other than the latest, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setTimeRange(long,%20long)[Get.setTimeRange()]
+* to return more than one version, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions--[Get.setMaxVersions()]
+* to return versions other than the latest, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setTimeRange-long-long-[Get.setTimeRange()]
 +
 To retrieve the latest version that is less than or equal to a given value, thus giving the 'latest' state of the record at a certain point in time, just use a range from 0 to the desired version and set the max versions to 1.
 

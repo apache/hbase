@@ -64,7 +64,7 @@ FreeNode offers a web-based client, but most people prefer a native client, and 
 
 === Jira
 
-Check for existing issues in link:https://issues.apache.org/jira/browse/HBASE[Jira].
+Check for existing issues in link:https://issues.apache.org/jira/projects/HBASE/issues[Jira].
 If it's either a new feature request, enhancement, or a bug, file a ticket.
 
 We track multiple types of work in JIRA:
@@ -479,8 +479,7 @@ mvn -DskipTests package assembly:single deploy
 
 If you see `Unable to find resource 'VM_global_library.vm'`, ignore it.
 It's not an error.
-It is link:http://jira.codehaus.org/browse/MSITE-286[officially
-                        ugly] though.
+It is link:https://issues.apache.org/jira/browse/MSITE-286[officially ugly] though.
 
 [[releasing]]
 == Releasing Apache HBase
@@ -597,8 +596,7 @@ Adjust the version in all the POM files appropriately.
 If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions
 in all pom.xml files.
 If you are running this receipe to publish a snapshot, you must keep the `-SNAPSHOT` suffix on the hbase version.
-The link:http://mojo.codehaus.org/versions-maven-plugin/[Versions
-                            Maven Plugin] can be of use here.
+The link:http://www.mojohaus.org/versions-maven-plugin/[Versions Maven Plugin] can be of use here.
 To set a version in all the many poms of the hbase multi-module project, use a command like the following:
 +
 [source,bourne]
@@ -977,7 +975,7 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 === Unit Tests
 
 Apache HBase test cases are subdivided into four categories: small, medium, large, and
-integration with corresponding JUnit link:http://www.junit.org/node/581[categories]: `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
+integration with corresponding JUnit link:https://github.com/junit-team/junit4/wiki/Categories[categories]: `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
 JUnit categories are denoted using java annotations and look like this in your unit test code.
 
 [source,java]
@@ -1343,7 +1341,7 @@ For other deployment options, a ClusterManager can be implemented and plugged in
 ==== Destructive integration / system tests (ChaosMonkey)
 
 HBase 0.96 introduced a tool named `ChaosMonkey`, modeled after
-link:http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html[same-named tool by Netflix's Chaos Monkey tool].
+link:https://netflix.github.io/chaosmonkey/[same-named tool by Netflix's Chaos Monkey tool].
 ChaosMonkey simulates real-world
 faults in a running cluster by killing or disconnecting random servers, or injecting
 other failures into the environment. You can use ChaosMonkey as a stand-alone tool
@@ -1997,7 +1995,7 @@ Use the btn:[Submit Patch]                        button in JIRA, just like othe
 
 ===== Reject
 
-Patches which do not adhere to the guidelines in link:https://wiki.apache.org/hadoop/Hbase/HowToCommit/hadoop/Hbase/HowToContribute#[HowToContribute] and to the link:https://wiki.apache.org/hadoop/Hbase/HowToCommit/hadoop/CodeReviewChecklist#[code review checklist] should be rejected.
+Patches which do not adhere to the guidelines in link:https://hbase.apache.org/book.html#developer[HowToContribute] and to the link:https://wiki.apache.org/hadoop/CodeReviewChecklist[code review checklist] should be rejected.
 Committers should always be polite to contributors and try to instruct and encourage them to contribute better patches.
 If a committer wishes to improve an unacceptable patch, then it should first be rejected, and a new patch should be attached by the committer for review.
 

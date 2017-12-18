@@ -29,7 +29,7 @@
 
 
 == Protobuf
-HBase uses Google's link:http://protobuf.protobufs[protobufs] wherever
+HBase uses Google's link:https://developers.google.com/protocol-buffers/[protobufs] wherever
 it persists metadata -- in the tail of hfiles or Cells written by
 HBase into the system hbase:meta table or when HBase writes znodes
 to zookeeper, etc. -- and when it passes objects over the wire making

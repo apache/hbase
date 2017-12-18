@@ -262,8 +262,7 @@ See <<brand.new.compressor,brand.new.compressor>>).
 .Install LZO Support
 
 HBase cannot ship with LZO because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
-See the link:http://wiki.apache.org/hadoop/UsingLzoCompression[Using LZO
-              Compression] wiki page for information on configuring LZO support for HBase.
+See the link:https://github.com/twitter/hadoop-lzo/blob/master/README.md[Hadoop-LZO at Twitter] for information on configuring LZO support for HBase.
 
 If you depend upon LZO compression, consider configuring your RegionServers to fail to start if LZO is not available.
 See <<hbase.regionserver.codecs,hbase.regionserver.codecs>>.

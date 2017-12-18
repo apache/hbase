@@ -335,7 +335,7 @@ This is the main trade-off.
 ====
 link:https://issues.apache.org/jira/browse/HBASE-4811[HBASE-4811] implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning.
 This feature is available in HBase 0.98 and later.
-See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed%28boolean for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed-boolean-[Scan.setReversed()] for more information.
 ====
 
 A common problem in database processing is quickly finding the most recent version of a value.
@@ -757,7 +757,7 @@ Neither approach is wrong, it just depends on what is most appropriate for the s
 ====
 link:https://issues.apache.org/jira/browse/HBASE-4811[HBASE-4811] implements an API to scan a table or a range within a table in reverse, reducing the need to optimize your schema for forward or reverse scanning.
 This feature is available in HBase 0.98 and later.
-See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed%28boolean for more information.
+See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setReversed-boolean-[Scan.setReversed()] for more information.
 ====
 
 [[schema.casestudies.log_timeseries.varkeys]]
@@ -786,8 +786,7 @@ The rowkey of LOG_TYPES would be:
 * `[bytes]` variable length bytes for raw hostname or event-type.
 
 A column for this rowkey could be a long with an assigned number, which could be obtained
-by using an
-+++<a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29">HBase counter</a>+++.
+by using an link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue-byte:A-byte:A-byte:A-long-[HBase counter]
 
 So the resulting composite rowkey would be:
 
@@ -803,7 +802,7 @@ In either the Hash or Numeric substitution approach, the raw values for hostname
 This effectively is the OpenTSDB approach.
 What OpenTSDB does is re-write data and pack rows into columns for certain time-periods.
 For a detailed explanation, see: http://opentsdb.net/schema.html, and
-+++<a href="http://www.cloudera.com/content/cloudera/en/resources/library/hbasecon/video-hbasecon-2012-lessons-learned-from-opentsdb.html">Lessons Learned from OpenTSDB</a>+++
+link:https://www.slideshare.net/cloudera/4-opentsdb-hbasecon[Lessons Learned from OpenTSDB]
 from HBaseCon2012.
 
 But this is how the general concept works: data is ingested, for example, in this manner...

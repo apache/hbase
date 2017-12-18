@@ -33,7 +33,7 @@ For information on unit tests for HBase itself, see <<hbase.tests,hbase.tests>>.
 
 == JUnit
 
-HBase uses link:http://junit.org[JUnit] 4 for unit tests
+HBase uses link:http://junit.org[JUnit] for unit tests
 
 This example will add unit tests to the following example class:
 

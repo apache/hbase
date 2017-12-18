@@ -706,7 +706,10 @@ Because of a change in the format in which MIT Kerberos writes its credentials c
 If you have this problematic combination of components in your environment, to work around this problem, first log in with `kinit` and then immediately refresh the credential cache with `kinit -R`.
 The refresh will rewrite the credential cache without the problematic formatting.
 
-Finally, depending on your Kerberos configuration, you may need to install the link:http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html[Java Cryptography Extension], or JCE.
+Prior to JDK 1.4, the JCE was an unbundled product, and as such, the JCA and JCE were regularly referred to as separate, distinct components.
+As JCE is now bundled in the JDK 7.0, the distinction is becoming less apparent. Since the JCE uses the same architecture as the JCA, the JCE should be more properly thought of as a part of the JCA.
+
+You may need to install the link:https://docs.oracle.com/javase/1.5.0/docs/guide/security/jce/JCERefGuide.html[Java Cryptography Extension], or JCE because of JDK 1.5 or earlier version.
 Insure the JCE jars are on the classpath on both server and client systems.
 
 You may also need to download the link:http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html[unlimited strength JCE policy files].
@@ -758,7 +761,7 @@ For example (substitute VERSION with your HBase version):
 HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-mapreduce-VERSION.jar rowcounter usertable
 ----
 
-See http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpathfor more information on HBase MapReduce jobs and classpaths.
+See <<hbase.mapreduce.classpath,HBase, MapReduce, and the CLASSPATH>> for more information on HBase MapReduce jobs and classpaths.
 
 [[trouble.hbasezerocopybytestring]]
 === Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString
@@ -799,7 +802,7 @@ hadoop fs -du /hbase/myTable
 ----
 ...returns a list of the regions under the HBase table 'myTable' and their disk utilization.
 
-For more information on HDFS shell commands, see the link:http://hadoop.apache.org/common/docs/current/file_system_shell.html[HDFS FileSystem Shell documentation].
+For more information on HDFS shell commands, see the link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html[HDFS FileSystem Shell documentation].
 
 [[trouble.namenode.hbase.objects]]
 === Browsing HDFS for HBase Objects
@@ -830,7 +833,7 @@ The HDFS directory structure of HBase WAL is..
             /<WAL>         (WAL files for the RegionServer)
 ----
 
-See the link:http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html[HDFS User Guide] for other non-shell diagnostic utilities like `fsck`.
+See the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html[HDFS User Guide] for other non-shell diagnostic utilities like `fsck`.
 
 [[trouble.namenode.0size.hlogs]]
 ==== Zero size WALs with data in them

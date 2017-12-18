@@ -76,7 +76,7 @@ HBase can run quite well stand-alone on a laptop - but this should be considered
 [[arch.overview.hbasehdfs]]
 === What Is The Difference Between HBase and Hadoop/HDFS?
 
-link:http://hadoop.apache.org/hdfs/[HDFS] is a distributed file system that is well suited for the storage of large files.
+link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html[HDFS] is a distributed file system that is well suited for the storage of large files.
 Its documentation states that it is not, however, a general purpose file system, and does not provide fast individual record lookups in files.
 HBase, on the other hand, is built on top of HDFS and provides fast record lookups (and updates) for large tables.
 This can sometimes be a point of conceptual confusion.
@@ -119,9 +119,7 @@ If a region has both an empty start and an empty end key, it is the only region 
 ====
 
 In the (hopefully unlikely) event that programmatic processing of catalog metadata
-is required, see the
-+++<a href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte%5B%5D%29">Writables</a>+++
-utility.
+is required, see the link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/RegionInfo.html#parseFrom-byte:A-[RegionInfo.parseFrom] utility.
 
 [[arch.catalog.startup]]
 === Startup Sequencing
@@ -221,8 +219,7 @@ In HBase 2.0 and later, link:http://hbase.apache.org/devapidocs/org/apache/hadoo
 
 For additional information on write durability, review the link:/acid-semantics.html[ACID semantics] page.
 
-For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch%28java.util.List%29[batch] methods on Table.
-
+For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[batch] methods on Table.
 [[client.external]]
 === External Clients
 
@@ -2740,7 +2737,7 @@ if (result.isStale()) {
 === Resources
 
 . More information about the design and implementation can be found at the jira issue: link:https://issues.apache.org/jira/browse/HBASE-10070[HBASE-10070]
-. HBaseCon 2014 link:http://hbasecon.com/sessions/#session15[talk] also contains some details and link:http://www.slideshare.net/enissoz/hbase-high-availability-for-reads-with-time[slides].
+. HBaseCon 2014 talk: link:http://hbase.apache.org/www.hbasecon.com/#2014-PresentationsRecordings[HBase Read High Availability Using Timeline-Consistent Region Replicas] also contains some details and link:http://www.slideshare.net/enissoz/hbase-high-availability-for-reads-with-time[slides].
 
 ifdef::backend-docbook[]
 [index]
