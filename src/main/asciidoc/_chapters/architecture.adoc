@@ -88,31 +88,10 @@ See the <<datamodel>> and the rest of this chapter for more information on how H
 
 The catalog table `hbase:meta` exists as an HBase table and is filtered out of the HBase shell's `list` command, but is in fact a table just like any other.
 
-[[arch.catalog.root]]
-=== -ROOT-
-
-NOTE: The `-ROOT-` table was removed in HBase 0.96.0.
-Information here should be considered historical.
-
-The `-ROOT-` table kept track of the location of the `.META` table (the previous name for the table now called `hbase:meta`) prior to HBase 0.96.
-The `-ROOT-` table structure was as follows:
-
-.Key
-
-* .META.
-  region key (`.META.,,1`)
-
-.Values
-
-* `info:regioninfo` (serialized link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html[HRegionInfo] instance of `hbase:meta`)
-* `info:server` (server:port of the RegionServer holding `hbase:meta`)
-* `info:serverstartcode` (start-time of the RegionServer process holding `hbase:meta`)
-
 [[arch.catalog.meta]]
 === hbase:meta
 
-The `hbase:meta` table (previously called `.META.`) keeps a list of all regions in the system.
-The location of `hbase:meta` was previously tracked within the `-ROOT-` table, but is now stored in ZooKeeper.
+The `hbase:meta` table (previously called `.META.`) keeps a list of all regions in the system, and the location of `hbase:meta` is stored in ZooKeeper.
 
 The `hbase:meta` table structure is as follows:
 
@@ -696,9 +675,9 @@ Your data is not the only resident of the block cache.
 Here are others that you may have to take into account:
 
 Catalog Tables::
-  The `-ROOT-` (prior to HBase 0.96, see <<arch.catalog.root,arch.catalog.root>>) and `hbase:meta` tables are forced into the block cache and have the in-memory priority which means that they are harder to evict.
-  The former never uses more than a few hundred bytes while the latter can occupy a few MBs
-  (depending on the number of regions).
+  The `hbase:meta` table is forced into the block cache and have the in-memory priority which means that they are harder to evict.
+
+NOTE: The hbase:meta tables can occupy a few MBs depending on the number of regions.
 
 HFiles Indexes::
   An _HFile_ is the file format that HBase uses to store data in HDFS.
