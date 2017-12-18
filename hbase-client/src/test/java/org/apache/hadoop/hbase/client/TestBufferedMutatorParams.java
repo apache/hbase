@@ -136,13 +136,14 @@ public class TestBufferedMutatorParams {
     BufferedMutatorParams bmp = new BufferedMutatorParams(TableName.valueOf(tableName));
 
     BufferedMutator.ExceptionListener listener = new MockExceptionListener();
-    bmp.writeBufferSize(17).maxKeyValueSize(13).pool(pool).listener(listener);
+    bmp.writeBufferSize(17).writeBufferMaxLinger(123).maxKeyValueSize(13).pool(pool).listener(listener);
     bmp.implementationClassName("someClassName");
     BufferedMutatorParams clone = bmp.clone();
 
     // Confirm some literals
     assertEquals(tableName, clone.getTableName().toString());
     assertEquals(17, clone.getWriteBufferSize());
+    assertEquals(123, clone.getWriteBufferMaxLinger());
     assertEquals(13, clone.getMaxKeyValueSize());
     assertEquals("someClassName", clone.getImplementationClassName());
 
@@ -168,6 +169,7 @@ public class TestBufferedMutatorParams {
     assertEquals(some.getTableName().toString(),
         clone.getTableName().toString());
     assertEquals(some.getWriteBufferSize(), clone.getWriteBufferSize());
+    assertEquals(some.getWriteBufferMaxLinger(), clone.getWriteBufferMaxLinger());
     assertEquals(some.getMaxKeyValueSize(), clone.getMaxKeyValueSize());
     assertTrue(some.getListener() == clone.getListener());
     assertTrue(some.getPool() == clone.getPool());

@@ -28,12 +28,14 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.HConstants;
+
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 /**
@@ -74,6 +76,12 @@ public class BufferedMutatorImpl implements BufferedMutator {
    */
   private final AtomicInteger undealtMutationCount = new AtomicInteger(0);
   private volatile long writeBufferSize;
+
+  // A 'max linger' below 100ms will cause too many timer events firing
+  public static final long MIN_WRITE_BUFFER_MAX_LINGER = 100;
+  private long writeBufferMaxLinger;
+  private transient Timer autoFlushTimer = null;
+
   private final int maxKeyValueSize;
   private final ExecutorService pool;
   private final AtomicInteger rpcTimeout;
@@ -100,6 +108,11 @@ public class BufferedMutatorImpl implements BufferedMutator {
     ConnectionConfiguration tableConf = new ConnectionConfiguration(conf);
     this.writeBufferSize = params.getWriteBufferSize() != BufferedMutatorParams.UNSET ?
         params.getWriteBufferSize() : tableConf.getWriteBufferSize();
+
+    // Set via the setter because it does the value validation and starts the TimerTask
+    this.setWriteBufferMaxLinger(params.getWriteBufferMaxLinger() != BufferedMutatorParams.UNSET ?
+            params.getWriteBufferMaxLinger() : tableConf.getWriteBufferMaxLinger());
+
     this.maxKeyValueSize = params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET ?
         params.getMaxKeyValueSize() : tableConf.getMaxKeyValueSize();
 
@@ -181,6 +194,24 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
   }
 
+  @VisibleForTesting
+  long getAutoFlushCount() {
+    return autoFlushCount;
+  }
+  private long autoFlushCount = 0;
+
+  private void autoFlush() {
+    if (currentWriteBufferSize.get() == 0) {
+      return; // No needless flushes
+    }
+    try {
+      autoFlushCount++;
+      flush();
+    } catch (InterruptedIOException | RetriesExhaustedWithDetailsException e) {
+      LOG.error("Exception during autoFlush --> " + e.getMessage());
+    }
+  }
+
   // validate for well-formedness
   public void validatePut(final Put put) throws IllegalArgumentException {
     HTable.validatePut(put, maxKeyValueSize);
@@ -191,6 +222,11 @@ public class BufferedMutatorImpl implements BufferedMutator {
     try {
       if (this.closed) {
         return;
+      }
+
+      if (this.autoFlushTimer != null) {
+        autoFlushTimer.cancel();
+        autoFlushTimer = null;
       }
       // As we can have an operation in progress even if the buffer is empty, we call
       // backgroundFlushCommits at least one time.
@@ -306,6 +342,37 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Override
   public long getWriteBufferSize() {
     return this.writeBufferSize;
+  }
+
+  @Override
+  public void setWriteBufferMaxLinger(long milliseconds) {
+    if (milliseconds > 0) {
+      // If the 'max linger' is set there is a minimal value to obey
+      this.writeBufferMaxLinger = Math.max(MIN_WRITE_BUFFER_MAX_LINGER, milliseconds);
+    } else {
+      // All values must be 0 or higher.
+      this.writeBufferMaxLinger = 0;
+    }
+
+    if (this.writeBufferMaxLinger == 0) {
+      if (autoFlushTimer != null) {
+        autoFlushTimer.cancel();
+        autoFlushTimer = null;
+      }
+    } else {
+      autoFlushTimer = new Timer(true); // Create Timer running as Daemon.
+      autoFlushTimer.schedule(new TimerTask() {
+        @Override
+        public void run() {
+          BufferedMutatorImpl.this.autoFlush();
+        }
+      }, writeBufferMaxLinger, writeBufferMaxLinger);
+    }
+  }
+
+  @Override
+  public long getWriteBufferMaxLinger() {
+    return this.writeBufferMaxLinger;
   }
 
   @Override

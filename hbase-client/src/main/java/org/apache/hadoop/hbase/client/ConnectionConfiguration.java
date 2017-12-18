@@ -30,10 +30,13 @@ public class ConnectionConfiguration {
 
   public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
   public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
+  public static final String WRITE_BUFFER_MAX_LINGER = "hbase.client.write.buffer.linger";
+  public static final long WRITE_BUFFER_MAX_LINGER_DEFAULT = 0; // Default: Autoflush is disabled
   public static final String MAX_KEYVALUE_SIZE_KEY = "hbase.client.keyvalue.maxsize";
   public static final int MAX_KEYVALUE_SIZE_DEFAULT = 10485760;
 
   private final long writeBufferSize;
+  private final long writeBufferMaxLinger;
   private final int metaOperationTimeout;
   private final int operationTimeout;
   private final int scannerCaching;
@@ -55,6 +58,8 @@ public class ConnectionConfiguration {
    */
   ConnectionConfiguration(Configuration conf) {
     this.writeBufferSize = conf.getLong(WRITE_BUFFER_SIZE_KEY, WRITE_BUFFER_SIZE_DEFAULT);
+
+    this.writeBufferMaxLinger = conf.getLong(WRITE_BUFFER_MAX_LINGER, WRITE_BUFFER_MAX_LINGER_DEFAULT);
 
     this.metaOperationTimeout = conf.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
@@ -105,6 +110,7 @@ public class ConnectionConfiguration {
   @VisibleForTesting
   protected ConnectionConfiguration() {
     this.writeBufferSize = WRITE_BUFFER_SIZE_DEFAULT;
+    this.writeBufferMaxLinger = WRITE_BUFFER_MAX_LINGER_DEFAULT;
     this.metaOperationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.operationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.scannerCaching = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING;
@@ -131,6 +137,10 @@ public class ConnectionConfiguration {
 
   public long getWriteBufferSize() {
     return writeBufferSize;
+  }
+
+  public long getWriteBufferMaxLinger() {
+    return writeBufferMaxLinger;
   }
 
   public int getMetaOperationTimeout() {
