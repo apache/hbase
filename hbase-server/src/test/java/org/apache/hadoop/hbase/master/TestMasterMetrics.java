@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -38,11 +36,13 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterMetrics {
 
-  private static final Log LOG = LogFactory.getLog(TestMasterMetrics.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetrics.class);
   private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
 

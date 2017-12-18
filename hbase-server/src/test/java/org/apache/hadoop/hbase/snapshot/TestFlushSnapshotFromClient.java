@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,6 +59,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test creating/using/deleting snapshots from the client
@@ -72,7 +72,7 @@ import org.junit.rules.TestRule;
  */
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestFlushSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
   @ClassRule
   public static final TestRule timeout =
       CategoryBasedTimeout.forClass(TestFlushSnapshotFromClient.class);

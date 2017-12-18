@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,7 +47,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -58,7 +57,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.D
 @InterfaceAudience.Private
 public class DeleteTableProcedure
     extends AbstractStateMachineTableProcedure<DeleteTableState> {
-  private static final Log LOG = LogFactory.getLog(DeleteTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeleteTableProcedure.class);
 
   private List<RegionInfo> regions;
   private TableName tableName;

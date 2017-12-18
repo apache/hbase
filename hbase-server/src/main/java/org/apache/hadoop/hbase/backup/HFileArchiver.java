@@ -25,8 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,7 +39,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Function;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Collections2;
@@ -54,7 +53,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class HFileArchiver {
-  private static final Log LOG = LogFactory.getLog(HFileArchiver.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileArchiver.class);
   private static final String SEPARATOR = ".";
 
   /** Number of retries in case of fs operation failure */

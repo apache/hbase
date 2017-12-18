@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -41,7 +39,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
@@ -52,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 @InterfaceAudience.Private
 class ZKAsyncRegistry implements AsyncRegistry {
 
-  private static final Log LOG = LogFactory.getLog(ZKAsyncRegistry.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKAsyncRegistry.class);
 
   private final ReadOnlyZKClient zk;
 

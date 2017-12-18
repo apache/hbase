@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -44,7 +42,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateTableState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
@@ -53,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.T
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverWithProcedures {
-  private static final Log LOG = LogFactory.getLog(TestMasterFailoverWithProcedures.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailoverWithProcedures.class);
 
 
   @ClassRule

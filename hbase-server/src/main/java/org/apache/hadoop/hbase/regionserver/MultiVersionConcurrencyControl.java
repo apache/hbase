@@ -24,9 +24,9 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 @InterfaceAudience.Private
 public class MultiVersionConcurrencyControl {
-  private static final Log LOG = LogFactory.getLog(MultiVersionConcurrencyControl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiVersionConcurrencyControl.class);
 
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);

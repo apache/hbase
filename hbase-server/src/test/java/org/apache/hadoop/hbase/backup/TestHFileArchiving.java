@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,6 +54,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
@@ -64,7 +64,7 @@ import org.junit.rules.TestName;
 @Category({MediumTests.class, MiscTests.class})
 public class TestHFileArchiving {
 
-  private static final Log LOG = LogFactory.getLog(TestHFileArchiving.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileArchiving.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
 

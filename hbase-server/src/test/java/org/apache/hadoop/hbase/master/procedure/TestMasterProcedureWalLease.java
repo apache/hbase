@@ -25,8 +25,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -52,11 +50,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 @Ignore
 public class TestMasterProcedureWalLease {
-  private static final Log LOG = LogFactory.getLog(TestMasterProcedureWalLease.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterProcedureWalLease.class);
 
   @Rule
   public TestName name = new TestName();

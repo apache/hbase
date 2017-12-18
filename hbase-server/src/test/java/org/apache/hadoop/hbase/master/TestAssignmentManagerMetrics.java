@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -40,13 +38,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.fail;
 
 @Category(MediumTests.class)
 public class TestAssignmentManagerMetrics {
 
-  private static final Log LOG = LogFactory.getLog(TestAssignmentManagerMetrics.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManagerMetrics.class);
   private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
 

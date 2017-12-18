@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +37,8 @@ import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 @InterfaceAudience.Private
 public class RestoreTool {
 
-  public static final Log LOG = LogFactory.getLog(BackupUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   private final static long TABLE_AVAILABILITY_WAIT_TIME = 180000;
 
   private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
@@ -358,7 +358,7 @@ public class RestoreTool {
       restoreService.run(paths, new TableName[]{tableName}, new TableName[] {newTableName}, true);
 
     } catch (Exception e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
       throw new IllegalStateException("Cannot restore hbase table", e);
     }
   }

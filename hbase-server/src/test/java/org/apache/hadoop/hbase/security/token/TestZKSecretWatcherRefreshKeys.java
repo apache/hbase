@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,13 +33,15 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the refreshKeys in ZKSecretWatcher
  */
 @Category({ SecurityTests.class, SmallTests.class })
 public class TestZKSecretWatcherRefreshKeys {
-  private static final Log LOG = LogFactory.getLog(TestZKSecretWatcherRefreshKeys.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcherRefreshKeys.class);
   private static HBaseTestingUtility TEST_UTIL;
 
   private static class MockAbortable implements Abortable {

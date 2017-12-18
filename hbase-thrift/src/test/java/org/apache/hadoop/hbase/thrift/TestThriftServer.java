@@ -32,8 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -69,6 +67,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
@@ -77,7 +77,7 @@ import org.junit.rules.TestName;
 @Category({ClientTests.class, LargeTests.class})
 public class TestThriftServer {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestThriftServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThriftServer.class);
   private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
       .getInstance(MetricsAssertHelper.class);
   protected static final int MAXVERSIONS = 3;

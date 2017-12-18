@@ -38,13 +38,13 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
@@ -63,7 +63,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
 public class NettyRpcServer extends RpcServer {
 
-  public static final Log LOG = LogFactory.getLog(NettyRpcServer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
 
   private final InetSocketAddress bindAddress;
 

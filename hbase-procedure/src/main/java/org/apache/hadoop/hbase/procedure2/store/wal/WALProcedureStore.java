@@ -37,8 +37,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.collections4.queue.CircularFifoQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -47,6 +45,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
@@ -59,6 +58,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -67,7 +68,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class WALProcedureStore extends ProcedureStoreBase {
-  private static final Log LOG = LogFactory.getLog(WALProcedureStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALProcedureStore.class);
   public static final String LOG_PREFIX = "pv2-";
   /** Used to construct the name of the log directory for master procedures */
   public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
@@ -496,8 +497,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.fatal("Unable to serialize one of the procedure: proc=" + proc +
-                ", subprocs=" + Arrays.toString(subprocs), e);
+      LOG.error(HBaseMarkers.FATAL, "Unable to serialize one of the procedure: proc=" +
+          proc + ", subprocs=" + Arrays.toString(subprocs), e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -525,7 +526,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.fatal("Unable to serialize one of the procedure: " + Arrays.toString(procs), e);
+      LOG.error(HBaseMarkers.FATAL, "Unable to serialize one of the procedure: " +
+          Arrays.toString(procs), e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -548,7 +550,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.fatal("Unable to serialize the procedure: " + proc, e);
+      LOG.error(HBaseMarkers.FATAL, "Unable to serialize the procedure: " + proc, e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -571,7 +573,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.fatal("Unable to serialize the procedure: " + procId, e);
+      LOG.error(HBaseMarkers.FATAL, "Unable to serialize the procedure: " + procId, e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -596,7 +598,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.fatal("Unable to serialize the procedure: " + proc, e);
+      LOG.error(HBaseMarkers.FATAL, "Unable to serialize the procedure: " + proc, e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -632,7 +634,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
-      LOG.fatal("Unable to serialize the procedures: " + Arrays.toString(procIds), e);
+      LOG.error("Unable to serialize the procedures: " + Arrays.toString(procIds), e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);
@@ -902,7 +904,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         LOG.warn("Unable to roll the log, attempt=" + (i + 1), e);
       }
     }
-    LOG.fatal("Unable to roll the log");
+    LOG.error(HBaseMarkers.FATAL, "Unable to roll the log");
     return false;
   }
 

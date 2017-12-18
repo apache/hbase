@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.hbase.procedure2.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestDelayedUtil {
-  private static final Log LOG = LogFactory.getLog(TestDelayedUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDelayedUtil.class);
 
   @Test
   public void testDelayedContainerEquals() {

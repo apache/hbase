@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import com.google.protobuf.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SharedConnection;
@@ -41,12 +40,14 @@ import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RegionServerCoprocessorHost extends
     CoprocessorHost<RegionServerCoprocessor, RegionServerCoprocessorEnvironment> {
 
-  private static final Log LOG = LogFactory.getLog(RegionServerCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerCoprocessorHost.class);
 
   private RegionServerServices rsServices;
 

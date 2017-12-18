@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +35,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test Export Snapshot Tool
@@ -45,7 +45,7 @@ import org.junit.rules.TestRule;
 public class TestExportSnapshotNoCluster {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestExportSnapshotNoCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotNoCluster.class);
 
   protected final static HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
 

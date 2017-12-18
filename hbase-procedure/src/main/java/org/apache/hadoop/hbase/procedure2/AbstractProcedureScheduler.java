@@ -23,13 +23,13 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
-  private static final Log LOG = LogFactory.getLog(AbstractProcedureScheduler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractProcedureScheduler.class);
   private final ReentrantLock schedulerLock = new ReentrantLock();
   private final Condition schedWaitCond = schedulerLock.newCondition();
   private boolean running = false;

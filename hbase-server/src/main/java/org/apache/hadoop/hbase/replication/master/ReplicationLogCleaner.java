@@ -18,11 +18,10 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Abortable;
@@ -31,15 +30,16 @@ import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
-
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Implementation of a log cleaner that checks if a log is still scheduled for
@@ -47,7 +47,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
-  private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationLogCleaner.class);
   private ZKWatcher zkw;
   private ReplicationQueuesClient replicationQueues;
   private boolean stopped = false;
@@ -140,9 +140,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     @Override
     public void abort(String why, Throwable e) {
       LOG.warn("ReplicationLogCleaner received abort, ignoring.  Reason: " + why);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(e);
-      }
+      LOG.debug(e.toString(), e);
     }
 
     @Override

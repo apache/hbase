@@ -32,8 +32,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -60,6 +58,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests writing Bloom filter blocks in the same part of the file as data
@@ -71,7 +71,7 @@ public class TestCompoundBloomFilter {
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCompoundBloomFilter.class);
 
   private static final int NUM_TESTS = 9;

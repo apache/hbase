@@ -30,8 +30,6 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -51,11 +49,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestBoundedRegionGroupingStrategy {
-  private static final Log LOG = LogFactory.getLog(TestBoundedRegionGroupingStrategy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBoundedRegionGroupingStrategy.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

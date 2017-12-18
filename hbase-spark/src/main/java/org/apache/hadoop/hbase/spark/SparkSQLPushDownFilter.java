@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.hbase.spark;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.spark.datasources.BytesEncoder;
@@ -46,7 +46,7 @@ import com.google.protobuf.ByteString;
  */
 @InterfaceAudience.Private
 public class SparkSQLPushDownFilter extends FilterBase{
-  protected static final Log log = LogFactory.getLog(SparkSQLPushDownFilter.class);
+  protected static final Logger log = LoggerFactory.getLogger(SparkSQLPushDownFilter.class);
 
   //The following values are populated with protobuffer
   DynamicLogicExpression dynamicLogicExpression;

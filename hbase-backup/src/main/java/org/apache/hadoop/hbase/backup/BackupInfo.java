@@ -30,11 +30,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.BackupInfo.Builder;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class BackupInfo implements Comparable<BackupInfo> {
-  private static final Log LOG = LogFactory.getLog(BackupInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
 
   public static interface Filter {
 
@@ -425,7 +425,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
       try {
         return Bytes.equals(toByteArray(), other.toByteArray());
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         return false;
       }
     } else {

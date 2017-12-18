@@ -35,13 +35,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -49,7 +48,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -90,6 +88,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@link MobCompactor} that compacts the mob files in partitions.
@@ -97,7 +97,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class PartitionedMobCompactor extends MobCompactor {
 
-  private static final Log LOG = LogFactory.getLog(PartitionedMobCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PartitionedMobCompactor.class);
   protected long mergeableSize;
   protected int delFileMaxCount;
   /** The number of files compacted in a batch */
@@ -362,7 +362,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       LOG.info(
           "After a mob compaction with all files selected, archiving the del files ");
       for (CompactionDelPartition delPartition : request.getDelPartitions()) {
-        LOG.info(delPartition.listDelFiles());
+        LOG.info(Objects.toString(delPartition.listDelFiles()));
         try {
           MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
             delPartition.getStoreFiles());

@@ -25,9 +25,10 @@ import java.util.HashSet;
 import java.util.List;
 
 import java.util.Set;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -53,7 +54,7 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Public
 public class MiniHBaseCluster extends HBaseCluster {
-  private static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(MiniHBaseCluster.class.getName());
   public LocalHBaseCluster hbaseCluster;
   private static int index;
 

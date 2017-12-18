@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,10 +43,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZKNodeTracker {
-  private static final Log LOG = LogFactory.getLog(TestZKNodeTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKNodeTracker.class);
   private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
 
   @BeforeClass
@@ -244,7 +244,7 @@ public class TestZKNodeTracker {
   }
 
   public static class TestingZKListener extends ZKListener {
-    private static final Log LOG = LogFactory.getLog(TestingZKListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TestingZKListener.class);
 
     private Semaphore deletedLock;
     private Semaphore createdLock;

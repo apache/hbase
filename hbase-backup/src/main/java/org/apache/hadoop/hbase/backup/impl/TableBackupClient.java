@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -59,7 +59,7 @@ public abstract class TableBackupClient {
   @VisibleForTesting
   public static final String BACKUP_TEST_MODE_STAGE = "backup.test.mode.stage";
 
-  private static final Log LOG = LogFactory.getLog(TableBackupClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableBackupClient.class);
 
   protected Configuration conf;
   protected Connection conn;

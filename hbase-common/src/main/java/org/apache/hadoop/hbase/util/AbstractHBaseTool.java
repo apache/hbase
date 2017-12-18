@@ -31,14 +31,14 @@ import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Common base class used for HBase command-line tools. Simplifies workflow and
@@ -55,7 +55,7 @@ public abstract class AbstractHBaseTool implements Tool, Configurable {
   private static final Option HELP_OPTION = new Option("h", "help", false,
       "Prints help for this tool.");
 
-  private static final Log LOG = LogFactory.getLog(AbstractHBaseTool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractHBaseTool.class);
 
   protected final Options options = new Options();
 

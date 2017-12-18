@@ -23,8 +23,6 @@ import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,11 +32,12 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
-  private static final Log LOG = LogFactory.getLog(ChaosMonkeyRunner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ChaosMonkeyRunner.class);
 
   public static final String MONKEY_LONG_OPT = "monkey";
   public static final String CHAOS_MONKEY_PROPS = "monkeyProps";
@@ -75,7 +74,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
           monkeyProps.load(this.getClass().getClassLoader()
               .getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
-          LOG.warn(e);
+          LOG.warn(e.toString(), e);
           System.exit(EXIT_FAILURE);
         }
       }

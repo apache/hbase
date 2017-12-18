@@ -24,8 +24,6 @@ import java.util.Iterator;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -59,6 +57,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import scala.Tuple2;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.Files;
@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.io.Files;
 public class TestJavaHBaseContext implements Serializable {
   private transient JavaSparkContext jsc;
   HBaseTestingUtility htu;
-  protected static final Log LOG = LogFactory.getLog(TestJavaHBaseContext.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestJavaHBaseContext.class);
 
 
 
@@ -189,6 +189,7 @@ public class TestJavaHBaseContext implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public Put call(String v) throws Exception {
       String[] cells = v.split(",");
       Put put = new Put(Bytes.toBytes(cells[0]));
@@ -464,6 +465,7 @@ public class TestJavaHBaseContext implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public Get call(byte[] v) throws Exception {
       return new Get(v);
     }
@@ -473,6 +475,7 @@ public class TestJavaHBaseContext implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public String call(Result result) throws Exception {
       Iterator<Cell> it = result.listCells().iterator();
       StringBuilder b = new StringBuilder();

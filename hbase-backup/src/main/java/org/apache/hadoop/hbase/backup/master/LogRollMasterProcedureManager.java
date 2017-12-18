@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
@@ -44,6 +42,8 @@ import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Master procedure manager for coordinated cluster-wide WAL roll operation, which is run during
@@ -51,7 +51,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class LogRollMasterProcedureManager extends MasterProcedureManager {
-  private static final Log LOG = LogFactory.getLog(LogRollMasterProcedureManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogRollMasterProcedureManager.class);
 
   public static final String ROLLLOG_PROCEDURE_SIGNATURE = "rolllog-proc";
   public static final String ROLLLOG_PROCEDURE_NAME = "rolllog";

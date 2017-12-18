@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,10 +53,12 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestRefreshHFilesEndpoint {
-  private static final Log LOG = LogFactory.getLog(TestRefreshHFilesEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRefreshHFilesEndpoint.class);
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final int NUM_MASTER = 1;
   private static final int NUM_RS = 2;
@@ -128,7 +128,7 @@ public class TestRefreshHFilesEndpoint {
       if (rex.getCause() instanceof IOException)
         throw new IOException();
     } catch (Throwable ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString(), ex);
       fail("Couldn't call the RefreshRegionHFilesEndpoint");
     }
   }

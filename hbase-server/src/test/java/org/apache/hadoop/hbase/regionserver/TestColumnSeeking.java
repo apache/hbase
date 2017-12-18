@@ -30,8 +30,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -52,6 +50,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestColumnSeeking {
@@ -60,7 +60,7 @@ public class TestColumnSeeking {
       withLookingForStuckThread(true).build();
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
-  private static final Log LOG = LogFactory.getLog(TestColumnSeeking.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
 
   @SuppressWarnings("unchecked")
   @Test

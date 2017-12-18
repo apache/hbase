@@ -26,8 +26,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -103,7 +103,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class HTable implements Table {
-  private static final Log LOG = LogFactory.getLog(HTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HTable.class);
   private static final Consistency DEFAULT_CONSISTENCY = Consistency.STRONG;
   private final ClusterConnection connection;
   private final TableName tableName;

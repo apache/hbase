@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.procedure.flush;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
  */
 @InterfaceAudience.Private
 public class FlushTableSubprocedure extends Subprocedure {
-  private static final Log LOG = LogFactory.getLog(FlushTableSubprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushTableSubprocedure.class);
 
   private final String table;
   private final List<HRegion> regions;

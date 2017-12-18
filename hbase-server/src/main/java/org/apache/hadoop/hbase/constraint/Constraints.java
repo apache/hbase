@@ -29,9 +29,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -53,7 +53,7 @@ public final class Constraints {
   private Constraints() {
   }
 
-  private static final Log LOG = LogFactory.getLog(Constraints.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Constraints.class);
   private static final String CONSTRAINT_HTD_KEY_PREFIX = "constraint $";
   private static final Pattern CONSTRAINT_HTD_ATTR_KEY_PATTERN = Pattern
       .compile(CONSTRAINT_HTD_KEY_PREFIX, Pattern.LITERAL);

@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -72,7 +70,8 @@ import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.Assert;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
@@ -86,7 +85,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public final class SnapshotTestingUtils {
-  private static final Log LOG = LogFactory.getLog(SnapshotTestingUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotTestingUtils.class);
 
   // default number of regions (and keys) given by getSplitKeys() and createTable()
   private static byte[] KEYS = Bytes.toBytes("0123456");

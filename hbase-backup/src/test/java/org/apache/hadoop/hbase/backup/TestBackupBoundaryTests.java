@@ -21,19 +21,18 @@ package org.apache.hadoop.hbase.backup;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupBoundaryTests extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestBackupBoundaryTests.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupBoundaryTests.class);
 
   /**
    * Verify that full backup is created on a single empty table correctly.

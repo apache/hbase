@@ -29,8 +29,6 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -51,6 +49,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test performance improvement of joined scanners optimization:
@@ -58,7 +58,7 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestJoinedScanners {
-  private static final Log LOG = LogFactory.getLog(TestJoinedScanners.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestJoinedScanners.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestJoinedScanners").toString();

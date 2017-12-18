@@ -24,8 +24,6 @@ import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.Collections;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
@@ -43,6 +41,8 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides a service for obtaining authentication tokens via the
@@ -53,7 +53,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class TokenProvider implements AuthenticationProtos.AuthenticationService.Interface,
     RegionCoprocessor {
 
-  private static final Log LOG = LogFactory.getLog(TokenProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TokenProvider.class);
 
   private AuthenticationTokenSecretManager secretManager;
 

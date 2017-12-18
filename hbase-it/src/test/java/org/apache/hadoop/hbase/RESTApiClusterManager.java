@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -98,7 +100,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   // because cluster managers don't tend to implement these operations.
   private ClusterManager hBaseClusterManager;
 
-  private static final Log LOG = LogFactory.getLog(RESTApiClusterManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RESTApiClusterManager.class);
 
   RESTApiClusterManager() {
     hBaseClusterManager = ReflectionUtils.newInstance(HBaseClusterManager.class,

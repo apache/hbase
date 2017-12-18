@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
@@ -46,6 +45,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
 
 /**
  * A base class for a test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -70,7 +70,7 @@ public abstract class TestTableMapReduceBase {
   /**
    * Retrieve my logger instance.
    */
-  protected abstract Log getLog();
+  protected abstract Logger getLog();
 
   /**
    * Handles API-specifics for setting up and executing the job.

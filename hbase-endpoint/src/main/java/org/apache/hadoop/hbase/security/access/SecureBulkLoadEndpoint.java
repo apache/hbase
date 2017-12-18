@@ -23,8 +23,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
@@ -51,6 +49,8 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coprocessor service for bulk loads in secure mode.
@@ -63,7 +63,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
 
   public static final long VERSION = 0L;
 
-  private static final Log LOG = LogFactory.getLog(SecureBulkLoadEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SecureBulkLoadEndpoint.class);
 
   private RegionCoprocessorEnvironment env;
   private RegionServerServices rsServices;

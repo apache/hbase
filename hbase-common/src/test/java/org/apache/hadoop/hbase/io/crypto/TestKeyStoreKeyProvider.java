@@ -29,19 +29,19 @@ import java.security.MessageDigest;
 import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestKeyStoreKeyProvider {
 
-  private static final Log LOG = LogFactory.getLog(TestKeyStoreKeyProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestKeyStoreKeyProvider.class);
   static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
   static final String ALIAS = "test";
   static final String PASSWORD = "password";

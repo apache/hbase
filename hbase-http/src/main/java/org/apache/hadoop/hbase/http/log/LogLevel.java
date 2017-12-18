@@ -30,14 +30,16 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.impl.Log4jLoggerAdapter;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.util.ServletUtil;
+import org.apache.log4j.LogManager;
 
 /**
  * Change log level in runtime.
@@ -115,7 +117,7 @@ public class LogLevel {
         out.println(MARKER
             + "Submitted Log Name: <b>" + logName + "</b><br />");
 
-        Log log = LogFactory.getLog(logName);
+        Logger log = LoggerFactory.getLogger(logName);
         out.println(MARKER
             + "Log Class: <b>" + log.getClass().getName() +"</b><br />");
         if (level != null) {
@@ -124,11 +126,11 @@ public class LogLevel {
 
         if (log instanceof Log4JLogger) {
           process(((Log4JLogger)log).getLogger(), level, out);
-        }
-        else if (log instanceof Jdk14Logger) {
+        } else if (log instanceof Jdk14Logger) {
           process(((Jdk14Logger)log).getLogger(), level, out);
-        }
-        else {
+        } else if (log instanceof Log4jLoggerAdapter) {
+          process(LogManager.getLogger(logName), level, out);
+        } else {
           out.println("Sorry, " + log.getClass() + " not supported.<br />");
         }
       }

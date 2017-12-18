@@ -25,8 +25,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -46,6 +44,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 1. Create table t1
@@ -58,7 +58,7 @@ import org.junit.runners.Parameterized;
 @Category(LargeTests.class)
 @RunWith(Parameterized.class)
 public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
-  private static final Log LOG = LogFactory.getLog(TestIncrementalBackupDeleteTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {

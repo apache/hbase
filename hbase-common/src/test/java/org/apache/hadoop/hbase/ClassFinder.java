@@ -33,8 +33,8 @@ import java.util.jar.JarInputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that finds a set of classes that are locally accessible
@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
  * imposed by name and class filters provided by the user.
  */
 public class ClassFinder {
-  private static final Log LOG = LogFactory.getLog(ClassFinder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClassFinder.class);
   private static String CLASS_EXT = ".class";
 
   private ResourcePathFilter resourcePathFilter;

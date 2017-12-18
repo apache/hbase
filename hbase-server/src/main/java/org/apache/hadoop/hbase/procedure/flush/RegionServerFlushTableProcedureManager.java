@@ -29,8 +29,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -51,13 +49,16 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This manager class handles flushing of the regions for table on a {@link HRegionServer}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class RegionServerFlushTableProcedureManager extends RegionServerProcedureManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerFlushTableProcedureManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RegionServerFlushTableProcedureManager.class);
 
   private static final String CONCURENT_FLUSH_TASKS_KEY =
       "hbase.flush.procedure.region.concurrentTasks";

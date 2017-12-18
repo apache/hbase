@@ -26,8 +26,6 @@ import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -66,6 +64,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing for lock up of WAL subsystem.
@@ -73,7 +73,7 @@ import org.mockito.Mockito;
  */
 @Category({MediumTests.class})
 public class TestWALLockup {
-  private static final Log LOG = LogFactory.getLog(TestWALLockup.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALLockup.class);
   @Rule public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";

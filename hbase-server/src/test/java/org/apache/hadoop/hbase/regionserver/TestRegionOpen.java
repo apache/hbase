@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,12 +49,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.fail;
 
 @Category({MediumTests.class, RegionServerTests.class})
 public class TestRegionOpen {
   @SuppressWarnings("unused")
-  private static final Log LOG = LogFactory.getLog(TestRegionOpen.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionOpen.class);
   private static final int NB_SERVERS = 1;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();

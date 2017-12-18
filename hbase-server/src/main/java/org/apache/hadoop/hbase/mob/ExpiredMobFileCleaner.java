@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,6 +27,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -47,7 +47,7 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Private
 public class ExpiredMobFileCleaner extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(ExpiredMobFileCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExpiredMobFileCleaner.class);
   /**
    * Cleans the MOB files when they're expired and their min versions are 0.
    * If the latest timestamp of Cells in a MOB file is older than the TTL in the column family,

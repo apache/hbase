@@ -25,13 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
@@ -40,11 +39,13 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class ReplicationPeerZKImpl extends ReplicationStateZKBase
     implements ReplicationPeer, Abortable, Closeable {
-  private static final Log LOG = LogFactory.getLog(ReplicationPeerZKImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerZKImpl.class);
 
   private ReplicationPeerConfig peerConfig;
   private final String id;
@@ -187,8 +188,8 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
 
   @Override
   public void abort(String why, Throwable e) {
-    LOG.fatal("The ReplicationPeer corresponding to peer " + peerConfig
-        + " was aborted for the following reason(s):" + why, e);
+    LOG.error(HBaseMarkers.FATAL, "The ReplicationPeer corresponding to peer " +
+        peerConfig + " was aborted for the following reason(s):" + why, e);
   }
 
   @Override

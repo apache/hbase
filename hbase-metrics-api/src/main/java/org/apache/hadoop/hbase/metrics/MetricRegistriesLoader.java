@@ -25,16 +25,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
 public class MetricRegistriesLoader {
-  private static final Log LOG = LogFactory.getLog(MetricRegistries.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricRegistries.class);
 
   private static final String defaultClass
       = "org.apache.hadoop.hbase.metrics.impl.MetricRegistriesImpl";

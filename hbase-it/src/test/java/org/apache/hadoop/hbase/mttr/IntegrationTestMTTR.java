@@ -30,8 +30,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -74,6 +72,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration test that should benchmark how fast HBase can recover from failures. This test starts
@@ -121,7 +121,7 @@ public class IntegrationTestMTTR {
    * Constants.
    */
   private static final byte[] FAMILY = Bytes.toBytes("d");
-  private static final Log LOG = LogFactory.getLog(IntegrationTestMTTR.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMTTR.class);
   private static long sleepTime;
   private static final String SLEEP_TIME_KEY = "hbase.IntegrationTestMTTR.sleeptime";
   private static final long SLEEP_TIME_DEFAULT = 60 * 1000l;

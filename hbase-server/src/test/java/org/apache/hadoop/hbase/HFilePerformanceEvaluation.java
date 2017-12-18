@@ -22,14 +22,14 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.random.RandomData;
 import org.apache.commons.math3.random.RandomDataImpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.crypto.CryptoCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
@@ -62,8 +62,8 @@ public class HFilePerformanceEvaluation {
       "WARN");
   }
   
-  private static final Log LOG =
-    LogFactory.getLog(HFilePerformanceEvaluation.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(HFilePerformanceEvaluation.class.getName());
 
   static byte [] format(final int i) {
     String v = Integer.toString(i);

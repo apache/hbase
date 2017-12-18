@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,7 +35,8 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -76,7 +75,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 @Deprecated
 @InterfaceAudience.Public
 public class HRegionInfo implements RegionInfo, Comparable<HRegionInfo> {
-  private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionInfo.class);
 
   /**
    * The new format for a region name contains its encodedName at the end.

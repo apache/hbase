@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,7 +39,8 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
 
@@ -55,8 +54,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
-  private static final Log LOG =
-      LogFactory.getLog(LoadBalancerPerformanceEvaluation.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
 
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 

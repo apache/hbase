@@ -16,10 +16,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.Principal;
@@ -29,8 +27,6 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
@@ -48,8 +44,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Lookup;
 import org.apache.http.config.RegistryBuilder;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.entity.ContentType;
 import org.apache.http.impl.auth.SPNegoSchemeFactory;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
@@ -65,6 +59,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
@@ -72,7 +68,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
-  private static final Log LOG = LogFactory.getLog(TestSpnegoHttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
   private static final String CLIENT_PRINCIPAL = "client";
 

@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Semaphore;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -39,11 +37,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestMasterAddressTracker {
-  private static final Log LOG = LogFactory.getLog(TestMasterAddressTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterAddressTracker.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -157,7 +157,7 @@ public class TestMasterAddressTracker {
   }
 
   public static class NodeCreationListener extends ZKListener {
-    private static final Log LOG = LogFactory.getLog(NodeCreationListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NodeCreationListener.class);
 
     private Semaphore lock;
     private String node;

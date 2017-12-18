@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.metrics.JvmPauseMonitorSource;
 import org.apache.hadoop.conf.Configuration;
 
@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class JvmPauseMonitor {
-  private static final Log LOG = LogFactory.getLog(JvmPauseMonitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JvmPauseMonitor.class);
 
   /** The target sleep time */
   private static final long SLEEP_INTERVAL_MS = 500;

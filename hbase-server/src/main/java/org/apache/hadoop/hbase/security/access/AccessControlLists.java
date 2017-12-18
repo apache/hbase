@@ -32,8 +32,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -75,6 +73,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Maintains lists of permission grants to users and groups to allow for
@@ -119,7 +119,7 @@ public class AccessControlLists {
    * _acl_ table info: column keys */
   public static final char ACL_KEY_DELIMITER = ',';
 
-  private static final Log LOG = LogFactory.getLog(AccessControlLists.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AccessControlLists.class);
 
   /**
    * Stores a new user permission grant in the access control lists table.

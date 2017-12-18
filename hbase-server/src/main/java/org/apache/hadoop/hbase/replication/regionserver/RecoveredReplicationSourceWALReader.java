@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.concurrent.PriorityBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 
 /**
@@ -35,7 +35,8 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RecoveredReplicationSourceWALReader extends ReplicationSourceWALReader {
-  private static final Log LOG = LogFactory.getLog(RecoveredReplicationSourceWALReader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RecoveredReplicationSourceWALReader.class);
 
   public RecoveredReplicationSourceWALReader(FileSystem fs, Configuration conf,
       PriorityBlockingQueue<Path> logQueue, long startPosition, WALEntryFilter filter,
@@ -43,6 +44,7 @@ public class RecoveredReplicationSourceWALReader extends ReplicationSourceWALRea
     super(fs, conf, logQueue, startPosition, filter, source);
   }
 
+  @Override
   protected void handleEmptyWALEntryBatch(WALEntryBatch batch, Path currentPath)
       throws InterruptedException {
     LOG.trace("Didn't read any new entries from WAL");

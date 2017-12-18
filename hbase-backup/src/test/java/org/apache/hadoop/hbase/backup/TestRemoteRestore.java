@@ -13,19 +13,19 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestRemoteRestore extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestRemoteRestore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRemoteRestore.class);
 
   @Override
   public void setUp () throws Exception {

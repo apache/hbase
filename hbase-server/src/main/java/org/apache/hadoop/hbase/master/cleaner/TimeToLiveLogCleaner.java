@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
-  private static final Log LOG = LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TimeToLiveLogCleaner.class.getName());
   public static final String TTL_CONF_KEY = "hbase.master.logcleaner.ttl";
   // default ttl = 10 minutes
   public static final long DEFAULT_TTL = 600_000L;

@@ -19,13 +19,13 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -34,7 +34,7 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnvironment<C> {
-  private static final Log LOG = LogFactory.getLog(BaseEnvironment.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseEnvironment.class);
 
   /** The coprocessor */
   public C impl;

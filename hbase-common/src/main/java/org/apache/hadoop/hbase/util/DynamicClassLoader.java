@@ -23,13 +23,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a class loader that can load classes dynamically from new
@@ -57,8 +57,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DynamicClassLoader extends ClassLoaderBase {
-  private static final Log LOG =
-      LogFactory.getLog(DynamicClassLoader.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DynamicClassLoader.class);
 
   // Dynamic jars are put under ${hbase.local.dir}/jars/
   private static final String DYNAMIC_JARS_DIR = File.separator

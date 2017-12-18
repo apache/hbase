@@ -16,8 +16,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -26,13 +24,14 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestBackupDeleteRestore extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestBackupDeleteRestore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupDeleteRestore.class);
 
   /**
    * Verify that load data- backup - delete some data - restore works as expected - deleted data get

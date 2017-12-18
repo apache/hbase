@@ -27,11 +27,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -67,7 +66,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -75,7 +75,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 /** memstore test case */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestDefaultMemStore {
-  private static final Log LOG = LogFactory.getLog(TestDefaultMemStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDefaultMemStore.class);
   @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
     withLookingForStuckThread(true).build();
@@ -167,7 +167,7 @@ public class TestDefaultMemStore {
     int count = 0;
     try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
         count++;
         // Row count is same as column count.
         assertEquals(rowCount, result.size());
@@ -184,7 +184,7 @@ public class TestDefaultMemStore {
     count = 0;
     try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
         // Assert the stuff is coming out in right order.
         assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         count++;
@@ -208,7 +208,7 @@ public class TestDefaultMemStore {
     int snapshotIndex = 5;
     try (StoreScanner s = new StoreScanner(scan, scanInfo, null, memstorescanners)) {
       while (s.next(result)) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
         // Assert the stuff is coming out in right order.
         assertTrue(CellUtil.matchingRows(result.get(0), Bytes.toBytes(count)));
         // Row count is same as column count.

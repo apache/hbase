@@ -49,9 +49,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -70,7 +70,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.Private
 class NettyRpcConnection extends RpcConnection {
 
-  private static final Log LOG = LogFactory.getLog(NettyRpcConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NettyRpcConnection.class);
 
   private static final ScheduledExecutorService RELOGIN_EXECUTOR =
       Executors.newSingleThreadScheduledExecutor(Threads.newDaemonThreadFactory("Relogin"));

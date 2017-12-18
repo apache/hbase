@@ -22,8 +22,6 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,9 +41,6 @@ import org.junit.rules.TestName;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionReplicasWithModifyTable {
-
-  private static final Log LOG = LogFactory.getLog(TestRegionReplicasWithModifyTable.class);
-
   private static final int NB_SERVERS = 3;
   private static Table table;
   private static final byte[] row = "TestRegionReplicasWithModifyTable".getBytes();

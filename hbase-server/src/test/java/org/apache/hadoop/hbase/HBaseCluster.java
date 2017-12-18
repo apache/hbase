@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceAudience.Private
 public abstract class HBaseCluster implements Closeable, Configurable {
   // Log is being used in DistributedHBaseCluster class, hence keeping it as package scope
-  static final Log LOG = LogFactory.getLog(HBaseCluster.class.getName());
+  static final Logger LOG = LoggerFactory.getLogger(HBaseCluster.class.getName());
   protected Configuration conf;
 
   /** the status of the cluster before we begin */

@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -40,8 +41,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -103,10 +102,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestMobCompactor {
-  private static final Log LOG = LogFactory.getLog(TestMobCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = null;
   private TableName tableName;
@@ -715,7 +716,7 @@ public class TestMobCompactor {
       Thread.sleep(50);
       fileList = fs.listStatus(path);
       for (FileStatus fileStatus: fileList) {
-        LOG.info(fileStatus);
+        LOG.info(Objects.toString(fileStatus));
       }
     }
   }
@@ -1040,7 +1041,7 @@ public class TestMobCompactor {
             }
           }
         });
-    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+    pool.allowCoreThreadTimeOut(true);
     return pool;
   }
 

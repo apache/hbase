@@ -27,8 +27,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -84,7 +82,8 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 /**
@@ -107,7 +106,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 @Category(IntegrationTests.class)
 public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestLoadAndVerify.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestLoadAndVerify.class);
 
   private static final String TEST_NAME = "IntegrationTestLoadAndVerify";
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
@@ -426,7 +425,7 @@ public void cleanUpCluster() throws Exception {
           try {
             LOG.info("Found cell=" + cell + " , walKey=" + context.getCurrentKey());
           } catch (IOException|InterruptedException e) {
-            LOG.warn(e);
+            LOG.warn(e.toString(), e);
           }
           if (rows.addAndGet(1) < MISSING_ROWS_TO_LOG) {
             context.getCounter(FOUND_GROUP_KEY, keyStr).increment(1);

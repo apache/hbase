@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
 
-  private static final Log LOG = LogFactory.getLog(BusyRegionSplitPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BusyRegionSplitPolicy.class);
 
   // Maximum fraction blocked write requests before region is considered for split
   private float maxBlockedRequests;

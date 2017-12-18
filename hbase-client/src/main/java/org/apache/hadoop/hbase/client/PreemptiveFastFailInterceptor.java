@@ -27,12 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
@@ -66,8 +66,8 @@ import org.apache.hadoop.ipc.RemoteException;
 @InterfaceAudience.Private
 class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
 
-  private static final Log LOG = LogFactory
-      .getLog(PreemptiveFastFailInterceptor.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(PreemptiveFastFailInterceptor.class);
 
   // amount of time to wait before we consider a server to be in fast fail
   // mode

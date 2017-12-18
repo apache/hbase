@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -29,6 +28,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
@@ -44,7 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.Private
 public class DeleteNamespaceProcedure
     extends AbstractStateMachineNamespaceProcedure<DeleteNamespaceState> {
-  private static final Log LOG = LogFactory.getLog(DeleteNamespaceProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeleteNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
   private String namespaceName;

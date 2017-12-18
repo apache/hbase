@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.hbase.backup;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestSystemTableSnapshot extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestSystemTableSnapshot.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSystemTableSnapshot.class);
 
   /**
    * Verify backup system table snapshot

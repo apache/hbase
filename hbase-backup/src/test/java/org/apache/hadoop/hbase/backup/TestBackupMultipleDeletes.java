@@ -25,8 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.client.Connection;
@@ -39,7 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -47,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @Category(LargeTests.class)
 public class TestBackupMultipleDeletes extends TestBackupBase {
-  private static final Log LOG = LogFactory.getLog(TestBackupMultipleDeletes.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupMultipleDeletes.class);
 
   @Test
   public void testBackupMultipleDeletes() throws Exception {

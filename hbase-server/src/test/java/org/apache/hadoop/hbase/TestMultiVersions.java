@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TimestampTestBase.FlushCache;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
@@ -49,6 +47,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
@@ -56,7 +56,7 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMultiVersions {
-  private static final Log LOG = LogFactory.getLog(TestMultiVersions.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Admin admin;
   

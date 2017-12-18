@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +39,8 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.Pair;
@@ -54,7 +54,7 @@ import org.apache.hadoop.util.Tool;
 
 @InterfaceAudience.Private
 public class MapReduceBackupMergeJob implements BackupMergeJob {
-  public static final Log LOG = LogFactory.getLog(MapReduceBackupMergeJob.class);
+  public static final Logger LOG = LoggerFactory.getLogger(MapReduceBackupMergeJob.class);
 
   protected Tool player;
   protected Configuration conf;
@@ -163,7 +163,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
       throw e;
     } catch (Exception e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
       if (!finishedTables) {
         // cleanup bulk directories and finish merge
         // merge MUST be repeated (no need for repair)

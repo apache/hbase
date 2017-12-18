@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -65,7 +63,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -73,7 +72,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestReversibleScanners {
-  private static final Log LOG = LogFactory.getLog(TestReversibleScanners.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
   HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static byte[] FAMILYNAME = Bytes.toBytes("testCf");

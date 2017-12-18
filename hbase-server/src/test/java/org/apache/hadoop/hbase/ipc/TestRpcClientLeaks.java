@@ -27,8 +27,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -49,6 +47,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestRpcClientLeaks {
@@ -99,7 +99,7 @@ public class TestRpcClientLeaks {
     UTIL.shutdownMiniCluster();
   }
 
-  public static final Log LOG = LogFactory.getLog(TestRpcClientLeaks.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestRpcClientLeaks.class);
 
   @Test(expected=RetriesExhaustedException.class)
   public void testSocketClosed() throws IOException, InterruptedException {

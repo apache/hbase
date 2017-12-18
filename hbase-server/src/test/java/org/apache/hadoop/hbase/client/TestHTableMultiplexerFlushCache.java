@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -38,13 +36,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestHTableMultiplexerFlushCache {
-  private static final Log LOG = LogFactory.getLog(TestHTableMultiplexerFlushCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHTableMultiplexerFlushCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER1 = Bytes.toBytes("testQualifier_1");

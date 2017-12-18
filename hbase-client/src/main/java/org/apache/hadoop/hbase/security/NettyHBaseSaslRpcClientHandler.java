@@ -25,10 +25,10 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.Promise;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -41,7 +41,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceAudience.Private
 public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-  private static final Log LOG = LogFactory.getLog(NettyHBaseSaslRpcClientHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClientHandler.class);
 
   private final Promise<Boolean> saslPromise;
 

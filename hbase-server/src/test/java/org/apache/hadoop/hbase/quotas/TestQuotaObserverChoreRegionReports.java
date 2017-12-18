@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,13 +48,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A test case to verify that region reports are expired when they are not sent.
  */
 @Category(LargeTests.class)
 public class TestQuotaObserverChoreRegionReports {
-  private static final Log LOG = LogFactory.getLog(TestQuotaObserverChoreRegionReports.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestQuotaObserverChoreRegionReports.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule

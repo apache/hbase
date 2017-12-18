@@ -28,15 +28,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -66,6 +65,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -87,7 +89,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @InterfaceAudience.Private
 public final class BackupSystemTable implements Closeable {
-  private static final Log LOG = LogFactory.getLog(BackupSystemTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupSystemTable.class);
 
   static class WALItem {
     String backupId;
@@ -968,7 +970,7 @@ public final class BackupSystemTable implements Closeable {
           + " tables [" + StringUtils.join(tables, " ") + "]");
     }
     if (LOG.isDebugEnabled()) {
-      tables.forEach(table -> LOG.debug(table));
+      tables.forEach(table -> LOG.debug(Objects.toString(table)));
     }
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForIncrBackupTableSet(tables, backupRoot);

@@ -13,16 +13,16 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowIndexEncoderV1 {
-  private static final Log LOG = LogFactory.getLog(RowIndexEncoderV1.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowIndexEncoderV1.class);
 
   /** The Cell previously appended. */
   private Cell lastCell = null;

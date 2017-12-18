@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,6 +37,8 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Maintains the cache for visibility labels and also uses the zookeeper to update the labels in the
@@ -48,7 +48,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityLabelsCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityLabelsCache.class);
   private static final List<String> EMPTY_LIST = Collections.emptyList();
   private static final Set<Integer> EMPTY_SET = Collections.emptySet();
   private static VisibilityLabelsCache instance;

@@ -19,11 +19,11 @@
 
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 
 /**
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 @InterfaceAudience.Private
 public class CompactionConfiguration {
 
-  private static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactionConfiguration.class);
 
   public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY = "hbase.hstore.compaction.ratio";
   public static final String HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY =
@@ -142,7 +142,7 @@ public class CompactionConfiguration {
     this.dateTieredCompactionWindowFactory = conf.get(
       DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS_KEY,
       DEFAULT_DATE_TIERED_COMPACTION_WINDOW_FACTORY_CLASS.getName());
-    LOG.info(this);
+    LOG.info(toString());
   }
 
   @Override

@@ -24,12 +24,12 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility functions for region server storage layer.
@@ -37,7 +37,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class StoreUtils {
 
-  private static final Log LOG = LogFactory.getLog(StoreUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreUtils.class);
 
   /**
    * Creates a deterministic hash code for store file collection.

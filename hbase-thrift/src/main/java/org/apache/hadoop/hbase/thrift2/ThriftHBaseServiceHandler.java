@@ -46,8 +46,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -73,6 +71,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
@@ -83,7 +83,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ThriftHBaseServiceHandler implements THBaseService.Iface {
 
   // TODO: Size of pool configuraple
-  private static final Log LOG = LogFactory.getLog(ThriftHBaseServiceHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ThriftHBaseServiceHandler.class);
 
   // nextScannerId and scannerMap are used to manage scanner state
   // TODO: Cleanup thread for Scanners, Scanner id wrap

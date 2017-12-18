@@ -22,15 +22,15 @@ import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class UnsafeAvailChecker {
 
   private static final String CLASS_NAME = "sun.misc.Unsafe";
-  private static final Log LOG = LogFactory.getLog(UnsafeAvailChecker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UnsafeAvailChecker.class);
   private static boolean avail = false;
   private static boolean unaligned = false;
 

@@ -418,7 +418,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
         }
         Thread.sleep(1000L);
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
       }
     }
     assertEquals(count, 2);

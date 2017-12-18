@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -31,6 +29,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ZooKeeper based controller for a procedure member.
@@ -52,7 +52,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
-  private static final Log LOG = LogFactory.getLog(ZKProcedureMemberRpcs.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureMemberRpcs.class);
 
   private final ZKProcedureUtil zkController;
 

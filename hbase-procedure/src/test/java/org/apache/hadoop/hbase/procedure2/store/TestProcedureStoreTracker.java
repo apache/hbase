@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.procedure2.store;
 
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker.BitSetNode;
 import static org.junit.Assert.assertEquals;
@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureStoreTracker {
-  private static final Log LOG = LogFactory.getLog(TestProcedureStoreTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureStoreTracker.class);
 
   @Test
   public void testSeqInsertAndDelete() {

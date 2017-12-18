@@ -42,8 +42,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -52,6 +50,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The asynchronous locator for regions other than meta.
@@ -59,7 +59,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class AsyncNonMetaRegionLocator {
 
-  private static final Log LOG = LogFactory.getLog(AsyncNonMetaRegionLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncNonMetaRegionLocator.class);
 
   static final String MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE =
     "hbase.client.meta.max.concurrent.locate.per.table";

@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,7 +34,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 /**
@@ -63,7 +62,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected static final int DEFAULT_NUM_READ_THREADS = 20;
 
   // Log is being used in IntegrationTestIngestWithEncryption, hence it is protected
-  protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;
   protected LoadTestTool loadTool;

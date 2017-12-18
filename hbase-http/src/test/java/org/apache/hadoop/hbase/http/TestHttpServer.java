@@ -45,8 +45,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.http.HttpServer.QuotingInputFilter.RequestQuoter;
@@ -67,10 +65,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
-  private static final Log LOG = LogFactory.getLog(TestHttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer server;
   private static URL baseUrl;
   // jetty 9.4.x needs this many threads to start, even in the small.

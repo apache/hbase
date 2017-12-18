@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -32,6 +30,8 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -41,7 +41,7 @@ import static org.junit.Assert.*;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCompressionTest {
-  private static final Log LOG = LogFactory.getLog(TestCompressionTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompressionTest.class);
 
   @Test
   public void testExceptionCaching() {

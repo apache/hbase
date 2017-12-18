@@ -25,8 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupCommands;
@@ -35,13 +33,14 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupDescribe extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestBackupDescribe.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupDescribe.class);
 
   /**
    * Verify that describe works as expected if incorrect backup Id is supplied

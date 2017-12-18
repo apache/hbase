@@ -23,8 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -34,13 +32,15 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A chore which computes the size of each {@link HRegion} on the FileSystem hosted by the given {@link HRegionServer}.
  */
 @InterfaceAudience.Private
 public class FileSystemUtilizationChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(FileSystemUtilizationChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileSystemUtilizationChore.class);
   static final String FS_UTILIZATION_CHORE_PERIOD_KEY = "hbase.regionserver.quotas.fs.utilization.chore.period";
   static final int FS_UTILIZATION_CHORE_PERIOD_DEFAULT = 1000 * 60 * 5; // 5 minutes in millis
 

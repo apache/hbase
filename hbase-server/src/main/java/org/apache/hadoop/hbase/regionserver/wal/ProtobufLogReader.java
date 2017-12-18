@@ -26,9 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
   HBaseInterfaceAudience.CONFIG})
 public class ProtobufLogReader extends ReaderBase {
-  private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogReader.class);
   // public for WALFactory until we move everything to o.a.h.h.wal
   @InterfaceAudience.Private
   public static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");

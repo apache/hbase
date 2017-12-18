@@ -19,11 +19,12 @@
 package org.apache.hadoop.hbase;
 
 import com.google.protobuf.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -49,7 +50,7 @@ import javax.management.remote.rmi.RMIConnectorServer;
  * 3)support subset of SSL (with default configuration)
  */
 public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
-  private static final Log LOG = LogFactory.getLog(JMXListener.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JMXListener.class);
   public static final String RMI_REGISTRY_PORT_CONF_KEY = ".rmi.registry.port";
   public static final String RMI_CONNECTOR_PORT_CONF_KEY = ".rmi.connector.port";
   public static final int defMasterRMIRegistryPort = 10101;

@@ -47,8 +47,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -106,7 +104,8 @@ import org.apache.htrace.core.ProbabilitySampler;
 import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -131,7 +130,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 public class PerformanceEvaluation extends Configured implements Tool {
   static final String RANDOM_SEEK_SCAN = "randomSeekScan";
   static final String RANDOM_READ = "randomRead";
-  private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
     MAPPER.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
@@ -361,7 +360,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         .add("desc", desc)
         .add("presplit", opts.presplitRegions)
         .add("splitPolicy", opts.splitPolicy)
-        .add("replicas", opts.replicas));
+        .add("replicas", opts.replicas)
+        .toString());
     }
 
     // remove an existing table
@@ -1989,7 +1989,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class FilteredScanTest extends TableTest {
-    protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
+    protected static final Logger LOG = LoggerFactory.getLogger(FilteredScanTest.class.getName());
 
     FilteredScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);

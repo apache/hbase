@@ -24,9 +24,8 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,6 +49,8 @@ import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Map-Reduce implementation of {@link BackupCopyJob}. Basically, there are 2 types of copy
@@ -59,7 +60,7 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 @InterfaceAudience.Private
 public class MapReduceBackupCopyJob implements BackupCopyJob {
   public static final String NUMBER_OF_LEVELS_TO_PRESERVE_KEY = "num.levels.preserve";
-  private static final Log LOG = LogFactory.getLog(MapReduceBackupCopyJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MapReduceBackupCopyJob.class);
 
   private Configuration conf;
 
@@ -233,7 +234,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         LOG.debug("Backup progress data updated to backup system table: \"Progress: "
             + newProgressStr + " - " + bytesCopied + " bytes copied.\"");
       } catch (Throwable t) {
-        LOG.error(t);
+        LOG.error(t.toString(), t);
         throw t;
       }
 
@@ -243,7 +244,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       LOG.debug("DistCp job-id: " + jobID + " completed: " + job.isComplete() + " "
           + job.isSuccessful());
       Counters ctrs = job.getCounters();
-      LOG.debug(ctrs);
+      LOG.debug(Objects.toString(ctrs));
       if (job.isComplete() && !job.isSuccessful()) {
         throw new Exception("DistCp job-id: " + jobID + " failed");
       }

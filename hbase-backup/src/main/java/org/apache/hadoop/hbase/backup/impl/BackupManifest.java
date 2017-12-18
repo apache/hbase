@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,6 +40,9 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -56,7 +57,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 @InterfaceAudience.Private
 public class BackupManifest {
 
-  private static final Log LOG = LogFactory.getLog(BackupManifest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupManifest.class);
 
   // manifest file name
   public static final String MANIFEST_FILE_NAME = ".backup.manifest";

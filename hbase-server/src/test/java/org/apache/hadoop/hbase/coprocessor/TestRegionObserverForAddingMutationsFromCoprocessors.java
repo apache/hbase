@@ -23,8 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -53,6 +51,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -60,8 +60,8 @@ import static org.junit.Assert.assertNotNull;
 @Category(MediumTests.class)
 public class TestRegionObserverForAddingMutationsFromCoprocessors {
 
-  private static final Log LOG
-    = LogFactory.getLog(TestRegionObserverForAddingMutationsFromCoprocessors.class);
+  private static final Logger LOG
+    = LoggerFactory.getLogger(TestRegionObserverForAddingMutationsFromCoprocessors.class);
 
   private static HBaseTestingUtility util;
   private static final byte[] dummy = Bytes.toBytes("dummy");

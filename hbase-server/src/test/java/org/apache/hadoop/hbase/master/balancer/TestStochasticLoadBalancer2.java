@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -28,10 +26,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({FlakeyTests.class, LargeTests.class})
 public class TestStochasticLoadBalancer2 extends BalancerTestBase {
-  private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStochasticLoadBalancer2.class);
   @Rule
   public final TestRule timeout = CategoryBasedTimeout.builder()
       .withTimeout(this.getClass())

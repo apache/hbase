@@ -26,9 +26,9 @@ import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,7 +40,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 @InterfaceAudience.Private
 public abstract class ServerCommandLine extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(ServerCommandLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ServerCommandLine.class);
   @SuppressWarnings("serial")
   private static final Set<String> DEFAULT_SKIP_WORDS = new HashSet<String>() {
     {

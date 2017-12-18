@@ -25,10 +25,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -43,6 +42,8 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test cases for ensuring our client visible classes have annotations for
@@ -72,7 +73,7 @@ import org.junit.experimental.categories.Category;
 public class TestInterfaceAudienceAnnotations {
 
   private static final String HBASE_PROTOBUF = "org.apache.hadoop.hbase.protobuf.generated";
-  private static final Log LOG = LogFactory.getLog(TestInterfaceAudienceAnnotations.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestInterfaceAudienceAnnotations.class);
 
   /** Selects classes with generated in their package name */
   static class GeneratedClassFilter implements ClassFinder.ClassFilter {
@@ -315,7 +316,7 @@ public class TestInterfaceAudienceAnnotations {
     if (!classes.isEmpty()) {
       LOG.info("These are the classes that DO NOT have @InterfaceAudience annotation:");
       for (Class<?> clazz : classes) {
-        LOG.info(clazz);
+        LOG.info(Objects.toString(clazz));
       }
     }
 
@@ -358,7 +359,7 @@ public class TestInterfaceAudienceAnnotations {
       LOG.info("These are the @InterfaceAudience.Public classes that have @InterfaceStability " +
           "annotation:");
       for (Class<?> clazz : classes) {
-        LOG.info(clazz);
+        LOG.info(Objects.toString(clazz));
       }
     }
 
@@ -403,7 +404,7 @@ public class TestInterfaceAudienceAnnotations {
       LOG.info("These are the @InterfaceAudience.LimitedPrivate classes that DO NOT " +
           "have @InterfaceStability annotation:");
       for (Class<?> clazz : classes) {
-        LOG.info(clazz);
+        LOG.info(Objects.toString(clazz));
       }
     }
     Assert.assertEquals("All classes that are marked with @InterfaceAudience.LimitedPrivate " +

@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.rest;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
@@ -36,6 +34,8 @@ import org.eclipse.jetty.servlet.ServletHolder;
 
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
 import java.util.Arrays;
@@ -43,7 +43,7 @@ import java.util.EnumSet;
 
 public class HBaseRESTTestingUtility {
 
-  private static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseRESTTestingUtility.class);
 
   private int testServletPort;
   private Server server;

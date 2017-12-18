@@ -38,8 +38,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
@@ -85,7 +83,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
@@ -116,8 +115,8 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.Promise;
  */
 @InterfaceAudience.Private
 public final class FanOutOneBlockAsyncDFSOutputHelper {
-
-  private static final Log LOG = LogFactory.getLog(FanOutOneBlockAsyncDFSOutputHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FanOutOneBlockAsyncDFSOutputHelper.class);
 
   private FanOutOneBlockAsyncDFSOutputHelper() {
   }

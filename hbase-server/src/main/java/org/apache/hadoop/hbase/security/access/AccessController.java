@@ -39,8 +39,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -139,6 +137,8 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -180,10 +180,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     MasterObserver, RegionObserver, RegionServerObserver, EndpointObserver, BulkLoadObserver {
   // TODO: encapsulate observer functions into separate class/sub-class.
 
-  private static final Log LOG = LogFactory.getLog(AccessController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AccessController.class);
 
-  private static final Log AUDITLOG =
-    LogFactory.getLog("SecurityLogger."+AccessController.class.getName());
+  private static final Logger AUDITLOG =
+    LoggerFactory.getLogger("SecurityLogger."+AccessController.class.getName());
   private static final String CHECK_COVERING_PERM = "check_covering_perm";
   private static final String TAG_CHECK_PASSED = "tag_check_passed";
   private static final byte[] TRUE = Bytes.toBytes(true);

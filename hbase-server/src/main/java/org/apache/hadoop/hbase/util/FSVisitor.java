@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.PathFilter;
  */
 @InterfaceAudience.Private
 public final class FSVisitor {
-  private static final Log LOG = LogFactory.getLog(FSVisitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSVisitor.class);
 
   public interface StoreFileVisitor {
     void storeFile(final String region, final String family, final String hfileName)

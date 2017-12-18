@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -42,7 +40,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -51,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestGlobalMemStoreSize {
-  private static final Log LOG = LogFactory.getLog(TestGlobalMemStoreSize.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGlobalMemStoreSize.class);
   private static int regionServerNum = 4;
   private static int regionNum = 16;
   // total region num = region num + root and meta regions

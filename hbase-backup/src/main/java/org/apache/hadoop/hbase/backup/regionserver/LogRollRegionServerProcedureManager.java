@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.backup.regionserver;
 import java.io.IOException;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This manager class handles the work dealing with distributed WAL roll request.
@@ -53,7 +53,8 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class LogRollRegionServerProcedureManager extends RegionServerProcedureManager {
 
-  private static final Log LOG = LogFactory.getLog(LogRollRegionServerProcedureManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LogRollRegionServerProcedureManager.class);
 
   /** Conf key for number of request threads to start backup on region servers */
   public static final String BACKUP_REQUEST_THREADS_KEY = "hbase.backup.region.pool.threads";

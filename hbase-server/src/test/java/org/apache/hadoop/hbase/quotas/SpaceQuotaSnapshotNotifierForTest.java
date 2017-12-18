@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 
 /**
@@ -30,7 +30,8 @@ import org.apache.hadoop.hbase.client.Connection;
  */
 @InterfaceAudience.Private
 public class SpaceQuotaSnapshotNotifierForTest implements SpaceQuotaSnapshotNotifier {
-  private static final Log LOG = LogFactory.getLog(SpaceQuotaSnapshotNotifierForTest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SpaceQuotaSnapshotNotifierForTest.class);
 
   private final Map<TableName,SpaceQuotaSnapshot> tableQuotaSnapshots = new HashMap<>();
 

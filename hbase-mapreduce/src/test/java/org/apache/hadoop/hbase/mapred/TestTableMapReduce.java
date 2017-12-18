@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -41,6 +39,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -50,10 +50,10 @@ import org.junit.experimental.categories.Category;
 @Category({MapReduceTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestTableMapReduce extends TestTableMapReduceBase {
-  private static final Log LOG =
-    LogFactory.getLog(TestTableMapReduce.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestTableMapReduce.class.getName());
 
-  protected Log getLog() { return LOG; }
+  protected Logger getLog() { return LOG; }
 
   /**
    * Pass the given key and processed record reduce

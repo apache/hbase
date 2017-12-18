@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.io.Writable;
 
@@ -53,7 +53,7 @@ public class IdentityTableReducer
 extends TableReducer<Writable, Mutation, Writable> {
 
   @SuppressWarnings("unused")
-  private static final Log LOG = LogFactory.getLog(IdentityTableReducer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IdentityTableReducer.class);
 
   /**
    * Writes each given record, consisting of the row key and the given values,

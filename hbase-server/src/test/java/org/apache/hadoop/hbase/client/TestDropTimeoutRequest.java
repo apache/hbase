@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -39,6 +37,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -60,7 +60,7 @@ public class TestDropTimeoutRequest {
   @Rule
   public TestName name = new TestName();
 
-  private static final Log LOG = LogFactory.getLog(TestDropTimeoutRequest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDropTimeoutRequest.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final int RPC_RETRY = 5;

@@ -32,8 +32,6 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,6 +51,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for {@link FSTableDescriptors}.
@@ -61,7 +61,7 @@ import org.junit.rules.TestName;
 @Category({MiscTests.class, MediumTests.class})
 public class TestFSTableDescriptors {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestFSTableDescriptors.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFSTableDescriptors.class);
 
   @Rule
   public TestName name = new TestName();

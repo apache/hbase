@@ -27,8 +27,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -66,6 +64,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Standup the master and fake it to test various aspects of master function.
@@ -77,7 +77,7 @@ import org.mockito.Mockito;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterNoCluster {
-  private static final Log LOG = LogFactory.getLog(TestMasterNoCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().

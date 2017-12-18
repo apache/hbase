@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -56,6 +54,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test various seek optimizations for correctness and check if they are
@@ -65,8 +65,8 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestSeekOptimizations {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestSeekOptimizations.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSeekOptimizations.class);
 
   // Constants
   private static final String FAMILY = "myCF";

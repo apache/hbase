@@ -39,8 +39,6 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -73,6 +71,8 @@ import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -89,7 +89,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
  */
 @InterfaceAudience.Private
 public final class ZKUtil {
-  private static final Log LOG = LogFactory.getLog(ZKUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKUtil.class);
 
   private static int zkDumpConnectionTimeOut;
 

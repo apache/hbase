@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase.regionserver.handler;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.FlushRegionCallable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 @InterfaceAudience.Private
 public class RegionReplicaFlushHandler extends EventHandler {
 
-  private static final Log LOG = LogFactory.getLog(RegionReplicaFlushHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaFlushHandler.class);
 
   private final ClusterConnection connection;
   private final RpcRetryingCallerFactory rpcRetryingCallerFactory;

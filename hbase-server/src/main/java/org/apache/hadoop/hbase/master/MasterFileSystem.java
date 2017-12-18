@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -47,6 +46,8 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
@@ -55,7 +56,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MasterFileSystem {
-  private static final Log LOG = LogFactory.getLog(MasterFileSystem.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterFileSystem.class);
 
   /** Parameter name for HBase instance root directory permission*/
   public static final String HBASE_DIR_PERMS = "hbase.rootdir.perms";
@@ -264,12 +265,13 @@ public class MasterFileSystem {
             HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       }
     } catch (DeserializationException de) {
-      LOG.fatal("Please fix invalid configuration for " + HConstants.HBASE_DIR, de);
+      LOG.error(HBaseMarkers.FATAL, "Please fix invalid configuration for "
+        + HConstants.HBASE_DIR, de);
       IOException ioe = new IOException();
       ioe.initCause(de);
       throw ioe;
     } catch (IllegalArgumentException iae) {
-      LOG.fatal("Please fix invalid configuration for "
+      LOG.error(HBaseMarkers.FATAL, "Please fix invalid configuration for "
         + HConstants.HBASE_DIR + " " + rd.toString(), iae);
       throw iae;
     }
@@ -444,7 +446,7 @@ public class MasterFileSystem {
   public void stop() {
   }
 
-  public void logFileSystemState(Log log) throws IOException {
+  public void logFileSystemState(Logger log) throws IOException {
     FSUtils.logFileSystemState(fs, rootdir, log);
   }
 }

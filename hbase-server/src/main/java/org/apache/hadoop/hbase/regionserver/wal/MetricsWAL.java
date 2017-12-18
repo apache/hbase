@@ -23,9 +23,9 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -37,7 +37,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class MetricsWAL implements WALActionsListener {
-  private static final Log LOG = LogFactory.getLog(MetricsWAL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsWAL.class);
 
   private final MetricsWALSource source;
 

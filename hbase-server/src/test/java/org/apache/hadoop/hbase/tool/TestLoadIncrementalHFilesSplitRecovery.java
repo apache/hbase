@@ -32,11 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,6 +61,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -78,6 +76,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
@@ -90,7 +90,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHF
  */
 @Category({ MiscTests.class, LargeTests.class })
 public class TestLoadIncrementalHFilesSplitRecovery {
-  private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
 
   static HBaseTestingUtility util;
   // used by secure subclass
@@ -289,7 +289,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
               errConn = getMockedConnection(util.getConfiguration());
               serviceCallable = this.buildClientServiceCallable(errConn, table, first, lqis, true);
             } catch (Exception e) {
-              LOG.fatal("mocking cruft, should never happen", e);
+              LOG.error(HBaseMarkers.FATAL, "mocking cruft, should never happen", e);
               throw new RuntimeException("mocking cruft, should never happen");
             }
             failedCalls.incrementAndGet();

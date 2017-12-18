@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureManager;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides the globally barriered procedure framework and environment
@@ -36,8 +36,8 @@ import org.apache.zookeeper.KeeperException;
 public class RegionServerProcedureManagerHost extends
     ProcedureManagerHost<RegionServerProcedureManager> {
 
-  private static final Log LOG = LogFactory
-      .getLog(RegionServerProcedureManagerHost.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RegionServerProcedureManagerHost.class);
 
   public void initialize(RegionServerServices rss) throws KeeperException {
     for (RegionServerProcedureManager proc : procedures) {

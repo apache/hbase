@@ -21,17 +21,17 @@ package org.apache.hadoop.hbase.util;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Version;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class finds the Version information for HBase.
  */
 @InterfaceAudience.Public
 public class VersionInfo {
-  private static final Log LOG = LogFactory.getLog(VersionInfo.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(VersionInfo.class.getName());
 
   // If between two dots there is not a number, we regard it as a very large number so it is
   // higher than any numbers in the version.

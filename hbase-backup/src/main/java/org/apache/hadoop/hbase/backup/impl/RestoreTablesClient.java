@@ -32,8 +32,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -44,6 +42,8 @@ import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.backup.util.RestoreTool;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem;
  */
 @InterfaceAudience.Private
 public class RestoreTablesClient {
-  private static final Log LOG = LogFactory.getLog(RestoreTablesClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestoreTablesClient.class);
 
   private Configuration conf;
   private Connection conn;

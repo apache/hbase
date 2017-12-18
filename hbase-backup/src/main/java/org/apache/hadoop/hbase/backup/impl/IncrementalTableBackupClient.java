@@ -31,8 +31,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -53,6 +51,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Incremental backup implementation.
@@ -61,7 +61,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class IncrementalTableBackupClient extends TableBackupClient {
-  private static final Log LOG = LogFactory.getLog(IncrementalTableBackupClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IncrementalTableBackupClient.class);
 
   protected IncrementalTableBackupClient() {
   }

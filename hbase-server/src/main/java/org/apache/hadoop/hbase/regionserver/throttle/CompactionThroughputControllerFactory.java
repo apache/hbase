@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.util.ReflectionUtils;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public final class CompactionThroughputControllerFactory {
-
-  private static final Log LOG = LogFactory.getLog(CompactionThroughputControllerFactory.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CompactionThroughputControllerFactory.class);
 
   public static final String HBASE_THROUGHPUT_CONTROLLER_KEY =
       "hbase.regionserver.throughput.controller";

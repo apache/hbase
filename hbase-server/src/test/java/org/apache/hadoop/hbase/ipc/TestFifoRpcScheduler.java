@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -32,6 +30,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -52,7 +52,7 @@ public class TestFifoRpcScheduler {
       CategoryBasedTimeout.builder().withTimeout(this.getClass()).
           withLookingForStuckThread(true).build();
 
-  private static final Log LOG = LogFactory.getLog(TestFifoRpcScheduler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFifoRpcScheduler.class);
 
   private AtomicInteger callExecutionCount;
 

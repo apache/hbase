@@ -21,15 +21,13 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 import java.io.OutputStream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -44,14 +42,14 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 public class ProtobufLogWriter extends AbstractProtobufLogWriter
     implements FSHLogProvider.Writer {
 
-  private static final Log LOG = LogFactory.getLog(ProtobufLogWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogWriter.class);
 
   protected FSDataOutputStream output;
 
   @Override
   public void append(Entry entry) throws IOException {
     entry.setCompressionContext(compressionContext);
-    ((WALKeyImpl)entry.getKey()).getBuilder(compressor).
+    entry.getKey().getBuilder(compressor).
         setFollowingKvCount(entry.getEdit().size()).build().writeDelimitedTo(output);
     for (Cell cell : entry.getEdit().getCells()) {
       // cellEncoder must assume little about the stream, since we write PB and cells in turn.
@@ -68,7 +66,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
         this.output.close();
       } catch (NullPointerException npe) {
         // Can get a NPE coming up from down in DFSClient$DFSOutputStream#close
-        LOG.warn(npe);
+        LOG.warn(npe.toString(), npe);
       }
       this.output = null;
     }

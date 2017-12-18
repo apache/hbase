@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.client.Connection;
@@ -37,13 +35,15 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This backup sub-procedure implementation forces a WAL rolling on a RS.
  */
 @InterfaceAudience.Private
 public class LogRollBackupSubprocedure extends Subprocedure {
-  private static final Log LOG = LogFactory.getLog(LogRollBackupSubprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogRollBackupSubprocedure.class);
 
   private final RegionServerServices rss;
   private final LogRollBackupSubprocedurePool taskManager;
@@ -116,7 +116,7 @@ public class LogRollBackupSubprocedure extends Subprocedure {
         table.writeRegionServerLastLogRollResult(server, highest, backupRoot);
         return null;
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         throw e;
       }
     }

@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +33,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -55,7 +55,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Public
 public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
-  private static final Log LOG = LogFactory.getLog(WALInputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALInputFormat.class);
 
   public static final String START_TIME_KEY = "wal.start.time";
   public static final String END_TIME_KEY = "wal.end.time";

@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * MemStoreCompactionStrategy is the root of a class hierarchy which defines the strategy for
@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class MemStoreCompactionStrategy {
 
-  protected static final Log LOG = LogFactory.getLog(MemStoreCompactionStrategy.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(MemStoreCompactionStrategy.class);
   // The upper bound for the number of segments we store in the pipeline prior to merging.
   public static final String COMPACTING_MEMSTORE_THRESHOLD_KEY =
       "hbase.hregion.compacting.pipeline.segments.limit";

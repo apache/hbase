@@ -36,8 +36,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -61,7 +59,8 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -70,7 +69,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 public abstract class AbstractTestIPC {
 
-  private static final Log LOG = LogFactory.getLog(AbstractTestIPC.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestIPC.class);
 
   private static final byte[] CELL_BYTES = Bytes.toBytes("xyz");
   private static final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);

@@ -28,13 +28,14 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -46,7 +47,7 @@ import org.apache.hadoop.hbase.client.TableState;
  */
 @InterfaceAudience.Private
 public class TableStateManager {
-  private static final Log LOG = LogFactory.getLog(TableStateManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableStateManager.class);
 
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
   private final MasterServices master;

@@ -24,9 +24,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
  */
 @InterfaceAudience.Private
 public class JVMClusterUtil {
-  private static final Log LOG = LogFactory.getLog(JVMClusterUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JVMClusterUtil.class);
 
   /**
    * Datastructure to hold RegionServer Thread and RegionServer instance

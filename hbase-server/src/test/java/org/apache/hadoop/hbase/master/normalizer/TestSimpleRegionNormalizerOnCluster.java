@@ -25,8 +25,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -55,13 +53,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestSimpleRegionNormalizerOnCluster {
-  private static final Log LOG = LogFactory.getLog(TestSimpleRegionNormalizerOnCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSimpleRegionNormalizerOnCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static Admin admin;

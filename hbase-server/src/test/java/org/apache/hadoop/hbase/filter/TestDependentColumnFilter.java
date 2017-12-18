@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -52,10 +50,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({FilterTests.class, SmallTests.class})
 public class TestDependentColumnFilter {
-  private static final Log LOG = LogFactory.getLog(TestDependentColumnFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDependentColumnFilter.class);
   private static final byte[][] ROWS = {
     Bytes.toBytes("test1"),Bytes.toBytes("test2")
   };

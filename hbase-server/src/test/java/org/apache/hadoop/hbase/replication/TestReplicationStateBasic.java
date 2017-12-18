@@ -23,8 +23,6 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Pair;
@@ -32,6 +30,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * White box testing for replication state interfaces. Implementations should extend this class, and
@@ -60,7 +60,7 @@ public abstract class TestReplicationStateBasic {
   protected static final int ZK_MAX_COUNT = 300;
   protected static final int ZK_SLEEP_INTERVAL = 100; // millis
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationStateBasic.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationStateBasic.class);
 
   @Before
   public void setUp() {

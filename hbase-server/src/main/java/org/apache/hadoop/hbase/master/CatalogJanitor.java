@@ -27,8 +27,6 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,6 +51,8 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A janitor for the catalog tables.  Scans the <code>hbase:meta</code> catalog
@@ -60,7 +60,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class CatalogJanitor extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(CatalogJanitor.class.getName());
 
   private final AtomicBoolean alreadyRunning = new AtomicBoolean(false);
   private final AtomicBoolean enabled = new AtomicBoolean(true);

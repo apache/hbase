@@ -40,13 +40,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.Procedure.LockState;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -75,7 +76,7 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ProcedureExecutor<TEnvironment> {
-  private static final Log LOG = LogFactory.getLog(ProcedureExecutor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureExecutor.class);
 
   public static final String CHECK_OWNER_SET_CONF_KEY = "hbase.procedure.check.owner.set";
   private static final boolean DEFAULT_CHECK_OWNER_SET = false;
@@ -160,7 +161,7 @@ public class ProcedureExecutor<TEnvironment> {
    */
   private static class CompletedProcedureCleaner<TEnvironment>
       extends ProcedureInMemoryChore<TEnvironment> {
-    private static final Log LOG = LogFactory.getLog(CompletedProcedureCleaner.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CompletedProcedureCleaner.class);
 
     private static final String CLEANER_INTERVAL_CONF_KEY = "hbase.procedure.cleaner.interval";
     private static final int DEFAULT_CLEANER_INTERVAL = 30 * 1000; // 30sec
@@ -1364,7 +1365,7 @@ public class ProcedureExecutor<TEnvironment> {
       return LockState.LOCK_YIELD_WAIT;
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
-      LOG.fatal("CODE-BUG: Uncaught runtime exception for " + proc, e);
+      LOG.error(HBaseMarkers.FATAL, "CODE-BUG: Uncaught runtime exception for " + proc, e);
     }
 
     // allows to kill the executor before something is stored to the wal.

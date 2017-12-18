@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Public
 public abstract class ScheduledChore implements Runnable {
-  private static final Log LOG = LogFactory.getLog(ScheduledChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ScheduledChore.class);
 
   private final String name;
 

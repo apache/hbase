@@ -29,8 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -51,7 +49,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -77,7 +76,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.MetaReg
  */
 @InterfaceAudience.Private
 public class MetaTableLocator {
-  private static final Log LOG = LogFactory.getLog(MetaTableLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetaTableLocator.class);
 
   // only needed to allow non-timeout infinite waits to stop when cluster shuts down
   private volatile boolean stopped = false;

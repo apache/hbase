@@ -24,11 +24,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -36,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
  * This class can be used to control chaos monkeys life cycle.
  */
 public class Monkeys implements Closeable {
-  private static final Log LOG = LogFactory.getLog(Monkeys.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Monkeys.class);
 
   private final Configuration conf;
   private final ChaosMonkeyRunner monkeyRunner;

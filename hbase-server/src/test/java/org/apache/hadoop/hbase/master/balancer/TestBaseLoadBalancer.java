@@ -35,8 +35,6 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -61,14 +59,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestBaseLoadBalancer extends BalancerTestBase {
 
   private static LoadBalancer loadBalancer;
-  private static final Log LOG = LogFactory.getLog(TestBaseLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBaseLoadBalancer.class);
   private static final ServerName master = ServerName.valueOf("fake-master", 0, 1L);
   private static RackManager rackManager;
   private static final int NUM_SERVERS = 15;

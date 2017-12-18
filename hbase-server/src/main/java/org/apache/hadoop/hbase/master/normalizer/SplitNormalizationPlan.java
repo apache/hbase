@@ -21,18 +21,18 @@ package org.apache.hadoop.hbase.master.normalizer;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Normalization plan to split region.
  */
 @InterfaceAudience.Private
 public class SplitNormalizationPlan implements NormalizationPlan {
-  private static final Log LOG = LogFactory.getLog(SplitNormalizationPlan.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(SplitNormalizationPlan.class.getName());
 
   private RegionInfo regionInfo;
   private byte[] splitPoint;

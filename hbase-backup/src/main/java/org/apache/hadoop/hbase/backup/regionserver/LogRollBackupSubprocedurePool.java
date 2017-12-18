@@ -29,12 +29,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 
 /**
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
  */
 @InterfaceAudience.Private
 public class LogRollBackupSubprocedurePool implements Closeable, Abortable {
-  private static final Log LOG = LogFactory.getLog(LogRollBackupSubprocedurePool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LogRollBackupSubprocedurePool.class);
 
   /** Maximum number of concurrent snapshot region tasks that can run concurrently */
   private static final String CONCURENT_BACKUP_TASKS_KEY = "hbase.backup.region.concurrentTasks";

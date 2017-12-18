@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -83,7 +81,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -96,7 +95,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
 @RunWith(Parameterized.class)
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestHRegionServerBulkLoad {
-  private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
   protected static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected final static Configuration conf = UTIL.getConfiguration();
   protected final static byte[] QUAL = Bytes.toBytes("qual");

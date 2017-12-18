@@ -33,8 +33,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.MetaTableAccessor.CollectingVisitor;
 import org.apache.hadoop.hbase.MetaTableAccessor.QueryType;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
@@ -53,6 +51,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The asynchronous meta table accessor. Used to read/write region and assignment information store
@@ -62,7 +62,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class AsyncMetaTableAccessor {
 
-  private static final Log LOG = LogFactory.getLog(AsyncMetaTableAccessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncMetaTableAccessor.class);
 
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */

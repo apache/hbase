@@ -31,15 +31,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import junit.framework.TestCase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import junit.framework.TestCase;
 
 public class TestKeyValue extends TestCase {
-  private static final Log LOG = LogFactory.getLog(TestKeyValue.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestKeyValue.class);
 
   public void testColumnCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");

@@ -31,8 +31,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,12 +45,14 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({IOTests.class, SmallTests.class})
 public class TestFixedFileTrailer {
 
-  private static final Log LOG = LogFactory.getLog(TestFixedFileTrailer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFixedFileTrailer.class);
   private static final int MAX_COMPARATOR_NAME_LENGTH = 128;
 
   /**

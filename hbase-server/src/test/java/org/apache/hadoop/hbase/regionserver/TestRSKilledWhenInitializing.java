@@ -27,11 +27,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -53,7 +50,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
@@ -62,7 +60,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @Category({RegionServerTests.class, MediumTests.class})
 @Ignore("See HBASE-19515") public class TestRSKilledWhenInitializing {
-  private static final Log LOG = LogFactory.getLog(TestRSKilledWhenInitializing.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSKilledWhenInitializing.class);
   @Rule public TestName testName = new TestName();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
     withTimeout(this.getClass()).withLookingForStuckThread(true).build();

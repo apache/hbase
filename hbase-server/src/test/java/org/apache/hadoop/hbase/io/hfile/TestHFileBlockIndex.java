@@ -35,8 +35,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -68,6 +66,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({IOTests.class, MediumTests.class})
@@ -82,7 +82,7 @@ public class TestHFileBlockIndex {
     this.compr = compr;
   }
 
-  private static final Log LOG = LogFactory.getLog(TestHFileBlockIndex.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockIndex.class);
 
   private static final int NUM_DATA_BLOCKS = 1000;
   private static final HBaseTestingUtility TEST_UTIL =

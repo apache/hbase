@@ -22,8 +22,6 @@ import static org.junit.Assert.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,6 +43,8 @@ import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Basic test for the HashTable M/R tool
@@ -52,7 +52,7 @@ import org.junit.rules.TestName;
 @Category(LargeTests.class)
 public class TestHashTable {
 
-  private static final Log LOG = LogFactory.getLog(TestHashTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHashTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

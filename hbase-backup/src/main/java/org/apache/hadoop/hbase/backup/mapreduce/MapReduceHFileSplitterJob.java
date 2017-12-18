@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.backup.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -47,6 +45,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A tool to split HFiles into new region boundaries as a MapReduce job. The tool generates HFiles
@@ -54,7 +54,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MapReduceHFileSplitterJob extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(MapReduceHFileSplitterJob.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MapReduceHFileSplitterJob.class);
   final static String NAME = "HFileSplitterJob";
   public final static String BULK_OUTPUT_CONF_KEY = "hfile.bulk.output";
   public final static String TABLES_KEY = "hfile.input.tables";

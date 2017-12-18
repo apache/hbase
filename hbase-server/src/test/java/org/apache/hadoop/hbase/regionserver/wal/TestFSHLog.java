@@ -144,7 +144,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
             try {
               holdAppend.await();
             } catch (InterruptedException e) {
-              LOG.error(e);
+              LOG.error(e.toString(), e);
             }
           }
         }
@@ -170,7 +170,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
             region.put(new Put(b).addColumn(b, b,b));
             putFinished.countDown();
           } catch (IOException e) {
-            LOG.error(e);
+            LOG.error(e.toString(), e);
           }
         }
       });
@@ -187,7 +187,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
             LOG.info("Flush succeeded:" +  flushResult.isFlushSucceeded());
             flushFinished.countDown();
           } catch (IOException e) {
-            LOG.error(e);
+            LOG.error(e.toString(), e);
           }
         }
       });

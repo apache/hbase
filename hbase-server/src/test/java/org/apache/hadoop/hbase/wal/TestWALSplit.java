@@ -39,14 +39,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -96,6 +95,8 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing {@link WAL} splitting code.
@@ -109,7 +110,7 @@ public class TestWALSplit {
     //((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
     //((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
   }
-  private final static Log LOG = LogFactory.getLog(TestWALSplit.class);
+  private final static Logger LOG = LoggerFactory.getLogger(TestWALSplit.class);
 
   private static Configuration conf;
   private FileSystem fs;
@@ -240,7 +241,7 @@ public class TestWALSplit {
           for (FileStatus status : fs.listStatus(WALDIR)) {
             ls.append("\t").append(status.toString()).append("\n");
           }
-          LOG.debug(ls);
+          LOG.debug(Objects.toString(ls));
           LOG.info("Splitting WALs out from under zombie. Expecting " + numWriters + " files.");
           WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf2, wals);
           LOG.info("Finished splitting out from under zombie.");
@@ -820,6 +821,7 @@ public class TestWALSplit {
     someOldThread.setDaemon(true);
     someOldThread.start();
     final Thread t = new Thread("Background-thread-dumper") {
+      @Override
       public void run() {
         try {
           Threads.threadDumpingIsAlive(someOldThread);
@@ -888,6 +890,7 @@ public class TestWALSplit {
           "Blocklist for " + OLDLOGDIR + " has changed"};
       private int count = 0;
 
+      @Override
       public FSDataInputStream answer(InvocationOnMock invocation) throws Throwable {
         if (count < 3) {
           throw new IOException(errors[count++]);
@@ -917,6 +920,7 @@ public class TestWALSplit {
 
     FileSystem spiedFs = Mockito.spy(fs);
     Mockito.doAnswer(new Answer<FSDataInputStream>() {
+      @Override
       public FSDataInputStream answer(InvocationOnMock invocation) throws Throwable {
         Thread.sleep(1500); // Sleep a while and wait report status invoked
         return (FSDataInputStream)invocation.callRealMethod();
@@ -1035,7 +1039,7 @@ public class TestWALSplit {
             byte region[] = new byte[] {(byte)'r', (byte) (0x30 + regionIdx)};
 
             Entry ret = createTestEntry(TABLE_NAME, region,
-                Bytes.toBytes((int)(index / regions.size())),
+                Bytes.toBytes(index / regions.size()),
                 FAMILY, QUALIFIER, VALUE, index);
             index++;
             return ret;
@@ -1157,7 +1161,7 @@ public class TestWALSplit {
     try{
       logSplitter.splitLogFile(logfiles[0], null);
     } catch (IOException e) {
-      LOG.info(e);
+      LOG.info(e.toString(), e);
       fail("Throws IOException when spliting "
           + "log, it is most likely because writing file does not "
           + "exist which is caused by concurrent replayRecoveredEditsIfAny()");

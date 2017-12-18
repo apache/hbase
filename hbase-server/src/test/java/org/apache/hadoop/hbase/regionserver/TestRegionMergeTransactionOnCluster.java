@@ -26,13 +26,12 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -77,7 +76,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
@@ -87,7 +87,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionMergeTransactionOnCluster {
-  private static final Log LOG = LogFactory.getLog(TestRegionMergeTransactionOnCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRegionMergeTransactionOnCluster.class);
+
   @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).
@@ -426,8 +428,8 @@ public class TestRegionMergeTransactionOnCluster {
           MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tablename);
       tableRegionsInMaster =
           master.getAssignmentManager().getRegionStates().getRegionsOfTable(tablename);
-      LOG.info(tableRegionsInMaster);
-      LOG.info(tableRegionsInMeta);
+      LOG.info(Objects.toString(tableRegionsInMaster));
+      LOG.info(Objects.toString(tableRegionsInMeta));
       int tableRegionsInMetaSize = tableRegionsInMeta.size();
       int tableRegionsInMasterSize = tableRegionsInMaster.size();
       if (tableRegionsInMetaSize == expectedRegionNum

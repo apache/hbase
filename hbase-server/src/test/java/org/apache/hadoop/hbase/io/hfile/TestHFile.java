@@ -29,10 +29,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -65,6 +64,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * test hfile features.
@@ -74,7 +75,7 @@ public class TestHFile  {
 
   @Rule public TestName testName = new TestName();
 
-  private static final Log LOG = LogFactory.getLog(TestHFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFile.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR =
@@ -322,7 +323,7 @@ public class TestHFile  {
         .withFileContext(meta)
         .withComparator(CellComparatorImpl.COMPARATOR)
         .create();
-    LOG.info(writer);
+    LOG.info(Objects.toString(writer));
     writeRecords(writer, useTags);
     fout.close();
     FSDataInputStream fin = fs.open(ncHFile);

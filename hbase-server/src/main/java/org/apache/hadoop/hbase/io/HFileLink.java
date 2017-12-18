@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * HFileLink describes a link to an hfile.
@@ -58,7 +58,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS",
   justification="To be fixed but warning suppressed for now")
 public class HFileLink extends FileLink {
-  private static final Log LOG = LogFactory.getLog(HFileLink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileLink.class);
 
   /**
    * A non-capture group, for HFileLink, so that this can be embedded.

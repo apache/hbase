@@ -23,8 +23,6 @@ import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 import java.io.IOException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -32,6 +30,8 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.RestoreJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.util.Tool;
 
@@ -48,7 +48,7 @@ import org.apache.hadoop.util.Tool;
  */
 @InterfaceAudience.Private
 public class MapReduceRestoreJob implements RestoreJob {
-  public static final Log LOG = LogFactory.getLog(MapReduceRestoreJob.class);
+  public static final Logger LOG = LoggerFactory.getLogger(MapReduceRestoreJob.class);
 
   private Tool player;
   private Configuration conf;
@@ -116,7 +116,7 @@ public class MapReduceRestoreJob implements RestoreJob {
         }
         LOG.debug("Restore Job finished:" + result);
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         throw new IOException("Can not restore from backup directory " + dirs
             + " (check Hadoop and HBase logs) ", e);
       }

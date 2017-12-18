@@ -33,8 +33,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -71,10 +69,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationSink {
-  private static final Log LOG = LogFactory.getLog(TestReplicationSink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
   private static final int BATCH_SIZE = 10;
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

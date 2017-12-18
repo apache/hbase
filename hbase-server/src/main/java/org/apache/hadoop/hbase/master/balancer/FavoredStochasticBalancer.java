@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -47,7 +45,8 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
@@ -70,7 +69,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
     FavoredNodesPromoter {
 
-  private static final Log LOG = LogFactory.getLog(FavoredStochasticBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredStochasticBalancer.class);
   private FavoredNodesManager fnm;
 
   @Override

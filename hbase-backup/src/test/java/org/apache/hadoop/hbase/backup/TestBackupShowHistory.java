@@ -24,8 +24,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -33,13 +31,14 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupShowHistory extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestBackupShowHistory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupShowHistory.class);
 
   private boolean findBackup(List<BackupInfo> history, String backupId) {
     assertTrue(history.size() > 0);

@@ -23,8 +23,6 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
@@ -36,7 +34,8 @@ import org.joni.Matcher;
 import org.joni.Option;
 import org.joni.Regex;
 import org.joni.Syntax;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -72,7 +71,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
 @InterfaceAudience.Public
 public class RegexStringComparator extends ByteArrayComparable {
 
-  private static final Log LOG = LogFactory.getLog(RegexStringComparator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegexStringComparator.class);
 
   private Engine engine;
 

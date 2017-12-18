@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Triple;
 @InterfaceAudience.Private
 public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityScanDeleteTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityScanDeleteTracker.class);
 
   /**
    * This tag is used for the DELETE cell which has no visibility label.

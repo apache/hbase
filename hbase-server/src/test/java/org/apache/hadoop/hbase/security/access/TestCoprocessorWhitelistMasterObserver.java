@@ -23,8 +23,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -50,13 +48,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Performs coprocessor loads for variuos paths and malformed strings
  */
 @Category({SecurityTests.class, MediumTests.class})
 public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
-  private static final Log LOG = LogFactory.getLog(TestCoprocessorWhitelistMasterObserver.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCoprocessorWhitelistMasterObserver.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final TableName TEST_TABLE = TableName.valueOf("testTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("fam1");

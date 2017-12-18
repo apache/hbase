@@ -28,9 +28,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -109,7 +109,7 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class TableInputFormatBase
     extends InputFormat<ImmutableBytesWritable, Result> {
 
-  private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableInputFormatBase.class);
 
   private static final String NOT_INITIALIZED = "The input format instance has not been properly " +
       "initialized. Ensure you call initializeTable either in your constructor or initialize " +

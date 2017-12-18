@@ -27,8 +27,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +53,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.exceptions.verification.WantedButNotInvoked;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing sync/append failures.
@@ -62,7 +62,7 @@ import org.mockito.exceptions.verification.WantedButNotInvoked;
  */
 @Category({MediumTests.class})
 public class TestFailedAppendAndSync {
-  private static final Log LOG = LogFactory.getLog(TestFailedAppendAndSync.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFailedAppendAndSync.class);
   @Rule public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";

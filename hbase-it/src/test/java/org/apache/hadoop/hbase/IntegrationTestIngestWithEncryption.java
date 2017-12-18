@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
@@ -29,8 +27,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
@@ -38,24 +34,17 @@ import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
-  private final static Log LOG = LogFactory.getLog(IntegrationTestIngestWithEncryption.class);
-  boolean initialized = false;
+  private final static Logger LOG =
+      LoggerFactory.getLogger(IntegrationTestIngestWithEncryption.class);
 
-  static {
-    // These log level changes are only useful when running on a localhost
-    // cluster.
-    Logger.getLogger(HFileReaderImpl.class).setLevel(Level.TRACE);
-    Logger.getLogger(HFileWriterImpl.class).setLevel(Level.TRACE);
-    Logger.getLogger(SecureProtobufLogReader.class).setLevel(Level.TRACE);
-    Logger.getLogger(SecureProtobufLogWriter.class).setLevel(Level.TRACE);
-  }
+  boolean initialized = false;
 
   @Override
   public void setUpCluster() throws Exception {

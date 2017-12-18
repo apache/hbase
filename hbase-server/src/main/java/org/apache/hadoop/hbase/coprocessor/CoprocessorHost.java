@@ -32,9 +32,9 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -75,7 +75,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
     "hbase.coprocessor.user.enabled";
   public static final boolean DEFAULT_USER_COPROCESSORS_ENABLED = true;
 
-  private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorHost.class);
   protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
   protected final SortedList<E> coprocEnvironments =

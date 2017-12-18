@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -32,13 +31,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
-import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -117,42 +112,12 @@ public abstract class GenericTestUtils {
         TimedOutTestsListener.buildThreadDiagnosticString());
   }
 
-  public static class LogCapturer {
-    private StringWriter sw = new StringWriter();
-    private WriterAppender appender;
-    private Logger logger;
-
-    public static LogCapturer captureLogs(Log l) {
-      Logger logger = ((Log4JLogger)l).getLogger();
-      LogCapturer c = new LogCapturer(logger);
-      return c;
-    }
-
-
-    private LogCapturer(Logger logger) {
-      this.logger = logger;
-      Layout layout = Logger.getRootLogger().getAppender("stdout").getLayout();
-      WriterAppender wa = new WriterAppender(layout, sw);
-      logger.addAppender(wa);
-    }
-
-    public String getOutput() {
-      return sw.toString();
-    }
-
-    public void stopCapturing() {
-      logger.removeAppender(appender);
-
-    }
-  }
-
-
   /**
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
    */
   public static class DelayAnswer implements Answer<Object> {
-    private final Log LOG;
+    private final Logger LOG;
 
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
@@ -165,7 +130,7 @@ public abstract class GenericTestUtils {
     private volatile Throwable thrown;
     private volatile Object returnValue;
 
-    public DelayAnswer(Log log) {
+    public DelayAnswer(Logger log) {
       this.LOG = log;
     }
 
@@ -262,13 +227,13 @@ public abstract class GenericTestUtils {
    */
   public static class DelegateAnswer implements Answer<Object> {
     private final Object delegate;
-    private final Log log;
+    private final Logger log;
 
     public DelegateAnswer(Object delegate) {
       this(null, delegate);
     }
 
-    public DelegateAnswer(Log log, Object delegate) {
+    public DelegateAnswer(Logger log, Object delegate) {
       this.log = log;
       this.delegate = delegate;
     }

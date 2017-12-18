@@ -32,8 +32,6 @@ import java.util.List;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -64,10 +62,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestTableResource {
-  private static final Log LOG = LogFactory.getLog(TestTableResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableResource.class);
 
   private static TableName TABLE = TableName.valueOf("TestTableResource");
   private static String COLUMN_FAMILY = "test";

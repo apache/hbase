@@ -28,14 +28,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class AbstractProtobufLogWriter {
 
-  private static final Log LOG = LogFactory.getLog(AbstractProtobufLogWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractProtobufLogWriter.class);
 
   protected CompressionContext compressionContext;
   protected Configuration conf;

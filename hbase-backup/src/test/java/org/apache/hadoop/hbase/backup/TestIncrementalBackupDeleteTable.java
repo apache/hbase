@@ -22,8 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -37,7 +35,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -50,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @Category(LargeTests.class)
 public class TestIncrementalBackupDeleteTable extends TestBackupBase {
-  private static final Log LOG = LogFactory.getLog(TestIncrementalBackupDeleteTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
 
   // implement all test cases in 1 test since incremental backup/restore has dependencies
   @Test

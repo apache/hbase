@@ -26,15 +26,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableCollection;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
@@ -44,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
  */
 @InterfaceAudience.Private
 class DefaultStoreFileManager implements StoreFileManager {
-  private static final Log LOG = LogFactory.getLog(DefaultStoreFileManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultStoreFileManager.class);
 
   private final CellComparator cellComparator;
   private final CompactionConfiguration comConf;

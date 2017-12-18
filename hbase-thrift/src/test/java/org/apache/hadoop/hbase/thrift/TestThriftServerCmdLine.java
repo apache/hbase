@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -50,7 +48,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 
 /**
@@ -61,8 +60,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 @RunWith(Parameterized.class)
 public class TestThriftServerCmdLine {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestThriftServerCmdLine.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestThriftServerCmdLine.class);
 
   private final ImplType implType;
   private boolean specifyFramed;

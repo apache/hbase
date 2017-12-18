@@ -23,10 +23,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class RootProcedureState {
-  private static final Log LOG = LogFactory.getLog(RootProcedureState.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RootProcedureState.class);
 
   private enum State {
     RUNNING,         // The Procedure is running or ready to run

@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.client.example;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +29,8 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.RefreshHFilesProtos;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -40,7 +40,7 @@ import java.io.IOException;
  * Region Server side via the RefreshHFilesService.
  */
 public class RefreshHFilesClient implements Closeable {
-  private static final Log LOG = LogFactory.getLog(RefreshHFilesClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RefreshHFilesClient.class);
   private final Connection connection;
 
   /**

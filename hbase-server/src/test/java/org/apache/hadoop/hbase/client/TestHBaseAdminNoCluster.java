@@ -24,8 +24,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -59,13 +57,15 @@ import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ServiceException;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestHBaseAdminNoCluster {
 
-  private static final Log LOG = LogFactory.getLog(TestHBaseAdminNoCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseAdminNoCluster.class);
 
   @Rule
   public TestName name = new TestName();

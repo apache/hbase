@@ -24,8 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,14 +37,16 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test handling of changes to the number of a peer's regionservers.
  */
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationChangingPeerRegionservers extends TestReplicationBase {
-
-  private static final Log LOG = LogFactory.getLog(TestReplicationChangingPeerRegionservers.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestReplicationChangingPeerRegionservers.class);
 
   /**
    * @throws java.lang.Exception

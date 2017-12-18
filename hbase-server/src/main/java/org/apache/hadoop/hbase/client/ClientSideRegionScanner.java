@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +32,8 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A client scanner for a region opened for read-only on the client side. Assumes region data
@@ -42,7 +42,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ClientSideRegionScanner extends AbstractClientScanner {
 
-  private static final Log LOG = LogFactory.getLog(ClientSideRegionScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientSideRegionScanner.class);
 
   private HRegion region;
   RegionScanner scanner;

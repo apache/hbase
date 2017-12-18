@@ -26,8 +26,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -46,7 +44,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -54,7 +53,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  */
 @Category({MasterTests.class, LargeTests.class})
 public class  TestRollingRestart {
-  private static final Log LOG = LogFactory.getLog(TestRollingRestart.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRollingRestart.class);
 
   @Rule
   public TestName name = new TestName();

@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,7 +50,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
@@ -66,7 +65,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @Category(IntegrationTests.class)
 public class IntegrationTestBackupRestore extends IntegrationTestBase {
   private static final String CLASS_NAME = IntegrationTestBackupRestore.class.getSimpleName();
-  protected static final Log LOG = LogFactory.getLog(IntegrationTestBackupRestore.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBackupRestore.class);
   protected static final TableName TABLE_NAME1 = TableName.valueOf(CLASS_NAME + ".table1");
   protected static final TableName TABLE_NAME2 = TableName.valueOf(CLASS_NAME + ".table2");
   protected static final String COLUMN_NAME = "f";

@@ -35,8 +35,6 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,6 +48,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class used to be the base of unit tests on load balancers. It gives helper
@@ -58,7 +58,7 @@ import org.junit.BeforeClass;
  *
  */
 public class BalancerTestBase {
-  private static final Log LOG = LogFactory.getLog(BalancerTestBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BalancerTestBase.class);
   protected static Random rand = new Random();
   static int regionId = 0;
   protected static Configuration conf;

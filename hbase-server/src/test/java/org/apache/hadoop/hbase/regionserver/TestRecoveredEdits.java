@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +52,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests around replay of recovered.edits content.
@@ -61,7 +61,7 @@ import org.junit.rules.TestName;
 @Category({MediumTests.class})
 public class TestRecoveredEdits {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestRecoveredEdits.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
   @Rule public TestName testName = new TestName();
 
   /**

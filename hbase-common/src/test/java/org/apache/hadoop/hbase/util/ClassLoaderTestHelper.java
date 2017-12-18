@@ -35,16 +35,16 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Some utilities to help class loader testing
  */
 public class ClassLoaderTestHelper {
-  private static final Log LOG = LogFactory.getLog(ClassLoaderTestHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClassLoaderTestHelper.class);
 
   private static final int BUFFER_SIZE = 4096;
 

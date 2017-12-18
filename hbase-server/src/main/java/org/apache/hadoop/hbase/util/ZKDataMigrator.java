@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -34,6 +32,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * utlity method to migrate zookeeper data across HBase versions.
@@ -41,7 +41,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class ZKDataMigrator {
 
-  private static final Log LOG = LogFactory.getLog(ZKDataMigrator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKDataMigrator.class);
 
   /**
    * Method for table states migration.

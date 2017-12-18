@@ -20,11 +20,10 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -39,6 +38,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -46,7 +47,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestWALProcedureStoreOnHDFS {
-  private static final Log LOG = LogFactory.getLog(TestWALProcedureStoreOnHDFS.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStoreOnHDFS.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -58,7 +59,7 @@ public class TestWALProcedureStoreOnHDFS {
 
     @Override
     public void abortProcess() {
-      LOG.fatal("Abort the Procedure Store");
+      LOG.error(HBaseMarkers.FATAL, "Abort the Procedure Store");
       store.stop(true);
     }
   };

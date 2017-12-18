@@ -28,8 +28,7 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
@@ -38,7 +37,8 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
 /**
@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   // LOG is being used in TestMultiRowRangeFilter, hence leaving it public
-  public static final Log LOG = LogFactory.getLog(RpcRetryingCallerImpl.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RpcRetryingCallerImpl.class);
 
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;

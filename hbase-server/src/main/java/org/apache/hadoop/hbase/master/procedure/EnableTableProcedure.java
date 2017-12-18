@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -31,6 +29,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.E
 @InterfaceAudience.Private
 public class EnableTableProcedure
     extends AbstractStateMachineTableProcedure<EnableTableState> {
-  private static final Log LOG = LogFactory.getLog(EnableTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EnableTableProcedure.class);
 
   private TableName tableName;
   private boolean skipTableStateCheck;

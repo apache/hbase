@@ -30,8 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -64,8 +62,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({ClientTests.class, MediumTests.class})
 public class TestThriftHBaseServiceHandlerWithReadOnly {
-
-  private static final Log LOG = LogFactory.getLog(TestThriftHBaseServiceHandlerWithReadOnly.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   // Static names for tables, columns, rows, and values

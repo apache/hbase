@@ -34,9 +34,9 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -49,7 +49,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceAudience.Private
 public class HBaseSaslRpcServer {
 
-  private static final Log LOG = LogFactory.getLog(HBaseSaslRpcServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseSaslRpcServer.class);
 
   private final SaslServer saslServer;
 

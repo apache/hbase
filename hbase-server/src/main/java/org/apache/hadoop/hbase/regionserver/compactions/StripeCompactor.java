@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -34,6 +32,8 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the placeholder for stripe compactor. The implementation, as well as the proper javadoc,
@@ -41,7 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class StripeCompactor extends AbstractMultiOutputCompactor<StripeMultiFileWriter> {
-  private static final Log LOG = LogFactory.getLog(StripeCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeCompactor.class);
 
   public StripeCompactor(Configuration conf, HStore store) {
     super(conf, store);

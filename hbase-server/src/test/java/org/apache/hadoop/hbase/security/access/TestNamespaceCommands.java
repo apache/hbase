@@ -24,9 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,14 +52,15 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import com.google.protobuf.BlockingRpcChannel;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestNamespaceCommands.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceCommands.class);
   private static String TEST_NAMESPACE = "ns1";
   private static String TEST_NAMESPACE2 = "ns2";
   private static Configuration conf;
@@ -204,7 +204,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
       for (Map.Entry<String, TablePermission> entry : perms.entries()) {
-        LOG.debug(entry);
+        LOG.debug(Objects.toString(entry));
       }
       assertEquals(6, perms.size());
 

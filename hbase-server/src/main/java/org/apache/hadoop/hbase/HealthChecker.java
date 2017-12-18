@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility for executing an external script that checks the health of
@@ -33,7 +33,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  */
 class HealthChecker {
 
-  private static final Log LOG = LogFactory.getLog(HealthChecker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HealthChecker.class);
   private ShellCommandExecutor shexec = null;
   private String exceptionStackTrace;
 

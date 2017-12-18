@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -66,12 +64,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithOperationAttributes implements Configurable {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestImportTSVWithOperationAttributes.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestImportTSVWithOperationAttributes.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -95,10 +96,12 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   @Rule
   public TestName name = new TestName();
 
+  @Override
   public Configuration getConf() {
     return util.getConfiguration();
   }
 
+  @Override
   public void setConf(Configuration conf) {
     throw new IllegalArgumentException("setConf not supported");
   }

@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.locking.LockManager;
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.procedure2.LockType;
 @InterfaceAudience.Private
 public class ExpiredMobFileCleanerChore extends ScheduledChore {
 
-  private static final Log LOG = LogFactory.getLog(ExpiredMobFileCleanerChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExpiredMobFileCleanerChore.class);
   private final HMaster master;
   private ExpiredMobFileCleaner cleaner;
 

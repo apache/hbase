@@ -30,10 +30,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 public class Get extends Query
   implements Row, Comparable<Row> {
-  private static final Log LOG = LogFactory.getLog(Get.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Get.class);
 
   private byte [] row = null;
   private int maxVersions = 1;

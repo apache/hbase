@@ -46,8 +46,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -103,6 +101,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -223,7 +223,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HBaseAdmin implements Admin {
-  private static final Log LOG = LogFactory.getLog(HBaseAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseAdmin.class);
 
   private ClusterConnection connection;
 

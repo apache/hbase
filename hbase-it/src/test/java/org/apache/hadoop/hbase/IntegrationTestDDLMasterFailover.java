@@ -27,8 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -40,6 +38,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -49,6 +48,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -101,7 +102,7 @@ import org.junit.experimental.categories.Category;
 @Category(IntegrationTests.class)
 public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestDDLMasterFailover.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestDDLMasterFailover.class);
 
   private static final int SERVER_COUNT = 1; // number of slaves for the smallest cluster
 
@@ -185,7 +186,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         Connection connection = ConnectionFactory.createConnection(getConf());
         setConnection(connection);
       } catch (IOException e) {
-        LOG.fatal("Failed to establish connection.", e);
+        LOG.error(HBaseMarkers.FATAL, "Failed to establish connection.", e);
       }
     }
     return connection;
@@ -1008,7 +1009,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       masterFailover.setConnection(connection);
       ret = ToolRunner.run(conf, masterFailover, args);
     } catch (IOException e){
-      LOG.fatal("Failed to establish connection. Aborting test ...", e);
+      LOG.error(HBaseMarkers.FATAL, "Failed to establish connection. Aborting test ...", e);
     } finally {
       connection = masterFailover.getConnection();
       if (connection != null){

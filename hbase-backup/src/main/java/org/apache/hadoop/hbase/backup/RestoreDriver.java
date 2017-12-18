@@ -39,8 +39,6 @@ import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -50,13 +48,15 @@ import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.log4j.LogManager;
 
 /**
  *
@@ -66,7 +66,7 @@ import org.apache.log4j.Logger;
 @InterfaceAudience.Private
 public class RestoreDriver extends AbstractHBaseTool {
 
-  private static final Log LOG = LogFactory.getLog(RestoreDriver.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RestoreDriver.class);
   private CommandLine cmd;
 
   private static final String USAGE_STRING =
@@ -83,7 +83,7 @@ public class RestoreDriver extends AbstractHBaseTool {
 
   protected void init() throws IOException {
     // disable irrelevant loggers to avoid it mess up command output
-    LogUtils.disableZkAndClientLoggers(LOG);
+    LogUtils.disableZkAndClientLoggers();
   }
 
   private int parseAndRun(String[] args) throws IOException {
@@ -96,9 +96,8 @@ public class RestoreDriver extends AbstractHBaseTool {
     System.out.println(BackupRestoreConstants.VERIFY_BACKUP);
 
     // enable debug logging
-    Logger backupClientLogger = Logger.getLogger("org.apache.hadoop.hbase.backup");
     if (cmd.hasOption(OPTION_DEBUG)) {
-      backupClientLogger.setLevel(Level.DEBUG);
+      LogManager.getLogger("org.apache.hadoop.hbase.backup").setLevel(Level.DEBUG);
     }
 
     // whether to overwrite to existing table if any, false by default

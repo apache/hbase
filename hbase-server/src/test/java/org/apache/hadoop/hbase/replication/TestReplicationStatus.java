@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,10 +35,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationStatus extends TestReplicationBase {
-  private static final Log LOG = LogFactory.getLog(TestReplicationStatus.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationStatus.class);
   private static final String PEER_ID = "2";
 
   /**

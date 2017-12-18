@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -56,7 +54,8 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 import com.google.protobuf.Service;
@@ -65,7 +64,7 @@ import com.google.protobuf.Service;
  * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
  */
 public class MockRegionServerServices implements RegionServerServices {
-  protected static final Log LOG = LogFactory.getLog(MockRegionServerServices.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(MockRegionServerServices.class);
   private final Map<String, Region> regions = new HashMap<>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);

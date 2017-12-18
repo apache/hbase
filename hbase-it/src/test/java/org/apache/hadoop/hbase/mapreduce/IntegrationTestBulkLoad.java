@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -88,7 +86,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
@@ -128,7 +127,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 @Category(IntegrationTests.class)
 public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestBulkLoad.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBulkLoad.class);
 
   private static final byte[] CHAIN_FAM = Bytes.toBytes("L");
   private static final byte[] SORT_FAM  = Bytes.toBytes("S");
@@ -197,7 +196,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
             Thread.sleep(sleepTime.get());
           }
         } catch (InterruptedException e1) {
-          LOG.error(e1);
+          LOG.error(e1.toString(), e1);
         }
       }
     }

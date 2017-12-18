@@ -32,8 +32,6 @@ import java.util.regex.Matcher;
 
 import org.apache.commons.collections4.map.AbstractReferenceMap;
 import org.apache.commons.collections4.map.ReferenceMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -90,6 +88,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -99,7 +99,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RegionCoprocessorHost
     extends CoprocessorHost<RegionCoprocessor, RegionCoprocessorEnvironment> {
 
-  private static final Log LOG = LogFactory.getLog(RegionCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionCoprocessorHost.class);
   // The shared data map
   private static final ReferenceMap<String, ConcurrentMap<String, Object>> SHARED_DATA_MAP =
       new ReferenceMap<>(AbstractReferenceMap.ReferenceStrength.HARD,
@@ -141,6 +141,7 @@ public class RegionCoprocessorHost
       return region;
     }
 
+    @Override
     public OnlineRegions getOnlineRegions() {
       return this.services;
     }
@@ -208,6 +209,7 @@ public class RegionCoprocessorHost
      * @return An instance of RegionServerServices, an object NOT for general user-space Coprocessor
      * consumption.
      */
+    @Override
     public RegionServerServices getRegionServerServices() {
       return this.rsServices;
     }
@@ -551,7 +553,7 @@ public class RegionCoprocessorHost
         }
       });
     } catch (IOException e) {
-      LOG.warn(e);
+      LOG.warn(e.toString(), e);
     }
   }
 
@@ -586,7 +588,7 @@ public class RegionCoprocessorHost
         }
       });
     } catch (IOException e) {
-      LOG.warn(e);
+      LOG.warn(e.toString(), e);
     }
   }
 

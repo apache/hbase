@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -73,6 +71,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test mob store compaction
@@ -81,7 +81,7 @@ import org.junit.rules.TestName;
 public class TestMobStoreCompaction {
   @Rule
   public TestName name = new TestName();
-  static final Log LOG = LogFactory.getLog(TestMobStoreCompaction.class.getName());
+  static final Logger LOG = LoggerFactory.getLogger(TestMobStoreCompaction.class.getName());
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Configuration conf = null;
 

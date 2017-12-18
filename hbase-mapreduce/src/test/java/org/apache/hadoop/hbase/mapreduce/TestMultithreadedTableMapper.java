@@ -26,8 +26,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,6 +48,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -58,7 +58,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestMultithreadedTableMapper {
-  private static final Log LOG = LogFactory.getLog(TestMultithreadedTableMapper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultithreadedTableMapper.class);
   private static final HBaseTestingUtility UTIL =
       new HBaseTestingUtility();
   static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");

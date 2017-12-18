@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,6 +48,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -57,7 +57,7 @@ import org.mockito.Mockito;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestSimpleRegionNormalizer {
-  private static final Log LOG = LogFactory.getLog(TestSimpleRegionNormalizer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSimpleRegionNormalizer.class);
 
   private static RegionNormalizer normalizer;
 

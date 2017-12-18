@@ -34,8 +34,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -55,7 +53,8 @@ import org.mockito.internal.matchers.ArrayEquals;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -64,7 +63,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @Category({MasterTests.class, MediumTests.class})
 public class TestZKProcedure {
 
-  private static final Log LOG = LogFactory.getLog(TestZKProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedure.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String COORDINATOR_NODE_NAME = "coordinator";
   private static final long KEEP_ALIVE = 100; // seconds

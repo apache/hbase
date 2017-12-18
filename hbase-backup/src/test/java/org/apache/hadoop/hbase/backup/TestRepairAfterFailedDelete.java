@@ -22,8 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -34,13 +32,14 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestRepairAfterFailedDelete extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestRepairAfterFailedDelete.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRepairAfterFailedDelete.class);
 
   @Test
   public void testRepairBackupDelete() throws Exception {

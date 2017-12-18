@@ -31,8 +31,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -44,7 +42,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableCollection;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 
@@ -67,7 +66,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 @InterfaceAudience.Private
 public class StripeStoreFileManager
   implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
-  private static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeStoreFileManager.class);
 
   /**
    * The file metadata fields that contain the stripe information.

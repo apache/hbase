@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Result;
@@ -28,13 +26,15 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.fail;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationKillRS extends TestReplicationBase {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationKillRS.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationKillRS.class);
 
   /**
    * Load up 1 tables over 2 region servers and kill a source during

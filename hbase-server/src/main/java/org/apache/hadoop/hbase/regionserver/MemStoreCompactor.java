@@ -18,19 +18,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The ongoing MemStore Compaction manager, dispatches a solo running compaction and interrupts
@@ -55,7 +56,7 @@ public class MemStoreCompactor {
           + ClassSize.ATOMIC_BOOLEAN    // isInterrupted (the internals)
       );
 
-  private static final Log LOG = LogFactory.getLog(MemStoreCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemStoreCompactor.class);
   private CompactingMemStore compactingMemStore;
 
   // a static version of the segment list from the pipeline

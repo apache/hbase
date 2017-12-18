@@ -48,8 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.mutable.MutableLong;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,6 +60,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -83,7 +82,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -115,7 +115,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
-  private static final Log LOG = LogFactory.getLog(AbstractFSWAL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWAL.class);
 
   protected static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
 
@@ -1117,8 +1117,8 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     if (args[0].compareTo("--dump") == 0) {
       WALPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
     } else if (args[0].compareTo("--perf") == 0) {
-      LOG.fatal("Please use the WALPerformanceEvaluation tool instead. i.e.:");
-      LOG.fatal(
+      LOG.error(HBaseMarkers.FATAL, "Please use the WALPerformanceEvaluation tool instead. i.e.:");
+      LOG.error(HBaseMarkers.FATAL,
         "\thbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation --iterations " + args[1]);
       System.exit(-1);
     } else if (args[0].compareTo("--split") == 0) {

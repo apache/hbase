@@ -21,8 +21,6 @@ import static org.junit.Assert.*;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
@@ -34,10 +32,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterMetricsWrapper {
-  private static final Log LOG = LogFactory.getLog(TestMasterMetricsWrapper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetricsWrapper.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 4;

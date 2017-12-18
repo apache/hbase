@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -56,10 +54,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestScannerFromBucketCache {
-  private static final Log LOG = LogFactory.getLog(TestScannerFromBucketCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerFromBucketCache.class);
   @Rule
   public TestName name = new TestName();
 

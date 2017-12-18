@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -47,6 +45,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestLockManager {
@@ -55,7 +55,7 @@ public class TestLockManager {
   // crank this up if this test turns out to be flaky.
   private static final int LOCAL_LOCKS_TIMEOUT = 1000;
 
-  private static final Log LOG = LogFactory.getLog(TestLockProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLockProcedure.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static MasterServices masterServices;
 

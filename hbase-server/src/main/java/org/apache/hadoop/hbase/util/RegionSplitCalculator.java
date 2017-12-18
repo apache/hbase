@@ -26,9 +26,9 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.TreeMultimap;
  */
 @InterfaceAudience.Private
 public class RegionSplitCalculator<R extends KeyRange> {
-  private static final Log LOG = LogFactory.getLog(RegionSplitCalculator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSplitCalculator.class);
 
   private final Comparator<R> rangeCmp;
   /**

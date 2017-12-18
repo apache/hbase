@@ -35,8 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -58,13 +56,15 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test our testing utility class
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
-  private static final Log LOG = LogFactory.getLog(TestHBaseTestingUtility.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtility.class);
 
   @Rule
   public TestName name = new TestName();

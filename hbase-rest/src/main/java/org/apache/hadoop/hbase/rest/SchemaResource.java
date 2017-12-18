@@ -35,8 +35,6 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.namespace.QName;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -44,6 +42,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 
 @InterfaceAudience.Private
 public class SchemaResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(SchemaResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SchemaResource.class);
 
   static CacheControl cacheControl;
   static {

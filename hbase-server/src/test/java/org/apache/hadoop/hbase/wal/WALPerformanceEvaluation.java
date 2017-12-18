@@ -31,8 +31,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -70,6 +68,8 @@ import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.Histogram;
@@ -86,7 +86,9 @@ import com.codahale.metrics.MetricRegistry;
  */
 @InterfaceAudience.Private
 public final class WALPerformanceEvaluation extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(WALPerformanceEvaluation.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(WALPerformanceEvaluation.class);
+
   private final MetricRegistry metrics = new MetricRegistry();
   private final Meter syncMeter =
     metrics.meter(name(WALPerformanceEvaluation.class, "syncMeter", "syncs"));

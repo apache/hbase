@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -30,6 +28,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -44,8 +44,8 @@ import static org.junit.Assert.fail;
 @Category(MediumTests.class)
 public class TestTableOutputFormatConnectionExhaust {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestTableOutputFormatConnectionExhaust.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTableOutputFormatConnectionExhaust.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   static final String TABLE = "TestTableOutputFormatConnectionExhaust";

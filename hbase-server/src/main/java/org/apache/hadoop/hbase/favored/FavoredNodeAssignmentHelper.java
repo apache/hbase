@@ -32,8 +32,6 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -52,6 +50,9 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -67,7 +68,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNode
  */
 @InterfaceAudience.Private
 public class FavoredNodeAssignmentHelper {
-  private static final Log LOG = LogFactory.getLog(FavoredNodeAssignmentHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeAssignmentHelper.class);
   private RackManager rackManager;
   private Map<String, List<ServerName>> rackToRegionServerMap;
   private List<String> uniqueRackList;

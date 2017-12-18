@@ -24,8 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
@@ -37,6 +35,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.AuthFailedException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link BaseReplicationEndpoint} for replication endpoints whose
@@ -48,7 +48,7 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   implements Abortable {
 
-  private static final Log LOG = LogFactory.getLog(HBaseReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseReplicationEndpoint.class);
 
   private ZKWatcher zkw = null; // FindBugs: MT_CORRECTNESS
 

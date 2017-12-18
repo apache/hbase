@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 @InterfaceStability.Evolving
 public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
-  private static final Log LOG = LogFactory.getLog(FSHLogProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSHLogProvider.class);
 
   // Only public so classes back in regionserver.wal can access
   public interface Writer extends WALProvider.Writer {

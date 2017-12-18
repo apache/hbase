@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -48,6 +46,8 @@ import java.util.*;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -59,7 +59,7 @@ import static org.junit.Assert.assertFalse;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestClassLoading {
-  private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   public static class TestMasterCoprocessor implements MasterCoprocessor, MasterObserver {

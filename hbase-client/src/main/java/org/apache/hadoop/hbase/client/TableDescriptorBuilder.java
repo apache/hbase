@@ -34,8 +34,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,13 +44,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @since 2.0.0
  */
 @InterfaceAudience.Public
 public class TableDescriptorBuilder {
-  public static final Log LOG = LogFactory.getLog(TableDescriptorBuilder.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TableDescriptorBuilder.class);
   @InterfaceAudience.Private
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
   private static final Bytes SPLIT_POLICY_KEY = new Bytes(Bytes.toBytes(SPLIT_POLICY));

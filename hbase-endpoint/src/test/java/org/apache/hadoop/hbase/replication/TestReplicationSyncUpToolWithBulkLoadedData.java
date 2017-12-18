@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,12 +35,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplicationSyncUpTool {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestReplicationSyncUpToolWithBulkLoadedData.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestReplicationSyncUpToolWithBulkLoadedData.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

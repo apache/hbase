@@ -38,20 +38,20 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants.BackupCommand;
 import org.apache.hadoop.hbase.backup.impl.BackupCommands;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.log4j.LogManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -61,7 +61,7 @@ import org.apache.log4j.Logger;
 @InterfaceAudience.Private
 public class BackupDriver extends AbstractHBaseTool {
 
-  private static final Log LOG = LogFactory.getLog(BackupDriver.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupDriver.class);
   private CommandLine cmd;
 
   public BackupDriver() throws IOException {
@@ -70,7 +70,7 @@ public class BackupDriver extends AbstractHBaseTool {
 
   protected void init() throws IOException {
     // disable irrelevant loggers to avoid it mess up command output
-    LogUtils.disableZkAndClientLoggers(LOG);
+    LogUtils.disableZkAndClientLoggers();
   }
 
   private int parseAndRun(String[] args) throws IOException {
@@ -122,11 +122,10 @@ public class BackupDriver extends AbstractHBaseTool {
     }
 
     // enable debug logging
-    Logger backupClientLogger = Logger.getLogger("org.apache.hadoop.hbase.backup");
     if (this.cmd.hasOption(OPTION_DEBUG)) {
-      backupClientLogger.setLevel(Level.DEBUG);
+      LogManager.getLogger("org.apache.hadoop.hbase.backup").setLevel(Level.DEBUG);
     } else {
-      backupClientLogger.setLevel(Level.INFO);
+      LogManager.getLogger("org.apache.hadoop.hbase.backup").setLevel(Level.INFO);
     }
 
     BackupCommands.Command command = BackupCommands.createCommand(getConf(), type, this.cmd);
@@ -157,7 +156,7 @@ public class BackupDriver extends AbstractHBaseTool {
     addOptWithArg(OPTION_SET, OPTION_SET_DESC);
     addOptWithArg(OPTION_PATH, OPTION_PATH_DESC);
     addOptWithArg(OPTION_YARN_QUEUE_NAME, OPTION_YARN_QUEUE_NAME_DESC);
-    
+
   }
 
   @Override

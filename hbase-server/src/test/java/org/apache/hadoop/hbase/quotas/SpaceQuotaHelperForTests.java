@@ -28,8 +28,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -48,14 +46,15 @@ import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 
 @InterfaceAudience.Private
 public class SpaceQuotaHelperForTests {
-  private static final Log LOG = LogFactory.getLog(SpaceQuotaHelperForTests.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SpaceQuotaHelperForTests.class);
 
   public static final int SIZE_PER_VALUE = 256;
   public static final String F1 = "f1";

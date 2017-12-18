@@ -24,8 +24,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -49,6 +47,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration test that verifies lazy CF loading during scans by doing repeated scans
@@ -72,7 +72,7 @@ public class IntegrationTestLazyCfLoading {
   private static final int WRITER_THREADS = 10;
   private static final int WAIT_BETWEEN_SCANS_MS = 1000;
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestLazyCfLoading.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestLazyCfLoading.class);
   private IntegrationTestingUtility util = new IntegrationTestingUtility();
   private final DataGenerator dataGen = new DataGenerator();
 

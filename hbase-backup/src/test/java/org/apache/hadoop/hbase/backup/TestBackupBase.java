@@ -25,9 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -68,6 +67,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is only a base for other integration-level backup tests. Do not add tests here.
@@ -76,7 +77,7 @@ import org.junit.Before;
  */
 public class TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestBackupBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupBase.class);
 
   protected static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static HBaseTestingUtility TEST_UTIL2;
@@ -501,7 +502,7 @@ public class TestBackupBase {
     FileSystem fs = FileSystem.get(conf1);
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(BACKUP_ROOT_DIR), true);
     while (it.hasNext()) {
-      LOG.debug(it.next().getPath());
+      LOG.debug(Objects.toString(it.next().getPath()));
     }
 
   }

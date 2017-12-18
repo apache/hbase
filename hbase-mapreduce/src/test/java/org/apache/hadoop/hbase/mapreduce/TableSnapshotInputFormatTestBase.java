@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,6 +42,8 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
 
@@ -51,7 +51,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 public abstract class TableSnapshotInputFormatTestBase {
-  private static final Log LOG = LogFactory.getLog(TableSnapshotInputFormatTestBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotInputFormatTestBase.class);
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   protected final HBaseTestingUtility UTIL = new HBaseTestingUtility();

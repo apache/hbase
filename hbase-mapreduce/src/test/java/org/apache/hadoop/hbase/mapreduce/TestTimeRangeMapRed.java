@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -51,6 +49,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +62,7 @@ import java.util.TreeMap;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestTimeRangeMapRed {
-  private final static Log log = LogFactory.getLog(TestTimeRangeMapRed.class);
+  private final static Logger log = LoggerFactory.getLogger(TestTimeRangeMapRed.class);
   private static final HBaseTestingUtility UTIL =
     new HBaseTestingUtility();
   private Admin admin;

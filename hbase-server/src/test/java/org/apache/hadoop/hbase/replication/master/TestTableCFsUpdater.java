@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.hbase.replication.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -41,6 +39,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -52,7 +52,7 @@ import static org.junit.Assert.assertTrue;
 @Category({ReplicationTests.class, SmallTests.class})
 public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
 
-  private static final Log LOG = LogFactory.getLog(TestTableCFsUpdater.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableCFsUpdater.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static ZKWatcher zkw = null;

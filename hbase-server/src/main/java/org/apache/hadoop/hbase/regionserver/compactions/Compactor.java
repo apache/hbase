@@ -29,8 +29,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -62,7 +60,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.Closeables;
 
 /**
@@ -71,7 +70,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.io.Closeables;
  */
 @InterfaceAudience.Private
 public abstract class Compactor<T extends CellSink> {
-  private static final Log LOG = LogFactory.getLog(Compactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Compactor.class);
   protected static final long COMPACTION_PROGRESS_LOG_INTERVAL = 60 * 1000;
   protected volatile CompactionProgress progress;
   protected final Configuration conf;

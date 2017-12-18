@@ -27,8 +27,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -37,6 +35,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.types.CopyOnWriteArrayMap;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A cache implementation for region locations from meta.
@@ -44,7 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetaCache {
 
-  private static final Log LOG = LogFactory.getLog(MetaCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetaCache.class);
 
   /**
    * Map of table to table {@link HRegionLocation}s.

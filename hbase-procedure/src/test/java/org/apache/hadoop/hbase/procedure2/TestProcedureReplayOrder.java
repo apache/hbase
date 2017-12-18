@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -37,6 +35,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -44,7 +44,7 @@ import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestProcedureReplayOrder {
-  private static final Log LOG = LogFactory.getLog(TestProcedureReplayOrder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureReplayOrder.class);
 
   private static final int NUM_THREADS = 16;
 

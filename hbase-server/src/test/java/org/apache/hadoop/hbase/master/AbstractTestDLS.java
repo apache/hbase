@@ -43,8 +43,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -92,14 +90,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Base class for testing distributed log splitting.
  */
 public abstract class AbstractTestDLS {
-  private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogManager.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

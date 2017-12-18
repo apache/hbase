@@ -27,8 +27,6 @@ import java.io.InputStream;
 import java.net.URL;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -39,6 +37,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
@@ -46,7 +46,7 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestInfoServers {
-  private static final Log LOG = LogFactory.getLog(TestInfoServers.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   @Rule

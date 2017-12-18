@@ -25,8 +25,6 @@ import java.util.UUID;
 import java.util.Set;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -34,13 +32,15 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test {@link FSUtils}.
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestFSVisitor {
-  private static final Log LOG = LogFactory.getLog(TestFSVisitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFSVisitor.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

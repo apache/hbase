@@ -22,19 +22,19 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestRestoreBoundaryTests extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestRestoreBoundaryTests.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRestoreBoundaryTests.class);
 
   /**
    * Verify that a single empty table is restored to a new table

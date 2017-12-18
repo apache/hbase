@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.procedure2;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -36,12 +34,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureExecutor {
-  private static final Log LOG = LogFactory.getLog(TestProcedureExecutor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureExecutor.class);
 
   private TestProcEnv procEnv;
   private NoopProcedureStore procStore;

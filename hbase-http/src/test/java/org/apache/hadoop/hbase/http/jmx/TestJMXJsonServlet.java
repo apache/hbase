@@ -25,8 +25,6 @@ import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer;
@@ -35,10 +33,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestJMXJsonServlet extends HttpServerFunctionalTest {
-  private   static final Log LOG = LogFactory.getLog(TestJMXJsonServlet.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestJMXJsonServlet.class);
   private static HttpServer server;
   private static URL baseUrl;
 

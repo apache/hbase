@@ -18,11 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -34,7 +33,7 @@ import org.apache.hadoop.hbase.util.ServerCommandLine;
  */
 @InterfaceAudience.Private
 public class HRegionServerCommandLine extends ServerCommandLine {
-  private static final Log LOG = LogFactory.getLog(HRegionServerCommandLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionServerCommandLine.class);
 
   private final Class<? extends HRegionServer> regionServerClass;
 

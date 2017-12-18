@@ -23,8 +23,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -35,7 +33,8 @@ import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 
 /**
@@ -60,7 +59,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 @InterfaceAudience.Private
 public class SimpleRegionNormalizer implements RegionNormalizer {
 
-  private static final Log LOG = LogFactory.getLog(SimpleRegionNormalizer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleRegionNormalizer.class);
   private static final int MIN_REGION_COUNT = 3;
   private MasterServices masterServices;
   private MasterRpcServices masterRpcServices;

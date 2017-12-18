@@ -35,9 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CellScanner;
@@ -66,6 +63,8 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
@@ -77,6 +76,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 /**
  * An RPC server that hosts protobuf described Services.
  *
@@ -85,7 +86,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
 public abstract class RpcServer implements RpcServerInterface,
     ConfigurationObserver {
   // LOG is being used in CallRunner and the log level is being changed in tests
-  public static final Log LOG = LogFactory.getLog(RpcServer.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RpcServer.class);
   protected static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
       = new CallQueueTooBigException();
 
@@ -109,7 +110,7 @@ public abstract class RpcServer implements RpcServerInterface,
 
   protected static final String AUTH_FAILED_FOR = "Auth failed for ";
   protected static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
-  protected static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
+  protected static final Logger AUDITLOG = LoggerFactory.getLogger("SecurityLogger."
       + Server.class.getName());
   protected SecretManager<TokenIdentifier> secretManager;
   protected final Map<String, String> saslProps;

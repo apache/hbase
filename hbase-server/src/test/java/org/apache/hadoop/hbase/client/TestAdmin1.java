@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,7 +63,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 
@@ -76,7 +75,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestAdmin1 {
-  private static final Log LOG = LogFactory.getLog(TestAdmin1.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAdmin1.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Admin admin;
 
@@ -1253,7 +1252,7 @@ public class TestAdmin1 {
     try {
       this.admin.deleteColumnFamily(tableName, Bytes.toBytes("col2"));
     } catch (TableNotDisabledException e) {
-      LOG.info(e);
+      LOG.info(e.toString(), e);
     }
     this.admin.disableTable(tableName);
     this.admin.deleteTable(tableName);

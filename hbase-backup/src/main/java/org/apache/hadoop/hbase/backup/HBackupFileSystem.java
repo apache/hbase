@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.backup;
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +29,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * View to an on-disk Backup Image FileSytem Provides the set of methods necessary to interact with
@@ -38,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class HBackupFileSystem {
-  public static final Log LOG = LogFactory.getLog(HBackupFileSystem.class);
+  public static final Logger LOG = LoggerFactory.getLogger(HBackupFileSystem.class);
 
   /**
    * This is utility class.

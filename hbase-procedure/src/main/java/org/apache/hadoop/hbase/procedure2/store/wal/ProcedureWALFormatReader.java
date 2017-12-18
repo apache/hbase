@@ -22,11 +22,11 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ProcedureWALFormatReader {
-  private static final Log LOG = LogFactory.getLog(ProcedureWALFormatReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureWALFormatReader.class);
 
   // ==============================================================================================
   //  We read the WALs in reverse order from the newest to the oldest.

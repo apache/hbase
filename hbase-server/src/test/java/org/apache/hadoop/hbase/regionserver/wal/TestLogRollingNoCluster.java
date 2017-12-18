@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -47,6 +46,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test many concurrent appenders to an WAL while rolling the log.
@@ -119,7 +120,7 @@ public class TestLogRollingNoCluster {
    * Appender thread.  Appends to passed wal file.
    */
   static class Appender extends Thread {
-    private final Log log;
+    private final Logger log;
     private final WAL wal;
     private final int count;
     private Exception e = null;
@@ -128,7 +129,7 @@ public class TestLogRollingNoCluster {
       super("" + index);
       this.wal = wal;
       this.count = count;
-      this.log = LogFactory.getLog("Appender:" + getName());
+      this.log = LoggerFactory.getLogger("Appender:" + getName());
     }
 
     /**

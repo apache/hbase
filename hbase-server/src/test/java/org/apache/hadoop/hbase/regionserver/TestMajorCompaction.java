@@ -35,8 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -69,6 +67,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test major compactions
@@ -81,7 +81,7 @@ public class TestMajorCompaction {
     return new Object[] { "NONE", "BASIC", "EAGER" };
   }
   @Rule public TestName name;
-  private static final Log LOG = LogFactory.getLog(TestMajorCompaction.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestMajorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
 

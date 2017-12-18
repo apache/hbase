@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -54,7 +52,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -65,7 +64,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public class HRegionFileSystem {
-  private static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionFileSystem.class);
 
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";
@@ -820,7 +819,7 @@ public class HRegionFileSystem {
    * @param LOG log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  void logFileSystemState(final Log LOG) throws IOException {
+  void logFileSystemState(final Logger LOG) throws IOException {
     FSUtils.logFileSystemState(fs, this.getRegionDir(), LOG);
   }
 

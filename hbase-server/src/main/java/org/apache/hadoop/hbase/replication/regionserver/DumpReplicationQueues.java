@@ -28,8 +28,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -59,6 +57,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AtomicLongMap;
 
 /**
@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AtomicLo
 
 public class DumpReplicationQueues extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(DumpReplicationQueues.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(DumpReplicationQueues.class.getName());
 
   private List<String> deadRegionServers;
   private List<String> deletedQueues;
@@ -417,7 +417,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     public void abort(String why, Throwable e) {
       LOG.warn("DumpReplicationQueue received abort, ignoring.  Reason: " + why);
       if (LOG.isDebugEnabled()) {
-        LOG.debug(e);
+        LOG.debug(e.toString(), e);
       }
     }
 

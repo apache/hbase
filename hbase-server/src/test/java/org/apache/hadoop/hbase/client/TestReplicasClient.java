@@ -35,9 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.codahale.metrics.Counter;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -62,7 +60,6 @@ import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -71,6 +68,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
@@ -79,11 +78,7 @@ import org.junit.experimental.categories.Category;
 @Category({MediumTests.class, ClientTests.class})
 @SuppressWarnings("deprecation")
 public class TestReplicasClient {
-  private static final Log LOG = LogFactory.getLog(TestReplicasClient.class);
-
-  static {
-    ((Log4JLogger)RpcRetryingCallerImpl.LOG).getLogger().setLevel(Level.ALL);
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicasClient.class);
 
   private static final int NB_SERVERS = 1;
   private static Table table = null;
@@ -161,7 +156,7 @@ public class TestReplicasClient {
             }
           }
         } catch (InterruptedException e1) {
-          LOG.error(e1);
+          LOG.error(e1.toString(), e1);
         }
       } else {
         LOG.info("We're not the primary replicas.");
@@ -175,7 +170,7 @@ public class TestReplicasClient {
             }
           }
         } catch (InterruptedException e1) {
-          LOG.error(e1);
+          LOG.error(e1.toString(), e1);
         }
       }
     }

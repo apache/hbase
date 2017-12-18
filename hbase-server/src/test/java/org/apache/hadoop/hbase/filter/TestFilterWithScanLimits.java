@@ -27,8 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
@@ -43,14 +41,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test if Filter is incompatible with scan-limits
  */
 @Category({FilterTests.class, MediumTests.class})
 public class TestFilterWithScanLimits extends FilterTestingCluster {
-  private static final Log LOG = LogFactory
-      .getLog(TestFilterWithScanLimits.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestFilterWithScanLimits.class);
 
   private static final TableName tableName = TableName.valueOf("scanWithLimit");
   private static final String columnFamily = "f1";

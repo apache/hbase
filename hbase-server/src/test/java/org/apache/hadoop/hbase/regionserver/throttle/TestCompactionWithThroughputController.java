@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -52,11 +50,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestCompactionWithThroughputController {
-
-  private static final Log LOG = LogFactory.getLog(TestCompactionWithThroughputController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
@@ -58,6 +56,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test cases that ensure that file system level errors are bubbled up
@@ -65,7 +65,7 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestFSErrorsExposed {
-  private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFSErrorsExposed.class);
 
   HBaseTestingUtility util = new HBaseTestingUtility();
 

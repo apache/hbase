@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +38,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
@@ -49,7 +49,7 @@ import java.util.List;
 
 @Category(LargeTests.class)
 public class TestReplicationDroppedTables extends TestReplicationBase {
-  private static final Log LOG = LogFactory.getLog(TestReplicationDroppedTables.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationDroppedTables.class);
 
   /**
    * @throws java.lang.Exception

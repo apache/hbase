@@ -26,10 +26,10 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class ResultBoundedCompletionService<V> {
-  private static final Log LOG = LogFactory.getLog(ResultBoundedCompletionService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResultBoundedCompletionService.class);
   private final RpcRetryingCallerFactory retryingCallerFactory;
   private final Executor executor;
   private final QueueingFuture<V>[] tasks; // all the tasks

@@ -28,8 +28,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,10 +36,12 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Creates multiple threads that write key/values into the */
 public class MultiThreadedWriter extends MultiThreadedWriterBase {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedWriter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedWriter.class);
 
   protected Set<HBaseWriterThread> writers = new HashSet<>();
 

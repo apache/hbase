@@ -30,8 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
@@ -43,6 +41,8 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
@@ -68,7 +68,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class HFileBlockIndex {
 
-  private static final Log LOG = LogFactory.getLog(HFileBlockIndex.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileBlockIndex.class);
 
   static final int DEFAULT_MAX_CHUNK_SIZE = 128 * 1024;
 

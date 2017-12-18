@@ -21,18 +21,18 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestFullBackup extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestFullBackup.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFullBackup.class);
 
   @Test
   public void testFullBackupMultipleCommand() throws Exception {

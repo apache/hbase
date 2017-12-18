@@ -21,17 +21,17 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DefaultOperationQuota implements OperationQuota {
-  private static final Log LOG = LogFactory.getLog(DefaultOperationQuota.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultOperationQuota.class);
 
   private final List<QuotaLimiter> limiters;
   private long writeAvailable = 0;

@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -47,13 +45,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class which verifies that region sizes are reported to the master.
  */
 @Category(MediumTests.class)
 public class TestRegionSizeUse {
-  private static final Log LOG = LogFactory.getLog(TestRegionSizeUse.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionSizeUse.class);
   private static final int SIZE_PER_VALUE = 256;
   private static final int NUM_SPLITS = 10;
   private static final String F1 = "f1";

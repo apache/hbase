@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -46,7 +44,8 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -55,7 +54,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @Category({MasterTests.class, MediumTests.class})
 public class TestZKProcedureControllers {
 
-  private static final Log LOG = LogFactory.getLog(TestZKProcedureControllers.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedureControllers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String COHORT_NODE_NAME = "expected";
   private static final String CONTROLLER_NODE_NAME = "controller";

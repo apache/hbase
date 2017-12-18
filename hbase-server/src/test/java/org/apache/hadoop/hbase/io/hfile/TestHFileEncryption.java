@@ -30,8 +30,6 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -54,10 +52,12 @@ import org.apache.hadoop.hbase.util.RedundantKVGenerator;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestHFileEncryption {
-  private static final Log LOG = LogFactory.getLog(TestHFileEncryption.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileEncryption.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final SecureRandom RNG = new SecureRandom();
 

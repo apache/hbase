@@ -35,8 +35,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -58,6 +56,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests optimized scanning of multiple columns.
@@ -66,7 +66,7 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestMultiColumnScanner {
 
-  private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiColumnScanner.class);
 
   private static final String TABLE_NAME =
       TestMultiColumnScanner.class.getSimpleName();

@@ -44,14 +44,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.security.sasl.SaslException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -65,7 +65,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message.Builder;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
@@ -85,7 +86,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 @InterfaceAudience.Private
 class BlockingRpcConnection extends RpcConnection implements Runnable {
 
-  private static final Log LOG = LogFactory.getLog(BlockingRpcConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BlockingRpcConnection.class);
 
   private final BlockingRpcClient rpcClient;
 
@@ -419,7 +420,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (ex instanceof SaslException) {
           String msg = "SASL authentication failed."
               + " The most likely cause is missing or invalid credentials." + " Consider 'kinit'.";
-          LOG.fatal(msg, ex);
+          LOG.error(HBaseMarkers.FATAL, msg, ex);
           throw new RuntimeException(msg, ex);
         }
         throw new IOException(ex);
@@ -568,8 +569,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
       waitingConnectionHeaderResponse = false;
     } catch (SocketTimeoutException ste) {
-      LOG.fatal("Can't get the connection header response for rpc timeout, please check if" +
-          " server has the correct configuration to support the additional function.", ste);
+      LOG.error(HBaseMarkers.FATAL, "Can't get the connection header response for rpc timeout, "
+          + "please check if server has the correct configuration to support the additional "
+          + "function.", ste);
       // timeout when waiting the connection header response, ignore the additional function
       throw new IOException("Timeout while waiting connection header response", ste);
     }

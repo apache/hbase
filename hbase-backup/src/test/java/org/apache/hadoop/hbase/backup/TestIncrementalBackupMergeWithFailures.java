@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -48,12 +46,15 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
-  private static final Log LOG = LogFactory.getLog(TestIncrementalBackupMergeWithFailures.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestIncrementalBackupMergeWithFailures.class);
 
   static enum FailurePhase {
     PHASE1, PHASE2, PHASE3, PHASE4
@@ -175,7 +176,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       } catch (RuntimeException e) {
         throw e;
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         if (!finishedTables) {
           // cleanup bulk directories and finish merge
           // merge MUST be repeated (no need for repair)

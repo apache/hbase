@@ -32,8 +32,6 @@ import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -73,7 +71,8 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -93,7 +92,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   /** Configuration prefix for overrides for the destination filesystem */
   public static final String CONF_DEST_PREFIX = NAME + ".to.";
 
-  private static final Log LOG = LogFactory.getLog(ExportSnapshot.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshot.class);
 
   private static final String MR_NUM_MAPS = "mapreduce.job.maps";
   private static final String CONF_NUM_SPLITS = "snapshot.export.format.splits";
@@ -153,7 +152,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
   private static class ExportMapper extends Mapper<BytesWritable, NullWritable,
                                                    NullWritable, NullWritable> {
-    private static final Log LOG = LogFactory.getLog(ExportMapper.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ExportMapper.class);
     final static int REPORT_SIZE = 1 * 1024 * 1024;
     final static int BUFFER_SIZE = 64 * 1024;
 

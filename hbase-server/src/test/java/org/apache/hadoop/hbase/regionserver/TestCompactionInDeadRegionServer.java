@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,6 +51,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This testcase is used to ensure that the compaction marker will fail a compaction if the RS is
@@ -61,7 +61,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompactionInDeadRegionServer {
-  private static final Log LOG = LogFactory.getLog(TestCompactionInDeadRegionServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionInDeadRegionServer.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

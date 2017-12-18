@@ -25,8 +25,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import javax.xml.bind.UnmarshalException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
@@ -34,13 +32,15 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class for {@link RemoteAdmin} to verify XML is parsed in a certain manner.
  */
 @Category(SmallTests.class)
 public class TestXmlParsing {
-  private static final Log LOG = LogFactory.getLog(TestXmlParsing.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestXmlParsing.class);
 
   @Test
   public void testParsingClusterVersion() throws Exception {

@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A ZooKeeper watcher meant to detect deletions of ZNodes.
@@ -32,7 +32,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class DeletionListener extends ZKListener {
 
-  private static final Log LOG = LogFactory.getLog(DeletionListener.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeletionListener.class);
 
   private final String pathToWatch;
   private final CountDownLatch deletedLatch;

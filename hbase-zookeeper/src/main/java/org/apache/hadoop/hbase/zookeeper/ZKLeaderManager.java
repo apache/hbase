@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles coordination of a single "leader" instance among many possible
@@ -41,7 +41,7 @@ import org.apache.zookeeper.KeeperException;
 @Deprecated
 @InterfaceAudience.Private
 public class ZKLeaderManager extends ZKListener {
-  private static final Log LOG = LogFactory.getLog(ZKLeaderManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKLeaderManager.class);
 
   private final Object lock = new Object();
   private final AtomicBoolean leaderExists = new AtomicBoolean();

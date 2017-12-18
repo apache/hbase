@@ -21,14 +21,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a shared ZooKeeper-based znode management utils for distributed procedure.  All znode
@@ -52,7 +52,7 @@ import org.apache.zookeeper.KeeperException;
 public abstract class ZKProcedureUtil
     extends ZKListener implements Closeable {
 
-  private static final Log LOG = LogFactory.getLog(ZKProcedureUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureUtil.class);
 
   public static final String ACQUIRED_BARRIER_ZNODE_DEFAULT = "acquired";
   public static final String REACHED_BARRIER_ZNODE_DEFAULT = "reached";

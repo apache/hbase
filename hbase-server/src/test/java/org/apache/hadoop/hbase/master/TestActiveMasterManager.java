@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -51,13 +49,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the {@link ActiveMasterManager}.
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestActiveMasterManager {
-  private final static Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
+  private final static Logger LOG = LoggerFactory.getLogger(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -226,7 +226,7 @@ public class TestActiveMasterManager {
   }
 
   public static class NodeDeletionListener extends ZKListener {
-    private static final Log LOG = LogFactory.getLog(NodeDeletionListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NodeDeletionListener.class);
 
     private Semaphore lock;
     private String node;

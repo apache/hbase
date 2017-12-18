@@ -28,9 +28,6 @@ import java.net.ServerSocket;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -64,7 +61,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -72,18 +68,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for the hdfs fix from HBASE-6435.
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestBlockReorder {
-  private static final Log LOG = LogFactory.getLog(TestBlockReorder.class);
-
-  static {
-    ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) HFileSystem.LOG).getLogger().setLevel(Level.ALL);
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockReorder.class);
 
   private Configuration conf;
   private MiniDFSCluster cluster;

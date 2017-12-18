@@ -23,11 +23,11 @@ import static org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Regi
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -52,7 +52,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
  */
 @InterfaceAudience.Private
 public final class CoprocessorRpcUtils {
-  private static final Log LOG = LogFactory.getLog(CoprocessorRpcUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorRpcUtils.class);
   /**
    * We assume that all HBase protobuf services share a common package name
    * (defined in the .proto files).

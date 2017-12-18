@@ -31,10 +31,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.util.JSONBean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
@@ -111,7 +111,7 @@ import org.apache.hadoop.hbase.util.JSONBean;
  *
  */
 public class JMXJsonServlet extends HttpServlet {
-  private static final Log LOG = LogFactory.getLog(JMXJsonServlet.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JMXJsonServlet.class);
 
   private static final long serialVersionUID = 1L;
 

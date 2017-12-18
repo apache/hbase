@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -38,13 +36,15 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used by the HMaster on startup to split meta logs and assign the meta table.
  */
 @InterfaceAudience.Private
 public class MasterMetaBootstrap {
-  private static final Log LOG = LogFactory.getLog(MasterMetaBootstrap.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterMetaBootstrap.class);
 
   private final MonitoredTask status;
   private final HMaster master;

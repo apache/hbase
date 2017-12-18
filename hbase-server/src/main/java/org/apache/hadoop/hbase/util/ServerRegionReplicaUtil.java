@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,13 +35,15 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Similar to {@link RegionReplicaUtil} but for the server side
  */
 public class ServerRegionReplicaUtil extends RegionReplicaUtil {
 
-  private static final Log LOG = LogFactory.getLog(ServerRegionReplicaUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ServerRegionReplicaUtil.class);
 
   /**
    * Whether asynchronous WAL replication to the secondary region replicas is enabled or not.

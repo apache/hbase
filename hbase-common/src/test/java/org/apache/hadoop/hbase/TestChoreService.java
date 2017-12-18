@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.CountingChore;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.DoNothingChore;
 import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.FailInitialChore;
@@ -35,10 +33,12 @@ import org.apache.hadoop.hbase.TestChoreService.ScheduledChoreSamples.SlowChore;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
 public class TestChoreService {
-  public static final Log log = LogFactory.getLog(TestChoreService.class);
+  public static final Logger log = LoggerFactory.getLogger(TestChoreService.class);
 
   /**
    * A few ScheduledChore samples that are useful for testing with ChoreService

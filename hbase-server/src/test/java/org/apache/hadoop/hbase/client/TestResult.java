@@ -29,8 +29,6 @@ import java.util.NoSuchElementException;
 
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
@@ -40,11 +38,13 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestResult extends TestCase {
 
-  private static final Log LOG = LogFactory.getLog(TestResult.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestResult.class.getName());
 
   static KeyValue[] genKVs(final byte[] row, final byte[] family,
                            final byte[] value,

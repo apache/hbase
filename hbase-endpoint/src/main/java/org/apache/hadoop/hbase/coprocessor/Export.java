@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -75,7 +73,8 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 import com.google.protobuf.RpcCallback;
@@ -93,7 +92,7 @@ import com.google.protobuf.Service;
 @InterfaceStability.Evolving
 public class Export extends ExportProtos.ExportService implements RegionCoprocessor {
 
-  private static final Log LOG = LogFactory.getLog(Export.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Export.class);
   private static final Class<? extends CompressionCodec> DEFAULT_CODEC = DefaultCodec.class;
   private static final SequenceFile.CompressionType DEFAULT_TYPE = SequenceFile.CompressionType.RECORD;
   private RegionCoprocessorEnvironment env = null;
@@ -341,7 +340,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
       done.run(response);
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
   }
 

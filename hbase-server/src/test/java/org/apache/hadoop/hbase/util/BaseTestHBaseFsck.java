@@ -34,8 +34,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -77,7 +75,8 @@ import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.zookeeper.KeeperException;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
@@ -92,7 +91,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
  */
 public class BaseTestHBaseFsck {
   static final int POOL_SIZE = 7;
-  protected static final Log LOG = LogFactory.getLog(BaseTestHBaseFsck.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(BaseTestHBaseFsck.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static Configuration conf = TEST_UTIL.getConfiguration();
   protected final static String FAM_STR = "fam";

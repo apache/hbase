@@ -23,11 +23,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Keeps lists of superusers and super groups loaded from HBase configuration,
@@ -35,7 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class Superusers {
-  private static final Log LOG = LogFactory.getLog(Superusers.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Superusers.class);
 
   /** Configuration key for superusers */
   public static final String SUPERUSER_CONF_KEY = "hbase.superuser"; // Not getting a name

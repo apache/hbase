@@ -35,15 +35,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
  * <p>
@@ -81,7 +82,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 public class KeyValue implements ExtendedCell {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
 
-  private static final Log LOG = LogFactory.getLog(KeyValue.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
 
   public static final int FIXED_OVERHEAD = ClassSize.OBJECT + // the KeyValue object itself
       ClassSize.REFERENCE + // pointer to "bytes"
@@ -738,9 +739,9 @@ public class KeyValue implements ExtendedCell {
   }
 
   public KeyValue(Cell c) {
-    this(c.getRowArray(), c.getRowOffset(), (int)c.getRowLength(),
-        c.getFamilyArray(), c.getFamilyOffset(), (int)c.getFamilyLength(),
-        c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(),
+    this(c.getRowArray(), c.getRowOffset(), c.getRowLength(),
+        c.getFamilyArray(), c.getFamilyOffset(), c.getFamilyLength(),
+        c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength(),
         c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(),
         c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
     this.seqId = c.getSequenceId();

@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -47,6 +45,8 @@ import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -57,7 +57,7 @@ public class BackupAdminImpl implements BackupAdmin {
   public final static String CHECK_OK = "Checking backup images: OK";
   public final static String CHECK_FAILED =
       "Checking backup images: Failed. Some dependencies are missing for restore";
-  private static final Log LOG = LogFactory.getLog(BackupAdminImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupAdminImpl.class);
 
   private final Connection conn;
 

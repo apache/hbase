@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -44,6 +42,8 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test transitions of state across the master.  Sets up the cluster once and
@@ -51,7 +51,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterTransitions {
-  private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterTransitions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLENAME = TableName.valueOf("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),

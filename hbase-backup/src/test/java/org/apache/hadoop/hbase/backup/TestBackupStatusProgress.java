@@ -24,21 +24,20 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupStatusProgress extends TestBackupBase {
 
-  private static final Log LOG = LogFactory.getLog(TestBackupStatusProgress.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupStatusProgress.class);
 
   /**
    * Verify that full backup is created on a single table with data correctly.

@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -39,7 +39,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 public class TableInputFormat extends TableInputFormatBase implements
     JobConfigurable {
-  private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableInputFormat.class);
 
   /**
    * space delimited list of columns

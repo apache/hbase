@@ -12,8 +12,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,6 +29,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test that verifies we do not have memstore size negative when a postPut/Delete hook is
@@ -39,8 +39,9 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestNegativeMemStoreSizeWithSlowCoprocessor {
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
 
-  static final Log LOG = LogFactory.getLog(TestNegativeMemStoreSizeWithSlowCoprocessor.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] tableName = Bytes.toBytes("test_table");
   private static final byte[] family = Bytes.toBytes("f");

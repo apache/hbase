@@ -21,14 +21,15 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -48,7 +49,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  */
 @InterfaceAudience.Private
 public final class ExportUtils {
-  private static final Log LOG = LogFactory.getLog(ExportUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExportUtils.class);
   public static final String RAW_SCAN = "hbase.mapreduce.include.deleted.rows";
   public static final String EXPORT_BATCHING = "hbase.export.scanner.batch";
   public static final String EXPORT_CACHING = "hbase.export.scanner.caching";

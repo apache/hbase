@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 
 /**
@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 @InterfaceAudience.Private
 public class ReplicationSourceFactory {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationSourceFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceFactory.class);
 
   static ReplicationSourceInterface create(Configuration conf, String peerId) {
     ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);

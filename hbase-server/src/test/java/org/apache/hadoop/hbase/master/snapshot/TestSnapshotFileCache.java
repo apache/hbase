@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,7 +48,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
@@ -61,7 +60,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 @Category({MasterTests.class, MediumTests.class})
 public class TestSnapshotFileCache {
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotFileCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static long sequenceId = 0;
   private static FileSystem fs;

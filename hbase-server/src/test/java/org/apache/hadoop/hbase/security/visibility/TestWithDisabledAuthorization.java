@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -54,7 +56,7 @@ import com.google.protobuf.ByteString;
 public class TestWithDisabledAuthorization {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  
+
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
   private static final String PRIVATE = "private";
@@ -63,7 +65,7 @@ public class TestWithDisabledAuthorization {
   private static final byte[] ZERO = Bytes.toBytes(0L);
 
 
-  @Rule 
+  @Rule
   public final TestName TEST_NAME = new TestName();
 
   private static User SUPERUSER;
@@ -95,6 +97,7 @@ public class TestWithDisabledAuthorization {
 
     // Define test labels
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.addLabels(conn,
@@ -103,7 +106,7 @@ public class TestWithDisabledAuthorization {
             new String[] { SECRET, CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
-          fail("Should not have failed");          
+          fail("Should not have failed");
         }
         return null;
       }
@@ -120,13 +123,14 @@ public class TestWithDisabledAuthorization {
     // Even though authorization is disabled, we should be able to manage user auths
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.setAuths(conn,
             new String[] { SECRET, CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
-          fail("Should not have failed");          
+          fail("Should not have failed");
         }
         return null;
       }
@@ -134,6 +138,7 @@ public class TestWithDisabledAuthorization {
 
     PrivilegedExceptionAction<List<String>> getAuths =
       new PrivilegedExceptionAction<List<String>>() {
+        @Override
         public List<String> run() throws Exception {
           GetAuthsResponse authsResponse = null;
           try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -156,13 +161,14 @@ public class TestWithDisabledAuthorization {
     assertTrue(authsList.contains(CONFIDENTIAL));
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.clearAuths(conn,
             new String[] { SECRET },
             USER_RW.getShortName());
         } catch (Throwable t) {
-          fail("Should not have failed");          
+          fail("Should not have failed");
         }
         return null;
       }
@@ -173,13 +179,14 @@ public class TestWithDisabledAuthorization {
     assertTrue(authsList.contains(CONFIDENTIAL));
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.clearAuths(conn,
             new String[] { CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
-          fail("Should not have failed");          
+          fail("Should not have failed");
         }
         return null;
       }

@@ -26,14 +26,14 @@ import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -69,7 +69,7 @@ public class CompactingMemStore extends AbstractMemStore {
       "hbase.memstore.inmemoryflush.threshold.factor";
   private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.02;
 
-  private static final Log LOG = LogFactory.getLog(CompactingMemStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactingMemStore.class);
   private HStore store;
   private RegionServicesForStores regionServices;
   private CompactionPipeline pipeline;

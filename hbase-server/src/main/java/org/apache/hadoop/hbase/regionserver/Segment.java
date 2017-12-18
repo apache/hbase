@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -343,9 +343,9 @@ public abstract class Segment {
   /**
    * Dumps all cells of the segment into the given log
    */
-  void dump(Log log) {
+  void dump(Logger log) {
     for (Cell cell: getCellSet()) {
-      log.debug(cell);
+      log.debug(Objects.toString(cell));
     }
   }
 

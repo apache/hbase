@@ -26,8 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,11 +36,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable.WALItem;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * After a full backup was created, the incremental backup will only store the changes made after
@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
  */
 @InterfaceAudience.Private
 public class IncrementalBackupManager extends BackupManager {
-  public static final Log LOG = LogFactory.getLog(IncrementalBackupManager.class);
+  public static final Logger LOG = LoggerFactory.getLogger(IncrementalBackupManager.class);
 
   public IncrementalBackupManager(Connection conn, Configuration conf) throws IOException {
     super(conn, conf);

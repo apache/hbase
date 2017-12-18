@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import org.apache.commons.logging.Log;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 /**
@@ -34,17 +34,16 @@ final class LogUtils {
 
   /**
    * Disables Zk- and HBase client logging
-   * @param log
    */
-  static void disableZkAndClientLoggers(Log log) {
+  static void disableZkAndClientLoggers() {
     // disable zookeeper log to avoid it mess up command output
-    Logger zkLogger = Logger.getLogger("org.apache.zookeeper");
+    Logger zkLogger = LogManager.getLogger("org.apache.zookeeper");
     zkLogger.setLevel(Level.OFF);
     // disable hbase zookeeper tool log to avoid it mess up command output
-    Logger hbaseZkLogger = Logger.getLogger("org.apache.hadoop.hbase.zookeeper");
+    Logger hbaseZkLogger = LogManager.getLogger("org.apache.hadoop.hbase.zookeeper");
     hbaseZkLogger.setLevel(Level.OFF);
     // disable hbase client log to avoid it mess up command output
-    Logger hbaseClientLogger = Logger.getLogger("org.apache.hadoop.hbase.client");
+    Logger hbaseClientLogger = LogManager.getLogger("org.apache.hadoop.hbase.client");
     hbaseClientLogger.setLevel(Level.OFF);
   }
 }

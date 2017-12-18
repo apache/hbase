@@ -34,8 +34,6 @@ import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -55,11 +53,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({FlakeyTests.class, MediumTests.class})
 public class TestStochasticLoadBalancer extends BalancerTestBase {
   public static final String REGION_KEY = "testRegion";
-  private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStochasticLoadBalancer.class);
 
   // Mapping of locality test -> expected locality
   private float[] expectedLocalities = {1.0f, 0.0f, 0.50f, 0.25f, 1.0f};

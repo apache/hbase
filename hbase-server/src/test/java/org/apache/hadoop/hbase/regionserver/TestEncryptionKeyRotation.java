@@ -29,8 +29,6 @@ import java.util.List;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -57,10 +55,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestEncryptionKeyRotation {
-  private static final Log LOG = LogFactory.getLog(TestEncryptionKeyRotation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestEncryptionKeyRotation.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   private static final Key initialCFKey;

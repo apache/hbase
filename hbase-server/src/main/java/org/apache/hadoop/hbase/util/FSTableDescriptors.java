@@ -30,8 +30,6 @@ import java.util.regex.Pattern;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,6 +38,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -73,7 +73,7 @@ import org.apache.hadoop.hbase.TableName;
  */
 @InterfaceAudience.Private
 public class FSTableDescriptors implements TableDescriptors {
-  private static final Log LOG = LogFactory.getLog(FSTableDescriptors.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSTableDescriptors.class);
   private final FileSystem fs;
   private final Path rootdir;
   private final boolean fsreadonly;

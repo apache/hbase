@@ -74,10 +74,10 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Message;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Verifies ProcessEndpoint works.
@@ -86,7 +86,7 @@ import org.apache.commons.logging.LogFactory;
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestRowProcessorEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(TestRowProcessorEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRowProcessorEndpoint.class);
 
   private static final TableName TABLE = TableName.valueOf("testtable");
   private final static byte[] ROW = Bytes.toBytes("testrow");

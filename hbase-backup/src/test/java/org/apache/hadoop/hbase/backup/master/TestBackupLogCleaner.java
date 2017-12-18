@@ -24,9 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,13 +47,14 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupLogCleaner extends TestBackupBase {
-  private static final Log LOG = LogFactory.getLog(TestBackupLogCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupLogCleaner.class);
 
   // implements all test cases in 1 test since incremental full backup/
   // incremental backup has dependencies
@@ -153,7 +153,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
       LocatedFileStatus lfs = it.next();
       if (lfs.isFile() && !AbstractFSWALProvider.isMetaFile(lfs.getPath())) {
         logFiles.add(lfs);
-        LOG.info(lfs);
+        LOG.info(Objects.toString(lfs));
       }
     }
     return logFiles;

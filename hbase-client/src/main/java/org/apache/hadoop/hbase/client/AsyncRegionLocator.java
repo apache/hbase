@@ -30,11 +30,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class AsyncRegionLocator {
 
-  private static final Log LOG = LogFactory.getLog(AsyncRegionLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncRegionLocator.class);
 
   private final HashedWheelTimer retryTimer;
 

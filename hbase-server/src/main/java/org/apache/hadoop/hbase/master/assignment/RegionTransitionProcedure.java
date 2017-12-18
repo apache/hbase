@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -36,11 +34,11 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for the Assign and Unassign Procedure.
@@ -89,7 +87,7 @@ public abstract class RegionTransitionProcedure
     extends Procedure<MasterProcedureEnv>
     implements TableProcedureInterface,
       RemoteProcedure<MasterProcedureEnv, ServerName> {
-  private static final Log LOG = LogFactory.getLog(RegionTransitionProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionTransitionProcedure.class);
 
   protected final AtomicBoolean aborted = new AtomicBoolean(false);
 
@@ -163,6 +161,7 @@ public abstract class RegionTransitionProcedure
   protected abstract void reportTransition(MasterProcedureEnv env,
       RegionStateNode regionNode, TransitionCode code, long seqId) throws UnexpectedStateException;
 
+  @Override
   public abstract RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName serverName);
 
   /**

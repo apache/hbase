@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -46,6 +44,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Run tests that use the HBase clients; {@link org.apache.hadoop.hbase.client.HTable}.
@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
 @Category({MasterTests.class, LargeTests.class})
 @SuppressWarnings ("deprecation")
 public class TestWarmupRegion {
-  private static final Log LOG = LogFactory.getLog(TestWarmupRegion.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWarmupRegion.class);
   protected TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");

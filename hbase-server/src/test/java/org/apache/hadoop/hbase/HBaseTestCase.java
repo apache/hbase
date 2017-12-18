@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.NavigableMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +29,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionAsTable;
@@ -38,6 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
@@ -49,7 +50,7 @@ import junit.framework.TestCase;
  */
 @Deprecated
 public abstract class HBaseTestCase extends TestCase {
-  private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseTestCase.class);
 
   protected final static byte [] fam1 = Bytes.toBytes("colfamily11");
   protected final static byte [] fam2 = Bytes.toBytes("colfamily21");
@@ -115,7 +116,7 @@ public abstract class HBaseTestCase extends TestCase {
         testDir = FSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
-      LOG.fatal("error during setup", e);
+      LOG.error(HBaseMarkers.FATAL, "error during setup", e);
       throw e;
     }
   }
@@ -129,7 +130,7 @@ public abstract class HBaseTestCase extends TestCase {
         }
       }
     } catch (Exception e) {
-      LOG.fatal("error during tear down", e);
+      LOG.error(HBaseMarkers.FATAL, "error during tear down", e);
     }
     super.tearDown();
   }
@@ -284,7 +285,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   public static long addContent(final Table updater,
-                                   final String columnFamily, 
+                                   final String columnFamily,
                                    final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {

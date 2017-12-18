@@ -39,9 +39,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Encodes and decodes to and from Base64 notation.
@@ -158,7 +159,7 @@ public class Base64 {
 
   /* ******** P R I V A T E   F I E L D S ******** */
 
-  private static final Log LOG = LogFactory.getLog(Base64.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Base64.class);
 
   /** Maximum line length (76) of Base64 output. */
   private final static int MAX_LINE_LENGTH = 76;
@@ -1100,7 +1101,7 @@ public class Base64 {
 
       // Check the size of file
       if (file.length() > Integer.MAX_VALUE) {
-        LOG.fatal("File is too big for this convenience method (" +
+        LOG.error(HBaseMarkers.FATAL, "File is too big for this convenience method (" +
             file.length() + " bytes).");
         return null;
       } // end if: file too big for int index

@@ -46,8 +46,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -71,6 +69,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestSimpleRpcScheduler {
@@ -79,7 +79,7 @@ public class TestSimpleRpcScheduler {
       CategoryBasedTimeout.builder().withTimeout(this.getClass()).
           withLookingForStuckThread(true).build();
 
-  private static final Log LOG = LogFactory.getLog(TestSimpleRpcScheduler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSimpleRpcScheduler.class);
 
   private final RpcScheduler.Context CONTEXT = new RpcScheduler.Context() {
     @Override

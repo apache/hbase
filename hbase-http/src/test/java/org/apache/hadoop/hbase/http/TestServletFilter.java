@@ -32,8 +32,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -43,10 +41,12 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestServletFilter extends HttpServerFunctionalTest {
-  private static final Log LOG = LogFactory.getLog(HttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   static volatile String uri = null;
 
   /** A very simple filter which record the uri filtered. */

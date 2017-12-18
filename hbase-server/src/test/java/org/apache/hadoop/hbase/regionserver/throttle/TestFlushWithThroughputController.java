@@ -18,8 +18,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -48,10 +46,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestFlushWithThroughputController {
-  private static final Log LOG = LogFactory.getLog(TestFlushWithThroughputController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFlushWithThroughputController.class);
   private static final double EPSILON = 1E-6;
 
   private HBaseTestingUtility hbtu;

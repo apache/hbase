@@ -32,8 +32,6 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -50,6 +48,8 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * test the performance for seek.
@@ -73,7 +73,7 @@ public class TestHFileSeek extends TestCase {
   private RandomDistribution.DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
-  private static final Log LOG = LogFactory.getLog(TestHFileSeek.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileSeek.class);
 
   @Override
   public void setUp() throws IOException {

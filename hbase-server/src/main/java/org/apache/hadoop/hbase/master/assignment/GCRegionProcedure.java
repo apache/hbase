@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -33,7 +31,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -47,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.G
  */
 @InterfaceAudience.Private
 public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCRegionState> {
-  private static final Log LOG = LogFactory.getLog(GCRegionProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GCRegionProcedure.class);
 
   public GCRegionProcedure(final MasterProcedureEnv env, final RegionInfo hri) {
     super(env, hri);

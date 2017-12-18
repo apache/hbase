@@ -35,8 +35,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -78,10 +76,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(MediumTests.class)
 public class TestHMobStore {
-  public static final Log LOG = LogFactory.getLog(TestHMobStore.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestHMobStore.class);
   @Rule public TestName name = new TestName();
 
   private HMobStore store;
