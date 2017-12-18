@@ -24,10 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class RegionServerSpaceQuotaManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerSpaceQuotaManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerSpaceQuotaManager.class);
 
   private final RegionServerServices rsServices;
 

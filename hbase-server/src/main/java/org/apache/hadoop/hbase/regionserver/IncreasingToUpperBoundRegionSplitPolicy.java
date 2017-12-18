@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -45,8 +45,9 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionSplitPolicy {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IncreasingToUpperBoundRegionSplitPolicy.class);
 
-  private static final Log LOG = LogFactory.getLog(IncreasingToUpperBoundRegionSplitPolicy.class);
   protected long initialSize;
 
   @Override

@@ -32,11 +32,10 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
 /**
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DirectMemoryUtils {
-  private static final Log LOG = LogFactory.getLog(DirectMemoryUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DirectMemoryUtils.class);
   private static final String MEMORY_USED = "MemoryUsed";
   private static final MBeanServer BEAN_SERVER;
   private static final ObjectName NIO_DIRECT_POOL;

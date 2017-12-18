@@ -25,8 +25,6 @@ import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
@@ -34,6 +32,8 @@ import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.junit.After;
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class for HBase integration tests that want to use the Chaos Monkey.
@@ -48,7 +48,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   public static final String NO_CLUSTER_CLEANUP_LONG_OPT = "noClusterCleanUp";
   public static final String MONKEY_LONG_OPT = "monkey";
   public static final String CHAOS_MONKEY_PROPS = "monkeyProps";
-  private static final Log LOG = LogFactory.getLog(IntegrationTestBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBase.class);
 
   protected IntegrationTestingUtility util;
   protected ChaosMonkey monkey;
@@ -99,7 +99,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
           monkeyProps.load(this.getClass().getClassLoader()
               .getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
-          LOG.warn(e);
+          LOG.warn(e.toString(), e);
           System.exit(EXIT_FAILURE);
         }
       }

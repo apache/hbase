@@ -21,10 +21,10 @@ import static org.apache.hadoop.hbase.client.AsyncRegionLocator.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The asynchronous locator for meta region.
@@ -32,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class AsyncMetaRegionLocator {
 
-  private static final Log LOG = LogFactory.getLog(AsyncMetaRegionLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncMetaRegionLocator.class);
 
   private final AsyncRegistry registry;
 

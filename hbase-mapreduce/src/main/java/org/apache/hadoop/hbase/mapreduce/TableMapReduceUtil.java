@@ -33,8 +33,6 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +41,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -70,7 +70,7 @@ import com.codahale.metrics.MetricRegistry;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 @InterfaceAudience.Public
 public class TableMapReduceUtil {
-  private static final Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableMapReduceUtil.class);
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up

@@ -27,8 +27,6 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,7 +48,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -67,10 +64,6 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestSecureWAL {
 
-  static {
-    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
-      .getLogger().setLevel(Level.ALL);
-  };
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule

@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
@@ -42,7 +40,8 @@ import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 
 /**
@@ -50,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
  */
 @InterfaceAudience.Private
 public class StripeCompactionPolicy extends CompactionPolicy {
-  private final static Log LOG = LogFactory.getLog(StripeCompactionPolicy.class);
+  private final static Logger LOG = LoggerFactory.getLogger(StripeCompactionPolicy.class);
   // Policy used to compact individual stripes.
   private ExploringCompactionPolicy stripePolicy = null;
 

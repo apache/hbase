@@ -74,8 +74,6 @@ import javax.security.sasl.SaslException;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -85,6 +83,9 @@ import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -107,8 +108,8 @@ import org.apache.hadoop.security.token.Token;
  */
 @InterfaceAudience.Private
 public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
-
-  private static final Log LOG = LogFactory.getLog(FanOutOneBlockAsyncDFSOutputSaslHelper.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FanOutOneBlockAsyncDFSOutputSaslHelper.class);
 
   private FanOutOneBlockAsyncDFSOutputSaslHelper() {
   }

@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
@@ -40,7 +38,8 @@ import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperat
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UnassignRegionStateData;
@@ -72,7 +71,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @InterfaceAudience.Private
 public class UnassignProcedure extends RegionTransitionProcedure {
-  private static final Log LOG = LogFactory.getLog(UnassignProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UnassignProcedure.class);
 
   /**
    * Where to send the unassign RPC.

@@ -32,8 +32,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
@@ -70,7 +68,8 @@ import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.wal.WALSplitter.SinkWriter;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.Cache;
 import org.apache.hadoop.hbase.shaded.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -84,7 +83,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 @InterfaceAudience.Private
 public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(RegionReplicaReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionReplicaReplicationEndpoint.class);
 
   // Can be configured differently than hbase.client.retries.number
   private static String CLIENT_RETRIES_NUMBER
@@ -161,8 +160,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       try {
         outputSink.finishWritingAndClose();
       } catch (IOException ex) {
-        LOG.warn("Got exception while trying to close OutputSink");
-        LOG.warn(ex);
+        LOG.warn("Got exception while trying to close OutputSink", ex);
       }
     }
     if (this.pool != null) {
@@ -583,6 +581,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       this.initialEncodedRegionName = regionInfo.getEncodedNameAsBytes();
     }
 
+    @Override
     public ReplicateWALEntryResponse call(HBaseRpcController controller) throws Exception {
       // Check whether we should still replay this entry. If the regions are changed, or the
       // entry is not coming form the primary region, filter it out because we do not need it.

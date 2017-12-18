@@ -27,12 +27,12 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
  */
 @InterfaceAudience.Private
 public class MultiHConnection {
-  private static final Log LOG = LogFactory.getLog(MultiHConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiHConnection.class);
   private Connection[] connections;
   private final Object connectionsLock =  new Object();
   private final int noOfConnections;

@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +38,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -48,7 +48,7 @@ import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestStressWALProcedureStore {
-  private static final Log LOG = LogFactory.getLog(TestWALProcedureStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStore.class);
 
   private static final int PROCEDURE_STORE_SLOTS = 8;
 

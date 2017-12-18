@@ -28,13 +28,12 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,7 +61,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.After;
 import org.junit.Before;
@@ -72,10 +70,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestCatalogJanitor {
-  private static final Log LOG = LogFactory.getLog(TestCatalogJanitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitor.class);
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   @Rule public final TestName name = new TestName();
@@ -478,7 +478,7 @@ public class TestCatalogJanitor {
   private void logFiles(String description, FileStatus[] storeFiles) {
     LOG.debug("Current " + description + ": ");
     for (FileStatus file : storeFiles) {
-      LOG.debug(file.getPath());
+      LOG.debug(Objects.toString(file.getPath()));
     }
   }
 

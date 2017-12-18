@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,11 +42,13 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, MediumTests.class})
 public class TestSeekBeforeWithInlineBlocks {
 
-  private static final Log LOG = LogFactory.getLog(TestSeekBeforeWithInlineBlocks.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSeekBeforeWithInlineBlocks.class);
 
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();

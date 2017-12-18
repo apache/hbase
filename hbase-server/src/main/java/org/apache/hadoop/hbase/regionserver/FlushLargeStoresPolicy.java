@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link FlushPolicy} that only flushes store larger a given threshold. If no store is large
@@ -29,7 +29,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class FlushLargeStoresPolicy extends FlushPolicy {
 
-  private static final Log LOG = LogFactory.getLog(FlushLargeStoresPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushLargeStoresPolicy.class);
 
   public static final String HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND =
       "hbase.hregion.percolumnfamilyflush.size.lower.bound";

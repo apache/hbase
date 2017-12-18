@@ -39,6 +39,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -50,8 +51,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -91,6 +90,7 @@ import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
@@ -188,7 +188,8 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
@@ -221,7 +222,7 @@ import com.google.protobuf.Service;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices {
-  private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
+  private static Logger LOG = LoggerFactory.getLogger(HMaster.class.getName());
 
   /**
    * Protection against zombie master. Started once Master accepts active responsibility and
@@ -607,6 +608,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     return connector.getLocalPort();
   }
 
+  @Override
   protected Function<TableDescriptorBuilder, TableDescriptorBuilder> getMetaTableObserver() {
     return builder -> builder.setRegionReplication(conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM));
   }
@@ -818,7 +820,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Wait for region servers to report in
     String statusStr = "Wait for region servers to report in";
     status.setStatus(statusStr);
-    LOG.info(status);
+    LOG.info(Objects.toString(status));
     waitForRegionServers(status);
 
     if (this.balancer instanceof FavoredNodesPromoter) {
@@ -1528,6 +1530,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * @return Client info for use as prefix on an audit log string; who did an action
    */
+  @Override
   public String getClientIdAuditPrefix() {
     return "Client=" + RpcServer.getRequestUserName().orElse(null)
         + "/" + RpcServer.getRemoteAddress().orElse(null);
@@ -2017,7 +2020,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
         } catch (Throwable t) {
           status.setStatus("Failed to become active: " + t.getMessage());
-          LOG.fatal("Failed to become active master", t);
+          LOG.error(HBaseMarkers.FATAL, "Failed to become active master", t);
           // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
           if (t instanceof NoClassDefFoundError &&
             t.getMessage()
@@ -2606,13 +2609,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     if (cpHost != null) {
       // HBASE-4014: dump a list of loaded coprocessors.
-      LOG.fatal("Master server abort: loaded coprocessors are: " +
+      LOG.error(HBaseMarkers.FATAL, "Master server abort: loaded coprocessors are: " +
           getLoadedCoprocessors());
     }
     if (t != null) {
-      LOG.fatal(msg, t);
+      LOG.error(HBaseMarkers.FATAL, msg, t);
     } else {
-      LOG.fatal(msg);
+      LOG.error(HBaseMarkers.FATAL, msg);
     }
 
     try {

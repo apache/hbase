@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -57,12 +55,14 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test log deletion as logs are rolled.
  */
 public abstract class AbstractTestLogRolling  {
-  private static final Log LOG = LogFactory.getLog(AbstractTestLogRolling.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
   protected HRegionServer server;
   protected String tableName;
   protected byte[] value;

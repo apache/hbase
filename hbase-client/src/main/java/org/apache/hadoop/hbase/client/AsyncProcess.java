@@ -34,8 +34,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -44,6 +42,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.AsyncProcessTask.SubmittedRows;
 import org.apache.hadoop.hbase.client.RequestController.ReturnCode;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -87,7 +87,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class AsyncProcess {
-  private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncProcess.class);
   private static final AtomicLong COUNTER = new AtomicLong();
 
   public static final String PRIMARY_CALL_TIMEOUT_KEY = "hbase.client.primaryCallTimeout.multiget";

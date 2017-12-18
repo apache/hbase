@@ -49,8 +49,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.time.StopWatch;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
@@ -98,7 +96,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ConnectStringParser;
 import org.apache.zookeeper.data.Stat;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -540,10 +539,10 @@ public final class Canary implements Tool {
         LOG.debug("The targeted table was disabled.  Assuming success.");
       } catch (DoNotRetryIOException dnrioe) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
-        LOG.error(dnrioe);
+        LOG.error(dnrioe.toString(), dnrioe);
       } catch (IOException e) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
-        LOG.error(e);
+        LOG.error(e.toString(), e);
       } finally {
         if (table != null) {
           try {
@@ -571,7 +570,7 @@ public final class Canary implements Tool {
   private static final long DEFAULT_TIMEOUT = 600000; // 10 mins
   private static final int MAX_THREADS_NUM = 16; // #threads to contact regions
 
-  private static final Log LOG = LogFactory.getLog(Canary.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Canary.class);
 
   public static final TableName DEFAULT_WRITE_TABLE_NAME = TableName.valueOf(
     NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "canary");

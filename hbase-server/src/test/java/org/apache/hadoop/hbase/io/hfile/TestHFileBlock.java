@@ -40,8 +40,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -75,6 +73,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
@@ -83,7 +83,7 @@ public class TestHFileBlock {
   private static final boolean detailedLogging = false;
   private static final boolean[] BOOLEAN_VALUES = new boolean[] { false, true };
 
-  private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = { NONE, GZ };
 

@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Strings;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -32,7 +31,7 @@ import java.net.InetAddress;
 
 @InterfaceAudience.Private
 public class HBaseKerberosUtils {
-  private static final Log LOG = LogFactory.getLog(HBaseKerberosUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseKerberosUtils.class);
 
   public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
   public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";

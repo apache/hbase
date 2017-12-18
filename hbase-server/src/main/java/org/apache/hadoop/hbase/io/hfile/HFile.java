@@ -38,8 +38,6 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -51,6 +49,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MetricsIO;
@@ -140,7 +140,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class HFile {
   // LOG is being used in HFileBlock and CheckSumUtil
-  static final Log LOG = LogFactory.getLog(HFile.class);
+  static final Logger LOG = LoggerFactory.getLogger(HFile.class);
 
   /**
    * Maximum length of key in HFile.

@@ -51,6 +51,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -64,8 +65,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -177,7 +176,8 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -199,7 +199,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 public class TestHRegion {
   // Do not spin up clusters in here. If you need to spin up a cluster, do it
   // over in TestHRegionOnCluster.
-  private static final Log LOG = LogFactory.getLog(TestHRegion.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
   @Rule
   public TestName name = new TestName();
   @ClassRule
@@ -927,7 +927,7 @@ public class TestHRegion {
       // now check whether we have only one store file, the compacted one
       Collection<HStoreFile> sfs = region.getStore(family).getStorefiles();
       for (HStoreFile sf : sfs) {
-        LOG.info(sf.getPath());
+        LOG.info(Objects.toString(sf.getPath()));
       }
       if (!mismatchedRegionName) {
         assertEquals(1, region.getStore(family).getStorefilesCount());
@@ -1081,7 +1081,7 @@ public class TestHRegion {
         try {
           desc = WALEdit.getFlushDescriptor(cells.get(0));
         } catch (IOException e) {
-          LOG.warn(e);
+          LOG.warn(e.toString(), e);
           return false;
         }
         if (desc != null) {
@@ -2143,8 +2143,8 @@ public class TestHRegion {
     byte[] value = Bytes.toBytes("value");
 
     Put put = new Put(row1);
-    put.addColumn(fam1, qual, (long) 1, value);
-    put.addColumn(fam1, qual, (long) 2, value);
+    put.addColumn(fam1, qual, 1, value);
+    put.addColumn(fam1, qual, 2, value);
 
     this.region = initHRegion(tableName, method, CONF, fam1);
     try {
@@ -2591,7 +2591,7 @@ public class TestHRegion {
       // extract the key values out the memstore:
       // This is kinda hacky, but better than nothing...
       long now = System.currentTimeMillis();
-      AbstractMemStore memstore = (AbstractMemStore)((HStore) region.getStore(fam1)).memstore;
+      AbstractMemStore memstore = (AbstractMemStore)region.getStore(fam1).memstore;
       Cell firstCell = memstore.getActive().first();
       assertTrue(firstCell.getTimestamp() <= now);
       now = firstCell.getTimestamp();
@@ -3879,7 +3879,7 @@ public class TestHRegion {
             byte[] value = Bytes.toBytes(String.valueOf(numPutsFinished));
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
-                put.addColumn(family, qualifier, (long) numPutsFinished, value);
+                put.addColumn(family, qualifier, numPutsFinished, value);
               }
             }
             region.put(put);
@@ -4115,7 +4115,7 @@ public class TestHRegion {
         region.flush(true);
       }
       // before compaction
-      HStore store = (HStore) region.getStore(fam1);
+      HStore store = region.getStore(fam1);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
       for (HStoreFile storefile : storeFiles) {
         StoreFileReader reader = storefile.getReader();
@@ -4208,7 +4208,7 @@ public class TestHRegion {
       byte col[] = Bytes.toBytes("col1");
 
       Put put = new Put(row);
-      put.addColumn(familyName, col, (long) 1, Bytes.toBytes("SomeRandomValue"));
+      put.addColumn(familyName, col, 1, Bytes.toBytes("SomeRandomValue"));
       region.put(put);
       region.flush(true);
 
@@ -4255,8 +4255,8 @@ public class TestHRegion {
       byte col[] = Bytes.toBytes("col1");
 
       Put put = new Put(row);
-      put.addColumn(fam1, col, (long) 1, Bytes.toBytes("test1"));
-      put.addColumn(fam2, col, (long) 1, Bytes.toBytes("test2"));
+      put.addColumn(fam1, col, 1, Bytes.toBytes("test1"));
+      put.addColumn(fam2, col, 1, Bytes.toBytes("test2"));
       ht.put(put);
 
       HRegion firstRegion = htu.getHBaseCluster().getRegions(tableName).get(0);
@@ -6430,7 +6430,7 @@ public class TestHRegion {
             byte[] value = Bytes.toBytes(String.valueOf(count));
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
-                put.addColumn(family, qualifier, (long) count, value);
+                put.addColumn(family, qualifier, count, value);
               }
             }
             try {

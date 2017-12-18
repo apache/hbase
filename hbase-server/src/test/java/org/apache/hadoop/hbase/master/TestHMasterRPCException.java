@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,13 +43,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestHMasterRPCException {
 
-  private static final Log LOG = LogFactory.getLog(TestHMasterRPCException.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHMasterRPCException.class);
 
   private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
 

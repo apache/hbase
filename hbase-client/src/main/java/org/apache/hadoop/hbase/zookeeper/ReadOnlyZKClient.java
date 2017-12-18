@@ -30,15 +30,14 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -47,7 +46,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public final class ReadOnlyZKClient implements Closeable {
 
-  private static final Log LOG = LogFactory.getLog(ReadOnlyZKClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReadOnlyZKClient.class);
 
   public static final String RECOVERY_RETRY = "zookeeper.recovery.retry";
 

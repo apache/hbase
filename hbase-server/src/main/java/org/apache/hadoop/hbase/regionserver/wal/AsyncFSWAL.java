@@ -45,8 +45,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,7 +62,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
@@ -131,7 +130,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.SingleThreadEvent
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
-  private static final Log LOG = LogFactory.getLog(AsyncFSWAL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWAL.class);
 
   private static final Comparator<SyncFuture> SEQ_COMPARATOR = (o1, o2) -> {
     int c = Long.compare(o1.getTxid(), o2.getTxid());

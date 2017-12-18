@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -81,10 +79,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsReplication {
-  private static final Log LOG = LogFactory.getLog(TestVisibilityLabelsReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestVisibilityLabelsReplication.class);
   protected static final int NON_VIS_TAG_TYPE = 100;
   protected static final String TEMP = "temp";
   protected static Configuration conf;

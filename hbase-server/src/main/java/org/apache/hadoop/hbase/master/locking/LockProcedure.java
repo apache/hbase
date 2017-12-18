@@ -24,8 +24,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,7 +35,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockProcedureData;
@@ -57,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 @InterfaceAudience.Private
 public final class LockProcedure extends Procedure<MasterProcedureEnv>
     implements TableProcedureInterface {
-  private static final Log LOG = LogFactory.getLog(LockProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LockProcedure.class);
 
   public static final int DEFAULT_REMOTE_LOCKS_TIMEOUT_MS = 30000;  // timeout in ms
   public static final String REMOTE_LOCKS_TIMEOUT_MS_CONF =

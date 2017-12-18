@@ -22,14 +22,14 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -42,8 +42,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class ScannerResultGenerator extends ResultGenerator {
 
-  private static final Log LOG =
-    LogFactory.getLog(ScannerResultGenerator.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ScannerResultGenerator.class);
 
   public static Filter buildFilterFromModel(final ScannerModel model) 
       throws Exception {

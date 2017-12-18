@@ -23,8 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.protobuf.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
@@ -61,6 +60,8 @@ import org.apache.hadoop.hbase.quotas.GlobalQuotaSettings;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -71,7 +72,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class MasterCoprocessorHost
     extends CoprocessorHost<MasterCoprocessor, MasterCoprocessorEnvironment> {
 
-  private static final Log LOG = LogFactory.getLog(MasterCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterCoprocessorHost.class);
 
   /**
    * Coprocessor environment extension providing access to master related

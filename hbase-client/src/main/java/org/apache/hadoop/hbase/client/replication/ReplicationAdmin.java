@@ -30,13 +30,13 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -72,7 +72,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @InterfaceAudience.Public
 @Deprecated
 public class ReplicationAdmin implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationAdmin.class);
 
   public static final String TNAME = "tableName";
   public static final String CFNAME = "columnFamilyName";

@@ -21,21 +21,16 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.List;
-
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Encoded;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.UriInfo;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -48,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TableResource extends ResourceBase {
 
   String table;
-  private static final Log LOG = LogFactory.getLog(TableResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableResource.class);
 
   /**
    * Constructor
@@ -206,7 +201,7 @@ public class TableResource extends ResourceBase {
     } catch (IOException exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
       processException(exp);
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       return null;
     }
   }

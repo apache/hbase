@@ -24,22 +24,22 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.Collection;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 /**
  * Implementation for hdfs
@@ -47,7 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FSHDFSUtils extends FSUtils {
-  private static final Log LOG = LogFactory.getLog(FSHDFSUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSHDFSUtils.class);
   private static Class dfsUtilClazz;
   private static Method getNNAddressesMethod;
 

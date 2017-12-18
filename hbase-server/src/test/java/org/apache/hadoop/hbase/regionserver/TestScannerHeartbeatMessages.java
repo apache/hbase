@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -46,7 +44,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -56,7 +53,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -122,8 +118,6 @@ public class TestScannerHeartbeatMessages {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    ((Log4JLogger) ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) HeartbeatRPCServices.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = TEST_UTIL.getConfiguration();
 
     conf.setStrings(HConstants.REGION_IMPL, HeartbeatHRegion.class.getName());

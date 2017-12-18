@@ -23,18 +23,18 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.util.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Chaos monkey that given multiple policies will run actions against the cluster.
  */
 public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
-  private static final Log LOG = LogFactory.getLog(PolicyBasedChaosMonkey.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PolicyBasedChaosMonkey.class);
   private static final long ONE_SEC = 1000;
   private static final long FIVE_SEC = 5 * ONE_SEC;
   private static final long ONE_MIN = 60 * ONE_SEC;

@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -33,6 +31,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test creating/using/deleting snapshots from the client
@@ -44,7 +44,7 @@ import org.junit.rules.TestRule;
  */
 @Category({ClientTests.class, LargeTests.class})
 public class TestMobFlushSnapshotFromClient extends TestFlushSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
   @ClassRule
   public static final TestRule timeout =

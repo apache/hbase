@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,13 +44,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestRestoreSnapshotHelper {
-  private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRestoreSnapshotHelper.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected final static String TEST_HFILE = "abc";

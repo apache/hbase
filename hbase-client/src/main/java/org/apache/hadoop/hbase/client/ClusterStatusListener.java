@@ -31,8 +31,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -42,7 +40,8 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.io.netty.bootstrap.Bootstrap;
 import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBufInputStream;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
@@ -63,7 +62,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
  */
 @InterfaceAudience.Private
 class ClusterStatusListener implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ClusterStatusListener.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClusterStatusListener.class);
   private final List<ServerName> deadServers = new ArrayList<>();
   protected final DeadServerHandler deadServerHandler;
   private final Listener listener;

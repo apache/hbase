@@ -45,8 +45,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -87,7 +85,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.io.netty.util.HashedWheelTimer;
 import org.apache.hadoop.hbase.shaded.io.netty.util.Timeout;
@@ -270,7 +269,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 class RawAsyncHBaseAdmin implements AsyncAdmin {
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
-  private static final Log LOG = LogFactory.getLog(AsyncHBaseAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncHBaseAdmin.class);
 
   private final AsyncConnectionImpl connection;
 

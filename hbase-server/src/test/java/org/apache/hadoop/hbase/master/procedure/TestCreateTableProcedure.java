@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -41,10 +39,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
-  private static final Log LOG = LogFactory.getLog(TestCreateTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableProcedure.class);
 
   private static final String F1 = "f1";
   private static final String F2 = "f2";

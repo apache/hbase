@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -50,13 +48,15 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestBlocksRead  {
-  private static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlocksRead.class);
   @Rule public TestName testName = new TestName();
 
   static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,

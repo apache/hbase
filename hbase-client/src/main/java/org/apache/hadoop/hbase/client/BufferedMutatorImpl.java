@@ -15,13 +15,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -33,8 +26,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.HConstants;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
@@ -59,7 +60,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 @InterfaceStability.Evolving
 public class BufferedMutatorImpl implements BufferedMutator {
 
-  private static final Log LOG = LogFactory.getLog(BufferedMutatorImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BufferedMutatorImpl.class);
 
   private final ExceptionListener listener;
 

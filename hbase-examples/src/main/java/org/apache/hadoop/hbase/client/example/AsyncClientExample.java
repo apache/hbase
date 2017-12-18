@@ -25,8 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
@@ -38,13 +36,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple example shows how to use asynchronous client.
  */
 public class AsyncClientExample extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(AsyncClientExample.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncClientExample.class);
 
   /**
    * The size for thread pool.

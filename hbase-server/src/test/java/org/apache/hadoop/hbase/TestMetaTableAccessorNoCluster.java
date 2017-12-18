@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -49,7 +47,8 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
@@ -59,7 +58,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMetaTableAccessorNoCluster {
-  private static final Log LOG = LogFactory.getLog(TestMetaTableAccessorNoCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableAccessorNoCluster.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Abortable ABORTABLE = new Abortable() {
     boolean aborted = false;

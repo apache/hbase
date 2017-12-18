@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Public
 @VisibleForTesting
 public class MultiTableHFileOutputFormat extends HFileOutputFormat2 {
-  private static final Log LOG = LogFactory.getLog(MultiTableHFileOutputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiTableHFileOutputFormat.class);
 
   /**
    * Creates a composite key to use as a mapper output key when using

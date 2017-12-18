@@ -22,8 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -38,6 +36,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -49,8 +49,8 @@ import java.io.IOException;
 
 @Category({MediumTests.class})
 public class TestRegionServerOnlineConfigChange {
-  private static final Log LOG =
-          LogFactory.getLog(TestRegionServerOnlineConfigChange.class.getName());
+  private static final Logger LOG =
+          LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
   private static HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
   private static Configuration conf = null;
 

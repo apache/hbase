@@ -23,9 +23,9 @@ import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public class SplitLogWorker implements Runnable {
 
-  private static final Log LOG = LogFactory.getLog(SplitLogWorker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SplitLogWorker.class);
 
   Thread worker;
   // thread pool which executes recovery work

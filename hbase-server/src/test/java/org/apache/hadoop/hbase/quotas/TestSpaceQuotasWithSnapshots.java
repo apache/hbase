@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -51,15 +49,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import com.google.common.collect.Iterables;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 
 /**
  * Test class to exercise the inclusion of snapshots in space quotas
  */
 @Category({LargeTests.class})
 public class TestSpaceQuotasWithSnapshots {
-  private static final Log LOG = LogFactory.getLog(TestSpaceQuotasWithSnapshots.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithSnapshots.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   // Global for all tests in the class
   private static final AtomicLong COUNTER = new AtomicLong(0);

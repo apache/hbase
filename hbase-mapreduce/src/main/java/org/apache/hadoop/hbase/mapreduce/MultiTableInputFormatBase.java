@@ -22,9 +22,9 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -55,7 +55,7 @@ import java.util.Iterator;
 public abstract class MultiTableInputFormatBase extends
     InputFormat<ImmutableBytesWritable, Result> {
 
-  private static final Log LOG = LogFactory.getLog(MultiTableInputFormatBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiTableInputFormatBase.class);
 
   /** Holds the set of scans used to define the input. */
   private List<Scan> scans;

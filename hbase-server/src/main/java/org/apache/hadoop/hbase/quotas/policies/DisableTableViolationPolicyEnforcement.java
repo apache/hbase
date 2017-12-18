@@ -18,11 +18,11 @@ package org.apache.hadoop.hbase.quotas.policies;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
@@ -34,7 +34,8 @@ import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
  */
 @InterfaceAudience.Private
 public class DisableTableViolationPolicyEnforcement extends DefaultViolationPolicyEnforcement {
-  private static final Log LOG = LogFactory.getLog(DisableTableViolationPolicyEnforcement.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DisableTableViolationPolicyEnforcement.class);
 
   @Override
   public void enable() throws IOException {

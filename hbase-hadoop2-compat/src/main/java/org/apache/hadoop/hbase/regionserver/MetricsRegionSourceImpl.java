@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
@@ -31,7 +31,7 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 @InterfaceAudience.Private
 public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionSourceImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionSourceImpl.class);
 
   private AtomicBoolean closed = new AtomicBoolean(false);
 

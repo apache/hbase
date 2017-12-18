@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,11 +41,13 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestCleanerChore {
 
-  private static final Log LOG = LogFactory.getLog(TestCleanerChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCleanerChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   @After

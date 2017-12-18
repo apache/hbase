@@ -32,9 +32,9 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.Provider;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 
@@ -47,8 +47,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 @InterfaceAudience.Private
 public class ProtobufMessageBodyConsumer
     implements MessageBodyReader<ProtobufMessageHandler> {
-  private static final Log LOG =
-    LogFactory.getLog(ProtobufMessageBodyConsumer.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(ProtobufMessageBodyConsumer.class);
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,

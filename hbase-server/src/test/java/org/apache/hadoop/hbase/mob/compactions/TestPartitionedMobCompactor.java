@@ -40,8 +40,6 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -86,10 +84,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestPartitionedMobCompactor {
-  private static final Log LOG = LogFactory.getLog(TestPartitionedMobCompactor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestPartitionedMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String family = "family";
   private final static String qf = "qf";

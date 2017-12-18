@@ -37,8 +37,6 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -56,10 +54,12 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(RowResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowResource.class);
 
   private static final String CHECK_PUT = "put";
   private static final String CHECK_DELETE = "delete";

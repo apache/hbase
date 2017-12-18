@@ -30,8 +30,7 @@ import java.net.BindException;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -71,13 +70,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * WAL tests that can be reused across providers.
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestWALFactory {
-  private static final Log LOG = LogFactory.getLog(TestWALFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALFactory.class);
 
   protected static Configuration conf;
   private static MiniDFSCluster cluster;
@@ -402,7 +403,7 @@ public class TestWALFactory {
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
-      DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
       TEST_UTIL.shutdownMiniDFSCluster();
       try {
@@ -410,7 +411,7 @@ public class TestWALFactory {
         // but still call this since it closes the LogSyncer thread first
         wal.shutdown();
       } catch (IOException e) {
-        LOG.info(e);
+        LOG.info(e.toString(), e);
       }
       fs.close(); // closing FS last so DFSOutputStream can't call close
       LOG.info("STOPPED first instance of the cluster");
@@ -445,7 +446,7 @@ public class TestWALFactory {
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
-      LOG.info(e);
+      LOG.info(e.toString(), e);
     }
 
     // Now try recovering the log, like the HMaster would do
@@ -454,6 +455,7 @@ public class TestWALFactory {
 
     class RecoverLogThread extends Thread {
       public Exception exception = null;
+      @Override
       public void run() {
           try {
             FSUtils.getInstance(fs, rlConf)

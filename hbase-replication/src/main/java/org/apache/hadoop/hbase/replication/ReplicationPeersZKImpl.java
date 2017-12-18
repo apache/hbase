@@ -28,8 +28,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -47,6 +45,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides an implementation of the ReplicationPeers interface using ZooKeeper. The
@@ -82,7 +82,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   private final ReplicationQueuesClient queuesClient;
   private Abortable abortable;
 
-  private static final Log LOG = LogFactory.getLog(ReplicationPeersZKImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeersZKImpl.class);
 
   public ReplicationPeersZKImpl(final ZKWatcher zk, final Configuration conf,
                                 final ReplicationQueuesClient queuesClient, Abortable abortable) {

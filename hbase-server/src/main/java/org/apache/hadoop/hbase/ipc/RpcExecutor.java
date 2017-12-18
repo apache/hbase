@@ -30,13 +30,13 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.Map;
 import java.util.HashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Strings;
  */
 @InterfaceAudience.Private
 public abstract class RpcExecutor {
-  private static final Log LOG = LogFactory.getLog(RpcExecutor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RpcExecutor.class);
 
   protected static final int DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT = 250;
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY = "hbase.ipc.server.callqueue.handler.factor";
@@ -151,7 +151,7 @@ public abstract class RpcExecutor {
   }
 
   protected int computeNumCallQueues(final int handlerCount, final float callQueuesHandlersFactor) {
-    return Math.max(1, (int) Math.round(handlerCount * callQueuesHandlersFactor));
+    return Math.max(1, Math.round(handlerCount * callQueuesHandlersFactor));
   }
 
   public Map<String, Long> getCallQueueCountsSummary() {
@@ -204,8 +204,7 @@ public abstract class RpcExecutor {
       queueInitArgs[0] = Math.max((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
     }
     for (int i = 0; i < numQueues; ++i) {
-      queues
-          .add((BlockingQueue<CallRunner>) ReflectionUtils.newInstance(queueClass, queueInitArgs));
+      queues.add(ReflectionUtils.newInstance(queueClass, queueInitArgs));
     }
   }
 
@@ -308,7 +307,7 @@ public abstract class RpcExecutor {
           }
         }
       } catch (Exception e) {
-        LOG.warn(e);
+        LOG.warn(e.toString(), e);
         throw e;
       } finally {
         if (interrupted) {
@@ -385,6 +384,7 @@ public abstract class RpcExecutor {
       this.queueSize = queueSize;
     }
 
+    @Override
     public int getNextQueue() {
       return ThreadLocalRandom.current().nextInt(queueSize);
     }

@@ -22,11 +22,11 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -38,10 +38,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestBlockCacheReporting {
-  private static final Log LOG = LogFactory.getLog(TestBlockCacheReporting.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestBlockCacheReporting.class);
   private Configuration conf;
 
   @Before
@@ -86,9 +88,9 @@ public class TestBlockCacheReporting {
     final int count = 3;
     addDataAndHits(cc.getBlockCache(), count);
     // The below has no asserts.  It is just exercising toString and toJSON code.
-    LOG.info(cc.getBlockCache().getStats());
+    LOG.info(Objects.toString(cc.getBlockCache().getStats()));
     BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
+    LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
     bucketCacheReport(cc.getBlockCache());
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
@@ -106,9 +108,9 @@ public class TestBlockCacheReporting {
     BlockCache bc = cc.getBlockCache();
     LOG.info("count=" + bc.getBlockCount() + ", currentSize=" + bc.getCurrentSize() +
         ", freeSize=" + bc.getFreeSize() );
-    LOG.info(cc.getBlockCache().getStats());
+    LOG.info(Objects.toString(cc.getBlockCache().getStats()));
     BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
+    LOG.info(Objects.toString(cbsbf));
     logPerFile(cbsbf);
     bucketCacheReport(cc.getBlockCache());
     LOG.info(BlockCacheUtil.toJSON(cbsbf));

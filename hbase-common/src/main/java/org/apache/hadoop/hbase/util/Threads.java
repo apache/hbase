@@ -31,11 +31,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class Threads {
-  private static final Log LOG = LogFactory.getLog(Threads.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Threads.class);
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
 
   public static final UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =

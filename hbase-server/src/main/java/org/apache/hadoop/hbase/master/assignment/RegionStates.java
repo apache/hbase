@@ -34,8 +34,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -47,7 +45,8 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -57,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class RegionStates {
-  private static final Log LOG = LogFactory.getLog(RegionStates.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionStates.class);
 
   protected static final State[] STATES_EXPECTED_ON_OPEN = new State[] {
     State.OFFLINE, State.CLOSED,      // disable/offline

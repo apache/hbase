@@ -26,8 +26,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -48,13 +46,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class for the quota status RPCs in the master and regionserver.
  */
 @Category({MediumTests.class})
 public class TestQuotaStatusRPCs {
-  private static final Log LOG = LogFactory.getLog(TestQuotaStatusRPCs.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestQuotaStatusRPCs.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong(0);
 

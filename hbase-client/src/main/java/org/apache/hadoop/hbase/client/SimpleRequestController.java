@@ -34,8 +34,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,6 +42,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -54,7 +55,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class SimpleRequestController implements RequestController {
-  private static final Log LOG = LogFactory.getLog(SimpleRequestController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleRequestController.class);
   /**
    * The maximum heap size for each request.
    */

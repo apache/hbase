@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.http.lib;
 
+import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.DEFAULT_HBASE_HTTP_STATIC_USER;
+import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.HBASE_HTTP_STATIC_USER;
+
 import java.io.IOException;
 import java.security.Principal;
 import java.util.HashMap;
 
+import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
@@ -29,18 +33,13 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.FilterContainer;
 import org.apache.hadoop.hbase.http.FilterInitializer;
-
-import javax.servlet.Filter;
-
-import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.HBASE_HTTP_STATIC_USER;
-import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.DEFAULT_HBASE_HTTP_STATIC_USER;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides a servlet filter that pretends to authenticate a fake user (Dr.Who)
@@ -50,7 +49,7 @@ import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.DEFAULT_HBASE
 public class StaticUserWebFilter extends FilterInitializer {
   static final String DEPRECATED_UGI_KEY = "dfs.web.ugi";
 
-  private static final Log LOG = LogFactory.getLog(StaticUserWebFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StaticUserWebFilter.class);
 
   static class User implements Principal {
     private final String name;

@@ -32,8 +32,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,6 +41,8 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 
 /**
  * A Master-invoked {@code Chore} that computes the size of each snapshot which was created from
@@ -67,7 +67,7 @@ import com.google.common.collect.Multimap;
  */
 @InterfaceAudience.Private
 public class SnapshotQuotaObserverChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(SnapshotQuotaObserverChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotQuotaObserverChore.class);
   static final String SNAPSHOT_QUOTA_CHORE_PERIOD_KEY =
       "hbase.master.quotas.snapshot.chore.period";
   static final int SNAPSHOT_QUOTA_CHORE_PERIOD_DEFAULT = 1000 * 60 * 5; // 5 minutes in millis

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
@@ -26,6 +24,8 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -35,7 +35,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestMobSnapshotFromClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobSnapshotFromClient.class);
 
   /**
    * Setup the config for the cluster

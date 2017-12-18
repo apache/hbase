@@ -32,8 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
@@ -42,6 +40,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class will coalesce increments from a thift server if
@@ -161,7 +161,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   private int maxQueueSize = 500000;
   private static final int CORE_POOL_SIZE = 1;
 
-  private static final Log LOG = LogFactory.getLog(FullyQualifiedRow.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FullyQualifiedRow.class);
 
   @SuppressWarnings("deprecation")
   public IncrementCoalescer(HBaseHandler hand) {

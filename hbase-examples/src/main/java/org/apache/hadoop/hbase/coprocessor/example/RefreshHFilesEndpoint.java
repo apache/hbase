@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.coprocessor.example;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -30,6 +29,8 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.protobuf.generated.RefreshHFilesProtos;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -44,7 +45,7 @@ import java.util.Collections;
  */
 public class RefreshHFilesEndpoint extends RefreshHFilesProtos.RefreshHFilesService
   implements RegionCoprocessor {
-  protected static final Log LOG = LogFactory.getLog(RefreshHFilesEndpoint.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(RefreshHFilesEndpoint.class);
   private RegionCoprocessorEnvironment env;
 
   public RefreshHFilesEndpoint() {

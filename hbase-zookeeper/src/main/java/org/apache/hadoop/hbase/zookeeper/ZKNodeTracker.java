@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tracks the availability and value of a single ZooKeeper node.
@@ -36,7 +36,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public abstract class ZKNodeTracker extends ZKListener {
   // LOG is being used in subclasses, hence keeping it protected
-  protected static final Log LOG = LogFactory.getLog(ZKNodeTracker.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(ZKNodeTracker.class);
   /** Path of node being tracked */
   protected final String node;
 

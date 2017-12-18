@@ -21,9 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,6 +48,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -60,7 +61,7 @@ import static org.junit.Assert.assertTrue;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestGetClosestAtOrBefore  {
   @Rule public TestName testName = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGetClosestAtOrBefore.class);
 
   private static final byte[] T00 = Bytes.toBytes("000");
   private static final byte[] T10 = Bytes.toBytes("010");
@@ -104,8 +105,8 @@ public class TestGetClosestAtOrBefore  {
     InternalScanner s = mr.getScanner(new Scan());
     try {
       List<Cell> keys = new ArrayList<>();
-        while (s.next(keys)) {
-        LOG.info(keys);
+      while (s.next(keys)) {
+        LOG.info(Objects.toString(keys));
         keys.clear();
       }
     } finally {
@@ -293,8 +294,8 @@ public class TestGetClosestAtOrBefore  {
     } finally {
       if (region != null) {
         try {
-          WAL wal = ((HRegion)region).getWAL();
-          ((HRegion)region).close();
+          WAL wal = region.getWAL();
+          region.close();
           wal.close();
         } catch (Exception e) {
           e.printStackTrace();
@@ -351,8 +352,8 @@ public class TestGetClosestAtOrBefore  {
     } finally {
       if (region != null) {
         try {
-          WAL wal = ((HRegion)region).getWAL();
-          ((HRegion)region).close();
+          WAL wal = region.getWAL();
+          region.close();
           wal.close();
         } catch (Exception e) {
           e.printStackTrace();

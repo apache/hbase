@@ -48,8 +48,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -112,7 +110,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -120,7 +119,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestHStore {
-  private static final Log LOG = LogFactory.getLog(TestHStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHStore.class);
   @Rule
   public TestName name = new TestName();
 

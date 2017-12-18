@@ -23,8 +23,6 @@ import java.io.InterruptedIOException;
 import java.util.NavigableSet;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -55,6 +53,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a helper class used internally to manage the namespace metadata that is stored in
@@ -69,7 +69,7 @@ import org.apache.yetus.audience.InterfaceAudience;
   justification="TODO: synchronize access on nsTable but it is done in tiers above and this " +
     "class is going away/shrinking")
 public class TableNamespaceManager {
-  private static final Log LOG = LogFactory.getLog(TableNamespaceManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableNamespaceManager.class);
 
   private Configuration conf;
   private MasterServices masterServices;

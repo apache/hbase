@@ -30,8 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Connection;
@@ -60,13 +58,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests ReplicationSource and ReplicationEndpoint interactions
  */
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationEndpoint extends TestReplicationBase {
-  private static final Log LOG = LogFactory.getLog(TestReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationEndpoint.class);
 
   static int numRegionServers;
 

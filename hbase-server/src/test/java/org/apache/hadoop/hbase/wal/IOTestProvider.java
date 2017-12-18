@@ -27,13 +27,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
@@ -70,7 +70,7 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
  */
 @InterfaceAudience.Private
 public class IOTestProvider implements WALProvider {
-  private static final Log LOG = LogFactory.getLog(IOTestProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IOTestProvider.class);
 
   private static final String ALLOWED_OPERATIONS = "hbase.wal.iotestprovider.operations";
   private enum AllowedOperations {

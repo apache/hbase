@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -54,11 +52,13 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilityLabelsReplication {
-  private static final Log LOG = LogFactory
-      .getLog(TestVisibilityLabelReplicationWithExpAsString.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestVisibilityLabelReplicationWithExpAsString.class);
 
   @Override
   @Before

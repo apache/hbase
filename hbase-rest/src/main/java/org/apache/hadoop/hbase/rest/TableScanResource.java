@@ -36,22 +36,22 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @InterfaceAudience.Private
 public class TableScanResource  extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(TableScanResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableScanResource.class);
 
   TableResource tableResource;
   ResultScanner results;
@@ -126,7 +126,7 @@ public class TableScanResource  extends ResourceBase {
     } catch (Exception exp) {
       servlet.getMetrics().incrementFailedScanRequests(1);
       processException(exp);
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       return null;
     }
   }

@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,6 +49,8 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An integration test which checks that the znodes in zookeeper and data in the FileSystem
@@ -68,8 +68,9 @@ import org.junit.experimental.categories.Category;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IntegrationTestZKAndFSPermissions.class);
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestZKAndFSPermissions.class);
   private String superUser;
   private String masterPrincipal;
   private boolean isForce;

@@ -37,8 +37,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -54,7 +52,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -69,8 +66,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -80,7 +75,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -96,10 +92,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestAssignmentManager {
-  private static final Log LOG = LogFactory.getLog(TestAssignmentManager.class);
-  static {
-    Logger.getLogger(MasterProcedureScheduler.class).setLevel(Level.TRACE);
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManager.class);
+
   @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout =
       CategoryBasedTimeout.builder().withTimeout(this.getClass()).
@@ -534,6 +528,7 @@ public class TestAssignmentManager {
   }
 
   private class NoopRsExecutor implements MockRSExecutor {
+    @Override
     public ExecuteProceduresResponse sendRequest(ServerName server,
         ExecuteProceduresRequest request) throws IOException {
       ExecuteProceduresResponse.Builder builder = ExecuteProceduresResponse.newBuilder();
@@ -602,6 +597,7 @@ public class TestAssignmentManager {
   }
 
   private static class ServerNotYetRunningRsExecutor implements MockRSExecutor {
+    @Override
     public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
         throws IOException {
       throw new ServerNotRunningYetException("wait on server startup");
@@ -615,6 +611,7 @@ public class TestAssignmentManager {
       this.exception = exception;
     }
 
+    @Override
     public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
         throws IOException {
       throw exception;
@@ -634,6 +631,7 @@ public class TestAssignmentManager {
       this.maxSocketTimeoutRetries = maxSocketTimeoutRetries;
     }
 
+    @Override
     public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
         throws IOException {
       // SocketTimeoutException should be a temporary problem
@@ -746,6 +744,7 @@ public class TestAssignmentManager {
   private class RandRsExecutor extends NoopRsExecutor {
     private final Random rand = new Random();
 
+    @Override
     public ExecuteProceduresResponse sendRequest(ServerName server, ExecuteProceduresRequest req)
         throws IOException {
       switch (rand.nextInt(5)) {

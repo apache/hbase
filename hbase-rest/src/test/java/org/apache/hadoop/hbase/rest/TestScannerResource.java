@@ -37,14 +37,11 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
-import org.apache.http.Header;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -62,14 +59,17 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.http.Header;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestScannerResource {
-  private static final Log LOG = LogFactory.getLog(TestScannerResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerResource.class);
   private static final TableName TABLE = TableName.valueOf("TestScannerResource");
   private static final TableName TABLE_TO_BE_DISABLED = TableName.valueOf("ScannerResourceDisable");
   private static final String NONEXISTENT_TABLE = "ThisTableDoesNotExist";
@@ -79,7 +79,7 @@ public class TestScannerResource {
   private static final String COLUMN_2 = CFB + ":2";
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;

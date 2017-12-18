@@ -30,8 +30,6 @@ import java.util.OptionalLong;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -70,7 +68,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -83,7 +82,7 @@ import static org.mockito.Mockito.when;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestHStoreFile extends HBaseTestCase {
-  private static final Log LOG = LogFactory.getLog(TestHStoreFile.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -30,6 +28,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -39,7 +39,7 @@ import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureMetrics {
-  private static final Log LOG = LogFactory.getLog(TestProcedureMetrics.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureMetrics.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
 

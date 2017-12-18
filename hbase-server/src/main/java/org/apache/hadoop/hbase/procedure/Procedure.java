@@ -25,9 +25,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class Procedure implements Callable<Void>, ForeignExceptionListener {
-  private static final Log LOG = LogFactory.getLog(Procedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Procedure.class);
 
   //
   // Arguments and naming

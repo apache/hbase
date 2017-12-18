@@ -30,8 +30,6 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,6 +39,8 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public abstract class ClientScanner extends AbstractClientScanner {
 
-  private static final Log LOG = LogFactory.getLog(ClientScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ClientScanner.class);
 
   protected final Scan scan;
   protected boolean closed = false;

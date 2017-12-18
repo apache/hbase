@@ -64,7 +64,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     TEST_UTIL.startMiniCluster(1);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    master = ((MiniHBaseCluster) TEST_UTIL.getHBaseCluster()).getMaster();
+    master = TEST_UTIL.getHBaseCluster().getMaster();
     zkNamespaceManager = new ZKNamespaceManager(master.getZooKeeper());
     zkNamespaceManager.start();
     LOG.info("Done initializing cluster");
@@ -98,7 +98,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     try {
       admin.deleteNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR).join();
     } catch (Exception exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -107,7 +107,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     try {
       admin.deleteNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR).join();
     } catch (Exception exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);

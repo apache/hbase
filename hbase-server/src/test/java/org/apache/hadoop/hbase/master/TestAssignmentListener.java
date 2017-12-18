@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -58,10 +56,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestAssignmentListener {
-  private static final Log LOG = LogFactory.getLog(TestAssignmentListener.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentListener.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

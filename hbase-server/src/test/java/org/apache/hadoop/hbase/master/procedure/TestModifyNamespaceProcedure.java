@@ -23,8 +23,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,10 +40,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestModifyNamespaceProcedure {
-  private static final Log LOG = LogFactory.getLog(TestModifyNamespaceProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestModifyNamespaceProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

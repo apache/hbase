@@ -24,8 +24,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -47,10 +46,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestMasterProcedureScheduler {
-  private static final Log LOG = LogFactory.getLog(TestMasterProcedureScheduler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterProcedureScheduler.class);
 
   private MasterProcedureScheduler queue;
   private Configuration conf;

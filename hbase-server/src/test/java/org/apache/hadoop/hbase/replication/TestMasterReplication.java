@@ -31,8 +31,6 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -82,11 +80,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestMasterReplication {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
 
   private Configuration baseConfiguration;
 

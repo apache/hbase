@@ -23,9 +23,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for MD5
@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class MD5Hash {
-  private static final Log LOG = LogFactory.getLog(MD5Hash.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MD5Hash.class);
 
   /**
    * Given a byte array, returns in MD5 hash as a hex string.

@@ -21,19 +21,19 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * <a href="http://www.mapr.com/">MapR</a> implementation.
  */
 @InterfaceAudience.Private
 public class FSMapRUtils extends FSUtils {
-  private static final Log LOG = LogFactory.getLog(FSMapRUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSMapRUtils.class);
 
   public void recoverFileLease(final FileSystem fs, final Path p,
       Configuration conf, CancelableProgressable reporter) throws IOException {

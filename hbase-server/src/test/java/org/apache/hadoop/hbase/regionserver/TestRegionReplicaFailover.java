@@ -26,9 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,7 +37,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.RpcRetryingCallerImpl;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.replication.regionserver.TestRegionReplicaReplicationEndpoint;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -48,25 +44,22 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests failover of secondary region replicas.
  */
 @Category(LargeTests.class)
 public class TestRegionReplicaFailover {
-
-  private static final Log LOG = LogFactory.getLog(TestRegionReplicaReplicationEndpoint.class);
-
-  static {
-    ((Log4JLogger)RpcRetryingCallerImpl.LOG).getLogger().setLevel(Level.ALL);
-  }
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRegionReplicaReplicationEndpoint.class);
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 

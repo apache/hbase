@@ -22,8 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -42,10 +40,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
-  private static final Log LOG = LogFactory.getLog(TestCloneSnapshotProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCloneSnapshotProcedure.class);
 
   protected final byte[] CF = Bytes.toBytes("cf1");
 

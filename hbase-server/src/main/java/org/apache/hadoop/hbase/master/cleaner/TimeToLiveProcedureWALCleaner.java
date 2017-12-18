@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Procedure WAL cleaner that uses the timestamp of the Procedure WAL to determine if it should be
@@ -32,8 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class TimeToLiveProcedureWALCleaner extends BaseFileCleanerDelegate {
-
-  private static final Log LOG = LogFactory.getLog(TimeToLiveProcedureWALCleaner.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimeToLiveProcedureWALCleaner.class.getName());
   public static final String TTL_CONF_KEY = "hbase.master.procedurewalcleaner.ttl";
   // default ttl = 7 days
   public static final long DEFAULT_TTL = 604_800_000L;

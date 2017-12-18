@@ -25,8 +25,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -36,7 +34,8 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
@@ -57,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionR
 public class RSProcedureDispatcher
     extends RemoteProcedureDispatcher<MasterProcedureEnv, ServerName>
     implements ServerListener {
-  private static final Log LOG = LogFactory.getLog(RSProcedureDispatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RSProcedureDispatcher.class);
 
   public static final String RS_RPC_STARTUP_WAIT_TIME_CONF_KEY =
       "hbase.regionserver.rpc.startup.waittime";

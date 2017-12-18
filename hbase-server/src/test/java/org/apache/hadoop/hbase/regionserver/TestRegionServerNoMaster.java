@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -50,6 +48,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -58,7 +58,7 @@ import org.junit.experimental.categories.Category;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionServerNoMaster {
 
-  private static final Log LOG = LogFactory.getLog(TestRegionServerNoMaster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerNoMaster.class);
   private static final int NB_SERVERS = 1;
   private static Table table;
   private static final byte[] row = "ee".getBytes();

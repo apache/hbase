@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -55,6 +53,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test if the FilterWrapper retains the same semantics defined in the
@@ -62,7 +62,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({FilterTests.class, MediumTests.class})
 public class TestFilterWrapper {
-  private static final Log LOG = LogFactory.getLog(TestFilterWrapper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFilterWrapper.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = null;

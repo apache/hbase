@@ -23,10 +23,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
@@ -36,7 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
  */
 @InterfaceAudience.Private
 public class ReplicationQueueInfo {
-  private static final Log LOG = LogFactory.getLog(ReplicationQueueInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationQueueInfo.class);
 
   private final String peerId;
   private final String peerClusterZnode;

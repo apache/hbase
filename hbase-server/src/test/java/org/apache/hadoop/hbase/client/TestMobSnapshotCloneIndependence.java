@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.TableName;
@@ -32,13 +30,15 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
 @Category(LargeTests.class)
 public class TestMobSnapshotCloneIndependence extends TestSnapshotCloneIndependence {
-  private static final Log LOG = LogFactory.getLog(TestMobSnapshotCloneIndependence.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobSnapshotCloneIndependence.class);
 
   @ClassRule
   public static final TestRule timeout =

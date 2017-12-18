@@ -23,8 +23,6 @@ import java.lang.reflect.Method;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -41,6 +39,8 @@ import org.apache.hadoop.mapreduce.StatusReporter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -58,7 +58,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 
 public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
-  private static final Log LOG = LogFactory.getLog(MultithreadedTableMapper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultithreadedTableMapper.class);
   private Class<? extends Mapper<ImmutableBytesWritable, Result,K2,V2>> mapClass;
   private Context outer;
   private ExecutorService executor;

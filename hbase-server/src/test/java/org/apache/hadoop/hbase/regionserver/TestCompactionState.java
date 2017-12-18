@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Admin;
@@ -43,11 +41,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Unit tests to test retrieving table/region compaction state*/
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestCompactionState {
-  private static final Log LOG = LogFactory.getLog(TestCompactionState.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Random random = new Random();
 

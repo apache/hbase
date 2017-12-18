@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -74,11 +72,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 

@@ -160,6 +160,7 @@
                   <exclude>junit:junit</exclude>
                   <exclude>log4j:log4j</exclude>
                   <exclude>commons-logging:commons-logging</exclude>
+                  <exclude>org.slf4j:slf4j-api</exclude>
                   <exclude>org.apache.yetus:audience-annotations</exclude>
                   <exclude>com.github.stephenc.fingbugs:*</exclude>
                   <exclude></exclude>

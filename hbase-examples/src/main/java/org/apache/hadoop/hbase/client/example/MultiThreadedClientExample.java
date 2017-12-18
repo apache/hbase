@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +30,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
@@ -50,7 +47,10 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Example on how to use HBase's {@link Connection} and {@link Table} in a
@@ -90,7 +90,7 @@ import org.apache.hadoop.util.ToolRunner;
  *
  */
 public class MultiThreadedClientExample extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedClientExample.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedClientExample.class);
   private static final int DEFAULT_NUM_OPERATIONS = 500000;
 
   /**

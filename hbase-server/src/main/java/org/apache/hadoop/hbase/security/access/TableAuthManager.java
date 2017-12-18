@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -42,11 +40,14 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Performs authorization checks for a given user's assigned permissions
@@ -97,7 +98,7 @@ public class TableAuthManager implements Closeable {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(TableAuthManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableAuthManager.class);
 
   /** Cache of global permissions */
   private volatile PermissionCache<Permission> globalCache;
@@ -769,7 +770,7 @@ public class TableAuthManager implements Closeable {
     if (refCount.get(instance) == null || refCount.get(instance) < 1) {
       String msg = "Something wrong with the TableAuthManager reference counting: " + instance
           + " whose count is " + refCount.get(instance);
-      LOG.fatal(msg);
+      LOG.error(HBaseMarkers.FATAL, msg);
       instance.close();
       managerMap.remove(instance.getZKPermissionWatcher().getWatcher());
       instance.getZKPermissionWatcher().getWatcher().abort(msg, null);

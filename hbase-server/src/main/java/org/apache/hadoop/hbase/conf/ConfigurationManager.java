@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.conf;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Set;
@@ -73,7 +73,7 @@ import java.util.WeakHashMap;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ConfigurationManager {
-  private static final Log LOG = LogFactory.getLog(ConfigurationManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConfigurationManager.class);
 
   // The set of Configuration Observers. These classes would like to get
   // notified when the configuration is reloaded from disk. This is a set

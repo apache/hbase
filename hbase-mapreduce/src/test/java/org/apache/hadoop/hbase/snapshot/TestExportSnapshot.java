@@ -28,10 +28,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,13 +50,13 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
@@ -68,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 public class TestExportSnapshot {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestExportSnapshot.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshot.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -350,7 +349,7 @@ public class TestExportSnapshot {
     FileStatus[] list = FSUtils.listStatus(fs, dir);
     if (list != null) {
       for (FileStatus fstat: list) {
-        LOG.debug(fstat.getPath());
+        LOG.debug(Objects.toString(fstat.getPath()));
         if (fstat.isDirectory()) {
           files.addAll(listFiles(fs, root, fstat.getPath()));
         } else {

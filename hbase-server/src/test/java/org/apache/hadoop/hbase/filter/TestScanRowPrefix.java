@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -35,6 +33,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,8 +46,8 @@ import java.util.List;
  */
 @Category({FilterTests.class, MediumTests.class})
 public class TestScanRowPrefix extends FilterTestingCluster {
-  private static final Log LOG = LogFactory
-      .getLog(TestScanRowPrefix.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestScanRowPrefix.class);
 
   @Rule
   public TestName name = new TestName();

@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -41,10 +39,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestServerCrashProcedure {
-  private static final Log LOG = LogFactory.getLog(TestServerCrashProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestServerCrashProcedure.class);
 
   private HBaseTestingUtility util;
 

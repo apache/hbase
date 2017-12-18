@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -49,6 +47,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -57,7 +57,7 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestParallelPut {
-  private static final Log LOG = LogFactory.getLog(TestParallelPut.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestParallelPut.class);
   @Rule public TestName name = new TestName(); 
   
   private HRegion region = null;

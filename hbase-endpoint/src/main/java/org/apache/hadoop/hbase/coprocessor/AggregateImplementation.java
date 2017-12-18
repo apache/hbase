@@ -33,11 +33,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 @InterfaceAudience.Private
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message>
 extends AggregateService implements RegionCoprocessor {
-  protected static final Log log = LogFactory.getLog(AggregateImplementation.class);
+  protected static final Logger log = LoggerFactory.getLogger(AggregateImplementation.class);
   private RegionCoprocessorEnvironment env;
 
   /**

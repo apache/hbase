@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,13 +49,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestScannerRetriableFailure {
-  private static final Log LOG = LogFactory.getLog(TestScannerRetriableFailure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerRetriableFailure.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

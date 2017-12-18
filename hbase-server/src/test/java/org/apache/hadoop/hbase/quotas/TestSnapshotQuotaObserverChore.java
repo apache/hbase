@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -57,17 +55,18 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Multimap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 
 /**
  * Test class for the {@link SnapshotQuotaObserverChore}.
  */
 @Category(MediumTests.class)
 public class TestSnapshotQuotaObserverChore {
-  private static final Log LOG = LogFactory.getLog(TestSnapshotQuotaObserverChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotQuotaObserverChore.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong();
 

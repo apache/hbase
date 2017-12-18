@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,6 +51,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,7 +61,7 @@ import static org.junit.Assert.fail;
 @Category({ MasterTests.class, MediumTests.class })
 public class TestEnableTable {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestEnableTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestEnableTable.class);
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
   @Rule

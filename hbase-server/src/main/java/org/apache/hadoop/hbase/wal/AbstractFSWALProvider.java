@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +33,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceStability.Evolving
 public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implements WALProvider {
 
-  private static final Log LOG = LogFactory.getLog(AbstractFSWALProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractFSWALProvider.class);
 
   /** Separate old log into different dir by regionserver name **/
   public static final String SEPARATE_OLDLOGDIR = "hbase.separate.oldlogdir.by.regionserver";

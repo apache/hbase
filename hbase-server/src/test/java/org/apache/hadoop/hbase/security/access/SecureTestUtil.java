@@ -30,8 +30,7 @@ import java.util.concurrent.CountDownLatch;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -67,6 +66,8 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -76,7 +77,7 @@ import static org.junit.Assert.fail;
  */
 public class SecureTestUtil {
 
-  private static final Log LOG = LogFactory.getLog(SecureTestUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SecureTestUtil.class);
   private static final int WAIT_TIME = 10000;
 
   public static void configureSuperuser(Configuration conf) throws IOException {

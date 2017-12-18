@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -57,13 +55,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.*;
 
 @Category({FlakeyTests.class, LargeTests.class})
 public class TestPerTableCFReplication {
 
-  private static final Log LOG = LogFactory.getLog(TestPerTableCFReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestPerTableCFReplication.class);
 
   private static Configuration conf1;
   private static Configuration conf2;

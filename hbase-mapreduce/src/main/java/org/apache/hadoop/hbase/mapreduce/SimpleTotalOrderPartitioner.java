@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -46,7 +46,7 @@ import org.apache.hadoop.mapreduce.Partitioner;
 @InterfaceAudience.Public
 public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableBytesWritable, VALUE>
 implements Configurable {
-  private final static Log LOG = LogFactory.getLog(SimpleTotalOrderPartitioner.class);
+  private final static Logger LOG = LoggerFactory.getLogger(SimpleTotalOrderPartitioner.class);
 
   @Deprecated
   public static final String START = "hbase.simpletotalorder.start";

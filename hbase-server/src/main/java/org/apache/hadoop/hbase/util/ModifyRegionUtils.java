@@ -32,8 +32,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,13 +40,15 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods for interacting with the regions.
  */
 @InterfaceAudience.Private
 public abstract class ModifyRegionUtils {
-  private static final Log LOG = LogFactory.getLog(ModifyRegionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ModifyRegionUtils.class);
 
   private ModifyRegionUtils() {
   }

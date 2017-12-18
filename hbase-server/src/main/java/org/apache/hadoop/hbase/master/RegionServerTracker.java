@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -36,6 +34,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tracks the online region servers via ZK.
@@ -49,7 +49,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class RegionServerTracker extends ZKListener {
-  private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerTracker.class);
   private NavigableMap<ServerName, RegionServerInfo> regionServers = new TreeMap<>();
   private ServerManager serverManager;
   private MasterServices server;

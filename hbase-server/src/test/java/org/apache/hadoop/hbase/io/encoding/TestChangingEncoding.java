@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -43,6 +41,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,7 +58,7 @@ import static org.junit.Assert.assertTrue;
  */
 @Category({IOTests.class, LargeTests.class})
 public class TestChangingEncoding {
-  private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestChangingEncoding.class);
   static final String CF = "EncodingTestCF";
   static final byte[] CF_BYTES = Bytes.toBytes(CF);
 

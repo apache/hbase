@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -42,7 +42,7 @@ import java.util.Set;
  */
 @InterfaceAudience.Private
 public class DeadServer {
-  private static final Log LOG = LogFactory.getLog(DeadServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeadServer.class);
 
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.

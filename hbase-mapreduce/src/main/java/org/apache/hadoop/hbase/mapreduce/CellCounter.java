@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -72,8 +72,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 public class CellCounter extends Configured implements Tool {
-  private static final Log LOG =
-    LogFactory.getLog(CellCounter.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(CellCounter.class.getName());
 
 
   /**

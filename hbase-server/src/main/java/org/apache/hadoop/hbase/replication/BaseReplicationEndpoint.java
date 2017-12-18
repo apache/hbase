@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.AbstractService;
 
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.Abstract
 public abstract class BaseReplicationEndpoint extends AbstractService
   implements ReplicationEndpoint {
 
-  private static final Log LOG = LogFactory.getLog(BaseReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseReplicationEndpoint.class);
   public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
       = "hbase.replication.source.custom.walentryfilters";
   protected Context ctx;

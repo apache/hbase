@@ -34,10 +34,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -99,7 +99,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties({"encodingCountsForTest"})
 public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
-  private static final Log LOG = LogFactory.getLog(LruBlockCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LruBlockCache.class);
 
   /**
    * Percentage of total size that eviction will evict until; e.g. if set to .8, then we will keep

@@ -26,8 +26,6 @@ import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,7 +39,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -60,7 +59,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 public class HStoreFile implements StoreFile {
 
-  private static final Log LOG = LogFactory.getLog(HStoreFile.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(HStoreFile.class.getName());
 
   public static final String STORE_FILE_READER_NO_READAHEAD = "hbase.store.reader.no-readahead";
 

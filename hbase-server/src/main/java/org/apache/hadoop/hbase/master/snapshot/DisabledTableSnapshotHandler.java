@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -39,7 +37,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
@@ -50,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
-  private static final Log LOG = LogFactory.getLog(DisabledTableSnapshotHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DisabledTableSnapshotHandler.class);
 
   /**
    * @param snapshot descriptor of the snapshot to take

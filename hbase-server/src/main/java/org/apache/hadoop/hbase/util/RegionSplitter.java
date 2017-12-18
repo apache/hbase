@@ -37,8 +37,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -56,6 +54,8 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
@@ -145,7 +145,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class RegionSplitter {
-  private static final Log LOG = LogFactory.getLog(RegionSplitter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionSplitter.class);
 
   /**
    * A generic interface for the RegionSplitter code to use for all it's
@@ -434,7 +434,7 @@ public class RegionSplitter {
    * Alternative getCurrentNrHRS which is no longer available.
    * @param connection
    * @return Rough count of regionservers out on cluster.
-   * @throws IOException 
+   * @throws IOException
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
     try (Admin admin = connection.getAdmin()) {
@@ -729,7 +729,7 @@ public class RegionSplitter {
           }
         } catch (NoServerForRegionException nsfre) {
           // NSFRE will occur if the old hbase:meta entry has no server assigned
-          LOG.info(nsfre);
+          LOG.info(nsfre.toString(), nsfre);
           logicalSplitting.add(region);
           continue;
         }
@@ -785,7 +785,7 @@ public class RegionSplitter {
    * @param conf
    * @param tableName
    * @return A Pair where first item is table dir and second is the split file.
-   * @throws IOException 
+   * @throws IOException
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
       final TableName tableName)
@@ -803,7 +803,7 @@ public class RegionSplitter {
       getTableDirAndSplitFile(connection.getConfiguration(), tableName);
     Path tableDir = tableDirAndSplitFile.getFirst();
     Path splitFile = tableDirAndSplitFile.getSecond();
- 
+
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
 
     // Using strings because (new byte[]{0}).equals(new byte[]{0}) == false
@@ -949,6 +949,7 @@ public class RegionSplitter {
       this.rowComparisonLength = lastRow.length();
     }
 
+    @Override
     public byte[] split(byte[] start, byte[] end) {
       BigInteger s = convertToBigInteger(start);
       BigInteger e = convertToBigInteger(end);
@@ -956,6 +957,7 @@ public class RegionSplitter {
       return convertToByte(split2(s, e));
     }
 
+    @Override
     public byte[][] split(int n) {
       Preconditions.checkArgument(lastRowInt.compareTo(firstRowInt) > 0,
           "last row (%s) is configured less than first row (%s)", lastRow,
@@ -1009,19 +1011,23 @@ public class RegionSplitter {
       }
     }
 
+    @Override
     public byte[] firstRow() {
       return convertToByte(firstRowInt);
     }
 
+    @Override
     public byte[] lastRow() {
       return convertToByte(lastRowInt);
     }
 
+    @Override
     public void setFirstRow(String userInput) {
       firstRow = userInput;
       firstRowInt = new BigInteger(firstRow, radix);
     }
 
+    @Override
     public void setLastRow(String userInput) {
       lastRow = userInput;
       lastRowInt = new BigInteger(lastRow, radix);
@@ -1029,14 +1035,17 @@ public class RegionSplitter {
       rowComparisonLength = lastRow.length();
     }
 
+    @Override
     public byte[] strToRow(String in) {
       return convertToByte(new BigInteger(in, radix));
     }
 
+    @Override
     public String rowToStr(byte[] row) {
       return Bytes.toStringBinary(row);
     }
 
+    @Override
     public String separator() {
       return " ";
     }
@@ -1130,6 +1139,7 @@ public class RegionSplitter {
     byte[] firstRowBytes = ArrayUtils.EMPTY_BYTE_ARRAY;
     byte[] lastRowBytes =
             new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
+    @Override
     public byte[] split(byte[] start, byte[] end) {
       return Bytes.split(start, end, 1)[1];
     }

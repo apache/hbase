@@ -20,10 +20,9 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -50,7 +49,7 @@ public class TableRecordReaderImpl {
   public static final String LOG_PER_ROW_COUNT
       = "hbase.mapreduce.log.scanner.rowcount";
 
-  private static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableRecordReaderImpl.class);
 
   // HBASE_COUNTER_GROUP_NAME is the name of mapreduce counter group for HBase
   @VisibleForTesting
@@ -254,7 +253,7 @@ public class TableRecordReaderImpl {
         long now = System.currentTimeMillis();
         LOG.info("Mapper took " + (now-timestamp)
           + "ms to process " + rowcount + " rows");
-        LOG.info(ioe);
+        LOG.info(ioe.toString(), ioe);
         String lastRow = lastSuccessfulRow == null ?
           "null" : Bytes.toStringBinary(lastSuccessfulRow);
         LOG.info("lastSuccessfulRow=" + lastRow);

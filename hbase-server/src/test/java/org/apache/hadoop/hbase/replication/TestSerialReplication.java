@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -61,10 +59,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestSerialReplication {
-  private static final Log LOG = LogFactory.getLog(TestSerialReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSerialReplication.class);
 
   private static Configuration conf1;
   private static Configuration conf2;

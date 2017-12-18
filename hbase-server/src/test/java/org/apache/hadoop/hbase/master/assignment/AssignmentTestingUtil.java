@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
@@ -31,11 +29,13 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class AssignmentTestingUtil {
-  private static final Log LOG = LogFactory.getLog(AssignmentTestingUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AssignmentTestingUtil.class);
 
   private AssignmentTestingUtil() {}
 

@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -50,6 +48,8 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -97,7 +97,7 @@ import com.google.protobuf.Service;
  */
 public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCoprocessor {
   private static final String NO_OF_VERSIONS_TO_DELETE = "noOfVersionsToDelete";
-  private static final Log LOG = LogFactory.getLog(BulkDeleteEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BulkDeleteEndpoint.class);
 
   private RegionCoprocessorEnvironment env;
 
@@ -167,7 +167,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
         }
       }
     } catch (IOException ioe) {
-      LOG.error(ioe);
+      LOG.error(ioe.toString(), ioe);
       // Call ServerRpcController#getFailedOn() to retrieve this IOException at client side.
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
@@ -175,7 +175,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
         try {
           scanner.close();
         } catch (IOException ioe) {
-          LOG.error(ioe);
+          LOG.error(ioe.toString(), ioe);
         }
       }
     }

@@ -25,6 +25,7 @@ import java.net.SocketTimeoutException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.concurrent.CompletableFuture;
@@ -35,8 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.CellComparatorImpl;
@@ -65,7 +64,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
  */
 @Category({ClientTests.class, SmallTests.class})
 public class TestClientNoCluster extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(TestClientNoCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientNoCluster.class);
   private Configuration conf;
   public static final ServerName META_SERVERNAME =
       ServerName.valueOf("meta.example.org", 16010, 12345);
@@ -234,7 +234,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     try {
       Result result = null;
       while ((result = scanner.next()) != null) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
       }
     } finally {
       scanner.close();
@@ -256,7 +256,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     try {
       Result result = null;
       while ((result = scanner.next()) != null) {
-        LOG.info(result);
+        LOG.info(Objects.toString(result));
       }
     } finally {
       scanner.close();

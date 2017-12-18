@@ -23,8 +23,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -32,13 +30,15 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test TestDynamicClassLoader
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestDynamicClassLoader {
-  private static final Log LOG = LogFactory.getLog(TestDynamicClassLoader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDynamicClassLoader.class);
 
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
   private Configuration conf;

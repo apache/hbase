@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -45,6 +43,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is only a base for other integration-level replication tests.
@@ -58,7 +58,7 @@ public class TestReplicationBase {
     ((Log4JLogger) ReplicationSource.LOG).getLogger().setLevel(Level.ALL);
   }*/
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationBase.class);
 
   protected static Configuration conf1 = HBaseConfiguration.create();
   protected static Configuration conf2;

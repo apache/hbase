@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Collections;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -50,12 +48,13 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 
 public class SyncTable extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(SyncTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SyncTable.class);
 
   static final String SOURCE_HASH_DIR_CONF_KEY = "sync.table.source.hash.dir";
   static final String SOURCE_TABLE_CONF_KEY = "sync.table.source.table.name";

@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +60,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -77,7 +77,7 @@ import static org.junit.Assert.assertTrue;
 public class TestRegionServerAbort {
   private static final byte[] FAMILY_BYTES = Bytes.toBytes("f");
 
-  private static final Log LOG = LogFactory.getLog(TestRegionServerAbort.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbort.class);
 
   private HBaseTestingUtility testUtil;
   private Configuration conf;

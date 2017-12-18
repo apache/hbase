@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
@@ -39,13 +37,15 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the reading and writing of access permissions to and from zookeeper.
  */
 @Category({SecurityTests.class, LargeTests.class})
 public class TestZKPermissionWatcher {
-  private static final Log LOG = LogFactory.getLog(TestZKPermissionWatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKPermissionWatcher.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableAuthManager AUTH_A;
   private static TableAuthManager AUTH_B;

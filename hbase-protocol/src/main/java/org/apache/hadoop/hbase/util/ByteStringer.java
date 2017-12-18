@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.HBaseZeroCopyByteString;
@@ -29,7 +29,7 @@ import com.google.protobuf.HBaseZeroCopyByteString;
  */
 @InterfaceAudience.Private
 public class ByteStringer {
-  private static final Log LOG = LogFactory.getLog(ByteStringer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ByteStringer.class);
 
   /**
    * Flag set at class loading time.

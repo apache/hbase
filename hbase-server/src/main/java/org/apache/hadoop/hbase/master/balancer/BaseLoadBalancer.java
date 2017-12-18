@@ -35,8 +35,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -53,6 +51,8 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
@@ -1004,7 +1004,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected Configuration config = HBaseConfiguration.create();
   protected RackManager rackManager;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
-  private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseLoadBalancer.class);
   protected MetricsBalancer metricsBalancer = null;
   protected ClusterStatus clusterStatus = null;
   protected ServerName masterServerName;

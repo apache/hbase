@@ -19,13 +19,14 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.D
 @InterfaceAudience.Private
 public class DisableTableProcedure
     extends AbstractStateMachineTableProcedure<DisableTableState> {
-  private static final Log LOG = LogFactory.getLog(DisableTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DisableTableProcedure.class);
 
   private TableName tableName;
   private boolean skipTableStateCheck;

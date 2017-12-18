@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +31,8 @@ import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NamespaceStateManager manages state (in terms of quota) of all the namespaces. It contains
@@ -41,7 +41,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class NamespaceStateManager {
 
-  private static final Log LOG = LogFactory.getLog(NamespaceStateManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NamespaceStateManager.class);
   private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
   private MasterServices master;
   private volatile boolean initialized = false;

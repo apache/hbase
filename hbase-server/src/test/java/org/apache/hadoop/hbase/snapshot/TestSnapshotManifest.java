@@ -21,8 +21,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,10 +41,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestSnapshotManifest {
-  private final Log LOG = LogFactory.getLog(getClass());
+  private final Logger LOG = LoggerFactory.getLogger(getClass());
 
   private static final String TABLE_NAME_STR = "testSnapshotManifest";
   private static final TableName TABLE_NAME = TableName.valueOf(TABLE_NAME_STR);

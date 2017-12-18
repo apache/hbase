@@ -34,8 +34,6 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,6 +41,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
@@ -76,7 +76,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
  */
 @InterfaceAudience.Private
 public class CoprocessorClassLoader extends ClassLoaderBase {
-  private static final Log LOG = LogFactory.getLog(CoprocessorClassLoader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorClassLoader.class);
 
   // A temporary place ${hbase.local.dir}/jars/tmp/ to store the local
   // copy of the jar file and the libraries contained in the jar.
@@ -108,7 +108,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     "org.xml",
     "sunw.",
     // logging
-    "org.apache.commons.logging",
+    "org.slf4j",
     "org.apache.log4j",
     "com.hadoop",
     // HBase:

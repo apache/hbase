@@ -34,8 +34,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,10 +50,12 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestChecksum {
-  private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
       NONE, GZ };

@@ -23,9 +23,9 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
@@ -41,7 +41,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class FileMmapEngine implements IOEngine {
-  static final Log LOG = LogFactory.getLog(FileMmapEngine.class);
+  static final Logger LOG = LoggerFactory.getLogger(FileMmapEngine.class);
 
   private final String path;
   private long size;

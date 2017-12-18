@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -46,7 +46,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class WALCoprocessorHost
     extends CoprocessorHost<WALCoprocessor, WALCoprocessorEnvironment> {
-  private static final Log LOG = LogFactory.getLog(WALCoprocessorHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALCoprocessorHost.class);
 
   /**
    * Encapsulation of the environment of each coprocessor

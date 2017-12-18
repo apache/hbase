@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -48,13 +46,15 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Service to support Region Server Grouping (HBase-6721).
  */
 @InterfaceAudience.Private
 public class RSGroupAdminServer implements RSGroupAdmin {
-  private static final Log LOG = LogFactory.getLog(RSGroupAdminServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RSGroupAdminServer.class);
 
   private MasterServices master;
   private final RSGroupInfoManager rsGroupInfoManager;

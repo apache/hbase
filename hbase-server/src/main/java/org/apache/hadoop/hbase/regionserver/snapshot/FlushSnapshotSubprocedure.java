@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class FlushSnapshotSubprocedure extends Subprocedure {
-  private static final Log LOG = LogFactory.getLog(FlushSnapshotSubprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushSnapshotSubprocedure.class);
 
   private final List<HRegion> regions;
   private final SnapshotDescription snapshot;

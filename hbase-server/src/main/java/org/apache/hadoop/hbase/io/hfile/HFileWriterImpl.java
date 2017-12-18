@@ -26,8 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,6 +40,8 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.CellComparatorImpl.MetaCellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -60,7 +60,7 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Private
 public class HFileWriterImpl implements HFile.Writer {
-  private static final Log LOG = LogFactory.getLog(HFileWriterImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileWriterImpl.class);
 
   private static final long UNSET = -1;
 

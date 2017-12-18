@@ -37,8 +37,6 @@ import java.util.OptionalInt;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
@@ -63,11 +61,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // Can't be small as it plays with EnvironmentEdgeManager
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestStoreScanner {
-  private static final Log LOG = LogFactory.getLog(TestStoreScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStoreScanner.class);
   @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
       withLookingForStuckThread(true).build();

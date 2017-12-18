@@ -19,12 +19,11 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -44,28 +43,30 @@ import org.apache.hadoop.mapred.Partitioner;
 @InterfaceAudience.Public
 public class HRegionPartitioner<K2,V2>
 implements Partitioner<ImmutableBytesWritable, V2> {
-  private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionPartitioner.class);
   // Connection and locator are not cleaned up; they just die when partitioner is done.
   private Connection connection;
   private RegionLocator locator;
   private byte[][] startKeys;
 
+  @Override
   public void configure(JobConf job) {
     try {
       this.connection = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
       TableName tableName = TableName.valueOf(job.get(TableOutputFormat.OUTPUT_TABLE));
       this.locator = this.connection.getRegionLocator(tableName);
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
 
     try {
       this.startKeys = this.locator.getStartKeys();
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
   }
 
+  @Override
   public int getPartition(ImmutableBytesWritable key, V2 value, int numPartitions) {
     byte[] region = null;
     // Only one region return 0
@@ -77,7 +78,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
       // here if a region splits while mapping
       region = locator.getRegionLocation(key.get()).getRegionInfo().getStartKey();
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
     for (int i = 0; i < this.startKeys.length; i++){
       if (Bytes.compareTo(region, this.startKeys[i]) == 0 ){

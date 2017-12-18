@@ -26,8 +26,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -40,6 +38,8 @@ import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper to synchronously wait on conditions.
@@ -50,7 +50,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class ProcedureSyncWait {
-  private static final Log LOG = LogFactory.getLog(ProcedureSyncWait.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureSyncWait.class);
 
   private ProcedureSyncWait() {}
 

@@ -23,8 +23,6 @@ import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +52,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A tool to replay WAL files as a M/R job.
@@ -67,7 +67,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class WALPlayer extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(WALPlayer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALPlayer.class);
   final static String NAME = "WALPlayer";
   public final static String BULK_OUTPUT_CONF_KEY = "wal.bulk.output";
   public final static String TABLES_KEY = "wal.input.tables";

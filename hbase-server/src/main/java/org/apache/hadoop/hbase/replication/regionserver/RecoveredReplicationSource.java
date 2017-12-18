@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,6 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 @InterfaceAudience.Private
 public class RecoveredReplicationSource extends ReplicationSource {
 
-  private static final Log LOG = LogFactory.getLog(RecoveredReplicationSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RecoveredReplicationSource.class);
 
   private String actualPeerId;
 

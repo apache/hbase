@@ -19,20 +19,20 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils.SnapshotMock;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
 @Category(SmallTests.class)
 public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
-  final Log LOG = LogFactory.getLog(getClass());
+  final Logger LOG = LoggerFactory.getLogger(getClass());
 
   @Override
   protected void setupConf(Configuration conf) {

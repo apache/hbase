@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -59,6 +57,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -68,7 +68,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorEndpoint {
-  private static final Log LOG = LogFactory.getLog(TestCoprocessorEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorEndpoint.class);
 
   private static final TableName TEST_TABLE =
       TableName.valueOf("TestCoprocessorEndpoint");

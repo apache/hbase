@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.mob;
 
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,10 +36,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
 public class TestCachedMobFile extends TestCase{
-  static final Log LOG = LogFactory.getLog(TestCachedMobFile.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestCachedMobFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf = TEST_UTIL.getConfiguration();
   private CacheConfig cacheConf = new CacheConfig(conf);

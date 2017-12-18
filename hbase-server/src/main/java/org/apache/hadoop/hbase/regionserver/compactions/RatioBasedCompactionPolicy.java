@@ -24,8 +24,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -35,6 +33,8 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The default algorithm for selecting files for compaction.
@@ -43,7 +43,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class RatioBasedCompactionPolicy extends SortedCompactionPolicy {
-  private static final Log LOG = LogFactory.getLog(RatioBasedCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RatioBasedCompactionPolicy.class);
 
   public RatioBasedCompactionPolicy(Configuration conf,
                                     StoreConfigInformation storeConfigInfo) {

@@ -27,8 +27,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -41,13 +39,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for the hostname specification by region server
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionServerHostname {
-  private static final Log LOG = LogFactory.getLog(TestRegionServerHostname.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerHostname.class);
 
   private HBaseTestingUtility TEST_UTIL;
 

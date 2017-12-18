@@ -25,13 +25,13 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -42,7 +42,7 @@ import org.apache.hadoop.io.serializer.Serializer;
 
 @InterfaceAudience.Public
 public class ResultSerialization extends Configured implements Serialization<Result> {
-  private static final Log LOG = LogFactory.getLog(ResultSerialization.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResultSerialization.class);
   // The following configuration property indicates import file format version.
   public static final String IMPORT_FORMAT_VER = "hbase.import.version";
 

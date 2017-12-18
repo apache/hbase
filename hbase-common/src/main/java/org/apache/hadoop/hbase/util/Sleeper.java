@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sleeper for current thread.
@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class Sleeper {
-  private static final Log LOG = LogFactory.getLog(Sleeper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Sleeper.class);
   private final int period;
   private final Stoppable stopper;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;

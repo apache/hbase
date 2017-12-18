@@ -21,11 +21,11 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -51,7 +51,7 @@ public class MemorySizeUtil {
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
 
-  private static final Log LOG = LogFactory.getLog(MemorySizeUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemorySizeUtil.class);
   // a constant to convert a fraction to a percentage
   private static final int CONVERT_TO_PERCENTAGE = 100;
 

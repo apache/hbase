@@ -26,8 +26,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -36,6 +34,8 @@ import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ThriftServer- this class starts up a Thrift server which implements the
@@ -45,7 +45,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ThriftServer {
 
-  private static final Log LOG = LogFactory.getLog(ThriftServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ThriftServer.class);
 
   private static final String MIN_WORKERS_OPTION = "minWorkers";
   private static final String MAX_WORKERS_OPTION = "workers";

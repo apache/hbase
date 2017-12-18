@@ -26,8 +26,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,6 +38,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the synchronization of token authentication master keys through
@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({SecurityTests.class, LargeTests.class})
 public class TestZKSecretWatcher {
-  private static final Log LOG = LogFactory.getLog(TestZKSecretWatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcher.class);
   private static HBaseTestingUtility TEST_UTIL;
   private static AuthenticationTokenSecretManager KEY_MASTER;
   private static AuthenticationTokenSecretManagerForTest KEY_SLAVE;

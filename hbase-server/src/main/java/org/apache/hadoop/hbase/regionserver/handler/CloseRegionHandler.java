@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -32,7 +30,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
@@ -45,7 +44,7 @@ public class CloseRegionHandler extends EventHandler {
   // after the user regions have closed.  What
   // about the case where master tells us to shutdown a catalog region and we
   // have a running queue of user regions to close?
-  private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CloseRegionHandler.class);
 
   private final RegionServerServices rsServices;
   private final RegionInfo regionInfo;

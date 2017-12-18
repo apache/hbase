@@ -36,8 +36,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,7 +52,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoop;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
@@ -64,7 +63,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChann
 @Category({ MiscTests.class, MediumTests.class })
 public class TestFanOutOneBlockAsyncDFSOutput {
 
-  private static final Log LOG = LogFactory.getLog(TestFanOutOneBlockAsyncDFSOutput.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
@@ -33,7 +31,8 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -42,7 +41,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class StripeStoreFlusher extends StoreFlusher {
-  private static final Log LOG = LogFactory.getLog(StripeStoreFlusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StripeStoreFlusher.class);
   private final Object flushLock = new Object();
   private final StripeCompactionPolicy policy;
   private final StripeCompactionPolicy.StripeInformationProvider stripes;

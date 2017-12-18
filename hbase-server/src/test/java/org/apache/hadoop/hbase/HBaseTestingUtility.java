@@ -55,8 +55,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -145,11 +143,14 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.log4j.LogManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.impl.Log4jLoggerAdapter;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -2600,9 +2601,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param clazz  The class for which to switch to debug logging.
    */
   public void enableDebug(Class<?> clazz) {
-    Log l = LogFactory.getLog(clazz);
+    Logger l = LoggerFactory.getLogger(clazz);
     if (l instanceof Log4JLogger) {
       ((Log4JLogger) l).getLogger().setLevel(org.apache.log4j.Level.DEBUG);
+    } else if (l instanceof Log4jLoggerAdapter) {
+      LogManager.getLogger(clazz).setLevel(org.apache.log4j.Level.DEBUG);
     } else if (l instanceof Jdk14Logger) {
       ((Jdk14Logger) l).getLogger().setLevel(java.util.logging.Level.ALL);
     }

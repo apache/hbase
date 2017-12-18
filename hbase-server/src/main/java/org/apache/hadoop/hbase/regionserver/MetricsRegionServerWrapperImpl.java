@@ -26,8 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -46,6 +44,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Impl for exposing HRegionServer Information through Hadoop's metrics 2 system.
@@ -54,7 +54,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class MetricsRegionServerWrapperImpl
     implements MetricsRegionServerWrapper {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionServerWrapperImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionServerWrapperImpl.class);
 
   private final HRegionServer regionServer;
   private final MetricsWALSource metricsWALSource;

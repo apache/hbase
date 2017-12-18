@@ -26,8 +26,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,13 +53,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestMaster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMaster.class);
   private static final TableName TABLENAME =
       TableName.valueOf("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");

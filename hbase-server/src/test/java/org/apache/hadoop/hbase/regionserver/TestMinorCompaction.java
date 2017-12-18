@@ -24,8 +24,6 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -45,6 +43,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test minor compactions
@@ -52,7 +52,7 @@ import org.junit.rules.TestName;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestMinorCompaction {
   @Rule public TestName name = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestMinorCompaction.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestMinorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   

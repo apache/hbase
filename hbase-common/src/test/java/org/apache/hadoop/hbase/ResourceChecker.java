@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to check the resources:
@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
  *  - check that they don't leak during the test
  */
 public class ResourceChecker {
-  private static final Log LOG = LogFactory.getLog(ResourceChecker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ResourceChecker.class);
   private String tagLine;
 
   enum Phase {

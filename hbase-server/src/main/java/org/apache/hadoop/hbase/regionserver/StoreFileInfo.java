@@ -25,14 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class StoreFileInfo {
-  private static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StoreFileInfo.class);
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded.

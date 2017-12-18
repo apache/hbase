@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -46,7 +44,8 @@ import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
@@ -67,7 +66,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements FavoredNodesPromoter {
-  private static final Log LOG = LogFactory.getLog(FavoredNodeLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FavoredNodeLoadBalancer.class);
 
   private RackManager rackManager;
   private Configuration conf;

@@ -34,8 +34,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -81,7 +79,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
@@ -116,7 +115,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 class RSGroupInfoManagerImpl implements RSGroupInfoManager {
-  private static final Log LOG = LogFactory.getLog(RSGroupInfoManagerImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RSGroupInfoManagerImpl.class);
 
   /** Table descriptor for <code>hbase:rsgroup</code> catalog table */
   private final static HTableDescriptor RSGROUP_TABLE_DESC;
@@ -624,7 +623,7 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * done asynchronously in this thread.
    */
   private class ServerEventsListenerThread extends Thread implements ServerListener {
-    private final Log LOG = LogFactory.getLog(ServerEventsListenerThread.class);
+    private final Logger LOG = LoggerFactory.getLogger(ServerEventsListenerThread.class);
     private boolean changed = false;
 
     ServerEventsListenerThread() {
@@ -738,7 +737,7 @@ class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   private class RSGroupStartupWorker extends Thread {
-    private final Log LOG = LogFactory.getLog(RSGroupStartupWorker.class);
+    private final Logger LOG = LoggerFactory.getLogger(RSGroupStartupWorker.class);
     private volatile boolean online = false;
 
     RSGroupStartupWorker() {

@@ -31,12 +31,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.IdLock;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 @InterfaceAudience.Private
 public class MobFileCache {
 
-  private static final Log LOG = LogFactory.getLog(MobFileCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MobFileCache.class);
 
   /*
    * Eviction and statistics thread. Periodically run to print the statistics and

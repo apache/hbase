@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A custom RegionSplitPolicy implementing a SplitPolicy that groups
@@ -32,8 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
-  private static final Log LOG = LogFactory
-      .getLog(KeyPrefixRegionSplitPolicy.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(KeyPrefixRegionSplitPolicy.class);
   @Deprecated
   public static final String PREFIX_LENGTH_KEY_DEPRECATED = "prefix_split_key_policy.prefix_length";
   public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";

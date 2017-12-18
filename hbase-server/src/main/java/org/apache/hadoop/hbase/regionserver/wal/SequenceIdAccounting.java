@@ -30,11 +30,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ImmutableByteArray;
 
@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.util.ImmutableByteArray;
 @InterfaceAudience.Private
 class SequenceIdAccounting {
 
-  private static final Log LOG = LogFactory.getLog(SequenceIdAccounting.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SequenceIdAccounting.class);
   /**
    * This lock ties all operations on {@link SequenceIdAccounting#flushingSequenceIds} and
    * {@link #lowestUnflushedSequenceIds} Maps. {@link #lowestUnflushedSequenceIds} has the

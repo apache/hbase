@@ -21,8 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Abortable;
@@ -36,6 +34,8 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of a file cleaner that checks if a hfile is still scheduled for replication before
@@ -43,7 +43,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
-  private static final Log LOG = LogFactory.getLog(ReplicationHFileCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationHFileCleaner.class);
   private ZKWatcher zkw;
   private ReplicationQueuesClient rqc;
   private boolean stopped = false;
@@ -192,9 +192,7 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
     @Override
     public void abort(String why, Throwable e) {
       LOG.warn("ReplicationHFileCleaner received abort, ignoring.  Reason: " + why);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(e);
-      }
+      LOG.debug(e.toString(), e);
     }
 
     @Override

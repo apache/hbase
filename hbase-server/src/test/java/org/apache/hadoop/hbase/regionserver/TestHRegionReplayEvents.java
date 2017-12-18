@@ -40,11 +40,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -78,7 +77,6 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.hadoop.util.StringUtils;
@@ -89,6 +87,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -109,7 +109,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 @Category(MediumTests.class)
 public class TestHRegionReplayEvents {
 
-  private static final Log LOG = LogFactory.getLog(TestHRegion.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
   @Rule public TestName name = new TestName();
 
   private static HBaseTestingUtility TEST_UTIL;
@@ -1208,15 +1208,13 @@ public class TestHRegionReplayEvents {
   @Test
   public void testWriteFlushRequestMarker() throws IOException {
     // primary region is empty at this point. Request a flush with writeFlushRequestWalMarker=false
-    FlushResultImpl result = (FlushResultImpl) ((HRegion) primaryRegion).flushcache(true, false,
-      FlushLifeCycleTracker.DUMMY);
+    FlushResultImpl result = primaryRegion.flushcache(true, false, FlushLifeCycleTracker.DUMMY);
     assertNotNull(result);
     assertEquals(result.result, FlushResultImpl.Result.CANNOT_FLUSH_MEMSTORE_EMPTY);
     assertFalse(result.wroteFlushWalMarker);
 
     // request flush again, but this time with writeFlushRequestWalMarker = true
-    result = (FlushResultImpl) ((HRegion) primaryRegion).flushcache(true, true,
-      FlushLifeCycleTracker.DUMMY);
+    result = primaryRegion.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
     assertNotNull(result);
     assertEquals(result.result, FlushResultImpl.Result.CANNOT_FLUSH_MEMSTORE_EMPTY);
     assertTrue(result.wroteFlushWalMarker);
@@ -1294,7 +1292,7 @@ public class TestHRegionReplayEvents {
     reader = createWALReaderForPrimary();
     while (true) {
       WAL.Entry entry = reader.next();
-      LOG.info(entry);
+      LOG.info(Objects.toString(entry));
       if (entry == null) {
         break;
       }

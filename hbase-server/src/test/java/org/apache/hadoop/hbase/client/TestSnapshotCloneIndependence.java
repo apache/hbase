@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.client;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,13 +49,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotCloneIndependence {
-  private static final Log LOG = LogFactory.getLog(TestSnapshotCloneIndependence.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCloneIndependence.class);
 
   @ClassRule
   public static final TestRule timeout =

@@ -21,11 +21,11 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -67,8 +67,8 @@ import org.apache.hadoop.hbase.security.User;
 //to figure out whether it is a meta region or not.
 @InterfaceAudience.Private
 public class AnnotationReadingPriorityFunction implements PriorityFunction {
-  private static final Log LOG =
-    LogFactory.getLog(AnnotationReadingPriorityFunction.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(AnnotationReadingPriorityFunction.class.getName());
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */
   public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";

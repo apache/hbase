@@ -31,9 +31,9 @@ import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQueue;
 import org.apache.commons.collections4.map.LinkedMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Ints;
 @InterfaceAudience.Private
 @JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
-  private static final Log LOG = LogFactory.getLog(BucketAllocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BucketAllocator.class);
 
   @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
   public final static class Bucket {

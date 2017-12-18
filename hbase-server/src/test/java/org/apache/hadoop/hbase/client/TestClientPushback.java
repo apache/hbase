@@ -24,8 +24,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
@@ -43,6 +41,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
@@ -56,7 +56,7 @@ import static org.junit.Assert.assertTrue;
 @Category(MediumTests.class)
 public class TestClientPushback {
 
-  private static final Log LOG = LogFactory.getLog(TestClientPushback.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientPushback.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName tableName = TableName.valueOf("client-pushback");

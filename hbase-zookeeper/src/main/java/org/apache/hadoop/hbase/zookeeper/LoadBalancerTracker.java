@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LoadBalancerProtos;
@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LoadBalancerProtos;
  */
 @InterfaceAudience.Private
 public class LoadBalancerTracker extends ZKNodeTracker {
-  private static final Log LOG = LogFactory.getLog(LoadBalancerTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LoadBalancerTracker.class);
 
   public LoadBalancerTracker(ZKWatcher watcher,
       Abortable abortable) {

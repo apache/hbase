@@ -23,9 +23,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -37,7 +37,7 @@ import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     implements MetricsRegionAggregateSource {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionAggregateSourceImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionAggregateSourceImpl.class);
 
   private final MetricsExecutorImpl executor = new MetricsExecutorImpl();
 

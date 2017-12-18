@@ -27,8 +27,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -63,6 +61,8 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests {@link HFile} cache-on-write functionality for data blocks, non-root
@@ -72,7 +72,7 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestCacheOnWriteInSchema {
 
-  private static final Log LOG = LogFactory.getLog(TestCacheOnWriteInSchema.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
   @Rule public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();

@@ -24,12 +24,12 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -193,7 +193,7 @@ public abstract class AbstractMemStore implements MemStore {
     return conf;
   }
 
-  protected void dump(Log log) {
+  protected void dump(Logger log) {
     active.dump(log);
     snapshot.dump(log);
   }

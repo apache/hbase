@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.util.IdLock;
  */
 @InterfaceAudience.Private
 public class RegionGroupingProvider implements WALProvider {
-  private static final Log LOG = LogFactory.getLog(RegionGroupingProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionGroupingProvider.class);
 
   /**
    * Map identifiers to a group number.

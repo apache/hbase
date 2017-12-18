@@ -29,8 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -62,7 +60,8 @@ import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -71,8 +70,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 @InterfaceAudience.Private
 public class Replication implements
   ReplicationSourceService, ReplicationSinkService, WALActionsListener {
-  private static final Log LOG =
-      LogFactory.getLog(Replication.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Replication.class);
   private boolean replicationForBulkLoadData;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueues replicationQueues;

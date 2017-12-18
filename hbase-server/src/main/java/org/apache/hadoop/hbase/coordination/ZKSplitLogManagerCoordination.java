@@ -29,8 +29,6 @@ import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,6 +36,7 @@ import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination.TaskFinisher.Status;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
@@ -57,7 +56,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -72,7 +72,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   public static final int DEFAULT_ZK_RETRIES = 3;
   public static final int DEFAULT_MAX_RESUBMIT = 3;
 
-  private static final Log LOG = LogFactory.getLog(SplitLogManagerCoordination.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SplitLogManagerCoordination.class);
 
   private final TaskFinisher taskFinisher;
   private final Configuration conf;
@@ -301,7 +301,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   }
 
   private void createRescanFailure() {
-    LOG.fatal("logic failure, rescan failure must not happen");
+    LOG.error(HBaseMarkers.FATAL, "logic failure, rescan failure must not happen");
   }
 
   /**
@@ -353,7 +353,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
         return;
       }
       SplitLogCounters.tot_mgr_null_data.increment();
-      LOG.fatal("logic error - got null data " + path);
+      LOG.error(HBaseMarkers.FATAL, "logic error - got null data " + path);
       setDone(path, FAILURE);
       return;
     }
@@ -382,8 +382,8 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       LOG.info("task " + path + " entered state: " + slt.toString());
       resubmitOrFail(path, CHECK);
     } else {
-      LOG.fatal("logic error - unexpected zk state for path = " + path + " data = "
-          + slt.toString());
+      LOG.error(HBaseMarkers.FATAL, "logic error - unexpected zk state for path = "
+          + path + " data = " + slt.toString());
       setDone(path, FAILURE);
     }
   }
@@ -573,7 +573,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
    * Asynchronous handler for zk create node results. Retries on failures.
    */
   public class CreateAsyncCallback implements AsyncCallback.StringCallback {
-    private final Log LOG = LogFactory.getLog(CreateAsyncCallback.class);
+    private final Logger LOG = LoggerFactory.getLogger(CreateAsyncCallback.class);
 
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {
@@ -614,7 +614,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
    * Asynchronous handler for zk get-data-set-watch on node results. Retries on failures.
    */
   public class GetDataAsyncCallback implements AsyncCallback.DataCallback {
-    private final Log LOG = LogFactory.getLog(GetDataAsyncCallback.class);
+    private final Logger LOG = LoggerFactory.getLogger(GetDataAsyncCallback.class);
 
     @Override
     public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
@@ -662,7 +662,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
    * Asynchronous handler for zk delete node results. Retries on failures.
    */
   public class DeleteAsyncCallback implements AsyncCallback.VoidCallback {
-    private final Log LOG = LogFactory.getLog(DeleteAsyncCallback.class);
+    private final Logger LOG = LoggerFactory.getLogger(DeleteAsyncCallback.class);
 
     @Override
     public void processResult(int rc, String path, Object ctx) {
@@ -704,7 +704,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
    * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}s to rescan for new tasks.
    */
   public class CreateRescanAsyncCallback implements AsyncCallback.StringCallback {
-    private final Log LOG = LogFactory.getLog(CreateRescanAsyncCallback.class);
+    private final Logger LOG = LoggerFactory.getLogger(CreateRescanAsyncCallback.class);
 
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {

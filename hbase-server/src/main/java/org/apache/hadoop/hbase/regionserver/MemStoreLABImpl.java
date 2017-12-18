@@ -28,14 +28,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 /**
@@ -66,7 +65,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class MemStoreLABImpl implements MemStoreLAB {
 
-  static final Log LOG = LogFactory.getLog(MemStoreLABImpl.class);
+  static final Logger LOG = LoggerFactory.getLogger(MemStoreLABImpl.class);
 
   private AtomicReference<Chunk> curChunk = new AtomicReference<>();
   // Lock to manage multiple handlers requesting for a chunk

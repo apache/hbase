@@ -32,10 +32,10 @@ import java.nio.ByteBuffer;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.io.WritableUtils;
@@ -52,7 +52,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceAudience.Private
 public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
 
-  private static final Log LOG = LogFactory.getLog(HBaseSaslRpcClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseSaslRpcClient.class);
   private boolean cryptoAesEnable;
   private CryptoAES cryptoAES;
   private InputStream saslInputStream;

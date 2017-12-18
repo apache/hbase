@@ -28,13 +28,13 @@ import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class EncryptionUtil {
-  static private final Log LOG = LogFactory.getLog(EncryptionUtil.class);
+  static private final Logger LOG = LoggerFactory.getLogger(EncryptionUtil.class);
 
   static private final SecureRandom RNG = new SecureRandom();
 

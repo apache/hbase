@@ -22,11 +22,11 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class CacheConfig {
-  private static final Log LOG = LogFactory.getLog(CacheConfig.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class.getName());
 
 
   /**

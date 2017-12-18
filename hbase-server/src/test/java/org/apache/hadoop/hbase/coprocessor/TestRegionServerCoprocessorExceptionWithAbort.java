@@ -23,8 +23,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -43,6 +41,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on a regionserver..
@@ -52,7 +52,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestRegionServerCoprocessorExceptionWithAbort {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
     TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");

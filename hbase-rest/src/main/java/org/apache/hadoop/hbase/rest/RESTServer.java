@@ -32,13 +32,12 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
@@ -68,6 +67,8 @@ import org.eclipse.jetty.servlet.FilterHolder;
 
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
 
@@ -82,7 +83,7 @@ import javax.servlet.DispatcherType;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class RESTServer implements Constants {
-  static Log LOG = LogFactory.getLog("RESTServer");
+  static Logger LOG = LoggerFactory.getLogger("RESTServer");
 
   static String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
   static boolean REST_CSRF_ENABLED_DEFAULT = false;
@@ -358,7 +359,7 @@ public class RESTServer implements Constants {
       server.start();
       server.join();
     } catch (Exception e) {
-      LOG.fatal("Failed to start server", e);
+      LOG.error(HBaseMarkers.FATAL, "Failed to start server", e);
       System.exit(1);
     }
     LOG.info("***** STOPPING service '" + RESTServer.class.getSimpleName() + "' *****");

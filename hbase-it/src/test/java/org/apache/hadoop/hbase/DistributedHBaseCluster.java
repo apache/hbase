@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -422,7 +423,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       LOG.warn("Restoring cluster - restoring region servers reported "
               + deferred.size() + " errors:");
       for (int i=0; i<deferred.size() && i < 3; i++) {
-        LOG.warn(deferred.get(i));
+        LOG.warn(Objects.toString(deferred.get(i)));
       }
     }
 
@@ -489,7 +490,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
       LOG.warn("Restoring cluster - restoring region servers reported "
               + deferred.size() + " errors:");
       for (int i=0; i<deferred.size() && i < 3; i++) {
-        LOG.warn(deferred.get(i));
+        LOG.warn(Objects.toString(deferred.get(i)));
       }
     }
 

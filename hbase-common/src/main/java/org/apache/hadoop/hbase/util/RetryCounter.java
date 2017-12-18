@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RetryCounter {
@@ -127,7 +127,7 @@ public class RetryCounter {
     }
   }
 
-  private static final Log LOG = LogFactory.getLog(RetryCounter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RetryCounter.class);
 
   private RetryConfig retryConfig;
   private int attempts;

@@ -24,8 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +32,8 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Scanner which performs a scan over snapshot files. Using this class requires copying the
@@ -65,7 +65,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class TableSnapshotScanner extends AbstractClientScanner {
 
-  private static final Log LOG = LogFactory.getLog(TableSnapshotScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotScanner.class);
 
   private Configuration conf;
   private String snapshotName;

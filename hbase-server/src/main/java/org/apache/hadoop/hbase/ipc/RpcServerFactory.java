@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 @InterfaceAudience.Private
 public class RpcServerFactory {
 
-  public static final Log LOG = LogFactory.getLog(RpcServerFactory.class);
+  public static final Logger LOG = LoggerFactory.getLogger(RpcServerFactory.class);
 
   public static final String CUSTOM_RPC_SERVER_IMPL_CONF_KEY = "hbase.rpc.server.impl";
 

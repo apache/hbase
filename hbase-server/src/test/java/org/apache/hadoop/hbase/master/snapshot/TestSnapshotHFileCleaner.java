@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +44,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test that the snapshot hfile cleaner finds hfiles referenced in a snapshot
@@ -53,7 +53,7 @@ import org.junit.rules.TestName;
 @Category({MasterTests.class, SmallTests.class})
 public class TestSnapshotHFileCleaner {
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotFileCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String TABLE_NAME_STR = "testSnapshotManifest";
   private static final String SNAPSHOT_NAME_STR = "testSnapshotManifest-snapshot";

@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,6 +56,8 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This testing base class creates a minicluster and testing table table
@@ -74,8 +74,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, LargeTests.class})
 public class OfflineMetaRebuildTestCore {
-  private final static Log LOG = LogFactory
-      .getLog(OfflineMetaRebuildTestCore.class);
+  private final static Logger LOG = LoggerFactory
+      .getLogger(OfflineMetaRebuildTestCore.class);
   protected HBaseTestingUtility TEST_UTIL;
   protected Configuration conf;
   private final static byte[] FAM = Bytes.toBytes("fam");

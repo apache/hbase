@@ -40,8 +40,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -74,11 +72,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService {
-
-  private static final Log LOG = LogFactory.getLog(DefaultVisibilityLabelServiceImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultVisibilityLabelServiceImpl.class);
 
   // "system" label is having an ordinal value 1.
   private static final int SYSTEM_LABEL_ORDINAL = 1;
@@ -507,7 +507,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         authLabels = (authLabels == null) ? new ArrayList<>() : authLabels;
         authorizations = new Authorizations(authLabels);
       } catch (Throwable t) {
-        LOG.error(t);
+        LOG.error(t.toString(), t);
         throw new IOException(t);
       }
     }

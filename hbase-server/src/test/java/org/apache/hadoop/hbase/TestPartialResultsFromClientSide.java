@@ -30,8 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.ClientScanner;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,6 +54,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * These tests are focused on testing how partial results appear to a client. Partial results are
@@ -69,7 +69,7 @@ import org.junit.rules.TestName;
  */
 @Category(MediumTests.class)
 public class TestPartialResultsFromClientSide {
-  private static final Log LOG = LogFactory.getLog(TestPartialResultsFromClientSide.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestPartialResultsFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int MINICLUSTER_SIZE = 5;

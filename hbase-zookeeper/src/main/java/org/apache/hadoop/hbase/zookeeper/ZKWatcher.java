@@ -27,8 +27,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -44,6 +42,8 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -58,7 +58,7 @@ import org.apache.zookeeper.data.Stat;
  */
 @InterfaceAudience.Private
 public class ZKWatcher implements Watcher, Abortable, Closeable {
-  private static final Log LOG = LogFactory.getLog(ZKWatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKWatcher.class);
 
   // Identifier for this watcher (for logging only).  It is made of the prefix
   // passed on construction and the zookeeper sessionid.

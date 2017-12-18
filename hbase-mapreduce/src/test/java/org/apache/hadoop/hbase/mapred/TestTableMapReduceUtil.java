@@ -28,8 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -53,15 +51,16 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableSet;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestTableMapReduceUtil {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestTableMapReduceUtil.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestTableMapReduceUtil.class);
 
   private static Table presidentsTable;
   private static final String TABLE_NAME = "People";

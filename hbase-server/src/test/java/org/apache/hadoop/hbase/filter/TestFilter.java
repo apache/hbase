@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -63,13 +61,15 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test filters at the HRegion doorstep.
  */
 @Category({FilterTests.class, SmallTests.class})
 public class TestFilter {
-  private final static Log LOG = LogFactory.getLog(TestFilter.class);
+  private final static Logger LOG = LoggerFactory.getLogger(TestFilter.class);
   private HRegion region;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

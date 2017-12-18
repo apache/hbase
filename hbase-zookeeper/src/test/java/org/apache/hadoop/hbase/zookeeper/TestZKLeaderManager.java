@@ -25,13 +25,12 @@ import static org.junit.Assert.fail;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -39,10 +38,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZKLeaderManager {
-  private static final Log LOG = LogFactory.getLog(TestZKLeaderManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKLeaderManager.class);
 
   private static final String LEADER_ZNODE =
       "/test/" + TestZKLeaderManager.class.getSimpleName();
@@ -53,7 +54,7 @@ public class TestZKLeaderManager {
     @Override
     public void abort(String why, Throwable e) {
       aborted = true;
-      LOG.fatal("Aborting during test: "+why, e);
+      LOG.error(HBaseMarkers.FATAL, "Aborting during test: "+why, e);
       fail("Aborted during test: " + why);
     }
 
@@ -91,6 +92,7 @@ public class TestZKLeaderManager {
       return watcher;
     }
 
+    @Override
     public void run() {
       while (!stopped) {
         zkLeader.start();

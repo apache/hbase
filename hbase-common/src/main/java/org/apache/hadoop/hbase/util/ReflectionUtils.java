@@ -29,9 +29,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import org.apache.commons.logging.Log;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 @InterfaceAudience.Private
 public class ReflectionUtils {
@@ -111,7 +112,7 @@ public class ReflectionUtils {
    * @param title a descriptive title for the call stacks
    * @param minInterval the minimum time from the last
    */
-  public static void logThreadInfo(Log log,
+  public static void logThreadInfo(Logger log,
                                    String title,
                                    long minInterval) {
     boolean dumpStack = false;

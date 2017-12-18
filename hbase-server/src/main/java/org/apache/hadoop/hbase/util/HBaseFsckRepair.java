@@ -24,8 +24,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
@@ -46,6 +44,8 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class contains helper methods that repair parts of hbase's filesystem
@@ -53,7 +53,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class HBaseFsckRepair {
-  private static final Log LOG = LogFactory.getLog(HBaseFsckRepair.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HBaseFsckRepair.class);
 
   /**
    * Fix multiple assignment by doing silent closes on each RS hosting the region

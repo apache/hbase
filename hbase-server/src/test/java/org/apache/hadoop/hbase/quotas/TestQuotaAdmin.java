@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.hbase.quotas;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -44,7 +43,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 
 import static org.junit.Assert.assertEquals;
@@ -57,7 +57,7 @@ import static org.junit.Assert.fail;
  */
 @Category({ClientTests.class, MediumTests.class})
 public class TestQuotaAdmin {
-  private static final Log LOG = LogFactory.getLog(TestQuotaAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestQuotaAdmin.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -148,7 +148,7 @@ public class TestQuotaAdmin {
       int countThrottle = 0;
       int countGlobalBypass = 0;
       for (QuotaSettings settings: scanner) {
-        LOG.debug(settings);
+        LOG.debug(Objects.toString(settings));
         switch (settings.getQuotaType()) {
           case THROTTLE:
             ThrottleSettings throttle = (ThrottleSettings)settings;
@@ -419,7 +419,7 @@ public class TestQuotaAdmin {
     try {
       int count = 0;
       for (QuotaSettings settings: scanner) {
-        LOG.debug(settings);
+        LOG.debug(Objects.toString(settings));
         count++;
       }
       return count;

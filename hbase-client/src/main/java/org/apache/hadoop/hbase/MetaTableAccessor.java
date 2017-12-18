@@ -34,8 +34,6 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.client.Connection;
@@ -71,7 +69,8 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -142,8 +141,8 @@ public class MetaTableAccessor {
    *                             separated by ","
    */
 
-  private static final Log LOG = LogFactory.getLog(MetaTableAccessor.class);
-  private static final Log METALOG = LogFactory.getLog("org.apache.hadoop.hbase.META");
+  private static final Logger LOG = LoggerFactory.getLogger(MetaTableAccessor.class);
+  private static final Logger METALOG = LoggerFactory.getLogger("org.apache.hadoop.hbase.META");
 
   // Save its daughter/parent region(s) when split/merge
   private static final byte[] daughterNameCq = Bytes.toBytes("_DAUGHTER_");

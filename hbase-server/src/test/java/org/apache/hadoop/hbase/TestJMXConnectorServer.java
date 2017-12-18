@@ -24,8 +24,6 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.naming.ServiceUnavailableException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -41,13 +39,15 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test case for JMX Connector Server.
  */
 @Category({ MiscTests.class, MediumTests.class })
 public class TestJMXConnectorServer {
-  private static final Log LOG = LogFactory.getLog(TestJMXConnectorServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static Configuration conf = null;

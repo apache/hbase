@@ -26,8 +26,6 @@ import static org.junit.Assert.assertFalse;
 import java.io.IOException;
 import java.net.ConnectException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -53,7 +51,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
@@ -62,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMetaTableLocator {
-  private static final Log LOG = LogFactory.getLog(TestMetaTableLocator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final ServerName SN =
       ServerName.valueOf("example.org", 1234, System.currentTimeMillis());

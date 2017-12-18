@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -38,6 +36,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -52,7 +52,8 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   public static Object[] data() {
     return new Object[] { "CHUNK_MAP", "ARRAY_MAP" }; // test different immutable indexes
   }
-  private static final Log LOG = LogFactory.getLog(TestCompactingToCellFlatMapMemStore.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCompactingToCellFlatMapMemStore.class);
   public final boolean toCellChunkMap;
   Configuration conf;
   //////////////////////////////////////////////////////////////////////////////
@@ -87,6 +88,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   //////////////////////////////////////////////////////////////////////////////
   // Compaction tests
   //////////////////////////////////////////////////////////////////////////////
+  @Override
   public void testCompaction1Bucket() throws IOException {
     int counter = 0;
     String[] keys1 = { "A", "A", "B", "C" }; //A1, A2, B3, C4
@@ -134,6 +136,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     memstore.clearSnapshot(snapshot.getId());
   }
 
+  @Override
   public void testCompaction2Buckets() throws IOException {
     if (toCellChunkMap) {
       // set memstore to flat into CellChunkMap
@@ -195,6 +198,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     memstore.clearSnapshot(snapshot.getId());
   }
 
+  @Override
   public void testCompaction3Buckets() throws IOException {
     if (toCellChunkMap) {
       // set memstore to flat into CellChunkMap
@@ -572,6 +576,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     assertTrue(chunkCreator.getPoolSize() > 0);
   }
 
+  @Override
   @Test
   public void testPuttingBackChunksAfterFlushing() throws IOException {
     byte[] row = Bytes.toBytes("testrow");

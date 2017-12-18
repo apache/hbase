@@ -44,8 +44,6 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -111,12 +109,14 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test replay of edits out of a WAL split.
  */
 public abstract class AbstractTestWALReplay {
-  private static final Log LOG = LogFactory.getLog(AbstractTestWALReplay.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestWALReplay.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path hbaseRootDir = null;

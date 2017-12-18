@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.regionserver.handler;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
  */
 @InterfaceAudience.Private
 public class WALSplitterHandler extends EventHandler {
-  private static final Log LOG = LogFactory.getLog(WALSplitterHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALSplitterHandler.class);
   private final ServerName serverName;
   private final CancelableProgressable reporter;
   private final AtomicInteger inProgressTasks;

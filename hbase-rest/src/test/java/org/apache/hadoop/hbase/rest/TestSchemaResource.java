@@ -26,8 +26,6 @@ import java.util.Collection;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
@@ -55,11 +53,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestSchemaResource {
-  private static final Log LOG = LogFactory.getLog(TestSchemaResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSchemaResource.class);
 
   private static String TABLE1 = "TestSchemaResource1";
   private static String TABLE2 = "TestSchemaResource2";

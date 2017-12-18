@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Monitor the actual tables for which HFiles are archived for long-term retention (always kept
@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
  * It is internally synchronized to ensure consistent view of the table state.
  */
 public class HFileArchiveTableMonitor {
-  private static final Log LOG = LogFactory.getLog(HFileArchiveTableMonitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileArchiveTableMonitor.class);
   private final Set<String> archivedTables = new TreeSet<>();
 
   /**

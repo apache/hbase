@@ -22,8 +22,6 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import com.codahale.metrics.Histogram;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
@@ -40,6 +38,8 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -59,7 +59,7 @@ import static org.junit.Assert.assertTrue;
 @Category(IntegrationTests.class)
 public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
-  private static final Log LOG = LogFactory.getLog(IntegrationTestRegionReplicaPerf.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestRegionReplicaPerf.class);
 
   private static final String SLEEP_TIME_KEY = "sleeptime";
   // short default interval because tests don't run very long.

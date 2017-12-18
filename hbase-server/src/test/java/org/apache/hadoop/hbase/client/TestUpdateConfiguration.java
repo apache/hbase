@@ -26,8 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
@@ -35,10 +33,12 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class})
 public class TestUpdateConfiguration {
-  private static final Log LOG = LogFactory.getLog(TestUpdateConfiguration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestUpdateConfiguration.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   
   @BeforeClass

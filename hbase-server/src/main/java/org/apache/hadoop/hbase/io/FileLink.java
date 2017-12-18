@@ -26,9 +26,9 @@ import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -92,7 +92,7 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 @InterfaceAudience.Private
 public class FileLink {
-  private static final Log LOG = LogFactory.getLog(FileLink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileLink.class);
 
   /** Define the Back-reference directory name prefix: .links-&lt;hfile&gt;/ */
   public static final String BACK_REFERENCES_DIRECTORY_PREFIX = ".links-";

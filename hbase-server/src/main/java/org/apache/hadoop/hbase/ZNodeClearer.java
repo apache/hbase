@@ -26,8 +26,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -35,6 +33,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>Contains a set of methods for the collaboration between the start/stop scripts and the
@@ -49,7 +49,7 @@ import org.apache.zookeeper.KeeperException;
  * check its content to make sure that the backup server is not now in charge.</p>
  */
 public class ZNodeClearer {
-  private static final Log LOG = LogFactory.getLog(ZNodeClearer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZNodeClearer.class);
 
   private ZNodeClearer() {}
 

@@ -24,8 +24,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,6 +37,8 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Master observer for restricting coprocessor assignments.
@@ -49,8 +49,8 @@ public class CoprocessorWhitelistMasterObserver implements MasterCoprocessor, Ma
   public static final String CP_COPROCESSOR_WHITELIST_PATHS_KEY =
       "hbase.coprocessor.region.whitelist.paths";
 
-  private static final Log LOG = LogFactory
-      .getLog(CoprocessorWhitelistMasterObserver.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(CoprocessorWhitelistMasterObserver.class);
 
   @Override
   public Optional<MasterObserver> getMasterObserver() {

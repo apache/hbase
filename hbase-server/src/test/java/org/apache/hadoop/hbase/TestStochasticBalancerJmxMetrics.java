@@ -36,8 +36,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -54,12 +52,14 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, MediumTests.class })
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Ignore
 public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
-  private static final Log LOG = LogFactory.getLog(TestStochasticBalancerJmxMetrics.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStochasticBalancerJmxMetrics.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static int connectorPort = 61120;
   private static StochasticLoadBalancer loadBalancer;

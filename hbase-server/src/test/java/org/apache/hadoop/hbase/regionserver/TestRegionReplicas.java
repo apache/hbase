@@ -30,8 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,7 +55,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -68,7 +67,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionReplicas {
-  private static final Log LOG = LogFactory.getLog(TestRegionReplicas.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicas.class);
 
   private static final int NB_SERVERS = 1;
   private static Table table;
@@ -251,7 +250,7 @@ public class TestRegionReplicas {
       LOG.info("Flushing primary region");
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
-      HRegion primaryRegion = (HRegion) region;
+      HRegion primaryRegion = region;
 
       // ensure that chore is run
       LOG.info("Sleeping for " + (4 * refreshPeriod));
@@ -347,7 +346,7 @@ public class TestRegionReplicas {
               if (key == endKey) key = startKey;
             }
           } catch (Exception ex) {
-            LOG.warn(ex);
+            LOG.warn(ex.toString(), ex);
             exceptions[0].compareAndSet(null, ex);
           }
         }
@@ -367,7 +366,7 @@ public class TestRegionReplicas {
               }
             }
           } catch (Exception ex) {
-            LOG.warn(ex);
+            LOG.warn(ex.toString(), ex);
             exceptions[1].compareAndSet(null, ex);
           }
         }
@@ -477,7 +476,7 @@ public class TestRegionReplicas {
       int sum = 0;
       for (HStoreFile sf : ((HStore) secondaryRegion.getStore(f)).getStorefiles()) {
         // Our file does not exist anymore. was moved by the compaction above.
-        LOG.debug(getRS().getFileSystem().exists(sf.getPath()));
+        LOG.debug(Boolean.toString(getRS().getFileSystem().exists(sf.getPath())));
         Assert.assertFalse(getRS().getFileSystem().exists(sf.getPath()));
 
         HFileScanner scanner = sf.getReader().getScanner(false, false);

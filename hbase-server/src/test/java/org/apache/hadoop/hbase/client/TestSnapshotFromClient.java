@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,6 +54,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test create/using/deleting snapshots from the client
@@ -64,7 +64,7 @@ import org.junit.rules.TestName;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestSnapshotFromClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromClient.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final int NUM_RS = 2;

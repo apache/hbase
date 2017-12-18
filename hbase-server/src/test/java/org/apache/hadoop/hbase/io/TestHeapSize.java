@@ -40,8 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -70,6 +68,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
@@ -77,7 +77,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestHeapSize  {
-  private static final Log LOG = LogFactory.getLog(TestHeapSize.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHeapSize.class);
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, Put, WALKey

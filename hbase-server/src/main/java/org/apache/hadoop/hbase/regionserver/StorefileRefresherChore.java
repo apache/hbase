@@ -23,11 +23,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class StorefileRefresherChore extends ScheduledChore {
 
-  private static final Log LOG = LogFactory.getLog(StorefileRefresherChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StorefileRefresherChore.class);
 
   /**
    * The period (in milliseconds) for refreshing the store files for the secondary regions.

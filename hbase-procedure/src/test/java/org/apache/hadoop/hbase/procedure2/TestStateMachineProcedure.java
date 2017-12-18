@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -35,13 +33,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestStateMachineProcedure {
-  private static final Log LOG = LogFactory.getLog(TestStateMachineProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestStateMachineProcedure.class);
 
   private static final Exception TEST_FAILURE_EXCEPTION = new Exception("test failure") {
     @Override

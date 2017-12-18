@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
@@ -54,6 +53,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ZooKeeper based implementation of {@link SplitLogWorkerCoordination}
@@ -64,7 +65,7 @@ import org.apache.zookeeper.data.Stat;
 public class ZkSplitLogWorkerCoordination extends ZKListener implements
     SplitLogWorkerCoordination {
 
-  private static final Log LOG = LogFactory.getLog(ZkSplitLogWorkerCoordination.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZkSplitLogWorkerCoordination.class);
 
   private static final int checkInterval = 5000; // 5 seconds
   private static final int FAILED_TO_OWN_TASK = -1;
@@ -539,7 +540,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
    * Asynchronous handler for zk get-data-set-watch on node results.
    */
   class GetDataAsyncCallback implements AsyncCallback.DataCallback {
-    private final Log LOG = LogFactory.getLog(GetDataAsyncCallback.class);
+    private final Logger LOG = LoggerFactory.getLogger(GetDataAsyncCallback.class);
 
     @Override
     public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
@@ -580,7 +581,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
       LOG.warn("transisition task " + task + " to " + slt + " failed because of version mismatch",
         bve);
     } catch (KeeperException.NoNodeException e) {
-      LOG.fatal(
+      LOG.error(HBaseMarkers.FATAL,
         "logic error - end task " + task + " " + slt + " failed because task doesn't exist", e);
     } catch (KeeperException e) {
       LOG.warn("failed to end task, " + task + " " + slt, e);

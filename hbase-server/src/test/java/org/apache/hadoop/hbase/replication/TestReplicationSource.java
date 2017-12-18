@@ -29,8 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,13 +59,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationSource {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestReplicationSource.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestReplicationSource.class);
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
   private final static HBaseTestingUtility TEST_UTIL_PEER =

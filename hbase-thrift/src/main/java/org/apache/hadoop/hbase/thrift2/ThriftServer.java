@@ -44,8 +44,6 @@ import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -86,7 +84,8 @@ import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.apache.thrift.transport.TTransportFactory;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -96,7 +95,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class ThriftServer extends Configured implements Tool {
-  private static final Log log = LogFactory.getLog(ThriftServer.class);
+  private static final Logger log = LoggerFactory.getLogger(ThriftServer.class);
 
   /**
    * Thrift quality of protection configuration key. Valid values can be:

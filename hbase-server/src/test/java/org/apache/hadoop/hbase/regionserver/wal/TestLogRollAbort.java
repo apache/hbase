@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -58,6 +57,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for conditions that should trigger RegionServer aborts when
@@ -65,7 +66,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestLogRollAbort {
-  private static final Log LOG = LogFactory.getLog(AbstractTestLogRolling.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
   private static MiniDFSCluster dfsCluster;
   private static Admin admin;
   private static MiniHBaseCluster cluster;
@@ -164,7 +165,7 @@ public class TestLogRollAbort {
         // not reliable now that sync plays a roll in wall rolling.  The above puts also now call
         // sync.
       } catch (Throwable t) {
-        LOG.fatal("FAILED TEST: Got wrong exception", t);
+        LOG.error(HBaseMarkers.FATAL, "FAILED TEST: Got wrong exception", t);
       }
     } finally {
       table.close();

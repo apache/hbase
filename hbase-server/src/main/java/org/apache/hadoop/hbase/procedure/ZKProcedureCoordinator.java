@@ -22,8 +22,6 @@ import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -31,13 +29,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ZooKeeper based {@link ProcedureCoordinatorRpcs} for a {@link ProcedureCoordinator}
  */
 @InterfaceAudience.Private
 public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
-  private static final Log LOG = LogFactory.getLog(ZKProcedureCoordinator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureCoordinator.class);
   private ZKProcedureUtil zkProc = null;
   protected ProcedureCoordinator coordinator = null;  // if started this should be non-null
 

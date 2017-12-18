@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -66,10 +64,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, SmallTests.class })
 public class TestReplicationHFileCleaner {
-  private static final Log LOG = LogFactory.getLog(ReplicationQueuesZKImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationQueuesZKImpl.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Server server;
   private static ReplicationQueues rq;

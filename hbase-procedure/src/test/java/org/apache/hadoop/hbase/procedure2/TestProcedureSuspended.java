@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -37,10 +35,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureSuspended {
-  private static final Log LOG = LogFactory.getLog(TestProcedureSuspended.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestProcedureSuspended.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
   private static final Procedure NULL_PROC = null;

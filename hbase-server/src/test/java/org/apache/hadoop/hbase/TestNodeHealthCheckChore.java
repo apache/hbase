@@ -27,8 +27,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,11 +37,13 @@ import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestNodeHealthCheckChore {
 
-  private static final Log LOG = LogFactory.getLog(TestNodeHealthCheckChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNodeHealthCheckChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int SCRIPT_TIMEOUT = 5000;
   private File healthScriptFile;

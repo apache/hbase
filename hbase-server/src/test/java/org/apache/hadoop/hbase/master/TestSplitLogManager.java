@@ -40,8 +40,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,8 +60,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -73,16 +69,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestSplitLogManager {
-  private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogManager.class);
 
   private final ServerManager sm = Mockito.mock(ServerManager.class);
-
-  static {
-    Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
-  }
 
   private ZKWatcher zkw;
   private DummyMasterServices master;
@@ -540,7 +534,7 @@ public class TestSplitLogManager {
             try {
               ZKUtil.setData(zkw, entry.getKey(), slt.toByteArray());
             } catch (KeeperException e) {
-              LOG.warn(e);
+              LOG.warn(e.toString(), e);
               encounteredZKException = true;
             }
             if (!encounteredZKException) {

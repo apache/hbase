@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,6 +38,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestClientOperationInterrupt {
-  private static final Log LOG = LogFactory.getLog(TestClientOperationInterrupt.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationInterrupt.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");

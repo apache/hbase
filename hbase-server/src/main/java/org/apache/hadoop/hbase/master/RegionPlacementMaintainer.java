@@ -38,8 +38,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
@@ -57,10 +55,9 @@ import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MunkresAssignment;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
@@ -74,7 +71,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 @InterfaceAudience.Private
 // TODO: Remove? Unused. Partially implemented only.
 public class RegionPlacementMaintainer {
-  private static final Log LOG = LogFactory.getLog(RegionPlacementMaintainer.class
+  private static final Logger LOG = LoggerFactory.getLogger(RegionPlacementMaintainer.class
       .getName());
   //The cost of a placement that should never be assigned.
   private static final float MAX_COST = Float.POSITIVE_INFINITY;
@@ -980,12 +977,6 @@ public class RegionPlacementMaintainer {
     opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion " +
         "information for current plan");
     try {
-      // Set the log4j
-      Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
-      Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.ERROR);
-      Logger.getLogger("org.apache.hadoop.hbase.master.RegionPlacementMaintainer")
-      .setLevel(Level.INFO);
-
       CommandLine cmd = new GnuParser().parse(opt, args);
       Configuration conf = HBaseConfiguration.create();
 

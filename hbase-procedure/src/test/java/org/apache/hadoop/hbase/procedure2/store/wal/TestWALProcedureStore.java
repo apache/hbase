@@ -28,8 +28,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -53,6 +51,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -61,7 +61,7 @@ import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestWALProcedureStore {
-  private static final Log LOG = LogFactory.getLog(TestWALProcedureStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALProcedureStore.class);
 
   private static final int PROCEDURE_STORE_SLOTS = 1;
   private static final Procedure NULL_PROC = null;

@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -51,13 +49,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 @Category(MediumTests.class)
 @Ignore("Flaky, needs to be rewritten, see HBASE-19125")
 public class TestReplicator extends TestReplicationBase {
 
-  static final Log LOG = LogFactory.getLog(TestReplicator.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
 
   @BeforeClass

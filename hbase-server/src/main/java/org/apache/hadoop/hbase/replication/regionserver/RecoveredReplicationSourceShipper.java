@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
@@ -36,8 +36,9 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RecoveredReplicationSourceShipper.class);
 
-  private static final Log LOG = LogFactory.getLog(RecoveredReplicationSourceShipper.class);
   protected final RecoveredReplicationSource source;
   private final ReplicationQueues replicationQueues;
 

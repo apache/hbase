@@ -28,8 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -49,6 +47,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for {@link RegionSplitter}, which can create a pre-split table or do a
@@ -56,7 +56,7 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestRegionSplitter {
-    private final static Log LOG = LogFactory.getLog(TestRegionSplitter.class);
+    private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
     private final static String CF_NAME = "SPLIT_TEST_CF";
     private final static byte xFF = (byte) 0xff;

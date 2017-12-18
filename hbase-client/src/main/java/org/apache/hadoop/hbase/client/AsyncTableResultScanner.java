@@ -24,9 +24,9 @@ import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 @InterfaceAudience.Private
 class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsumer {
 
-  private static final Log LOG = LogFactory.getLog(AsyncTableResultScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncTableResultScanner.class);
 
   private final AsyncTable<AdvancedScanResultConsumer> rawTable;
 

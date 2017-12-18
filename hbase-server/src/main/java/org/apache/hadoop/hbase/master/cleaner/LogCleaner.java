@@ -25,8 +25,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,7 +33,8 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
-  private static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(LogCleaner.class.getName());
 
   public static final String OLD_WALS_CLEANER_SIZE = "hbase.oldwals.cleaner.thread.size";
   public static final int OLD_WALS_CLEANER_DEFAULT_SIZE = 2;

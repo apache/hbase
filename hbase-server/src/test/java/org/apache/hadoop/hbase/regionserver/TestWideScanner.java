@@ -26,8 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -43,10 +41,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWideScanner extends HBaseTestCase {
-  private static final Log LOG = LogFactory.getLog(TestWideScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWideScanner.class);
 
   static final byte[] A = Bytes.toBytes("A");
   static final byte[] B = Bytes.toBytes("B");

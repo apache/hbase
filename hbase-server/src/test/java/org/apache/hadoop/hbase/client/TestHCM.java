@@ -41,8 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
@@ -87,6 +85,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -98,7 +98,7 @@ public class TestHCM {
       .withTimeout(this.getClass())
       .withLookingForStuckThread(true)
       .build();
-  private static final Log LOG = LogFactory.getLog(TestHCM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHCM.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME =
       TableName.valueOf("test");
@@ -747,7 +747,7 @@ public class TestHCM {
           }
         } catch (Throwable t) {
           failed.set(t);
-          LOG.error(t);
+          LOG.error(t.toString(), t);
         }
         step.set(3);
       }

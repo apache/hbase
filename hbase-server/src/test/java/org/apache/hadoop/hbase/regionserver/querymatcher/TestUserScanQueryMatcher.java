@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -38,11 +36,13 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
 
-  private static final Log LOG = LogFactory.getLog(TestUserScanQueryMatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestUserScanQueryMatcher.class);
 
   /**
    * This is a cryptic test. It is checking that we don't include a fake cell, one that has a

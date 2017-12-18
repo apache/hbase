@@ -27,13 +27,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -75,6 +74,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
@@ -82,7 +83,7 @@ import org.junit.rules.TestName;
  */
 @Category({VerySlowRegionServerTests.class, MediumTests.class}) // Starts 100 threads
 public class TestAtomicOperation {
-  private static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();
 
   HRegion region = null;
@@ -107,8 +108,8 @@ public class TestAtomicOperation {
   public void teardown() throws IOException {
     if (region != null) {
       BlockCache bc = region.getStores().get(0).getCacheConfig().getBlockCache();
-      ((HRegion)region).close();
-      WAL wal = ((HRegion)region).getWAL();
+      region.close();
+      WAL wal = region.getWAL();
       if (wal != null) wal.close();
       if (bc != null) bc.shutdown();
       region = null;
@@ -428,7 +429,7 @@ public class TestAtomicOperation {
               Get g = new Get(row);
               Result r = region.get(g);
               if (r.size() != 1) {
-                LOG.debug(r);
+                LOG.debug(Objects.toString(r));
                 failures.incrementAndGet();
                 fail();
               }
@@ -525,7 +526,7 @@ public class TestAtomicOperation {
                 ;
               rs.close();
               if (r.size() != 1) {
-                LOG.debug(r);
+                LOG.debug(Objects.toString(r));
                 failures.incrementAndGet();
                 fail();
               }
@@ -627,6 +628,7 @@ public class TestAtomicOperation {
       this.region = region;
     }
 
+    @Override
     public void doWork() throws Exception {
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));
@@ -644,6 +646,7 @@ public class TestAtomicOperation {
       this.region = region;
    }
 
+    @Override
     public void doWork() throws Exception {
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));

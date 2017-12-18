@@ -31,10 +31,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Public
 public class ParseFilter {
-  private static final Log LOG = LogFactory.getLog(ParseFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ParseFilter.class);
 
   private static HashMap<ByteBuffer, Integer> operatorPrecedenceHashMap;
   private static HashMap<String, String> filterHashMap;

@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Result;
@@ -36,18 +39,17 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestMultiTableSnapshotInputFormat
     extends org.apache.hadoop.hbase.mapreduce.TestMultiTableSnapshotInputFormat {
 
-  private static final Log LOG = LogFactory.getLog(TestMultiTableSnapshotInputFormat.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMultiTableSnapshotInputFormat.class);
 
   @Override
   protected void runJob(String jobName, Configuration c, List<Scan> scans)

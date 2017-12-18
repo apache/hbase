@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Client-side manager for which table's hfiles should be preserved for long-term archive.
@@ -41,7 +41,7 @@ import org.apache.zookeeper.KeeperException;
 class HFileArchiveManager {
 
   private final String archiveZnode;
-  private static final Log LOG = LogFactory.getLog(HFileArchiveManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFileArchiveManager.class);
   private final ZKWatcher zooKeeper;
   private volatile boolean stopped = false;
 

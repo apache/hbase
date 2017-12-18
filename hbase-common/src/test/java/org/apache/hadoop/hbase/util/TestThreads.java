@@ -22,16 +22,16 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestThreads {
-  private static final Log LOG = LogFactory.getLog(TestThreads.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThreads.class);
 
   private static final int SLEEP_TIME_MS = 3000;
   private static final int TOLERANCE_MS = (int) (0.10 * SLEEP_TIME_MS);

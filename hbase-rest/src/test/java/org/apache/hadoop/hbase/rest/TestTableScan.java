@@ -43,8 +43,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.stream.XMLStreamException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -67,6 +65,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
@@ -78,7 +78,7 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestTableScan {
-  private static final Log LOG = LogFactory.getLog(TestTableScan.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableScan.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScanResource");
   private static final String CFA = "a";

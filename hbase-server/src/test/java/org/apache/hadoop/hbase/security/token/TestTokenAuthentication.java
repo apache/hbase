@@ -32,8 +32,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -57,6 +55,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -64,9 +63,6 @@ import org.apache.hadoop.hbase.regionserver.OnlineRegions;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -92,6 +88,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
@@ -114,7 +116,7 @@ public class TestTokenAuthentication {
     System.setProperty("java.security.krb5.realm", "hbase");
     System.setProperty("java.security.krb5.kdc", "blah");
   }
-  private static final Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTokenAuthentication.class);
 
   public interface AuthenticationServiceSecurityInfo {}
 
@@ -123,7 +125,7 @@ public class TestTokenAuthentication {
    */
   private static class TokenServer extends TokenProvider implements
       AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
-    private static final Log LOG = LogFactory.getLog(TokenServer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TokenServer.class);
     private Configuration conf;
     private HBaseTestingUtility TEST_UTIL;
     private RpcServerInterface rpcServer;
@@ -252,7 +254,7 @@ public class TestTokenAuthentication {
 
     @Override
     public void abort(String reason, Throwable error) {
-      LOG.fatal("Aborting on: "+reason, error);
+      LOG.error(HBaseMarkers.FATAL, "Aborting on: "+reason, error);
       this.aborted = true;
       this.stopped = true;
       sleeper.skipSleepCycle();
@@ -339,6 +341,7 @@ public class TestTokenAuthentication {
       started = true;
     }
 
+    @Override
     public void run() {
       try {
         initialize();

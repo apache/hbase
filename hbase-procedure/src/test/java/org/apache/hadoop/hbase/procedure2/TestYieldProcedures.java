@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -37,13 +35,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestYieldProcedures {
-  private static final Log LOG = LogFactory.getLog(TestYieldProcedures.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestYieldProcedures.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
   private static final Procedure NULL_PROC = null;

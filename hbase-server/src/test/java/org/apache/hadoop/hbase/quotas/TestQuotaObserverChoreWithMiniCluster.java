@@ -32,8 +32,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -52,7 +50,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
 
@@ -61,7 +60,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
  */
 @Category(LargeTests.class)
 public class TestQuotaObserverChoreWithMiniCluster {
-  private static final Log LOG = LogFactory.getLog(TestQuotaObserverChoreWithMiniCluster.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestQuotaObserverChoreWithMiniCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong(0);
   private static final long DEFAULT_WAIT_MILLIS = 500;

@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -52,6 +50,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class tests the ReplicationTrackerZKImpl class and ReplicationListener interface. One
@@ -63,7 +63,7 @@ import org.junit.experimental.categories.Category;
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationTrackerZKImpl {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationTrackerZKImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationTrackerZKImpl.class);
 
   private static Configuration conf;
   private static HBaseTestingUtility utility;

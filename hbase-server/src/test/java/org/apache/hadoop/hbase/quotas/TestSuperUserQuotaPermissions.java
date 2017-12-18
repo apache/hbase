@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -51,13 +49,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class to verify that the HBase superuser can override quotas.
  */
 @Category(MediumTests.class)
 public class TestSuperUserQuotaPermissions {
-  private static final Log LOG = LogFactory.getLog(TestSuperUserQuotaPermissions.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSuperUserQuotaPermissions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   // Default to the user running the tests
   private static final String SUPERUSER_NAME = System.getProperty("user.name");

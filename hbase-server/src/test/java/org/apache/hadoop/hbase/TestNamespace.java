@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
@@ -50,10 +48,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestNamespace {
-  private static final Log LOG = LogFactory.getLog(TestNamespace.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamespace.class);
   private static HMaster master;
   protected final static int NUM_SLAVES_BASE = 4;
   private static HBaseTestingUtility TEST_UTIL;
@@ -130,7 +130,7 @@ public class TestNamespace {
     try {
       admin.createNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -140,7 +140,7 @@ public class TestNamespace {
     try {
       admin.createNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -153,7 +153,7 @@ public class TestNamespace {
     try {
       admin.deleteNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -162,7 +162,7 @@ public class TestNamespace {
     try {
       admin.deleteNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
     } catch (IOException exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);

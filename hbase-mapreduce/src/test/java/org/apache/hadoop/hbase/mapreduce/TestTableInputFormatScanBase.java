@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,6 +45,8 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -62,7 +62,7 @@ import org.junit.BeforeClass;
  */
 public abstract class TestTableInputFormatScanBase {
 
-  private static final Log LOG = LogFactory.getLog(TestTableInputFormatScanBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormatScanBase.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final TableName TABLE_NAME = TableName.valueOf("scantest");

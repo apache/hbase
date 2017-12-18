@@ -25,8 +25,6 @@ import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,6 +38,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This testcase issues SSL certificates configures the HttpServer to serve
@@ -51,7 +51,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static final String BASEDIR = System.getProperty("test.build.dir",
       "target/test-dir") + "/" + TestSSLHttpServer.class.getSimpleName();
 
-  private static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static Configuration conf;
   private static HttpServer server;
   private static URL baseUrl;

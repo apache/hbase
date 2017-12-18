@@ -25,13 +25,13 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
@@ -39,7 +39,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class HBaseCommonTestingUtility {
-  protected static final Log LOG = LogFactory.getLog(HBaseCommonTestingUtility.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(HBaseCommonTestingUtility.class);
 
   /** Compression algorithms to use in parameterized JUnit 4 tests */
   public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =

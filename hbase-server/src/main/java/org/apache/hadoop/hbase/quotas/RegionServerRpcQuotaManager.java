@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RegionServerRpcQuotaManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerRpcQuotaManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
 

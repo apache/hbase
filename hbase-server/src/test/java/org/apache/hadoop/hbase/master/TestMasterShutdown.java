@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,10 +39,12 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterShutdown {
-  private static final Log LOG = LogFactory.getLog(TestMasterShutdown.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
 
   /**
    * Simple test of shutdown.

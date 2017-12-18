@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -38,8 +38,8 @@ public class IdentityTableReduce
 extends MapReduceBase
 implements TableReduce<ImmutableBytesWritable, Put> {
   @SuppressWarnings("unused")
-  private static final Log LOG =
-    LogFactory.getLog(IdentityTableReduce.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(IdentityTableReduce.class.getName());
 
   /**
    * No aggregation, output pairs of (key, record)

@@ -37,8 +37,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,6 +48,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
@@ -71,7 +71,7 @@ import org.apache.htrace.core.Tracer;
 @InterfaceAudience.Private
 class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
-  private static final Log LOG = LogFactory.getLog(AsyncRequestFutureImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncRequestFutureImpl.class);
 
   private RetryingTimeTracker tracker;
 

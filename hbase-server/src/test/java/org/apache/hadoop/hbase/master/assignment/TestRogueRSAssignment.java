@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,6 +49,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -64,7 +64,7 @@ import static org.junit.Assert.assertNotNull;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestRogueRSAssignment {
-  private static final Log LOG = LogFactory.getLog(TestRogueRSAssignment.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRogueRSAssignment.class);
 
   @Rule
   public final TestName name = new TestName();

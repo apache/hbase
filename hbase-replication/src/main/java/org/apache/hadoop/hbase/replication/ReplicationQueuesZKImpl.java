@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides an implementation of the
@@ -67,7 +67,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   /** Znode containing all replication queues for this region server. */
   private String myQueuesZnode;
 
-  private static final Log LOG = LogFactory.getLog(ReplicationQueuesZKImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationQueuesZKImpl.class);
 
   public ReplicationQueuesZKImpl(ReplicationQueuesArguments args) {
     this(args.getZk(), args.getConf(), args.getAbortable());

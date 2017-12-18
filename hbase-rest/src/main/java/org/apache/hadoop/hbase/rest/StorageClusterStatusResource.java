@@ -30,10 +30,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.RegionLoad;
@@ -43,8 +42,8 @@ import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
 @InterfaceAudience.Private
 public class StorageClusterStatusResource extends ResourceBase {
-  private static final Log LOG =
-    LogFactory.getLog(StorageClusterStatusResource.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(StorageClusterStatusResource.class);
 
   static CacheControl cacheControl;
   static {

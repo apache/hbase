@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -45,10 +43,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureEvents {
-  private static final Log LOG = LogFactory.getLog(TestCreateTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

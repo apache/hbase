@@ -48,8 +48,7 @@ import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -77,6 +76,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
@@ -98,7 +98,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableCollection;
@@ -133,7 +134,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 10;
 
-  private static final Log LOG = LogFactory.getLog(HStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HStore.class);
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
@@ -2221,7 +2222,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
             try {
               sf.deleteStoreFile();
             } catch (IOException deleteEx) {
-              LOG.fatal("Failed to delete store file we committed, halting " + pathToDelete, ex);
+              LOG.error(HBaseMarkers.FATAL, "Failed to delete store file we committed, "
+                  + "halting " + pathToDelete, ex);
               Runtime.getRuntime().halt(1);
             }
           }

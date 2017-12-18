@@ -50,8 +50,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -80,12 +78,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ClientTests.class, MediumTests.class})
 public class TestAsyncProcess {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
       withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestAsyncProcess.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncProcess.class);
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes(StandardCharsets.UTF_8);

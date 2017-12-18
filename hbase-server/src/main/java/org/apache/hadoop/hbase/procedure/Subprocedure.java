@@ -21,14 +21,14 @@ import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Distributed procedure member's Subprocedure.  A procedure is sarted on a ProcedureCoordinator
@@ -51,7 +51,7 @@ import org.apache.zookeeper.KeeperException;
  * barrierName. (ex: snapshot121126).
  */
 abstract public class Subprocedure implements Callable<Void> {
-  private static final Log LOG = LogFactory.getLog(Subprocedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Subprocedure.class);
 
   // Name of the procedure
   final private String barrierName;

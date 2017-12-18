@@ -24,8 +24,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
@@ -42,12 +40,14 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A MultiThreadUpdater that helps to work with ACL
  */
 public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedUpdaterWithACL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedUpdaterWithACL.class);
   private final static String COMMA= ",";
   private User userOwner;
   /**

@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -41,13 +39,15 @@ import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used to clean the replication queues belonging to the peer which does not exist.
  */
 @InterfaceAudience.Private
 public class ReplicationZKNodeCleaner {
-  private static final Log LOG = LogFactory.getLog(ReplicationZKNodeCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationZKNodeCleaner.class);
   private final ZKWatcher zkw;
   private final ReplicationQueuesClient queuesClient;
   private final ReplicationPeers replicationPeers;

@@ -25,8 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -44,10 +42,12 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestRestartCluster {
-  private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRestartCluster.class);
   private HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName[] TABLES = {

@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -43,7 +42,7 @@ import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_RO
  */
 @InterfaceAudience.Public
 public class TableRecordReaderImpl {
-  private static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableRecordReaderImpl.class);
 
   private byte [] startRow;
   private byte [] endRow;
@@ -248,7 +247,7 @@ public class TableRecordReaderImpl {
         long now = System.currentTimeMillis();
         LOG.info("Mapper took " + (now-timestamp)
           + "ms to process " + rowcount + " rows");
-        LOG.info(ioe);
+        LOG.info(ioe.toString(), ioe);
         String lastRow = lastSuccessfulRow == null ?
           "null" : Bytes.toStringBinary(lastSuccessfulRow);
         LOG.info("lastSuccessfulRow=" + lastRow);

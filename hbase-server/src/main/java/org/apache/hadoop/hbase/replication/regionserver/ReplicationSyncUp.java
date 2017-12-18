@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +37,8 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * In a scenario of Replication based Disaster/Recovery, when hbase
@@ -51,7 +51,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class ReplicationSyncUp extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationSyncUp.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSyncUp.class.getName());
 
   private static Configuration conf;
 

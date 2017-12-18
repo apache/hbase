@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.replication.master;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -38,7 +36,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 /**
@@ -49,7 +48,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 @InterfaceStability.Unstable
 public class ReplicationPeerConfigUpgrader extends ReplicationStateZKBase {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationPeerConfigUpgrader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerConfigUpgrader.class);
 
   public ReplicationPeerConfigUpgrader(ZKWatcher zookeeper,
                          Configuration conf, Abortable abortable) {

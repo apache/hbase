@@ -17,14 +17,13 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Predicate;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Collections2;
@@ -36,7 +35,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public abstract class SortedCompactionPolicy extends CompactionPolicy {
 
-  private static final Log LOG = LogFactory.getLog(SortedCompactionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SortedCompactionPolicy.class);
 
   public SortedCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);

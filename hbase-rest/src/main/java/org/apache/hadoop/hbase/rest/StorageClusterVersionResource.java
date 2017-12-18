@@ -30,17 +30,16 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 
 @InterfaceAudience.Private
 public class StorageClusterVersionResource extends ResourceBase {
-  private static final Log LOG =
-    LogFactory.getLog(StorageClusterVersionResource.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(StorageClusterVersionResource.class);
 
   static CacheControl cacheControl;
   static {

@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -48,7 +46,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,11 +61,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestLogRolling extends AbstractTestLogRolling {
 
-  private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLogRolling.class);
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
       withLookingForStuckThread(true).build();
 
@@ -355,7 +354,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
           // a failed append could not be followed by a successful
           // sync. What is coming out here is a failed sync, a sync
           // that used to 'pass'.
-          LOG.info(e);
+          LOG.info(e.toString(), e);
         }
       }
 

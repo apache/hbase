@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -37,13 +35,16 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureSchedulerConcurrency {
-  private static final Log LOG = LogFactory.getLog(TestMasterProcedureSchedulerConcurrency.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMasterProcedureSchedulerConcurrency.class);
 
   private MasterProcedureScheduler queue;
   private Configuration conf;

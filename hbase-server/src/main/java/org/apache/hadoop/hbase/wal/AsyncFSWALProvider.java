@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,7 +29,8 @@ import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
 import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
@@ -46,7 +45,7 @@ import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.DefaultThreadFact
 @InterfaceStability.Evolving
 public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
 
-  private static final Log LOG = LogFactory.getLog(AsyncFSWALProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWALProvider.class);
 
   // Only public so classes back in regionserver.wal can access
   public interface AsyncWriter extends WALProvider.AsyncWriter {

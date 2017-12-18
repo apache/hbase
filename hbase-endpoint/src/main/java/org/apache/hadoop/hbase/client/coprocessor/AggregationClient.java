@@ -38,13 +38,13 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Public
 public class AggregationClient implements Closeable {
   // TODO: This class is not used.  Move to examples?
-  private static final Log log = LogFactory.getLog(AggregationClient.class);
+  private static final Logger log = LoggerFactory.getLogger(AggregationClient.class);
   private final Connection connection;
 
   /**

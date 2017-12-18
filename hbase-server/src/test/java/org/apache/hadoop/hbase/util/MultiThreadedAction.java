@@ -31,8 +31,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -45,13 +43,15 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Common base class for reader and writer parts of multi-thread HBase load
  * test (See LoadTestTool).
  */
 public abstract class MultiThreadedAction {
-  private static final Log LOG = LogFactory.getLog(MultiThreadedAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedAction.class);
 
   protected final TableName tableName;
   protected final Configuration conf;

@@ -27,19 +27,19 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
 
-  private static final Log LOG = LogFactory.getLog(MetricsRegionWrapperImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionWrapperImpl.class);
 
   public static final int PERIOD = 45;
   public static final String UNKNOWN = "unknown";

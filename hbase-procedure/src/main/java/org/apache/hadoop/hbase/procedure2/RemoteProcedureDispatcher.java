@@ -32,10 +32,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedContainerWithTimestamp;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil.DelayedWithTimeout;
@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultima
  */
 @InterfaceAudience.Private
 public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable<TRemote>> {
-  private static final Log LOG = LogFactory.getLog(RemoteProcedureDispatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RemoteProcedureDispatcher.class);
 
   public static final String THREAD_POOL_SIZE_CONF_KEY =
       "hbase.procedure.remote.dispatcher.threadpool.size";

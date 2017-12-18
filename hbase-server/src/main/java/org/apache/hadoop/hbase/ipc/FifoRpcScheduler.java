@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
-import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
-
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.HashMap;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
 
 /**
  * A very simple {@code }RpcScheduler} that serves incoming requests in order.
@@ -36,7 +37,7 @@ import java.util.HashMap;
  * This can be used for HMaster, where no prioritization is needed.
  */
 public class FifoRpcScheduler extends RpcScheduler {
-  private static final Log LOG = LogFactory.getLog(FifoRpcScheduler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FifoRpcScheduler.class);
   private final int handlerCount;
   private final int maxQueueLength;
   private final AtomicInteger queueSize = new AtomicInteger(0);

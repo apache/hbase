@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,11 +40,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestTableSnapshotScanner {
 
-  private static final Log LOG = LogFactory.getLog(TestTableSnapshotScanner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableSnapshotScanner.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_REGION_SERVERS = 2;
   private static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};

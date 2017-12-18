@@ -35,8 +35,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,7 +56,8 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -101,7 +100,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   // syncs and appends have completed -- so the log roller can swap the WAL out under it.
   //
   // We use ring buffer sequence as txid of FSWALEntry and SyncFuture.
-  private static final Log LOG = LogFactory.getLog(FSHLog.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FSHLog.class);
 
   /**
    * The nexus at which all incoming handlers meet. Does appends and sync with an ordering. Appends
@@ -162,13 +161,13 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
     @Override
     public void handleOnStartException(Throwable ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString(), ex);
       throw new RuntimeException(ex);
     }
 
     @Override
     public void handleOnShutdownException(Throwable ex) {
-      LOG.error(ex);
+      LOG.error(ex.toString(), ex);
       throw new RuntimeException(ex);
     }
   }
@@ -634,6 +633,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   /**
    * @return true if number of replicas for the WAL is lower than threshold
    */
+  @Override
   protected boolean doCheckLogLowReplication() {
     boolean logRollNeeded = false;
     // if the number of replicas in HDFS has fallen below the configured

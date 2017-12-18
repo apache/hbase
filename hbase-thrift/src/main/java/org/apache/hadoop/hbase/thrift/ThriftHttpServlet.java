@@ -25,8 +25,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Base64;
@@ -43,6 +41,8 @@ import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Thrift Http Servlet is used for performing Kerberos authentication if security is enabled and
@@ -51,7 +51,7 @@ import org.ietf.jgss.Oid;
 @InterfaceAudience.Private
 public class ThriftHttpServlet extends TServlet {
   private static final long serialVersionUID = 1L;
-  private static final Log LOG = LogFactory.getLog(ThriftHttpServlet.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(ThriftHttpServlet.class.getName());
   private transient final UserGroupInformation realUser;
   private transient final Configuration conf;
   private final boolean securityEnabled;

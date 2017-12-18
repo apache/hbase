@@ -33,8 +33,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -74,10 +72,12 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractTestFSWAL {
 
-  protected static final Log LOG = LogFactory.getLog(AbstractTestFSWAL.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(AbstractTestFSWAL.class);
 
   protected static Configuration CONF;
   protected static FileSystem FS;

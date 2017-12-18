@@ -26,8 +26,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
@@ -40,7 +38,8 @@ import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
@@ -53,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
  */
 @InterfaceAudience.Private
 public class QuotaObserverChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(QuotaObserverChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(QuotaObserverChore.class);
   static final String QUOTA_OBSERVER_CHORE_PERIOD_KEY =
       "hbase.master.quotas.observer.chore.period";
   static final int QUOTA_OBSERVER_CHORE_PERIOD_DEFAULT = 1000 * 60 * 1; // 1 minutes in millis

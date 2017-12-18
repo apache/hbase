@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -83,7 +81,8 @@ import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -102,7 +101,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Unstable
 public class SnapshotManager extends MasterProcedureManager implements Stoppable {
-  private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SnapshotManager.class);
 
   /** By default, check to see if the snapshot is complete every WAKE MILLIS (ms) */
   private static final int SNAPSHOT_WAKE_MILLIS_DEFAULT = 500;

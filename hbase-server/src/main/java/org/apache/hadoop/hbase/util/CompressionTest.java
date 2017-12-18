@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,7 +52,7 @@ import org.apache.hadoop.io.compress.Compressor;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class CompressionTest {
-  private static final Log LOG = LogFactory.getLog(CompressionTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompressionTest.class);
 
   public static boolean testCompression(String codec) {
     codec = codec.toLowerCase(Locale.ROOT);

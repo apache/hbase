@@ -17,9 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.hash.Hashing;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -48,23 +55,17 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.hbase.shaded.com.google.common.hash.Hashing;
 
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy
  */
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestPerColumnFamilyFlush {
-  private static final Log LOG = LogFactory.getLog(TestPerColumnFamilyFlush.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestPerColumnFamilyFlush.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

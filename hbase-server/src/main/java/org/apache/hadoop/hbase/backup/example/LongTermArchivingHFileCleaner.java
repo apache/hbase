@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link BaseHFileCleanerDelegate} that only cleans HFiles that don't belong to a table that is
@@ -44,7 +44,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
-  private static final Log LOG = LogFactory.getLog(LongTermArchivingHFileCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LongTermArchivingHFileCleaner.class);
 
   TableHFileArchiveTracker archiveTracker;
   private FileSystem fs;

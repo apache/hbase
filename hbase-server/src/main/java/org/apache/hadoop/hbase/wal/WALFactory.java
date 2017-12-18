@@ -29,12 +29,12 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 @InterfaceAudience.Private
 public class WALFactory implements WALFileLengthProvider {
 
-  private static final Log LOG = LogFactory.getLog(WALFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALFactory.class);
 
   /**
    * Maps between configuration names for providers and implementation classes.

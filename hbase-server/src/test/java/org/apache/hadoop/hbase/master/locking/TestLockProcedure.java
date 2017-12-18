@@ -28,8 +28,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -60,7 +58,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
@@ -81,7 +80,7 @@ public class TestLockProcedure {
   private static final int HEARTBEAT_TIMEOUT = 2000;
   private static final int LOCAL_LOCKS_TIMEOUT = 4000;
 
-  private static final Log LOG = LogFactory.getLog(TestLockProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLockProcedure.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static MasterRpcServices masterRpcService;
   private static ProcedureExecutor<MasterProcedureEnv> procExec;

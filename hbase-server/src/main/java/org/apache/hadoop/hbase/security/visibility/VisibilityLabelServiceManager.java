@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -31,7 +31,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceAudience.Private
 public class VisibilityLabelServiceManager {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityLabelServiceManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityLabelServiceManager.class);
 
   public static final String VISIBILITY_LABEL_SERVICE_CLASS =
       "hbase.regionserver.visibility.label.service.class";

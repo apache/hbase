@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -56,6 +54,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -73,7 +73,7 @@ import static org.junit.Assert.assertTrue;
  */
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsWithDeletes {
-  private static final Log LOG = LogFactory.getLog(TestVisibilityLabelsWithDeletes.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestVisibilityLabelsWithDeletes.class);
   private static final String TOPSECRET = "TOPSECRET";
   private static final String PUBLIC = "PUBLIC";
   private static final String PRIVATE = "PRIVATE";

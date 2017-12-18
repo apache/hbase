@@ -23,8 +23,6 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -54,6 +52,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -64,7 +64,7 @@ import static org.junit.Assert.assertTrue;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestCompactingMemStore extends TestDefaultMemStore {
 
-  private static final Log LOG = LogFactory.getLog(TestCompactingMemStore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompactingMemStore.class);
   protected static ChunkCreator chunkCreator;
   protected HRegion region;
   protected RegionServicesForStores regionServicesForStores;

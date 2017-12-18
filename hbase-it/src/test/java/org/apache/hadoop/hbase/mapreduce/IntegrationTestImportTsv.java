@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,6 +56,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
@@ -66,7 +66,7 @@ import org.junit.rules.TestName;
 public class IntegrationTestImportTsv extends Configured implements Tool {
 
   private static final String NAME = IntegrationTestImportTsv.class.getSimpleName();
-  private static final Log LOG = LogFactory.getLog(IntegrationTestImportTsv.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestImportTsv.class);
 
   protected static final String simple_tsv =
       "row1\t1\tc1\tc2\n" +

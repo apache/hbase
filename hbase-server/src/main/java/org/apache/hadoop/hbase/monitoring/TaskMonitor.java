@@ -28,11 +28,11 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.collections4.queue.CircularFifoQueue;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class TaskMonitor {
-  private static final Log LOG = LogFactory.getLog(TaskMonitor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TaskMonitor.class);
 
   public static final String MAX_TASKS_KEY = "hbase.taskmonitor.max.tasks";
   public static final int DEFAULT_MAX_TASKS = 1000;

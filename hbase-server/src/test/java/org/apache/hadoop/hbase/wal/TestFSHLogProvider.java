@@ -30,8 +30,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,10 +56,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestFSHLogProvider {
-  private static final Log LOG = LogFactory.getLog(TestFSHLogProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFSHLogProvider.class);
 
   protected static Configuration conf;
   protected static FileSystem fs;

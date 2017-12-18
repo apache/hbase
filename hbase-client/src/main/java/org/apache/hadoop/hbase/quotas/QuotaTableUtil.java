@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
@@ -89,7 +89,7 @@ import org.apache.hadoop.hbase.util.Strings;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class QuotaTableUtil {
-  private static final Log LOG = LogFactory.getLog(QuotaTableUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(QuotaTableUtil.class);
 
   /** System table for quotas */
   public static final TableName QUOTA_TABLE_NAME =

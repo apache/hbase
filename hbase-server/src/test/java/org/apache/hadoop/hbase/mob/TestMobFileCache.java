@@ -23,8 +23,6 @@ import java.util.Date;
 
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,10 +40,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
 public class TestMobFileCache extends TestCase {
-  static final Log LOG = LogFactory.getLog(TestMobFileCache.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestMobFileCache.class);
   private HBaseTestingUtility UTIL;
   private HRegion region;
   private Configuration conf;

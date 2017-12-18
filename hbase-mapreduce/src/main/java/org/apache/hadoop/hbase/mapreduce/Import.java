@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,6 +77,8 @@ import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -86,7 +86,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Public
 public class Import extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(Import.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Import.class);
   final static String NAME = "import";
   public final static String CF_RENAME_PROP = "HBASE_IMPORTER_RENAME_CFS";
   public final static String BULK_OUTPUT_CONF_KEY = "import.bulk.output";
@@ -287,7 +287,7 @@ public class Import extends Configured implements Tool {
       extends TableMapper<KeyValueWritableComparable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(KeyValueSortImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KeyValueSortImporter.class);
 
     /**
      * @param row The current table row key.
@@ -352,7 +352,7 @@ public class Import extends Configured implements Tool {
   public static class KeyValueImporter extends TableMapper<ImmutableBytesWritable, KeyValue> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(KeyValueImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KeyValueImporter.class);
 
     /**
      * @param row The current table row key.
@@ -393,7 +393,7 @@ public class Import extends Configured implements Tool {
       extends TableMapper<CellWritableComparable, Cell> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(CellImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CellImporter.class);
 
     /**
      * @param row  The current table row key.
@@ -458,7 +458,7 @@ public class Import extends Configured implements Tool {
   public static class CellImporter extends TableMapper<ImmutableBytesWritable, Cell> {
     private Map<byte[], byte[]> cfRenameMap;
     private Filter filter;
-    private static final Log LOG = LogFactory.getLog(CellImporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CellImporter.class);
 
     /**
      * @param row  The current table row key.

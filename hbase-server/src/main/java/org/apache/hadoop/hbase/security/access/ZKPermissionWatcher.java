@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.TableName;
@@ -30,6 +28,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -53,7 +53,7 @@ import java.util.concurrent.RejectedExecutionException;
  */
 @InterfaceAudience.Private
 public class ZKPermissionWatcher extends ZKListener implements Closeable {
-  private static final Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
   private final TableAuthManager authManager;

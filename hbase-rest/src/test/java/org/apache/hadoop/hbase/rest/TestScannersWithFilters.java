@@ -34,8 +34,6 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -79,11 +77,13 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestScannersWithFilters {
 
-  private static final Log LOG = LogFactory.getLog(TestScannersWithFilters.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannersWithFilters.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScannersWithFilters");
 

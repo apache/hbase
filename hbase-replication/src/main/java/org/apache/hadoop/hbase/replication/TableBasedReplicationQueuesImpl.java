@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
@@ -42,6 +40,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,7 +59,7 @@ import java.util.TreeSet;
 public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
   implements ReplicationQueues {
 
-  private static final Log LOG = LogFactory.getLog(TableBasedReplicationQueuesImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TableBasedReplicationQueuesImpl.class);
 
   // Common byte values used in replication offset tracking
   private static final byte[] INITIAL_OFFSET_BYTES = Bytes.toBytes(0L);

@@ -28,8 +28,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -85,6 +83,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -97,7 +97,7 @@ import static org.junit.Assert.fail;
 public class TestNamespaceAuditor {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-  private static final Log LOG = LogFactory.getLog(TestNamespaceAuditor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceAuditor.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Admin ADMIN;
   private String prefix = "TestNamespaceAuditor";
@@ -198,7 +198,7 @@ public class TestNamespaceAuditor {
     try {
       ADMIN.createNamespace(nspDesc);
     } catch (Exception exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -211,7 +211,7 @@ public class TestNamespaceAuditor {
     try {
       ADMIN.createNamespace(nspDesc);
     } catch (Exception exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -224,7 +224,7 @@ public class TestNamespaceAuditor {
     try {
       ADMIN.createNamespace(nspDesc);
     } catch (Exception exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -237,7 +237,7 @@ public class TestNamespaceAuditor {
     try {
       ADMIN.createNamespace(nspDesc);
     } catch (Exception exp) {
-      LOG.warn(exp);
+      LOG.warn(exp.toString(), exp);
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
@@ -416,7 +416,7 @@ public class TestNamespaceAuditor {
         ADMIN.createTable(tableDescOne);
         fail("Table " + tableOne.toString() + "creation should fail.");
       } catch (Exception exp) {
-        LOG.error(exp);
+        LOG.error(exp.toString(), exp);
       }
       assertFalse(ADMIN.tableExists(tableOne));
 
@@ -429,7 +429,7 @@ public class TestNamespaceAuditor {
         ADMIN.createTable(tableDescOne);
       } catch (Exception e) {
         fail("Table " + tableOne.toString() + "creation should succeed.");
-        LOG.error(e);
+        LOG.error(e.toString(), e);
       }
       assertTrue(ADMIN.tableExists(tableOne));
       nstate = getNamespaceState(nsp1);

@@ -22,18 +22,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Chore that will clean the replication queues belonging to the peer which does not exist.
  */
 @InterfaceAudience.Private
 public class ReplicationZKNodeCleanerChore extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(ReplicationZKNodeCleanerChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationZKNodeCleanerChore.class);
   private final ReplicationZKNodeCleaner cleaner;
 
   public ReplicationZKNodeCleanerChore(Stoppable stopper, int period,

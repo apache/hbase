@@ -23,9 +23,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
@@ -43,7 +43,7 @@ public class TableSplit extends InputSplit
 implements Writable, Comparable<TableSplit> {
   /** @deprecated LOG variable would be made private. fix in hbase 3.0 */
   @Deprecated
-  public static final Log LOG = LogFactory.getLog(TableSplit.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TableSplit.class);
 
   // should be < 0 (@see #readFields(DataInput))
   // version 1 supports Scan data member

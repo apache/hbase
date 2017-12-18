@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,11 +41,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 
 // This tests that GroupBasedBalancer will use data in zk to do balancing during master startup.
 // This does not test retain assignment.
@@ -56,7 +55,7 @@ import static org.junit.Assert.assertFalse;
 // assignment with a timeout.
 @Category(MediumTests.class)
 public class TestRSGroupsOfflineMode {
-  private static final Log LOG = LogFactory.getLog(TestRSGroupsOfflineMode.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsOfflineMode.class);
   private static HMaster master;
   private static Admin hbaseAdmin;
   private static HBaseTestingUtility TEST_UTIL;

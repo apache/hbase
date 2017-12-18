@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -53,7 +52,7 @@ public class HRegionPartitioner<KEY, VALUE>
 extends Partitioner<ImmutableBytesWritable, VALUE>
 implements Configurable {
 
-  private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionPartitioner.class);
   private Configuration conf = null;
   // Connection and locator are not cleaned up; they just die when partitioner is done.
   private Connection connection;
@@ -86,7 +85,7 @@ implements Configurable {
       // here if a region splits while mapping
       region = this.locator.getRegionLocation(key.get()).getRegionInfo().getStartKey();
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
     for (int i = 0; i < this.startKeys.length; i++){
       if (Bytes.compareTo(region, this.startKeys[i]) == 0 ){
@@ -129,12 +128,12 @@ implements Configurable {
       TableName tableName = TableName.valueOf(conf.get(TableOutputFormat.OUTPUT_TABLE));
       this.locator = this.connection.getRegionLocator(tableName);
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
     try {
       this.startKeys = this.locator.getStartKeys();
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error(e.toString(), e);
     }
   }
 }

@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -53,10 +51,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class, FlakeyTests.class})
 public class TestMultiParallel {
-  private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiParallel.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] VALUE = Bytes.toBytes("value");
@@ -111,7 +111,7 @@ public class TestMultiParallel {
 
     // Don't use integer as a multiple, so that we have a number of keys that is
     // not a multiple of the number of regions
-    int numKeys = (int) ((float) starterKeys.length * 10.33F);
+    int numKeys = (int) (starterKeys.length * 10.33F);
 
     List<byte[]> keys = new ArrayList<>();
     for (int i = 0; i < numKeys; i++) {
@@ -232,7 +232,7 @@ public class TestMultiParallel {
       table.batch(actions, r);
       fail();
     } catch (RetriesExhaustedWithDetailsException ex) {
-      LOG.debug(ex);
+      LOG.debug(ex.toString(), ex);
       // good!
       assertFalse(ex.mayHaveClusterIssues());
     }

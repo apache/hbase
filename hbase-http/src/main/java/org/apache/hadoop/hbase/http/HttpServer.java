@@ -47,8 +47,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -93,6 +91,8 @@ import org.eclipse.jetty.webapp.WebAppContext;
 
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -105,7 +105,7 @@ import org.glassfish.jersey.servlet.ServletContainer;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HttpServer implements FilterContainer {
-  private static final Log LOG = LogFactory.getLog(HttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   private static final String EMPTY_STRING = "";
 
   private static final int DEFAULT_MAX_HEADER_SIZE = 64 * 1024; // 64K

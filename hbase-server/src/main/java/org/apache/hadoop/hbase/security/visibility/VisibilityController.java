@@ -38,8 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -114,6 +112,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
@@ -125,8 +125,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class VisibilityController implements MasterCoprocessor, RegionCoprocessor,
     VisibilityLabelsService.Interface, MasterObserver, RegionObserver {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityController.class);
-  private static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
+  private static final Logger LOG = LoggerFactory.getLogger(VisibilityController.class);
+  private static final Logger AUDITLOG = LoggerFactory.getLogger("SecurityLogger."
       + VisibilityController.class.getName());
   // flags if we are running on a region of the 'labels' table
   private boolean labelsRegion = false;
@@ -772,7 +772,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         LOG.error("User is not having required permissions to add labels", e);
         setExceptionResults(visLabels.size(), e, response);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         setExceptionResults(visLabels.size(), e, response);
       }
     }
@@ -827,7 +827,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         LOG.error("User is not having required permissions to set authorization", e);
         setExceptionResults(auths.size(), e, response);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         setExceptionResults(auths.size(), e, response);
       }
     }
@@ -951,7 +951,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
         LOG.error("User is not having required permissions to clear authorization", e);
         setExceptionResults(auths.size(), e, response);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error(e.toString(), e);
         setExceptionResults(auths.size(), e, response);
       }
     }

@@ -53,8 +53,6 @@ import java.util.function.Function;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -113,6 +111,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -172,7 +171,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
@@ -224,7 +224,7 @@ public class HRegionServer extends HasThread implements
   // Time to pause if master says 'please hold'. Make configurable if needed.
   private static final int INIT_PAUSE_TIME_MS = 1000;
 
-  private static final Log LOG = LogFactory.getLog(HRegionServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HRegionServer.class);
 
   /**
    * For testing only!  Set to true to skip notifying region assignment to master .
@@ -1663,7 +1663,7 @@ public class HRegionServer extends HasThread implements
       .setCurrentCompactedKVs(currentCompactedKVs)
       .setDataLocality(dataLocality)
       .setLastMajorCompactionTs(r.getOldestHfileTs(true));
-    ((HRegion)r).setCompleteSequenceId(regionLoadBldr);
+    r.setCompleteSequenceId(regionLoadBldr);
 
     return regionLoadBldr.build();
   }
@@ -2198,7 +2198,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public void postOpenDeployTasks(final PostOpenDeployContext context)
       throws KeeperException, IOException {
-    HRegion r = (HRegion) context.getRegion();
+    HRegion r = context.getRegion();
     long masterSystemTime = context.getMasterSystemTime();
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionInfo().getRegionNameAsString());
@@ -2223,7 +2223,7 @@ public class HRegionServer extends HasThread implements
         + r.getRegionInfo().getRegionNameAsString());
     }
 
-    triggerFlushInPrimaryRegion((HRegion)r);
+    triggerFlushInPrimaryRegion(r);
 
     LOG.debug("Finished post open deploy task for " + r.getRegionInfo().getRegionNameAsString());
   }
@@ -2373,15 +2373,15 @@ public class HRegionServer extends HasThread implements
   public void abort(String reason, Throwable cause) {
     String msg = "***** ABORTING region server " + this + ": " + reason + " *****";
     if (cause != null) {
-      LOG.fatal(msg, cause);
+      LOG.error(HBaseMarkers.FATAL, msg, cause);
     } else {
-      LOG.fatal(msg);
+      LOG.error(HBaseMarkers.FATAL, msg);
     }
     this.abortRequested = true;
     // HBASE-4014: show list of coprocessors that were loaded to help debug
     // regionserver crashes.Note that we're implicitly using
     // java.util.HashSet's toString() method to print the coprocessor names.
-    LOG.fatal("RegionServer abort: loaded coprocessors are: " +
+    LOG.error(HBaseMarkers.FATAL, "RegionServer abort: loaded coprocessors are: " +
         CoprocessorHost.getLoadedCoprocessors());
     // Try and dump metrics if abort -- might give clue as to how fatal came about....
     try {
@@ -2631,7 +2631,8 @@ public class HRegionServer extends HasThread implements
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof ClockOutOfSyncException) {
-        LOG.fatal("Master rejected startup because clock is out of sync", ioe);
+        LOG.error(HBaseMarkers.FATAL, "Master rejected startup because clock is out of sync",
+            ioe);
         // Re-throw IOE will cause RS to abort
         throw ioe;
       } else if (ioe instanceof ServerNotRunningYetException) {
@@ -3197,7 +3198,7 @@ public class HRegionServer extends HasThread implements
        Map<byte[], List<HStoreFile>> hstoreFiles = null;
        Exception exceptionToThrow = null;
        try{
-         hstoreFiles = ((HRegion)regionToClose).close(false);
+         hstoreFiles = regionToClose.close(false);
        } catch (Exception e) {
          exceptionToThrow = e;
        }

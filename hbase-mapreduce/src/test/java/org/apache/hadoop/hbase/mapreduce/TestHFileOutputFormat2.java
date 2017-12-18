@@ -40,8 +40,6 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -110,6 +108,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple test for {@link HFileOutputFormat2}.
@@ -132,7 +132,7 @@ public class TestHFileOutputFormat2  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestHFileOutputFormat2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileOutputFormat2.class);
 
   /**
    * Simple mapper that makes KeyValue output.

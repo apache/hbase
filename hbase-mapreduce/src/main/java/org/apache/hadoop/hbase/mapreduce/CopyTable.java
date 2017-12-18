@@ -23,8 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,6 +30,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -49,7 +49,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 @InterfaceAudience.Public
 public class CopyTable extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(CopyTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CopyTable.class);
 
   final static String NAME = "copytable";
   long startTime = 0;

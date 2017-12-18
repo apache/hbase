@@ -50,8 +50,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -63,6 +61,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -109,7 +109,7 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Public
 public class LoadIncrementalHFiles extends Configured implements Tool {
 
-  private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LoadIncrementalHFiles.class);
 
   public static final String NAME = "completebulkload";
   static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
@@ -328,7 +328,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       if (queue.isEmpty()) {
         LOG.warn(
           "Bulk load operation did not find any files to load in " + "directory " + hfofDir != null
-              ? hfofDir.toUri()
+              ? hfofDir.toUri().toString()
               : "" + ".  Does it contain files in " +
                   "subdirectories that correspond to column family names?");
         return Collections.emptyMap();
@@ -877,7 +877,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       for (LoadQueueItem q : queue) {
         err.append("  ").append(q.getFilePath()).append('\n');
       }
-      LOG.error(err);
+      LOG.error(err.toString());
     }
   }
 

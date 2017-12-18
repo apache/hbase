@@ -28,8 +28,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,6 +47,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests that {@link CacheConfig} does as expected.
@@ -59,7 +59,7 @@ import org.junit.experimental.categories.Category;
 // tests clash on the global variable if this test is run as small sized test.
 @Category({IOTests.class, LargeTests.class})
 public class TestCacheConfig {
-  private static final Log LOG = LogFactory.getLog(TestCacheConfig.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheConfig.class);
   private Configuration conf;
 
   static class Deserializer implements CacheableDeserializer<Cacheable> {

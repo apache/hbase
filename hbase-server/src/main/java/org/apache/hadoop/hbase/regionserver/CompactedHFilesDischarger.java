@@ -19,14 +19,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -36,7 +35,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
  */
 @InterfaceAudience.Private
 public class CompactedHFilesDischarger extends ScheduledChore {
-  private static final Log LOG = LogFactory.getLog(CompactedHFilesDischarger.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactedHFilesDischarger.class);
   private RegionServerServices regionServerServices;
   // Default is to use executor
   @VisibleForTesting

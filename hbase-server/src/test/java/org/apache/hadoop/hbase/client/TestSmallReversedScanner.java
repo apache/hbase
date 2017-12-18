@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -29,12 +27,14 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 @Category(MediumTests.class)
 public class TestSmallReversedScanner {
-  public static final Log LOG = LogFactory.getLog(TestSmallReversedScanner.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestSmallReversedScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final TableName TABLE_NAME = TableName.valueOf("testReversedSmall");

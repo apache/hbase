@@ -24,8 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,10 +41,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestAssignmentOnRSCrash {
-  private static final Log LOG = LogFactory.getLog(TestAssignmentOnRSCrash.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentOnRSCrash.class);
 
   private static final TableName TEST_TABLE = TableName.valueOf("testb");
   private static final String FAMILY_STR = "f";

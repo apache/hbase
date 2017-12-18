@@ -34,8 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -71,7 +69,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -82,7 +81,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @Category({IOTests.class, MediumTests.class})
 public class TestCacheOnWrite {
 
-  private static final Log LOG = LogFactory.getLog(TestCacheOnWrite.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private Configuration conf;

@@ -40,8 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -67,7 +66,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -89,8 +89,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
  */
 @InterfaceAudience.Private
 public class ReplicationSourceManager implements ReplicationListener {
-  private static final Log LOG =
-      LogFactory.getLog(ReplicationSourceManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReplicationSourceManager.class);
   // List of all the sources that read this RS's logs
   private final List<ReplicationSourceInterface> sources;
   // List of all the sources we got from died RSs

@@ -22,8 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +35,8 @@ import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test that the {@link SnapshotDescription} helper is helping correctly.
@@ -66,7 +66,7 @@ public class TestSnapshotDescriptionUtils {
     EnvironmentEdgeManagerTestHelper.reset();
   }
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotDescriptionUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotDescriptionUtils.class);
 
   @Test
   public void testValidateMissingTableName() throws IOException {

@@ -40,8 +40,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -94,7 +93,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -108,8 +108,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescr
 @Category({ReplicationTests.class, MediumTests.class})
 public abstract class TestReplicationSourceManager {
 
-  protected static final Log LOG =
-      LogFactory.getLog(TestReplicationSourceManager.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestReplicationSourceManager.class);
 
   protected static Configuration conf;
 
@@ -274,7 +274,7 @@ public abstract class TestReplicationSourceManager {
       if(i > 1 && i % 20 == 0) {
         wal.rollWriter();
       }
-      LOG.info(i);
+      LOG.info(Long.toString(i));
       final long txid = wal.append(
           hri,
           new WALKeyImpl(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc, scopes),

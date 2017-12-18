@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,6 +54,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test a multi-column scanner when there is a Bloom filter false-positive.
@@ -65,8 +65,8 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestScanWithBloomError {
 
-  private static final Log LOG =
-    LogFactory.getLog(TestScanWithBloomError.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestScanWithBloomError.class);
 
   private static final String TABLE_NAME = "ScanWithBloomError";
   private static final String FAMILY = "myCF";

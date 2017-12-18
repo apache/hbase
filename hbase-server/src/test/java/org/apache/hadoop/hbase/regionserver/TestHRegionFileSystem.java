@@ -30,8 +30,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -57,11 +55,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestHRegionFileSystem {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestHRegionFileSystem.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   private static final byte[][] FAMILIES = {

@@ -37,8 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -55,7 +53,8 @@ import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 
@@ -64,7 +63,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class CompactSplit implements CompactionRequester, PropagatingConfigurationObserver {
-  private static final Log LOG = LogFactory.getLog(CompactSplit.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CompactSplit.class);
 
   // Configuration key for the large compaction threads.
   public final static String LARGE_COMPACTION_THREADS =

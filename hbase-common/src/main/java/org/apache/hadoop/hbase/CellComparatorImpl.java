@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Longs;
 
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Longs;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CellComparatorImpl implements CellComparator {
-  static final Log LOG = LogFactory.getLog(CellComparatorImpl.class);
+  static final Logger LOG = LoggerFactory.getLogger(CellComparatorImpl.class);
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.

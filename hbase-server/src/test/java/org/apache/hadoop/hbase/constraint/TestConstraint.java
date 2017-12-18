@@ -24,8 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,14 +40,16 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Do the complex testing of constraints against a minicluster
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestConstraint {
-  private static final Log LOG = LogFactory
-      .getLog(TestConstraint.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestConstraint.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");

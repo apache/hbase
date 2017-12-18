@@ -31,8 +31,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -74,10 +72,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
-  private static final Log LOG = LogFactory.getLog(TestFromClientSide3.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFromClientSide3.class);
   private final static HBaseTestingUtility TEST_UTIL
     = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");

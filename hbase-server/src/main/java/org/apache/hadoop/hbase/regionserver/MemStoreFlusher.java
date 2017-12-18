@@ -37,8 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,6 +53,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Thread that flushes cache on request
@@ -67,7 +67,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 class MemStoreFlusher implements FlushRequester {
-  private static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemStoreFlusher.class);
 
   private Configuration conf;
   // These two data members go together.  Any entry in the one must have

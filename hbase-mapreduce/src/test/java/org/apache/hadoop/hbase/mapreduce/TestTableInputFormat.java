@@ -32,8 +32,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -64,6 +62,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This tests the TableInputFormat and its recovery semantics
@@ -72,7 +72,7 @@ import org.mockito.stubbing.Answer;
 @Category(LargeTests.class)
 public class TestTableInputFormat {
 
-  private static final Log LOG = LogFactory.getLog(TestTableInputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableInputFormat.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static MiniMRCluster mrCluster;

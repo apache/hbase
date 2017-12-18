@@ -54,11 +54,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -102,7 +103,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
  */
 @InterfaceAudience.Private
 public class BucketCache implements BlockCache, HeapSize {
-  private static final Log LOG = LogFactory.getLog(BucketCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BucketCache.class);
 
   /** Priority buckets config */
   static final String SINGLE_FACTOR_CONFIG_NAME = "hbase.bucketcache.single.factor";

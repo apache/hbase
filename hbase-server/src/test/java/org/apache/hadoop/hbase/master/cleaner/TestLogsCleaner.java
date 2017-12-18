@@ -31,8 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
@@ -68,11 +66,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestLogsCleaner {
 
-  private static final Log LOG = LogFactory.getLog(TestLogsCleaner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLogsCleaner.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass

@@ -28,8 +28,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.ClusterStatus.Option;
@@ -59,6 +57,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -71,7 +71,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 @Category(LargeTests.class)
 public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
 
-  private static final Log LOG = LogFactory.getLog(TestFavoredStochasticBalancerPickers.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFavoredStochasticBalancerPickers.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int SLAVES = 6;

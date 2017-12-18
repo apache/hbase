@@ -28,9 +28,9 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -42,7 +42,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class JVM {
-  private static final Log LOG = LogFactory.getLog(JVM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JVM.class);
   private OperatingSystemMXBean osMbean;
 
   private static final boolean ibmvendor =

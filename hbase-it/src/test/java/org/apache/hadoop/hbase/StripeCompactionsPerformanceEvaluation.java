@@ -24,8 +24,6 @@ import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
@@ -42,6 +40,8 @@ import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -49,7 +49,9 @@ import org.junit.Assert;
  */
 @InterfaceAudience.Private
 public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
-  private static final Log LOG = LogFactory.getLog(StripeCompactionsPerformanceEvaluation.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StripeCompactionsPerformanceEvaluation.class);
+
   private static final TableName TABLE_NAME =
     TableName.valueOf(StripeCompactionsPerformanceEvaluation.class.getSimpleName());
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("CF");
@@ -195,8 +197,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
 
   private void runOneTest(String description, Configuration conf) throws Exception {
     int numServers = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
-    long startKey = (long)preloadKeys * numServers;
-    long endKey = startKey + (long)writeKeys * numServers;
+    long startKey = preloadKeys * numServers;
+    long endKey = startKey + writeKeys * numServers;
     status(String.format("%s test starting on %d servers; preloading 0 to %d and writing to %d",
         description, numServers, startKey, endKey));
 

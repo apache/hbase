@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,13 +41,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the load balancer that is created by default.
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestDefaultLoadBalancer extends BalancerTestBase {
-  private static final Log LOG = LogFactory.getLog(TestDefaultLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDefaultLoadBalancer.class);
 
   private static LoadBalancer loadBalancer;
 

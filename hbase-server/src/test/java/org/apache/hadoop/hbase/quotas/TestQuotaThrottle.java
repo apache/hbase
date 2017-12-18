@@ -18,17 +18,15 @@
 
 package org.apache.hadoop.hbase.quotas;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -44,12 +42,14 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestQuotaThrottle {
-  private final static Log LOG = LogFactory.getLog(TestQuotaThrottle.class);
+  private final static Logger LOG = LoggerFactory.getLogger(TestQuotaThrottle.class);
 
   private final static int REFRESH_TIME = 30 * 60000;
 
@@ -587,9 +587,9 @@ public class TestQuotaThrottle {
       }
 
       LOG.debug("QuotaCache");
-      LOG.debug(quotaCache.getNamespaceQuotaCache());
-      LOG.debug(quotaCache.getTableQuotaCache());
-      LOG.debug(quotaCache.getUserQuotaCache());
+      LOG.debug(Objects.toString(quotaCache.getNamespaceQuotaCache()));
+      LOG.debug(Objects.toString(quotaCache.getTableQuotaCache()));
+      LOG.debug(Objects.toString(quotaCache.getUserQuotaCache()));
     }
   }
 

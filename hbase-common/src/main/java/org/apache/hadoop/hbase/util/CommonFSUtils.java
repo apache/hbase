@@ -29,8 +29,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -45,6 +43,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public abstract class CommonFSUtils {
-  private static final Log LOG = LogFactory.getLog(CommonFSUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CommonFSUtils.class);
 
   /** Parameter name for HBase WAL directory */
   public static final String HBASE_WAL_DIR = "hbase.wal.dir";
@@ -733,7 +733,7 @@ public abstract class CommonFSUtils {
    * @param LOG log to output information
    * @throws IOException if an unexpected exception occurs
    */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+  public static void logFileSystemState(final FileSystem fs, final Path root, Logger LOG)
       throws IOException {
     LOG.debug("File system contents for path " + root);
     logFSTree(LOG, fs, root, "|-");
@@ -742,9 +742,9 @@ public abstract class CommonFSUtils {
   /**
    * Recursive helper to log the state of the FS
    *
-   * @see #logFileSystemState(FileSystem, Path, Log)
+   * @see #logFileSystemState(FileSystem, Path, Logger)
    */
-  private static void logFSTree(Log LOG, final FileSystem fs, final Path root, String prefix)
+  private static void logFSTree(Logger LOG, final FileSystem fs, final Path root, String prefix)
       throws IOException {
     FileStatus[] files = listStatus(fs, root, null);
     if (files == null) {

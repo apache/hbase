@@ -52,8 +52,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -71,6 +69,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -97,6 +96,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -105,7 +106,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class WALSplitter {
-  private static final Log LOG = LogFactory.getLog(WALSplitter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALSplitter.class);
 
   /** By default we retry errors in splitting, rather than skipping. */
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
@@ -1538,7 +1539,7 @@ public class WALSplitter {
       } catch (IOException e) {
           e = e instanceof RemoteException ?
                   ((RemoteException)e).unwrapRemoteException() : e;
-        LOG.fatal(" Got while writing log entry to log", e);
+        LOG.error(HBaseMarkers.FATAL, " Got while writing log entry to log", e);
         throw e;
       }
     }

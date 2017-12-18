@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -36,7 +36,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class MasterProcedureUtil {
-  private static final Log LOG = LogFactory.getLog(MasterProcedureUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MasterProcedureUtil.class);
 
   private MasterProcedureUtil() {}
 

@@ -35,8 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
@@ -44,13 +42,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
 @Category({MiscTests.class, MediumTests.class})
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdReadWriteLock {
 
-  private static final Log LOG = LogFactory.getLog(TestIdReadWriteLock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLock.class);
 
   private static final int NUM_IDS = 16;
   private static final int NUM_THREADS = 128;

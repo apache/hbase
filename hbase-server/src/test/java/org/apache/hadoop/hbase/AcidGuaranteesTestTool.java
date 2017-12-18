@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
@@ -51,7 +49,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -61,7 +60,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class AcidGuaranteesTestTool extends AbstractHBaseTool {
 
-  private static final Log LOG = LogFactory.getLog(AcidGuaranteesTestTool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AcidGuaranteesTestTool.class);
 
   public static final TableName TABLE_NAME = TableName.valueOf("TestAcidGuarantees");
   public static final byte[] FAMILY_A = Bytes.toBytes("A");

@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -46,6 +44,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 class StringRange {
@@ -124,7 +124,7 @@ public class TestColumnRangeFilter {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final Log LOG = LogFactory.getLog(TestColumnRangeFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestColumnRangeFilter.class);
 
   @Rule
   public TestName name = new TestName();

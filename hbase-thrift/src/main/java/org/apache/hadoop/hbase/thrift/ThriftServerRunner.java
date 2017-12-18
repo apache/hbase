@@ -48,8 +48,6 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilder;
@@ -84,6 +82,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.SecurityUtil;
@@ -139,7 +138,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Throwables;
 import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -151,7 +151,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.util.concurrent.ThreadFa
 @InterfaceAudience.Private
 public class ThriftServerRunner implements Runnable {
 
-  private static final Log LOG = LogFactory.getLog(ThriftServerRunner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ThriftServerRunner.class);
 
   private static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
 
@@ -386,7 +386,7 @@ public class ThriftServerRunner implements Runnable {
             tserver.serve();
           }
         } catch (Exception e) {
-          LOG.fatal("Cannot run ThriftServer", e);
+          LOG.error(HBaseMarkers.FATAL, "Cannot run ThriftServer", e);
           // Crash the process if the ThriftServer is not running
           System.exit(-1);
         }
@@ -714,7 +714,7 @@ public class ThriftServerRunner implements Runnable {
    */
   public static class HBaseHandler implements Hbase.Iface {
     protected Configuration conf;
-    protected static final Log LOG = LogFactory.getLog(HBaseHandler.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(HBaseHandler.class);
 
     // nextScannerId and scannerMap are used to manage scanner state
     protected int nextScannerId = 0;

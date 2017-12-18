@@ -27,11 +27,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 
 /**
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 @InterfaceAudience.Private
 public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner {
-  private static final Log LOG = LogFactory.getLog(KeyValueHeap.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KeyValueHeap.class);
   protected PriorityQueue<KeyValueScanner> heap = null;
   // Holds the scanners when a ever a eager close() happens.  All such eagerly closed
   // scans are collected and when the final scanner.close() happens will perform the

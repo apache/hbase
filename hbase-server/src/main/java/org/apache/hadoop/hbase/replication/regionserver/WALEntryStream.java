@@ -25,8 +25,6 @@ import java.util.NoSuchElementException;
 import java.util.OptionalLong;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +33,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -53,7 +53,7 @@ import org.apache.hadoop.ipc.RemoteException;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class WALEntryStream implements Closeable {
-  private static final Log LOG = LogFactory.getLog(WALEntryStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALEntryStream.class);
 
   private Reader reader;
   private Path currentPath;

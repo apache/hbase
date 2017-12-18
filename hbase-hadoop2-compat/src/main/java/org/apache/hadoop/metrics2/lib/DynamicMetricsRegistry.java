@@ -21,9 +21,9 @@ package org.apache.hadoop.metrics2.lib;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
  */
 @InterfaceAudience.Private
 public class DynamicMetricsRegistry {
-  private static final Log LOG = LogFactory.getLog(DynamicMetricsRegistry.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DynamicMetricsRegistry.class);
 
   private final ConcurrentMap<String, MutableMetric> metricsMap =
       Maps.newConcurrentMap();

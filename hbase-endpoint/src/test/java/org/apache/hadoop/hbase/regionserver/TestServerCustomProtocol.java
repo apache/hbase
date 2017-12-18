@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -61,6 +59,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -69,7 +69,7 @@ import com.google.protobuf.ServiceException;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestServerCustomProtocol {
-  private static final Log LOG = LogFactory.getLog(TestServerCustomProtocol.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestServerCustomProtocol.class);
   static final String WHOAREYOU = "Who are you?";
   static final String NOBODY = "nobody";
   static final String HELLO = "Hello, ";

@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
@@ -41,6 +39,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs.
@@ -49,7 +49,7 @@ import org.junit.rules.TestName;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestTimestampsFilter {
-  private static final Log LOG = LogFactory.getLog(TestTimestampsFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestTimestampsFilter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule

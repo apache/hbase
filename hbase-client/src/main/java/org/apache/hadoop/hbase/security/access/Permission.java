@@ -24,9 +24,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -54,7 +54,7 @@ public class Permission extends VersionedWritable {
     public byte code() { return code; }
   }
 
-  private static final Log LOG = LogFactory.getLog(Permission.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Permission.class);
   protected static final Map<Byte,Action> ACTION_BY_CODE = Maps.newHashMap();
 
   protected Action[] actions;

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -38,6 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +47,7 @@ import static org.junit.Assert.assertEquals;
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSyncUpTool extends TestReplicationBase {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationSyncUpTool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSyncUpTool.class);
 
   private static final TableName t1_su = TableName.valueOf("t1_syncup");
   private static final TableName t2_su = TableName.valueOf("t2_syncup");

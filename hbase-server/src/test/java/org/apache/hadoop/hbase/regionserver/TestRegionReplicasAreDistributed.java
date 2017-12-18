@@ -25,8 +25,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,11 +41,13 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionReplicasAreDistributed {
 
-  private static final Log LOG = LogFactory.getLog(TestRegionReplicasAreDistributed.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicasAreDistributed.class);
 
   private static final int NB_SERVERS = 3;
   private static Table table;

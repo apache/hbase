@@ -36,8 +36,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -92,6 +90,8 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The AssignmentManager is the coordinator for region assign/unassign operations.
@@ -106,7 +106,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class AssignmentManager implements ServerListener {
-  private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AssignmentManager.class);
 
   // TODO: AMv2
   //  - handle region migration from hbase1 to hbase2.
@@ -510,7 +510,7 @@ public class AssignmentManager implements ServerListener {
           }
         }
       } catch (Throwable t) {
-        LOG.error(t);
+        LOG.error(t.toString(), t);
       }
     }).start();
   }
@@ -748,7 +748,7 @@ public class AssignmentManager implements ServerListener {
           plan.setDestination(getBalancer().randomAssignment(plan.getRegionInfo(),
               this.master.getServerManager().createDestinationServersList(exclude)));
         } catch (HBaseIOException e) {
-          LOG.warn(e);
+          LOG.warn(e.toString(), e);
         }
       }
     }

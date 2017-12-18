@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -47,7 +45,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
@@ -61,7 +60,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestRSStatusServlet {
-  private static final Log LOG = LogFactory.getLog(TestRSStatusServlet.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSStatusServlet.class);
   private HRegionServer rs;
   private RSRpcServices rpcServices;
   private RpcServerInterface rpcServer;

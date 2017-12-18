@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -46,6 +44,8 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A zookeeper that can handle 'recoverable' errors.
@@ -72,7 +72,7 @@ import org.apache.zookeeper.proto.SetDataRequest;
  */
 @InterfaceAudience.Private
 public class RecoverableZooKeeper {
-  private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RecoverableZooKeeper.class);
   // the actual ZooKeeper client instance
   private ZooKeeper zk;
   private final RetryCounterFactory retryCounterFactory;

@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,6 +37,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test clone/restore snapshots from the client
@@ -48,7 +48,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRestoreFlushSnapshotFromClient {
-  private static final Log LOG = LogFactory.getLog(TestRestoreFlushSnapshotFromClient.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRestoreFlushSnapshotFromClient.class);
 
   protected final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

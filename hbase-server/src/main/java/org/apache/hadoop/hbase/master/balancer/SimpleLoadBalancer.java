@@ -28,8 +28,6 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,7 +37,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
@@ -57,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.MinMaxPriorityQu
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {
-  private static final Log LOG = LogFactory.getLog(SimpleLoadBalancer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SimpleLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
 
   private RegionInfoComparator riComparator = new RegionInfoComparator();

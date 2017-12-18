@@ -29,8 +29,6 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -41,10 +39,12 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.rest.model.TableInfoModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RegionsResource extends ResourceBase {
-  private static final Log LOG = LogFactory.getLog(RegionsResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionsResource.class);
 
   static CacheControl cacheControl;
   static {

@@ -47,8 +47,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompatibilityFactory;
@@ -105,7 +103,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 /**
@@ -115,7 +114,7 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 @Category({ClientTests.class, MediumTests.class})
 public class TestThriftHBaseServiceHandler {
 
-  private static final Log LOG = LogFactory.getLog(TestThriftHBaseServiceHandler.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThriftHBaseServiceHandler.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   // Static names for tables, columns, rows, and values
@@ -1563,7 +1562,7 @@ public class TestThriftHBaseServiceHandler {
   }
 
   public static class DelayingRegionObserver implements RegionCoprocessor, RegionObserver {
-    private static final Log LOG = LogFactory.getLog(DelayingRegionObserver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DelayingRegionObserver.class);
     // sleep time in msec
     private long delayMillis;
 

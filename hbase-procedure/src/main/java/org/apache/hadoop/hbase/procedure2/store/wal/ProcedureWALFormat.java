@@ -25,12 +25,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class ProcedureWALFormat {
-  private static final Log LOG = LogFactory.getLog(ProcedureWALFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcedureWALFormat.class);
 
   static final byte LOG_TYPE_STREAM = 0;
   static final byte LOG_TYPE_COMPACTED = 1;

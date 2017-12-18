@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
@@ -34,6 +32,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests filter Lists in ways that rely on a MiniCluster. Where possible, favor tests in
@@ -42,7 +42,7 @@ import org.junit.rules.TestName;
 @Category({ MediumTests.class, FilterTests.class })
 public class TestFilterListOnMini {
 
-  private static final Log LOG = LogFactory.getLog(TestFilterListOnMini.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFilterListOnMini.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule

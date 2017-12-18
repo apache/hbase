@@ -30,8 +30,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -67,6 +65,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 
@@ -79,7 +79,7 @@ public class TestMetaWithReplicas {
       withTimeout(this.getClass()).
       withLookingForStuckThread(true).
       build();
-  private static final Log LOG = LogFactory.getLog(TestMetaWithReplicas.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMetaWithReplicas.class);
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule

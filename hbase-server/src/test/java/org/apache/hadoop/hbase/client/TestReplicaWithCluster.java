@@ -30,8 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -66,10 +64,12 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestReplicaWithCluster {
-  private static final Log LOG = LogFactory.getLog(TestReplicaWithCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicaWithCluster.class);
 
   private static final int NB_SERVERS = 3;
   private static final byte[] row = TestReplicaWithCluster.class.getName().getBytes();
@@ -115,7 +115,7 @@ public class TestReplicaWithCluster {
             }
           }
         } catch (InterruptedException e1) {
-          LOG.error(e1);
+          LOG.error(e1.toString(), e1);
         }
       } else {
         LOG.info("We're not the primary replicas.");
@@ -555,7 +555,7 @@ public class TestReplicaWithCluster {
       try {
         Thread.sleep(2 * REFRESH_PERIOD);
       } catch (InterruptedException e1) {
-        LOG.error(e1);
+        LOG.error(e1.toString(), e1);
       }
 
       // But if we ask for stale we will get it
@@ -590,7 +590,7 @@ public class TestReplicaWithCluster {
       try {
         Thread.sleep(2 * REFRESH_PERIOD);
       } catch (InterruptedException e1) {
-        LOG.error(e1);
+        LOG.error(e1.toString(), e1);
       }
 
       // But if we ask for stale we will get it
@@ -636,7 +636,7 @@ public class TestReplicaWithCluster {
       try {
         Thread.sleep(2 * REFRESH_PERIOD);
       } catch (InterruptedException e1) {
-        LOG.error(e1);
+        LOG.error(e1.toString(), e1);
       }
 
       try {
@@ -768,7 +768,7 @@ public class TestReplicaWithCluster {
       try {
         Thread.sleep(2 * REFRESH_PERIOD);
       } catch (InterruptedException e1) {
-        LOG.error(e1);
+        LOG.error(e1.toString(), e1);
       }
 
       // Simulating the RS down

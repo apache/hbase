@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -46,6 +44,8 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of the StoreFlusher. It extends the DefaultStoreFlusher.
@@ -65,7 +65,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
 
-  private static final Log LOG = LogFactory.getLog(DefaultMobStoreFlusher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultMobStoreFlusher.class);
   private final Object flushLock = new Object();
   private long mobCellValueSizeThreshold = 0;
   private Path targetPath;

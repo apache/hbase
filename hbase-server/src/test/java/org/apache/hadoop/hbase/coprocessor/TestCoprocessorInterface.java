@@ -35,8 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -73,11 +71,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorInterface {
   @Rule public TestName name = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorInterface.class);
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 

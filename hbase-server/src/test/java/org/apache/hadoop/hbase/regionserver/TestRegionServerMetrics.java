@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CompatibilityFactory;
@@ -61,8 +59,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -74,20 +70,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionServerMetrics {
-  private static final Log LOG = LogFactory.getLog(TestRegionServerMetrics.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerMetrics.class);
 
   @Rule
   public TestName testName = new TestName();
 
   @ClassRule
   public static TestRule timeout = CategoryBasedTimeout.forClass(TestRegionServerMetrics.class);
-
-  static {
-    Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
-  }
 
   private static MetricsAssertHelper metricsHelper;
   private static MiniHBaseCluster cluster;
@@ -536,7 +530,7 @@ public class TestRegionServerMetrics {
       setMobThreshold(region, cf, 0);
 
       // closing the region forces the compaction.discharger to archive the compacted hfiles
-      ((HRegion) region).close();
+      region.close();
 
       // metrics are reset by the region initialization
       region.initialize();

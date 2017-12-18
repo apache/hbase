@@ -28,17 +28,17 @@ import java.util.Properties;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AuthFilter extends AuthenticationFilter {
-  private static final Log LOG = LogFactory.getLog(AuthFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AuthFilter.class);
   private static final String REST_PREFIX = "hbase.rest.authentication.";
   private static final int REST_PREFIX_LEN = REST_PREFIX.length();
 

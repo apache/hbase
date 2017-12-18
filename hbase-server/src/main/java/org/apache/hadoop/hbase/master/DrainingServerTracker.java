@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -31,6 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tracks the list of draining region servers via ZK.
@@ -51,7 +51,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class DrainingServerTracker extends ZKListener {
-  private static final Log LOG = LogFactory.getLog(DrainingServerTracker.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DrainingServerTracker.class);
 
   private ServerManager serverManager;
   private final NavigableSet<ServerName> drainingServers = new TreeSet<>();

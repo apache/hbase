@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class PressureAwareThroughputController extends Configured implements
     ThroughputController, Stoppable {
-  private static final Log LOG = LogFactory.getLog(PressureAwareThroughputController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PressureAwareThroughputController.class);
 
   /**
    * Stores the information of one controlled compaction.

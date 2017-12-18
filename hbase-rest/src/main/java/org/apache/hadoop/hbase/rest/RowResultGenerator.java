@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Get;
@@ -37,7 +37,7 @@ import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 public class RowResultGenerator extends ResultGenerator {
-  private static final Log LOG = LogFactory.getLog(RowResultGenerator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RowResultGenerator.class);
 
   private Iterator<Cell> valuesI;
   private Cell cache;

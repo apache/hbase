@@ -23,10 +23,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -38,7 +38,7 @@ public class FailedServers {
   private final Map<String, Long> failedServers = new HashMap<String, Long>();
   private long latestExpiry = 0;
   private final int recheckServersTimeout;
-  private static final Log LOG = LogFactory.getLog(FailedServers.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FailedServers.class);
 
   public FailedServers(Configuration conf) {
     this.recheckServersTimeout = conf.getInt(

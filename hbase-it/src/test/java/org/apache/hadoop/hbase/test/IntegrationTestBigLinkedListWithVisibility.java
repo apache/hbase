@@ -24,8 +24,6 @@ import java.util.Iterator;
 import java.util.UUID;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -50,6 +48,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mapreduce.Import;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -72,6 +71,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * IT test used to verify the deletes with visibility labels.
@@ -123,7 +124,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   private static String userName = "user1";
 
   static class VisibilityGenerator extends Generator {
-    private static final Log LOG = LogFactory.getLog(VisibilityGenerator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(VisibilityGenerator.class);
 
     @Override
     protected void createSchema() throws IOException {
@@ -162,7 +163,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
             AccessControlClient.grant(ConnectionFactory.createConnection(getConf()), tableName,
                 USER.getShortName(), null, null, actions);
           } catch (Throwable e) {
-            LOG.fatal("Error in granting permission for the user " + USER.getShortName(), e);
+            LOG.error(HBaseMarkers.FATAL, "Error in granting permission for the user " +
+                USER.getShortName(), e);
             throw new IOException(e);
           }
         }
@@ -239,7 +241,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   }
 
   static class Copier extends Configured implements Tool {
-    private static final Log LOG = LogFactory.getLog(Copier.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Copier.class);
     private TableName tableName;
     private int labelIndex;
     private boolean delete;
@@ -395,7 +397,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   }
 
   static class VisibilityVerify extends Verify {
-    private static final Log LOG = LogFactory.getLog(VisibilityVerify.class);
+    private static final Logger LOG = LoggerFactory.getLogger(VisibilityVerify.class);
     private TableName tableName;
     private int labelIndex;
 
@@ -475,7 +477,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
   static class VisibilityLoop extends Loop {
     private static final int SLEEP_IN_MS = 5000;
-    private static final Log LOG = LogFactory.getLog(VisibilityLoop.class);
+    private static final Logger LOG = LoggerFactory.getLogger(VisibilityLoop.class);
     IntegrationTestBigLinkedListWithVisibility it;
 
     @Override

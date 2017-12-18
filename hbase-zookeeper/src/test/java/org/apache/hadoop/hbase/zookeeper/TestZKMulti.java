@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
@@ -43,13 +41,15 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test ZooKeeper multi-update functionality
  */
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZKMulti {
-  private static final Log LOG = LogFactory.getLog(TestZKMulti.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKMulti.class);
   private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
   private static ZKWatcher zkw = null;
 

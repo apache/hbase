@@ -24,8 +24,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -48,6 +46,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test the optimization that does not scan files where all timestamps are
@@ -57,8 +57,8 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({IOTests.class, MediumTests.class})
 public class TestScannerSelectionUsingTTL {
 
-  private static final Log LOG =
-      LogFactory.getLog(TestScannerSelectionUsingTTL.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestScannerSelectionUsingTTL.class);
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static TableName TABLE = TableName.valueOf("myTable");

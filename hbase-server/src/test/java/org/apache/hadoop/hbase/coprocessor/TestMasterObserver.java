@@ -30,8 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -70,7 +68,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -83,7 +82,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNa
  */
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestMasterObserver {
-  private static final Log LOG = LogFactory.getLog(TestMasterObserver.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterObserver.class);
 
   public static CountDownLatch tableCreationLatch = new CountDownLatch(1);
   public static CountDownLatch tableDeletionLatch = new CountDownLatch(1);

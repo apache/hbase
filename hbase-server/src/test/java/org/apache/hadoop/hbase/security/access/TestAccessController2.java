@@ -26,8 +26,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -64,10 +62,12 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({SecurityTests.class, LargeTests.class})
 public class TestAccessController2 extends SecureTestUtil {
-  private static final Log LOG = LogFactory.getLog(TestAccessController2.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAccessController2.class);
 
   private static final byte[] TEST_ROW = Bytes.toBytes("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f");

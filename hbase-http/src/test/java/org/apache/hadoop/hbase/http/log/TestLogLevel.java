@@ -19,18 +19,23 @@ package org.apache.hadoop.hbase.http.log;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.net.URI;
+import java.net.URL;
 
+import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.commons.logging.*;
-import org.apache.commons.logging.impl.*;
-import org.apache.log4j.*;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.LoggerFactory;
+import org.slf4j.impl.Log4jLoggerAdapter;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestLogLevel {
@@ -40,11 +45,11 @@ public class TestLogLevel {
   @SuppressWarnings("deprecation")
   public void testDynamicLogLevel() throws Exception {
     String logName = TestLogLevel.class.getName();
-    Log testlog = LogFactory.getLog(logName);
+    org.slf4j.Logger testlog = LoggerFactory.getLogger(logName);
 
     //only test Log4JLogger
-    if (testlog instanceof Log4JLogger) {
-      Logger log = ((Log4JLogger)testlog).getLogger();
+    if (testlog instanceof Log4jLoggerAdapter) {
+      Logger log = LogManager.getLogger(logName);
       log.debug("log.debug1");
       log.info("log.info1");
       log.error("log.error1");

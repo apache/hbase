@@ -23,13 +23,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * A utility to store user specific HConnections in memory.
@@ -48,7 +48,7 @@ import org.apache.commons.logging.LogFactory;
  */
 @InterfaceAudience.Private
 public class ConnectionCache {
-  private static final Log LOG = LogFactory.getLog(ConnectionCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ConnectionCache.class);
 
   private final Map<String, ConnectionInfo> connections = new ConcurrentHashMap<>();
   private final KeyLocker<String> locker = new KeyLocker<>();
