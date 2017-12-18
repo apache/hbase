@@ -1261,6 +1261,11 @@
             <artifactId>asciidoctorj-pdf</artifactId>
             <version>${asciidoctorj.pdf.version}</version>
           </dependency>
+          <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>${jruby.version}</version>
+          </dependency>
         </dependencies>
         <configuration>
           <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
