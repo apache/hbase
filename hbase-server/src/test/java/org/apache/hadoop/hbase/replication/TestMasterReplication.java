@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,8 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+
+import com.google.protobuf.ServiceException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -74,8 +76,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.ServiceException;
 
 @Category(LargeTests.class)
 public class TestMasterReplication {
@@ -217,7 +217,7 @@ public class TestMasterReplication {
    */
   @Test(timeout = 300000)
   public void testCyclicReplication2() throws Exception {
-    LOG.info("testCyclicReplication1");
+    LOG.info("testCyclicReplication2");
     int numClusters = 3;
     Table[] htables = null;
     try {
@@ -256,7 +256,7 @@ public class TestMasterReplication {
       // without HBASE-9158 the edit for row4 would have been marked with
       // cluster 0's id
       // and hence not replicated to cluster 0
-      wait(row4, htables[0], true);
+      wait(row4, htables[0], false);
     } finally {
       close(htables);
       shutDownMiniClusters();
