@@ -459,7 +459,7 @@ The host name or IP address of the name server (DNS)
 ZooKeeper session timeout in milliseconds. It is used in two different ways.
       First, this value is used in the ZK client that HBase uses to connect to the ensemble.
       It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'. See
-      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
+      https://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
       For example, if an HBase region server connects to a ZK ensemble that's also managed
       by HBase, then the
       session timeout will be the one specified by this configuration. But, a region server that connects
@@ -523,7 +523,7 @@ The host name or IP address of the name server (DNS)
 +
 .Description
 Port used by ZooKeeper peers to talk to each other.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.
 +
 .Default
@@ -535,7 +535,7 @@ Port used by ZooKeeper peers to talk to each other.
 +
 .Description
 Port used by ZooKeeper for leader election.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    See https://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
     for more information.
 +
 .Default
@@ -1946,7 +1946,7 @@ If the DFSClient configuration
 
       Class used to execute the regions balancing when the period occurs.
       See the class comment for more on how it works
-      http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/balancer/StochasticLoadBalancer.html
+      https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/balancer/StochasticLoadBalancer.html
       It replaces the DefaultLoadBalancer as the default (since renamed
       as the SimpleLoadBalancer).
 

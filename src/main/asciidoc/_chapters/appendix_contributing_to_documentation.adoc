@@ -35,9 +35,9 @@ including the documentation.
 
 In HBase, documentation includes the following areas, and probably some others:
 
-* The link:http://hbase.apache.org/book.html[HBase Reference
+* The link:https://hbase.apache.org/book.html[HBase Reference
   Guide] (this book)
-* The link:http://hbase.apache.org/[HBase website]
+* The link:https://hbase.apache.org/[HBase website]
 * API documentation
 * Command-line utility output and help text
 * Web UI strings, explicit help text, context-sensitive strings, and others
@@ -126,7 +126,7 @@ This directory also stores images used in the HBase Reference Guide.
 
 The website's pages are written in an HTML-like XML dialect called xdoc, which
 has a reference guide at
-http://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
+https://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
 You can edit these files in a plain-text editor, an IDE, or an XML editor such
 as XML Mind XML Editor (XXE) or Oxygen XML Author.
 

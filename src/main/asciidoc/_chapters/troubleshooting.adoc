@@ -225,7 +225,7 @@ Search here first when you have an issue as its more than likely someone has alr
 [[trouble.resources.lists]]
 === Mailing Lists
 
-Ask a question on the link:http://hbase.apache.org/mail-lists.html[Apache HBase mailing lists].
+Ask a question on the link:https://hbase.apache.org/mail-lists.html[Apache HBase mailing lists].
 The 'dev' mailing list is aimed at the community of developers actually building Apache HBase and for features currently under development, and 'user' is generally used for questions on released versions of Apache HBase.
 Before going to the mailing list, make sure your question has not already been answered by searching the mailing list archives first.
 Use <<trouble.resources.searchhadoop>>.
@@ -596,7 +596,7 @@ See also Jesse Andersen's link:http://blog.cloudera.com/blog/2014/04/how-to-use-
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual <<trouble.client.scantimeout>>.
 Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)` (line number may vary). It tends to happen in the context of a slow/freezing `RegionServer#next` call.
 It can be prevented by having `hbase.rpc.timeout` > `hbase.regionserver.lease.period`.
-Harsh J investigated the issue as part of the mailing list thread link:http://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase, mail # user - Lease does not exist exceptions]
+Harsh J investigated the issue as part of the mailing list thread link:https://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase, mail # user - Lease does not exist exceptions]
 
 [[trouble.client.scarylogs]]
 === Shell or client application throws lots of scary exceptions during normal operation
@@ -802,7 +802,7 @@ hadoop fs -du /hbase/myTable
 ----
 ...returns a list of the regions under the HBase table 'myTable' and their disk utilization.
 
-For more information on HDFS shell commands, see the link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html[HDFS FileSystem Shell documentation].
+For more information on HDFS shell commands, see the link:https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/FileSystemShell.html[HDFS FileSystem Shell documentation].
 
 [[trouble.namenode.hbase.objects]]
 === Browsing HDFS for HBase Objects
@@ -1174,7 +1174,7 @@ If you have a DNS server, you can set `hbase.zookeeper.dns.interface` and `hbase
 
 ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
 
-See the link:http://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
+See the link:https://wiki.apache.org/hadoop/ZooKeeper/Troubleshooting[ZooKeeper Operating Environment Troubleshooting] page.
 It has suggestions and tools for checking disk and networking performance; i.e.
 the operating environment your ZooKeeper and HBase are running in.
 
@@ -1313,7 +1313,7 @@ These changes were backported to HBase 0.98.x and apply to all newer versions.
 == HBase and HDFS
 
 General configuration guidance for Apache HDFS is out of the scope of this guide.
-Refer to the documentation available at http://hadoop.apache.org/ for extensive information about configuring HDFS.
+Refer to the documentation available at https://hadoop.apache.org/ for extensive information about configuring HDFS.
 This section deals with HDFS in terms of HBase.
 
 In most cases, HBase stores its data in Apache HDFS.

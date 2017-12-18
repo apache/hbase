@@ -620,7 +620,7 @@ To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in 
 [[rowcounter]]
 === RowCounter and CellCounter
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter]        is a mapreduce job to count all the rows of a table.
 This is a good utility to use as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
 It will run the mapreduce all in a single process but it will run faster if you have a MapReduce cluster in place for it to exploit. It is also possible to limit
 the time range of data to be scanned by using the `--starttime=[starttime]` and `--endtime=[endtime]` flags.
@@ -633,7 +633,7 @@ RowCounter only counts one version per cell.
 
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 
-HBase ships another diagnostic mapreduce job called link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
+HBase ships another diagnostic mapreduce job called link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
 Like RowCounter, it gathers more fine-grained statistics about your table.
 The statistics gathered by RowCounter are more fine-grained and include:
 
@@ -666,7 +666,7 @@ See link:https://issues.apache.org/jira/browse/HBASE-4391[HBASE-4391 Add ability
 === Offline Compaction Tool
 
 See the usage for the
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html[CompactionTool].
 Run it like:
 
 [source, bash]
@@ -722,7 +722,7 @@ The LoadTestTool has received many updates in recent HBase releases, including s
 [[ops.regionmgt.majorcompact]]
 === Major Compaction
 
-Major compactions can be requested via the HBase shell or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
+Major compactions can be requested via the HBase shell or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact-org.apache.hadoop.hbase.TableName-[Admin.majorCompact].
 
 Note: major compactions do NOT do region merges.
 See <<compaction,compaction>> for more information about compactions.
@@ -868,7 +868,7 @@ But usually disks do the "John Wayne" -- i.e.
 take a while to go down spewing errors in _dmesg_ -- or for some reason, run much slower than their companions.
 In this case you want to decommission the disk.
 You have two options.
-You can link:http://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F[decommission
+You can link:https://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F[decommission
             the datanode] or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode, unmount the bad volume (You can't umount a volume while the datanode is using it), and then restart the datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0). The regionserver will throw some errors in its logs as it recalibrates where to get its data from -- it will likely roll its WAL log too -- but in general but for some latency spikes, it should keep on chugging.
 
 .Short Circuit Reads
@@ -1021,7 +1021,7 @@ To configure metrics for a given region server, edit the _conf/hadoop-metrics2-h
 Restart the region server for the changes to take effect.
 
 To change the sampling rate for the default sink, edit the line beginning with `*.period`.
-To filter which metrics are emitted or to extend the metrics framework, see http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html
+To filter which metrics are emitted or to extend the metrics framework, see https://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html
 
 .HBase Metrics and Ganglia
 [NOTE]
@@ -1029,7 +1029,7 @@ To filter which metrics are emitted or to extend the metrics framework, see http
 By default, HBase emits a large number of metrics per region server.
 Ganglia may have difficulty processing all these metrics.
 Consider increasing the capacity of the Ganglia server or reducing the number of metrics emitted by HBase.
-See link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html#filtering[Metrics Filtering].
+See link:https://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html#filtering[Metrics Filtering].
 ====
 
 === Disabling Metrics
@@ -1455,7 +1455,7 @@ A single WAL edit goes through several steps in order to be replicated to a slav
 . The edit is tagged with the master's UUID and added to a buffer.
   When the buffer is filled, or the reader reaches the end of the file, the buffer is sent to a random region server on the slave cluster.
 . The region server reads the edits sequentially and separates them into buffers, one buffer per table.
-  After all edits are read, each buffer is flushed using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
+  After all edits are read, each buffer is flushed using link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
   The master's UUID and the UUIDs of slaves which have already consumed the data are preserved in the edits they are applied, in order to prevent replication loops.
 . In the master, the offset for the WAL that is currently being replicated is registered in ZooKeeper.
 
@@ -2090,7 +2090,7 @@ The act of copying these files creates new HDFS metadata, which is why a restore
 === Live Cluster Backup - Replication
 
 This approach assumes that there is a second cluster.
-See the HBase page on link:http://hbase.apache.org/book.html#_cluster_replication[replication] for more information.
+See the HBase page on link:https://hbase.apache.org/book.html#_cluster_replication[replication] for more information.
 
 [[ops.backup.live.copytable]]
 === Live Cluster Backup - CopyTable
@@ -2299,7 +2299,7 @@ as in <<snapshots_s3>>.
 - You must be using HBase 1.2 or higher with Hadoop 2.7.1 or
   higher. No version of HBase supports Hadoop 2.7.0.
 - Your hosts must be configured to be aware of the Azure blob storage filesystem.
-  See http://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html.
+  See https://hadoop.apache.org/docs/r2.7.1/hadoop-azure/index.html.
 
 After you meet the prerequisites, follow the instructions
 in <<snapshots_s3>>, replacingthe protocol specifier with `wasb://` or `wasbs://`.
@@ -2362,7 +2362,7 @@ See <<gcpause,gcpause>>, <<trouble.log.gc,trouble.log.gc>> and elsewhere (TODO: 
 Generally less regions makes for a smoother running cluster (you can always manually split the big regions later (if necessary) to spread the data, or request load, over the cluster); 20-200 regions per RS is a reasonable range.
 The number of regions cannot be configured directly (unless you go for fully <<disable.splitting,disable.splitting>>); adjust the region size to achieve the target region size given table size.
 
-When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor], as well as shell commands.
+When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor], as well as shell commands.
 These settings will override the ones in `hbase-site.xml`.
 That is useful if your tables have different workloads/use cases.
 

@@ -270,21 +270,21 @@ Cell content is uninterpreted bytes
 == Data Model Operations
 
 The four primary data model operations are Get, Put, Scan, and Delete.
-Operations are applied via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances.
+Operations are applied via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances.
 
 === Get
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] returns attributes for a specified row.
-Gets are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get-org.apache.hadoop.hbase.client.Get-[Table.get]
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] returns attributes for a specified row.
+Gets are executed via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get-org.apache.hadoop.hbase.client.Get-[Table.get]
 
 === Put
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put-org.apache.hadoop.hbase.client.Put-[Table.put] (non-writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[Table.batch] (non-writeBuffer)
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put-org.apache.hadoop.hbase.client.Put-[Table.put] (non-writeBuffer) or link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch-java.util.List-java.lang.Object:A-[Table.batch] (non-writeBuffer)
 
 [[scan]]
 === Scans
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] allow iteration over multiple rows for specified attributes.
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] allow iteration over multiple rows for specified attributes.
 
 The following is an example of a Scan on a Table instance.
 Assume that a table is populated with rows with keys "row1", "row2", "row3", and then another set of rows with the keys "abc1", "abc2", and "abc3". The following example shows how to set a Scan instance to return the rows beginning with "row".
@@ -311,12 +311,12 @@ try {
 }
 ----
 
-Note that generally the easiest way to specify a specific stop point for a scan is by using the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html[InclusiveStopFilter] class.
+Note that generally the easiest way to specify a specific stop point for a scan is by using the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html[InclusiveStopFilter] class.
 
 === Delete
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html[Delete] removes a row from a table.
-Deletes are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete-org.apache.hadoop.hbase.client.Delete-[Table.delete].
+link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html[Delete] removes a row from a table.
+Deletes are executed via link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete-org.apache.hadoop.hbase.client.Delete-[Table.delete].
 
 HBase does not modify data in place, and so deletes are handled by creating new markers called _tombstones_.
 These tombstones, along with the dead values, are cleaned up on major compactions.
@@ -355,7 +355,7 @@ Prior to HBase 0.96, the default number of versions kept was `3`, but in 0.96 an
 .Modify the Maximum Number of Versions for a Column Family
 ====
 This example uses HBase Shell to keep a maximum of 5 versions of all columns in column family `f1`.
-You could also use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+You could also use link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 ----
 hbase> alter ‘t1′, NAME => ‘f1′, VERSIONS => 5
@@ -367,7 +367,7 @@ hbase> alter ‘t1′, NAME => ‘f1′, VERSIONS => 5
 You can also specify the minimum number of versions to store per column family.
 By default, this is set to 0, which means the feature is disabled.
 The following example sets the minimum number of versions on all columns in column family `f1` to `2`, via HBase Shell.
-You could also use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
+You could also use link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 ----
 hbase> alter ‘t1′, NAME => ‘f1′, MIN_VERSIONS => 2
@@ -385,12 +385,12 @@ In this section we look at the behavior of the version dimension for each of the
 ==== Get/Scan
 
 Gets are implemented on top of Scans.
-The below discussion of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] applies equally to link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scans].
+The below discussion of link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] applies equally to link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scans].
 
 By default, i.e. if you specify no explicit version, when doing a `get`, the cell whose version has the largest value is returned (which may or may not be the latest one written, see later). The default behavior can be modified in the following ways:
 
-* to return more than one version, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions--[Get.setMaxVersions()]
-* to return versions other than the latest, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setTimeRange-long-long-[Get.setTimeRange()]
+* to return more than one version, see link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions--[Get.setMaxVersions()]
+* to return versions other than the latest, see link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setTimeRange-long-long-[Get.setTimeRange()]
 +
 To retrieve the latest version that is less than or equal to a given value, thus giving the 'latest' state of the record at a certain point in time, just use a range from 0 to the desired version and set the max versions to 1.
 

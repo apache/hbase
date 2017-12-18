@@ -171,7 +171,7 @@ Similarly, you can now expand into other operations such as Get, Scan, or Delete
 
 == MRUnit
 
-link:http://mrunit.apache.org/[Apache MRUnit] is a library that allows you to unit-test MapReduce jobs.
+link:https://mrunit.apache.org/[Apache MRUnit] is a library that allows you to unit-test MapReduce jobs.
 You can use it to test HBase jobs in the same way as other MapReduce jobs.
 
 Given a MapReduce job that writes to an HBase table called `MyTest`, which has one column family called `CF`, the reducer of such a job could look like the following:
