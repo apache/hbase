@@ -356,7 +356,7 @@ public abstract class CommonFSUtils {
   public static Path getRootDir(final Configuration c) throws IOException {
     Path p = new Path(c.get(HConstants.HBASE_DIR));
     FileSystem fs = p.getFileSystem(c);
-    return p.makeQualified(fs);
+    return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   public static void setRootDir(final Configuration c, final Path root) throws IOException {
@@ -384,7 +384,7 @@ public abstract class CommonFSUtils {
       return getRootDir(c);
     }
     FileSystem fs = p.getFileSystem(c);
-    return p.makeQualified(fs);
+    return p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
 
   @VisibleForTesting
@@ -399,8 +399,10 @@ public abstract class CommonFSUtils {
 
   private static boolean isValidWALRootDir(Path walDir, final Configuration c) throws IOException {
     Path rootDir = getRootDir(c);
-    if (!walDir.equals(rootDir)) {
-      if (walDir.toString().startsWith(rootDir.toString() + "/")) {
+    FileSystem fs = walDir.getFileSystem(c);
+    Path qualifiedWalDir = walDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    if (!qualifiedWalDir.equals(rootDir)) {
+      if (qualifiedWalDir.toString().startsWith(rootDir.toString() + "/")) {
         throw new IllegalStateException("Illegal WAL directory specified. " +
             "WAL directories are not permitted to be under the root directory if set.");
       }
