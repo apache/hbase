@@ -548,19 +548,15 @@ Usually this the ensemble location is kept out in the _hbase-site.xml_ and is pi
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
-Minimally, a client of HBase needs several libraries in its `CLASSPATH` when connecting to a cluster, including:
-[source]
+Minimally, an HBase client needs hbase-client module in its dependencies when connecting to a cluster:
+[source,xml]
 ----
 
-commons-configuration (commons-configuration-1.6.jar)
-commons-lang3 (commons-lang3-3.6.jar)
-commons-logging (commons-logging-1.1.1.jar)
-hadoop-core (hadoop-core-1.0.0.jar)
-hbase (hbase-0.92.0.jar)
-log4j (log4j-1.2.16.jar)
-slf4j-api (slf4j-api-1.5.8.jar)
-slf4j-log4j (slf4j-log4j12-1.5.8.jar)
-zookeeper (zookeeper-3.4.2.jar)
+<dependency>
+  <groupId>org.apache.hbase</groupId>
+  <artifactId>hbase-client</artifactId>
+  <version>1.2.4</version>
+</dependency>
 ----
 
 An example basic _hbase-site.xml_ for client only might look as follows:
