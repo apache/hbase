@@ -25,10 +25,16 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 /**
  * A Filter for WAL entries before being sent over to replication. Multiple
  * filters might be chained together using {@link ChainWALEntryFilter}.
+ * Applied on the replication source side.
+ * <p>There is also a filter that can be installed on the sink end of a replication stream.
+ * See {@link org.apache.hadoop.hbase.replication.regionserver.WALEntrySinkFilter}. Certain
+ * use-cases may need such a facility but better to filter here on the source side rather
+ * than later, after the edit arrives at the sink.</p>
+ * @see org.apache.hadoop.hbase.replication.regionserver.WALEntrySinkFilter for filtering
+ * replication on the sink-side.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public interface WALEntryFilter {
-
   /**
    * Applies the filter, possibly returning a different Entry instance.
    * If null is returned, the entry will be skipped.
@@ -37,5 +43,4 @@ public interface WALEntryFilter {
    * no cells will cause the entry to be skipped for replication.
    */
   public Entry filter(Entry entry);
-
 }
