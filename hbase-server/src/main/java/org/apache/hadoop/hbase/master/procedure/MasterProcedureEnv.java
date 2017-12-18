@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.replication.ReplicationManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -135,6 +136,10 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
   public RSProcedureDispatcher getRemoteDispatcher() {
     return remoteDispatcher;
+  }
+
+  public ReplicationManager getReplicationManager() {
+    return master.getReplicationManager();
   }
 
   public boolean isRunning() {
