@@ -89,6 +89,7 @@ public class ReplicationSink {
   // Number of hfiles that we successfully replicated
   private long hfilesReplicated = 0;
   private SourceFSConfigurationProvider provider;
+  private WALEntrySinkFilter walEntrySinkFilter;
 
   /**
    * Create a sink for replication
@@ -102,7 +103,7 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.metrics = new MetricsSink();
-
+    this.walEntrySinkFilter = setupWALEntrySinkFilter();
     String className =
         conf.get("hbase.replication.source.fs.conf.provider",
           DefaultSourceFSConfigurationProvider.class.getCanonicalName());
@@ -114,6 +115,22 @@ public class ReplicationSink {
       throw new IllegalArgumentException("Configured source fs configuration provider class "
           + className + " throws error.", e);
     }
+  }
+
+  private WALEntrySinkFilter setupWALEntrySinkFilter() throws IOException {
+    Class<?> walEntryFilterClass =
+        this.conf.getClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY, null);
+    WALEntrySinkFilter filter = null;
+    try {
+      filter = walEntryFilterClass == null? null:
+          (WALEntrySinkFilter)walEntryFilterClass.newInstance();
+    } catch (Exception e) {
+      LOG.warn("Failed to instantiate " + walEntryFilterClass);
+    }
+    if (filter != null) {
+      filter.init(getConnection());
+    }
+    return filter;
   }
 
   /**
@@ -134,8 +151,6 @@ public class ReplicationSink {
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
    * operates against raw protobuf type saving on a conversion from pb to pojo.
-   * @param entries
-   * @param cells
    * @param replicationClusterId Id which will uniquely identify source cluster FS client
    *          configurations in the replication configuration directory
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
@@ -147,7 +162,6 @@ public class ReplicationSink {
       String replicationClusterId, String sourceBaseNamespaceDirPath,
       String sourceHFileArchiveDirPath) throws IOException {
     if (entries.isEmpty()) return;
-    if (cells == null) throw new NullPointerException("TODO: Add handling of null CellScanner");
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -162,8 +176,21 @@ public class ReplicationSink {
       for (WALEntry entry : entries) {
         TableName table =
             TableName.valueOf(entry.getKey().getTableName().toByteArray());
+        if (this.walEntrySinkFilter != null) {
+          if (this.walEntrySinkFilter.filter(table, entry.getKey().getWriteTime())) {
+            // Skip Cells in CellScanner associated with this entry.
+            int count = entry.getAssociatedCellCount();
+            for (int i = 0; i < count; i++) {
+              // Throw index out of bounds if our cell count is off
+              if (!cells.advance()) {
+                throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
+              }
+            }
+            continue;
+          }
+        }
         Cell previousCell = null;
-        Mutation m = null;
+        Mutation mutation = null;
         int count = entry.getAssociatedCellCount();
         for (int i = 0; i < count; i++) {
           // Throw index out of bounds if our cell count is off
@@ -181,7 +208,7 @@ public class ReplicationSink {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
               // Create new mutation
-              m =
+              mutation =
                   CellUtil.isDelete(cell) ? new Delete(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength()) : new Put(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength());
@@ -189,13 +216,13 @@ public class ReplicationSink {
               for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
                 clusterIds.add(toUUID(clusterId));
               }
-              m.setClusterIds(clusterIds);
-              addToHashMultiMap(rowMap, table, clusterIds, m);
+              mutation.setClusterIds(clusterIds);
+              addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
-              ((Delete) m).add(cell);
+              ((Delete) mutation).add(cell);
             } else {
-              ((Put) m).add(cell);
+              ((Put) mutation).add(cell);
             }
             previousCell = cell;
           }
