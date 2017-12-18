@@ -7761,7 +7761,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               .setTimestamp(Math.max(currentCell.getTimestamp() + 1, now))
               .setType(KeyValue.Type.Put.getCode())
               .setValue(newValue, 0, newValue.length)
-              .setTags(Tag.fromList(tags))
+              .setTags(TagUtil.fromList(tags))
               .build();
     } else {
       PrivateCellUtil.updateLatestStamp(delta, now);

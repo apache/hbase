@@ -591,40 +591,31 @@ public final class CellUtil {
   /**
    * Note : Now only CPs can create cell with tags using the CP environment
    * @return A new cell which is having the extra tags also added to it.
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *
    */
   @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
-    return createCell(cell, Tag.fromList(tags));
+    return PrivateCellUtil.createCell(cell, tags);
   }
 
   /**
    * Now only CPs can create cell with tags using the CP environment
    * @return A new cell which is having the extra tags also added to it.
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static Cell createCell(Cell cell, byte[] tags) {
-    if (cell instanceof ByteBufferCell) {
-      return new PrivateCellUtil.TagRewriteByteBufferCell((ByteBufferCell) cell, tags);
-    }
-    return new PrivateCellUtil.TagRewriteCell(cell, tags);
+    return PrivateCellUtil.createCell(cell, tags);
   }
 
   /**
    * Now only CPs can create cell with tags using the CP environment
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   *             Use CP environment to build Cell using {@link ExtendedCellBuilder}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
   public static Cell createCell(Cell cell, byte[] value, byte[] tags) {
-    if (cell instanceof ByteBufferCell) {
-      return new PrivateCellUtil.ValueAndTagRewriteByteBufferCell((ByteBufferCell) cell, value,
-          tags);
-    }
-    return new PrivateCellUtil.ValueAndTagRewriteCell(cell, value, tags);
+    return PrivateCellUtil.createCell(cell, value, tags);
   }
 
   /**

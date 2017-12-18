@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.List;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -40,12 +42,6 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   protected byte[] tags = null;
   protected int tagsOffset = 0;
   protected int tagsLength = 0;
-  // Will go away once we do with RawCellBuilder
-  protected boolean allowSeqIdUpdate = false;
-
-  public ExtendedCellBuilderImpl(boolean allowSeqIdUpdate) {
-    this.allowSeqIdUpdate = allowSeqIdUpdate;
-  }
 
   @Override
   public ExtendedCellBuilder setRow(final byte[] row) {
@@ -93,8 +89,8 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   }
 
   @Override
-  public ExtendedCellBuilder setType(final DataType type) {
-    this.type = toKeyValueType(type);
+  public ExtendedCellBuilder setType(final Cell.DataType type) {
+    this.type = PrivateCellUtil.toTypeByte(type);
     return this;
   }
 
@@ -131,12 +127,15 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   }
 
   @Override
+  public ExtendedCellBuilder setTags(List<Tag> tags) {
+    byte[] tagBytes = TagUtil.fromList(tags);
+    return setTags(tagBytes);
+  }
+
+  @Override
   public ExtendedCellBuilder setSequenceId(final long seqId) {
-    if (allowSeqIdUpdate) {
-      this.seqId = seqId;
-      return this;
-    }
-    throw new UnsupportedOperationException("SeqId cannot be set on this cell");
+    this.seqId = seqId;
+    return this;
   }
 
   private void checkBeforeBuild() {
@@ -174,16 +173,5 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
     tagsOffset = 0;
     tagsLength = 0;
     return this;
-  }
-
-  private static KeyValue.Type toKeyValueType(DataType type) {
-    switch (type) {
-      case Put: return KeyValue.Type.Put;
-      case Delete: return KeyValue.Type.Delete;
-      case DeleteColumn: return KeyValue.Type.DeleteColumn;
-      case DeleteFamilyVersion: return KeyValue.Type.DeleteFamilyVersion;
-      case DeleteFamily: return KeyValue.Type.DeleteFamily;
-      default: throw new UnsupportedOperationException("Unsupported data type:" + type);
-    }
   }
 }

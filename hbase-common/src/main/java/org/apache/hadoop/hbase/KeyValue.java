@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 import static org.apache.hadoop.hbase.util.Bytes.len;
 
 import java.io.DataInput;
@@ -29,8 +30,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1522,19 +1525,6 @@ public class KeyValue implements ExtendedCell {
   }
 
   /**
-   * Returns any tags embedded in the KeyValue.  Used in testcases.
-   * @return The tags
-   */
-  @Override
-  public List<Tag> getTags() {
-    int tagsLength = getTagsLength();
-    if (tagsLength == 0) {
-      return EMPTY_ARRAY_LIST;
-    }
-    return TagUtil.asList(getTagsArray(), getTagsOffset(), tagsLength);
-  }
-
-  /**
    * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
    */
   @Override
@@ -2563,5 +2553,31 @@ public class KeyValue implements ExtendedCell {
     KeyValue kv = new KeyValue(copy, 0, copy.length);
     kv.setSequenceId(this.getSequenceId());
     return kv;
+  }
+
+  @Override
+  public Optional<Tag> getTag(byte type) {
+    int length = getTagsLength();
+    int offset = getTagsOffset();
+    int pos = offset;
+    while (pos < offset + length) {
+      int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
+      if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
+        return Optional
+            .ofNullable(new ArrayBackedTag(getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
+      }
+      pos += TAG_LENGTH_SIZE + tagLen;
+    }
+    return Optional.ofNullable(null);
+  }
+
+  @Override
+  public List<Tag> getTags() {
+    List<Tag> tags = new ArrayList<>();
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
+    while (tagsItr.hasNext()) {
+      tags.add(tagsItr.next());
+    }
+    return tags;
   }
 }

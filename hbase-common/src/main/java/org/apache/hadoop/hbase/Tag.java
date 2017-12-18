@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -150,38 +149,6 @@ public interface Tag {
       ByteBufferUtils.copyFromBufferToArray(out, tag.getValueByteBuffer(), tag.getValueOffset(),
         offset, tag.getValueLength());
     }
-  }
-
-  /**
-   * Write a list of tags into a byte array
-   * @param tags The list of tags
-   * @return the serialized tag data as bytes
-   */
-  // TODO : Remove this when we move to RawCellBuilder
-  public static byte[] fromList(List<Tag> tags) {
-    if (tags == null || tags.isEmpty()) {
-      return HConstants.EMPTY_BYTE_ARRAY;
-    }
-    int length = 0;
-    for (Tag tag : tags) {
-      length += tag.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
-    }
-    byte[] b = new byte[length];
-    int pos = 0;
-    int tlen;
-    for (Tag tag : tags) {
-      tlen = tag.getValueLength();
-      pos = Bytes.putAsShort(b, pos, tlen + Tag.TYPE_LENGTH_SIZE);
-      pos = Bytes.putByte(b, pos, tag.getType());
-      if (tag.hasArray()) {
-        pos = Bytes.putBytes(b, pos, tag.getValueArray(), tag.getValueOffset(), tlen);
-      } else {
-        ByteBufferUtils.copyFromBufferToArray(b, tag.getValueByteBuffer(), tag.getValueOffset(),
-          pos, tlen);
-        pos += tlen;
-      }
-    }
-    return b;
   }
 
   /**

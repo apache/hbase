@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -154,7 +154,7 @@ public class TestCompactionLifeCycleTracker {
                         .setFamily(CF1)
                         .setQualifier(QUALIFIER)
                         .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(CellBuilder.DataType.Put)
+                        .setType(DataType.Put)
                         .setValue(Bytes.toBytes(i))
                         .build()));
       }
@@ -167,7 +167,7 @@ public class TestCompactionLifeCycleTracker {
                         .setFamily(CF1)
                         .setQualifier(QUALIFIER)
                         .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(CellBuilder.DataType.Put)
+                        .setType(DataType.Put)
                         .setValue(Bytes.toBytes(i))
                         .build()));
       }

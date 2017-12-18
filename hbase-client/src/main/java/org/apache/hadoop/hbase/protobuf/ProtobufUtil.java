@@ -27,6 +27,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
+
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -37,9 +38,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.function.Function;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -535,7 +537,7 @@ public final class ProtobufUtil {
                   .setFamily(family)
                   .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
                   .setTimestamp(ts)
-                  .setType(CellBuilder.DataType.Put)
+                  .setType(DataType.Put)
                   .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
                   .setTags(allTagsBytes)
                   .build());
@@ -555,7 +557,7 @@ public final class ProtobufUtil {
                   .setFamily(family)
                   .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
                   .setTimestamp(ts)
-                  .setType(CellBuilder.DataType.Put)
+                  .setType(DataType.Put)
                   .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null)
                   .build());
             }

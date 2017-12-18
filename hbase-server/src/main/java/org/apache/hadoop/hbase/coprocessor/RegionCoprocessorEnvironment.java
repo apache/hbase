@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -127,7 +127,7 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<Reg
   /**
    * Returns a CellBuilder so that coprocessors can build cells. These cells can also include tags.
    * Note that this builder does not support updating seqId of the cells
-   * @return the ExtendedCellBuilder
+   * @return the RawCellBuilder
    */
-  ExtendedCellBuilder getCellBuilder();
+  RawCellBuilder getCellBuilder();
 }

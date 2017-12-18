@@ -17,15 +17,23 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
 
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -267,5 +275,31 @@ public class MapReduceCell extends ByteBufferCell implements ExtendedCell {
     } catch (CloneNotSupportedException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public Optional<Tag> getTag(byte type) {
+    int length = getTagsLength();
+    int offset = getTagsOffset();
+    int pos = offset;
+    while (pos < offset + length) {
+      int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
+      if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
+        return Optional
+            .ofNullable(new ArrayBackedTag(getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
+      }
+      pos += TAG_LENGTH_SIZE + tagLen;
+    }
+    return Optional.ofNullable(null);
+  }
+
+  @Override
+  public List<Tag> getTags() {
+    List<Tag> tags = new ArrayList<>();
+    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
+    while (tagsItr.hasNext()) {
+      tags.add(tagsItr.next());
+    }
+    return tags;
   }
 }

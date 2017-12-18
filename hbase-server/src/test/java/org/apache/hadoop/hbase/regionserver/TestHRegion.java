@@ -29,9 +29,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -74,7 +74,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellBuilder;
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -89,7 +89,6 @@ import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -97,6 +96,7 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -158,7 +158,6 @@ import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
@@ -6282,20 +6281,20 @@ public class TestHRegion {
               .setRow(a)
               .setFamily(fam1)
               .setTimestamp(HConstants.LATEST_TIMESTAMP)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .build()),
         // this is outside the region boundary
         new Put(c).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
               .setRow(c)
               .setFamily(fam1)
               .setTimestamp(HConstants.LATEST_TIMESTAMP)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .build()),
         new Put(b).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
               .setRow(b)
               .setFamily(fam1)
               .setTimestamp(HConstants.LATEST_TIMESTAMP)
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .build())
     };
 
@@ -6331,13 +6330,13 @@ public class TestHRegion {
                 .setRow(a)
                 .setFamily(fam1)
                 .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .build()),
             new Put(b).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
                 .setRow(b)
                 .setFamily(fam1)
                 .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                .setType(CellBuilder.DataType.Put)
+                .setType(DataType.Put)
                 .build()),
         };
 

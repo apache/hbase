@@ -147,6 +147,10 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
     return ByteBufferUtils.toByte(this.buf, this.offset + this.length - 1);
   }
 
+  public DataType getType() {
+    return PrivateCellUtil.toDataType(getTypeByte());
+  }
+
   @Override
   public long getSequenceId() {
     return 0;

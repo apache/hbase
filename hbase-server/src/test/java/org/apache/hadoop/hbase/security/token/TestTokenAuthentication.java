@@ -39,9 +39,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RawCellBuilder;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -331,7 +331,7 @@ public class TestTokenAuthentication {
         }
 
         @Override
-        public ExtendedCellBuilder getCellBuilder() {
+        public RawCellBuilder getCellBuilder() {
           return null;
         }
       });

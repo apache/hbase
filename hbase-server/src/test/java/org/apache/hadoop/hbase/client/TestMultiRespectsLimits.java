@@ -18,7 +18,13 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.CellBuilder;
+import static junit.framework.TestCase.assertEquals;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilityFactory;
@@ -42,12 +48,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static junit.framework.TestCase.assertEquals;
 
 /**
  * This test sets the multi size WAAAAAY low and then checks to make sure that gets will still make
@@ -157,7 +157,7 @@ public class TestMultiRespectsLimits {
               .setFamily(FAMILY)
               .setQualifier(col)
               .setTimestamp(p.getTimeStamp())
-              .setType(CellBuilder.DataType.Put)
+              .setType(DataType.Put)
               .setValue(value)
               .build());
       t.put(p);
