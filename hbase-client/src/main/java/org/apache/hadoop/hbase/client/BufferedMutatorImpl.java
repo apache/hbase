@@ -73,7 +73,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
    * The {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
    */
   private final AtomicInteger undealtMutationCount = new AtomicInteger(0);
-  private volatile long writeBufferSize;
+  private final long writeBufferSize;
   private final int maxKeyValueSize;
   private final ExecutorService pool;
   private final AtomicInteger rpcTimeout;

@@ -51,7 +51,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 public class ZKNamespaceManager extends ZKListener {
   private static final Log LOG = LogFactory.getLog(ZKNamespaceManager.class);
   private final String nsZNode;
-  private volatile NavigableMap<String,NamespaceDescriptor> cache;
+  private final NavigableMap<String,NamespaceDescriptor> cache;
 
   public ZKNamespaceManager(ZKWatcher zkw) throws IOException {
     super(zkw);
