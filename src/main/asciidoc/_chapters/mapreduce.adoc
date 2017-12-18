@@ -27,7 +27,7 @@
 :icons: font
 :experimental:
 
-Apache MapReduce is a software framework used to analyze large amounts of data, and is the framework used most often with link:http://hadoop.apache.org/[Apache Hadoop].
+Apache MapReduce is a software framework used to analyze large amounts of data. It is provided by link:https://hadoop.apache.org/[Apache Hadoop].
 MapReduce itself is out of the scope of this document.
 A good place to get started with MapReduce is http://hadoop.apache.org/docs/r2.6.0/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html.
 MapReduce version 2 (MR2)is now part of link:http://hadoop.apache.org/docs/r2.3.0/hadoop-yarn/hadoop-yarn-site/[YARN].
@@ -40,44 +40,88 @@ link:http://www.cascading.org/[alternative API] for MapReduce.
 .`mapred` and `mapreduce`
 [NOTE]
 ====
-There are two mapreduce packages in HBase as in MapReduce itself: _org.apache.hadoop.hbase.mapred_      and _org.apache.hadoop.hbase.mapreduce_.
-The former does old-style API and the latter the new style.
+There are two mapreduce packages in HBase as in MapReduce itself: _org.apache.hadoop.hbase.mapred_ and _org.apache.hadoop.hbase.mapreduce_.
+The former does old-style API and the latter the new mode.
 The latter has more facility though you can usually find an equivalent in the older package.
 Pick the package that goes with your MapReduce deploy.
-When in doubt or starting over, pick the _org.apache.hadoop.hbase.mapreduce_.
-In the notes below, we refer to o.a.h.h.mapreduce but replace with the o.a.h.h.mapred if that is what you are using.
+When in doubt or starting over, pick _org.apache.hadoop.hbase.mapreduce_.
+In the notes below, we refer to _o.a.h.h.mapreduce_ but replace with
+_o.a.h.h.mapred_ if that is what you are using.
 ====
 
 [[hbase.mapreduce.classpath]]
 == HBase, MapReduce, and the CLASSPATH
 
-By default, MapReduce jobs deployed to a MapReduce cluster do not have access to either the HBase configuration under `$HBASE_CONF_DIR` or the HBase classes.
+By default, MapReduce jobs deployed to a MapReduce cluster do not have access to
+either the HBase configuration under `$HBASE_CONF_DIR` or the HBase classes.
 
-To give the MapReduce jobs the access they need, you could add _hbase-site.xml_ to _$HADOOP_HOME/conf_ and add HBase jars to the _$HADOOP_HOME/lib_ directory.
-You would then need to copy these changes across your cluster. Or you can edit _$HADOOP_HOME/conf/hadoop-env.sh_ and add them to the `HADOOP_CLASSPATH` variable.
-However, this approach is not recommended because it will pollute your Hadoop install with HBase references.
-It also requires you to restart the Hadoop cluster before Hadoop can use the HBase data.
+To give the MapReduce jobs the access they need, you could add _hbase-site.xml_to _$HADOOP_HOME/conf_ and add HBase jars to the _$HADOOP_HOME/lib_ directory.
+You would then need to copy these changes across your cluster. Or you could edit _$HADOOP_HOME/conf/hadoop-env.sh_ and add hbase dependencies to the `HADOOP_CLASSPATH` variable.
+Neither of these approaches is recommended because it will pollute your Hadoop install with HBase references.
+It also requires you restart the Hadoop cluster before Hadoop can use the HBase data.
 
-The recommended approach is to let HBase add its dependency jars itself and use `HADOOP_CLASSPATH` or `-libjars`.
+The recommended approach is to let HBase add its dependency jars and use `HADOOP_CLASSPATH` or `-libjars`.
 
-Since HBase 0.90.x, HBase adds its dependency JARs to the job configuration itself.
-The dependencies only need to be available on the local `CLASSPATH`.
-The following example runs the bundled HBase link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable`.
-If you have not set the environment variables expected in the command (the parts prefixed by a `$` sign and surrounded by curly braces), you can use the actual system paths instead.
-Be sure to use the correct version of the HBase JAR for your system.
-The backticks (``` symbols) cause the shell to execute the sub-commands, setting the output of `hbase classpath` (the command to dump HBase CLASSPATH) to `HADOOP_CLASSPATH`.
+Since HBase `0.90.x`, HBase adds its dependency JARs to the job configuration itself.
+The dependencies only need to be available on the local `CLASSPATH` and from here they'll be picked
+up and bundled into the fat job jar deployed to the MapReduce cluster. A basic trick just passes
+the full hbase classpath -- all hbase and dependent jars as well as configurations -- to the mapreduce
+job runner letting hbase utility pick out from the full-on classpath what it needs adding them to the
+MapReduce job configuration (See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done).
+
+
+The following example runs the bundled HBase link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable`.
+It sets into `HADOOP_CLASSPATH` the jars hbase needs to run in an MapReduce context (including configuration files such as hbase-site.xml).
+Be sure to use the correct version of the HBase JAR for your system; replace the VERSION string in the below command line w/ the version of
+your local hbase install.  The backticks (``` symbols) cause the shell to execute the sub-commands, setting the output of `hbase classpath` into `HADOOP_CLASSPATH`.
 This example assumes you use a BASH-compatible shell.
 
 [source,bash]
 ----
-$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-VERSION.jar rowcounter usertable
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` \
+  ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-VERSION.jar \
+  org.apache.hadoop.hbase.mapreduce.RowCounter usertable
 ----
 
-When the command runs, internally, the HBase JAR finds the dependencies it needs and adds them to the MapReduce job configuration.
-See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done.
+The above command will launch a row counting mapreduce job against the hbase cluster that is pointed to by your local configuration on a cluster that the hadoop configs are pointing to.
 
-The command `hbase mapredcp` can also help you dump the CLASSPATH entries required by MapReduce, which are the same jars `TableMapReduceUtil#addDependencyJars` would add.
-You can add them together with HBase conf directory to `HADOOP_CLASSPATH`.
+The main for the `hbase-mapreduce.jar` is a Driver that lists a few basic mapreduce tasks that ship with hbase.
+For example, presuming your install is hbase `2.0.0-SNAPSHOT`:
+
+[source,bash]
+----
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` \
+  ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-2.0.0-SNAPSHOT.jar
+An example program must be given as the first argument.
+Valid program names are:
+  CellCounter: Count cells in HBase table.
+  WALPlayer: Replay WAL files.
+  completebulkload: Complete a bulk data load.
+  copytable: Export a table from local cluster to peer cluster.
+  export: Write table data to HDFS.
+  exportsnapshot: Export the specific snapshot to a given FileSystem.
+  import: Import data written by Export.
+  importtsv: Import data in TSV format.
+  rowcounter: Count rows in HBase table.
+  verifyrep: Compare the data from tables in two different clusters. WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is changed after being appended to the log.
+
+----
+
+You can use the above listed shortnames for mapreduce jobs as in the below re-run of the row counter job (again, presuming your install is hbase `2.0.0-SNAPSHOT`):
+
+[source,bash]
+----
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` \
+  ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-mapreduce-2.0.0-SNAPSHOT.jar \
+  rowcounter usertable
+----
+
+You might find the more selective `hbase mapredcp` tool output of interest; it lists the minimum set of jars needed
+to run a basic mapreduce job against an hbase install. It does not include configuration. You'll probably need to add
+these if you want your MapReduce job to find the target cluster. You'll probably have to also add pointers to extra jars
+once you start to do anything of substance. Just specify the extras by passing the system propery `-Dtmpjars` when
+you run `hbase mapredcp`.
+
 For jobs that do not package their dependencies or call `TableMapReduceUtil#addDependencyJars`, the following command structure is necessary:
 
 [source,bash]
