@@ -40,6 +40,10 @@ module IRB
       devnull = 'NUL' if WINDOZE
       f = File.open(devnull, 'w')
       $stdout = f
+      # This is a workaround for the jruby issue 1372.
+      # The stderr is an input to stty to re-adjust the terminal for the error('stdin isnt a terminal')
+      # incase the command is piped with hbase shell(eg - >echo 'list' | bin/hbase shell)
+      `stty icrnl <&2`
       super
     ensure
       f.close
