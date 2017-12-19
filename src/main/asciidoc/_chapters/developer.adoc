@@ -33,7 +33,7 @@ Being familiar with these guidelines will help the HBase committers to use your 
 [[getting.involved]]
 == Getting Involved
 
-Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)[issues in JIRA tagged with the label 'beginner'].
+Apache HBase gets better only when people contribute! If you are looking to contribute to Apache HBase, look for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)[issues in JIRA tagged with the label 'beginner'].
 These are issues HBase contributors have deemed worthy but not of immediate priority and a good way to ramp on HBase internals.
 See link:http://search-hadoop.com/m/DHED43re96[What label
                 is used for issues that are good on ramps for new contributors?] from the dev mailing list for background.
@@ -143,7 +143,7 @@ info.
 
 ==== Working on an issue
 
-To check for existing issues which you can tackle as a beginner, search for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)[issues in JIRA tagged with the label 'beginner'].
+To check for existing issues which you can tackle as a beginner, search for link:https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)[issues in JIRA tagged with the label 'beginner'].
 
 .JIRA Priorites
 * *Blocker*: Should only be used if the issue WILL cause data loss or cluster instability reliably.
