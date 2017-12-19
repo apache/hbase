@@ -193,6 +193,15 @@ public class TestRegionsOnMasterOptions {
         // still only carry system regions post crash.
         assertEquals(masterCount, mNewActualCount);
       }
+      // Disable balancer and wait till RIT done else cluster won't go down.
+      TEST_UTIL.getAdmin().balancerSwitch(false, true);
+      while (true) {
+        if (!TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+            isMetaRegionInTransition()) {
+          break;
+        }
+        Threads.sleep(10);
+      }
     } finally {
       LOG.info("Running shutdown of cluster");
       TEST_UTIL.shutdownMiniCluster();
