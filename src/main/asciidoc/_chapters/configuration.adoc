@@ -1031,8 +1031,79 @@ Since HBase 1.0.0, it is possible to change a subset of the configuration withou
 In the HBase shell, there are new operators, `update_config` and `update_all_config` that will prompt a server or all servers to reload configuration.
 
 Only a subset of all configurations can currently be changed in the running server.
-Here is an incomplete list: `hbase.regionserver.thread.compaction.large`, `hbase.regionserver.thread.compaction.small`, `hbase.regionserver.thread.split`, `hbase.regionserver.thread.merge`, as well as compaction policy and configurations and adjustment to offpeak hours.
-For the full list consult the patch attached to  link:https://issues.apache.org/jira/browse/HBASE-12147[HBASE-12147 Porting Online Config Change from 89-fb].
+Here are those configurations:
+
+.Configurations support dynamically change
+[cols="1",options="header"]
+|===
+| Key
+| hbase.ipc.server.fallback-to-simple-auth-allowed
+| hbase.cleaner.scan.dir.concurrent.size
+| hbase.regionserver.thread.compaction.large
+| hbase.regionserver.thread.compaction.small
+| hbase.regionserver.thread.split
+| hbase.regionserver.throughput.controller
+| hbase.regionserver.thread.hfilecleaner.throttle
+| hbase.regionserver.hfilecleaner.large.queue.size
+| hbase.regionserver.hfilecleaner.small.queue.size
+| hbase.regionserver.hfilecleaner.large.thread.count
+| hbase.regionserver.hfilecleaner.small.thread.count
+| hbase.regionserver.flush.throughput.controller
+| hbase.hstore.compaction.max.size
+| hbase.hstore.compaction.max.size.offpeak
+| hbase.hstore.compaction.min.size
+| hbase.hstore.compaction.min
+| hbase.hstore.compaction.max
+| hbase.hstore.compaction.ratio
+| hbase.hstore.compaction.ratio.offpeak
+| hbase.regionserver.thread.compaction.throttle
+| hbase.hregion.majorcompaction
+| hbase.hregion.majorcompaction.jitter
+| hbase.hstore.min.locality.to.skip.major.compact
+| hbase.hstore.compaction.date.tiered.max.storefile.age.millis
+| hbase.hstore.compaction.date.tiered.incoming.window.min
+| hbase.hstore.compaction.date.tiered.window.policy.class
+| hbase.hstore.compaction.date.tiered.single.output.for.minor.compaction
+| hbase.hstore.compaction.date.tiered.window.factory.class
+| hbase.offpeak.start.hour
+| hbase.offpeak.end.hour
+| hbase.oldwals.cleaner.thread.size
+| hbase.procedure.worker.keep.alive.time.msec
+| hbase.procedure.worker.add.stuck.percentage
+| hbase.procedure.worker.monitor.interval.msec
+| hbase.procedure.worker.stuck.threshold.msec
+| hbase.regions.slop
+| hbase.regions.overallSlop
+| hbase.balancer.tablesOnMaster
+| hbase.balancer.tablesOnMaster.systemTablesOnly
+| hbase.util.ip.to.rack.determiner
+| hbase.ipc.server.max.callqueue.length
+| hbase.ipc.server.priority.max.callqueue.length
+| hbase.ipc.server.callqueue.type
+| hbase.ipc.server.callqueue.codel.target.delay
+| hbase.ipc.server.callqueue.codel.interval
+| hbase.ipc.server.callqueue.codel.lifo.threshold
+| hbase.master.balancer.stochastic.maxSteps
+| hbase.master.balancer.stochastic.stepsPerRegion
+| hbase.master.balancer.stochastic.maxRunningTime
+| hbase.master.balancer.stochastic.runMaxSteps
+| hbase.master.balancer.stochastic.numRegionLoadsToRemember
+| hbase.master.loadbalance.bytable
+| hbase.master.balancer.stochastic.minCostNeedBalance
+| hbase.master.balancer.stochastic.localityCost
+| hbase.master.balancer.stochastic.rackLocalityCost
+| hbase.master.balancer.stochastic.readRequestCost
+| hbase.master.balancer.stochastic.writeRequestCost
+| hbase.master.balancer.stochastic.memstoreSizeCost
+| hbase.master.balancer.stochastic.storefileSizeCost
+| hbase.master.balancer.stochastic.regionReplicaHostCostKey
+| hbase.master.balancer.stochastic.regionReplicaRackCostKey
+| hbase.master.balancer.stochastic.regionCountCost
+| hbase.master.balancer.stochastic.primaryRegionCountCost
+| hbase.master.balancer.stochastic.moveCost
+| hbase.master.balancer.stochastic.maxMovePercent
+| hbase.master.balancer.stochastic.tableSkewCost
+|===
 
 ifdef::backend-docbook[]
 [index]
