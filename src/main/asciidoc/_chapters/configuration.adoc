@@ -79,11 +79,10 @@ To check for well-formedness and only print output if errors exist, use the comm
 .Keep Configuration In Sync Across the Cluster
 [WARNING]
 ====
-When running in distributed mode, after you make an edit to an HBase configuration, make sure you copy the content of the _conf/_ directory to all nodes of the cluster.
+When running in distributed mode, after you make an edit to an HBase configuration, make sure you copy the contents of the _conf/_ directory to all nodes of the cluster.
 HBase will not do this for you.
 Use `rsync`, `scp`, or another secure mechanism for copying the configuration files to your nodes.
-For most configuration, a restart is needed for servers to pick up changes An exception is dynamic configuration.
-to be described later below.
+For most configurations, a restart is needed for servers to pick up changes. Dynamic configuration is an exception to this, to be described later below.
 ====
 
 [[basic.prerequisites]]
@@ -131,11 +130,11 @@ DNS::
   HBase uses the local hostname to self-report its IP address. Both forward and reverse DNS resolving must work in versions of HBase previous to 0.92.0. The link:https://github.com/sujee/hadoop-dns-checker[hadoop-dns-checker] tool can be used to verify DNS is working correctly on the cluster. The project `README` file provides detailed instructions on usage.
 
 Loopback IP::
-  Prior to hbase-0.96.0, HBase only used the IP address `127.0.0.1` to refer to `localhost`, and this could not be configured.
+  Prior to hbase-0.96.0, HBase only used the IP address `127.0.0.1` to refer to `localhost`, and this was not configurable.
   See <<loopback.ip,Loopback IP>> for more details.
 
 NTP::
-  The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism, on your cluster, and that all nodes look to the same service for time synchronization. See the link:http://www.tldp.org/LDP/sag/html/basic-ntp-config.html[Basic NTP Configuration] at [citetitle]_The Linux Documentation Project (TLDP)_ to set up NTP.
+  The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism on your cluster and that all nodes look to the same service for time synchronization. See the link:http://www.tldp.org/LDP/sag/html/basic-ntp-config.html[Basic NTP Configuration] at [citetitle]_The Linux Documentation Project (TLDP)_ to set up NTP.
 
 [[ulimit]]
 Limits on Number of Files and Processes (ulimit)::
@@ -176,8 +175,8 @@ Linux Shell::
   All of the shell scripts that come with HBase rely on the link:http://www.gnu.org/software/bash[GNU Bash] shell.
 
 Windows::
-  Prior to HBase 0.96, testing for running HBase on Microsoft Windows was limited.
-  Running a on Windows nodes is not recommended for production systems.
+  Prior to HBase 0.96, running HBase on Microsoft Windows was limited only for testing purposes.
+  Running production systems on Windows machines is not recommended.
 
 
 [[hadoop]]
@@ -262,8 +261,8 @@ Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under 
 The bundled jar is ONLY for use in standalone mode.
 In distributed mode, it is _critical_ that the version of Hadoop that is out on your cluster match what is under HBase.
 Replace the hadoop jar found in the HBase lib directory with the hadoop jar you are running on your cluster to avoid version mismatch issues.
-Make sure you replace the jar in HBase everywhere on your cluster.
-Hadoop version mismatch issues have various manifestations but often all looks like its hung up.
+Make sure you replace the jar in HBase across your whole cluster.
+Hadoop version mismatch issues have various manifestations but often all look like its hung.
 ====
 
 [[dfs.datanode.max.transfer.threads]]
@@ -333,7 +332,7 @@ data must persist across node comings and goings. Writing to
 HDFS where data is replicated ensures the latter.
 
 To configure this standalone variant, edit your _hbase-site.xml_
-setting the _hbase.rootdir_ to point at a directory in your
+setting _hbase.rootdir_  to point at a directory in your
 HDFS instance but then set _hbase.cluster.distributed_
 to _false_. For example:
 
@@ -373,18 +372,18 @@ Some of the information that was originally in this section has been moved there
 ====
 
 A pseudo-distributed mode is simply a fully-distributed mode run on a single host.
-Use this configuration testing and prototyping on HBase.
-Do not use this configuration for production nor for evaluating HBase performance.
+Use this HBase configuration for testing and prototyping purposes only.
+Do not use this configuration for production or for performance evaluation.
 
 [[fully_dist]]
 === Fully-distributed
 
 By default, HBase runs in standalone mode.
 Both standalone mode and pseudo-distributed mode are provided for the purposes of small-scale testing.
-For a production environment, distributed mode is appropriate.
+For a production environment, distributed mode is advised.
 In distributed mode, multiple instances of HBase daemons run on multiple servers in the cluster.
 
-Just as in pseudo-distributed mode, a fully distributed configuration requires that you set the `hbase-cluster.distributed` property to `true`.
+Just as in pseudo-distributed mode, a fully distributed configuration requires that you set the `hbase.cluster.distributed` property to `true`.
 Typically, the `hbase.rootdir` is configured to point to a highly-available HDFS filesystem.
 
 In addition, the cluster is configured so that multiple cluster nodes enlist as RegionServers, ZooKeeper QuorumPeers, and backup HMaster servers.
@@ -509,7 +508,7 @@ Just as in Hadoop where you add site-specific HDFS configuration to the _hdfs-si
 For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_.
 
 Not all configuration options make it out to _hbase-default.xml_.
-Configuration that it is thought rare anyone would change can exist only in code; the only way to turn up such configurations is via a reading of the source code itself.
+Some configurations would only appear in source code; the only way to identify these changes are through code review.
 
 Currently, changes here will require a cluster restart for HBase to notice the change.
 // hbase/src/main/asciidoc
@@ -544,7 +543,7 @@ If you are running HBase in standalone mode, you don't need to configure anythin
 Since the HBase Master may move around, clients bootstrap by looking to ZooKeeper for current critical locations.
 ZooKeeper is where all these values are kept.
 Thus clients require the location of the ZooKeeper ensemble before they can do anything else.
-Usually this the ensemble location is kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
+Usually this ensemble location is kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
@@ -559,7 +558,7 @@ Minimally, an HBase client needs hbase-client module in its dependencies when co
 </dependency>
 ----
 
-An example basic _hbase-site.xml_ for client only might look as follows:
+A basic example _hbase-site.xml_ for client only may look as follows:
 [source,xml]
 ----
 <?xml version="1.0"?>
@@ -595,7 +594,7 @@ If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be spe
 
 === Basic Distributed HBase Install
 
-Here is an example basic configuration for a distributed ten node cluster:
+Here is a basic configuration example for a distributed ten node cluster:
 * The nodes are named `example0`, `example1`, etc., through node `example9` in this example.
 * The HBase Master and the HDFS NameNode are running on the node `example0`.
 * RegionServers run on nodes `example1`-`example9`.
@@ -706,10 +705,10 @@ See link:https://issues.apache.org/jira/browse/HBASE-6389[HBASE-6389 Modify the
 ===== `zookeeper.session.timeout`
 
 The default timeout is three minutes (specified in milliseconds). This means that if a server crashes, it will be three minutes before the Master notices the crash and starts recovery.
-You might like to tune the timeout down to a minute or even less so the Master notices failures the sooner.
-Before changing this value, be sure you have your JVM garbage collection configuration under control otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer (You might be fine with this -- you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
+You might need to tune the timeout down to a minute or even less so the Master notices failures sooner.
+Before changing this value, be sure you have your JVM garbage collection configuration under control, otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer. (You might be fine with this -- you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
 
-To change this configuration, edit _hbase-site.xml_, copy the changed file around the cluster and restart.
+To change this configuration, edit _hbase-site.xml_, copy the changed file across the cluster and restart.
 
 We set this value high to save our having to field questions up on the mailing lists asking why a RegionServer went down during a massive import.
 The usual cause is that their JVM is untuned and they are running into long GC pauses.
@@ -725,14 +724,14 @@ See <<zookeeper,zookeeper>>.
 ==== HDFS Configurations
 
 [[dfs.datanode.failed.volumes.tolerated]]
-===== dfs.datanode.failed.volumes.tolerated
+===== `dfs.datanode.failed.volumes.tolerated`
 
 This is the "...number of volumes that are allowed to fail before a DataNode stops offering service.
 By default any volume failure will cause a datanode to shutdown" from the _hdfs-default.xml_ description.
 You might want to set this to about half the amount of your available disks.
 
-[[hbase.regionserver.handler.count_description]]
-==== `hbase.regionserver.handler.count`
+[[hbase.regionserver.handler.count]]
+===== `hbase.regionserver.handler.count`
 
 This setting defines the number of threads that are kept open to answer incoming requests to user tables.
 The rule of thumb is to keep this number low when the payload per request approaches the MB (big puts, scans using a large cache) and high when the payload is small (gets, small puts, ICVs, deletes). The total size of the queries in progress is limited by the setting `hbase.ipc.server.max.callqueue.size`.
@@ -748,7 +747,7 @@ You can get a sense of whether you have too little or too many handlers by <<rpc
 ==== Configuration for large memory machines
 
 HBase ships with a reasonable, conservative configuration that will work on nearly all machine types that people might want to test with.
-If you have larger machines -- HBase has 8G and larger heap -- you might the following configuration options helpful.
+If you have larger machines -- HBase has 8G and larger heap -- you might find the following configuration options helpful.
 TODO.
 
 [[config.compression]]
@@ -773,10 +772,10 @@ However, as all memstores are not expected to be full all the time, less WAL fil
 [[disable.splitting]]
 ==== Managed Splitting
 
-HBase generally handles splitting your regions, based upon the settings in your _hbase-default.xml_ and _hbase-site.xml_          configuration files.
+HBase generally handles splitting of your regions based upon the settings in your _hbase-default.xml_ and _hbase-site.xml_          configuration files.
 Important settings include `hbase.regionserver.region.split.policy`, `hbase.hregion.max.filesize`, `hbase.regionserver.regionSplitLimit`.
 A simplistic view of splitting is that when a region grows to `hbase.hregion.max.filesize`, it is split.
-For most use patterns, most of the time, you should use automatic splitting.
+For most usage patterns, you should use automatic splitting.
 See <<manual_region_splitting_decisions,manual region splitting decisions>> for more information about manual region splitting.
 
 Instead of allowing HBase to split your regions automatically, you can choose to manage the splitting yourself.
@@ -802,8 +801,8 @@ It is better to err on the side of too few regions and perform rolling splits la
 The optimal number of regions depends upon the largest StoreFile in your region.
 The size of the largest StoreFile will increase with time if the amount of data grows.
 The goal is for the largest region to be just large enough that the compaction selection algorithm only compacts it during a timed major compaction.
-Otherwise, the cluster can be prone to compaction storms where a large number of regions under compaction at the same time.
-It is important to understand that the data growth causes compaction storms, and not the manual split decision.
+Otherwise, the cluster can be prone to compaction storms with a large number of regions under compaction at the same time.
+It is important to understand that the data growth causes compaction storms and not the manual split decision.
 
 If the regions are split into too many large regions, you can increase the major compaction interval by configuring `HConstants.MAJOR_COMPACTION_PERIOD`.
 HBase 0.90 introduced `org.apache.hadoop.hbase.util.RegionSplitter`, which provides a network-IO-safe rolling split of all regions.
@@ -863,9 +862,9 @@ You might also see the graphs on the tail of link:https://issues.apache.org/jira
 This section is about configurations that will make servers come back faster after a fail.
 See the Deveraj Das and Nicolas Liochon blog post link:http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/[Introduction to HBase Mean Time to Recover (MTTR)] for a brief introduction.
 
-The issue link:https://issues.apache.org/jira/browse/HBASE-8389[HBASE-8354 forces Namenode into loop with lease recovery requests] is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments.
+The issue link:https://issues.apache.org/jira/browse/HBASE-8389[HBASE-8354 forces Namenode into loop with lease recovery requests] is messy but has a bunch of good discussion toward the end on low timeouts and how to cause faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments.
 The below suggested configurations are Varun's suggestions distilled and tested.
-Make sure you are running on a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help HBase MTTR (e.g.
+Make sure you are running on a late-version HDFS so you have the fixes he refers to and himself adds to HDFS that help HBase MTTR (e.g.
 HDFS-3703, HDFS-3712, and HDFS-4791 -- Hadoop 2 for sure has them and late Hadoop 1 has some). Set the following in the RegionServer.
 
 [source,xml]
