@@ -169,36 +169,6 @@ public class TestAssignmentManager {
     if (this.am.waitServerReportEvent(null, null)) throw new UnexpectedStateException();
   }
 
-  @Ignore @Test // TODO
-  public void testGoodSplit() throws Exception {
-    TableName tableName = TableName.valueOf(this.name.getMethodName());
-    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
-        .setStartKey(Bytes.toBytes(0))
-        .setEndKey(Bytes.toBytes(2))
-        .setSplit(false)
-        .setRegionId(0)
-        .build();
-    SplitTableRegionProcedure split =
-        new SplitTableRegionProcedure(this.master.getMasterProcedureExecutor().getEnvironment(),
-            hri, Bytes.toBytes(1));
-    rsDispatcher.setMockRsExecutor(new GoodSplitExecutor());
-    long st = System.currentTimeMillis();
-    Thread t = new Thread() {
-      public void run() {
-        try {
-          waitOnFuture(submitProcedure(split));
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-    };
-    t.start();
-    t.join();
-    long et = System.currentTimeMillis();
-    float sec = ((et - st) / 1000.0f);
-    LOG.info(String.format("[T] Splitting in %s", StringUtils.humanTimeDiff(et - st)));
-  }
-
   @Test
   public void testAssignWithGoodExec() throws Exception {
     // collect AM metrics before test
@@ -863,10 +833,6 @@ public class TestAssignmentManager {
         return mockRsExec.sendRequest(serverName, request);
       }
     }
-  }
-
-  private class GoodSplitExecutor extends NoopRsExecutor {
-
   }
 
   private void collectAssignmentManagerMetrics() {
