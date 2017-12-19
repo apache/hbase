@@ -19,8 +19,11 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -40,6 +43,7 @@ import static junit.framework.TestCase.assertTrue;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestAssignProcedure {
+  private static final Log LOG = LogFactory.getLog(TestAssignProcedure.class);
   @Rule public TestName name = new TestName();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).
@@ -64,11 +68,17 @@ public class TestAssignProcedure {
   @Test
   public void testComparatorWithMetas() {
     List<AssignProcedure> procedures = new ArrayList<AssignProcedure>();
+    RegionInfo user3 = RegionInfoBuilder.newBuilder(TableName.valueOf("user3")).build();
+    procedures.add(new AssignProcedure(user3));
+    RegionInfo system = RegionInfoBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME).build();
+    procedures.add(new AssignProcedure(system));
     RegionInfo user1 = RegionInfoBuilder.newBuilder(TableName.valueOf("user_space1")).build();
+    RegionInfo user2 = RegionInfoBuilder.newBuilder(TableName.valueOf("user_space2")).build();
     procedures.add(new AssignProcedure(user1));
     RegionInfo meta2 = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
         setStartKey(Bytes.toBytes("002")).build();
     procedures.add(new AssignProcedure(meta2));
+    procedures.add(new AssignProcedure(user2));
     RegionInfo meta1 = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
         setStartKey(Bytes.toBytes("001")).build();
     procedures.add(new AssignProcedure(meta1));
@@ -76,15 +86,24 @@ public class TestAssignProcedure {
     RegionInfo meta0 = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).
         setStartKey(Bytes.toBytes("000")).build();
     procedures.add(new AssignProcedure(meta0));
-    RegionInfo user2 = RegionInfoBuilder.newBuilder(TableName.valueOf("user_space2")).build();
-    procedures.add(new AssignProcedure(user2));
-    RegionInfo system = RegionInfoBuilder.newBuilder(TableName.NAMESPACE_TABLE_NAME).build();
-    procedures.add(new AssignProcedure(system));
-    procedures.sort(AssignProcedure.COMPARATOR);
-    assertTrue(procedures.get(0).getRegionInfo().equals(RegionInfoBuilder.FIRST_META_REGIONINFO));
-    assertTrue(procedures.get(1).getRegionInfo().equals(meta0));
-    assertTrue(procedures.get(2).getRegionInfo().equals(meta1));
-    assertTrue(procedures.get(3).getRegionInfo().equals(meta2));
-    assertTrue(procedures.get(4).getRegionInfo().getTable().equals(TableName.NAMESPACE_TABLE_NAME));
+    for (int i = 0; i < 10; i++) {
+      Collections.shuffle(procedures);
+      procedures.sort(AssignProcedure.COMPARATOR);
+      try {
+        assertTrue(procedures.get(0).getRegionInfo().equals(RegionInfoBuilder.FIRST_META_REGIONINFO));
+        assertTrue(procedures.get(1).getRegionInfo().equals(meta0));
+        assertTrue(procedures.get(2).getRegionInfo().equals(meta1));
+        assertTrue(procedures.get(3).getRegionInfo().equals(meta2));
+        assertTrue(procedures.get(4).getRegionInfo().getTable().equals(TableName.NAMESPACE_TABLE_NAME));
+        assertTrue(procedures.get(5).getRegionInfo().equals(user1));
+        assertTrue(procedures.get(6).getRegionInfo().equals(user2));
+        assertTrue(procedures.get(7).getRegionInfo().equals(user3));
+      } catch (Throwable t) {
+        for (AssignProcedure proc : procedures) {
+          LOG.debug(proc);
+        }
+        throw t;
+      }
+    }
   }
 }
