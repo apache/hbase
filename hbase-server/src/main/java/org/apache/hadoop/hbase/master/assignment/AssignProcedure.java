@@ -379,7 +379,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
           return RegionInfo.COMPARATOR.compare(left.getRegionInfo(), right.getRegionInfo());
         }
         return -1;
-      } else if (left.getRegionInfo().isMetaRegion()) {
+      } else if (right.getRegionInfo().isMetaRegion()) {
         return +1;
       }
       if (left.getRegionInfo().getTable().isSystemTable()) {
@@ -387,7 +387,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
           return RegionInfo.COMPARATOR.compare(left.getRegionInfo(), right.getRegionInfo());
         }
         return -1;
-      } else if (left.getRegionInfo().getTable().isSystemTable()) {
+      } else if (right.getRegionInfo().getTable().isSystemTable()) {
         return +1;
       }
       return RegionInfo.COMPARATOR.compare(left.getRegionInfo(), right.getRegionInfo());
