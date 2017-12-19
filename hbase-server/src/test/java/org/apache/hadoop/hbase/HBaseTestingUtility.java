@@ -3231,7 +3231,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @throws IOException
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName) throws IOException {
-    waitUntilAllRegionsAssigned( tableName,
+    waitUntilAllRegionsAssigned(tableName,
       this.conf.getLong("hbase.client.sync.wait.timeout.msec", 60000));
   }
 
@@ -3255,59 +3255,59 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
       throws IOException {
-    final Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
-    try {
-      LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
-          timeout + "ms");
-      waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
-        @Override
-        public String explainFailure() throws IOException {
-          return explainTableAvailability(tableName);
-        }
+    if (!TableName.isMetaTableName(tableName)) {
+      try (final Table meta = getConnection().getTable(TableName.META_TABLE_NAME)) {
+        LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
+            timeout + "ms");
+        waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
+          @Override
+          public String explainFailure() throws IOException {
+            return explainTableAvailability(tableName);
+          }
 
-        @Override
-        public boolean evaluate() throws IOException {
-          Scan scan = new Scan();
-          scan.addFamily(HConstants.CATALOG_FAMILY);
-          ResultScanner s = meta.getScanner(scan);
-          try {
-            Result r;
-            while ((r = s.next()) != null) {
-              byte[] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-              HRegionInfo info = HRegionInfo.parseFromOrNull(b);
-              if (info != null && info.getTable().equals(tableName)) {
-                // Get server hosting this region from catalog family. Return false if no server
-                // hosting this region, or if the server hosting this region was recently killed
-                // (for fault tolerance testing).
-                byte[] server =
-                    r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-                if (server == null) {
-                  return false;
-                } else {
-                  byte[] startCode =
-                      r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
-                  ServerName serverName =
-                      ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + "," +
-                          Bytes.toLong(startCode));
-                  if (!getHBaseClusterInterface().isDistributedCluster()
-                      && getHBaseCluster().isKilledRS(serverName)) {
+          @Override
+          public boolean evaluate() throws IOException {
+            Scan scan = new Scan();
+            scan.addFamily(HConstants.CATALOG_FAMILY);
+            boolean tableFound = false;
+            try (ResultScanner s = meta.getScanner(scan)) {
+              for (Result r; (r = s.next()) != null;) {
+                byte[] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+                HRegionInfo info = HRegionInfo.parseFromOrNull(b);
+                if (info != null && info.getTable().equals(tableName)) {
+                  // Get server hosting this region from catalog family. Return false if no server
+                  // hosting this region, or if the server hosting this region was recently killed
+                  // (for fault tolerance testing).
+                  tableFound = true;
+                  byte[] server =
+                      r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+                  if (server == null) {
+                    return false;
+                  } else {
+                    byte[] startCode =
+                        r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
+                    ServerName serverName =
+                        ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + "," +
+                            Bytes.toLong(startCode));
+                    if (!getHBaseClusterInterface().isDistributedCluster() &&
+                        getHBaseCluster().isKilledRS(serverName)) {
+                      return false;
+                    }
+                  }
+                  if (RegionStateStore.getRegionState(r,
+                    info.getReplicaId()) != RegionState.State.OPEN) {
                     return false;
                   }
                 }
-                if (RegionStateStore.getRegionState(r, info.getReplicaId())
-                    != RegionState.State.OPEN) {
-                  return false;
-                }
               }
             }
-          } finally {
-            s.close();
+            if (!tableFound) {
+              LOG.warn("Didn't find the entries for table " + tableName + " in meta, already deleted?");
+            }
+            return tableFound;
           }
-          return true;
-        }
-      });
-    } finally {
-      meta.close();
+        });
+      }
     }
     LOG.info("All regions for table " + tableName + " assigned to meta. Checking AM states.");
     // check from the master state if we are using a mini cluster
