@@ -113,7 +113,7 @@ October 2nd, 2009:: HBase at Hadoop World in NYC. A few of us will be talking on
 
 August 7th-9th, 2009:: HUG7 and HBase Hackathon at StumbleUpon in SF: Sign up for the:: link:http://www.meetup.com/hbaseusergroup/calendar/10950511/[HBase User Group Meeting, HUG7] or for the link:http://www.meetup.com/hackathon/calendar/10951718/[Hackathon] or for both (all are welcome!).
 
-June, 2009::  HBase at HadoopSummit2009 and at NOSQL: See the link:http://wiki.apache.org/hadoop/HBase/HBasePresentations[presentations]
+June, 2009::  HBase at HadoopSummit2009 and at NOSQL: See the link:https://hbase.apache.org/book.html#other.info.pres[presentations]
 
 March 3rd, 2009 :: HUG6 -- link:http://www.meetup.com/hbaseusergroup/calendar/9764004/[HBase User Group 6]
 
