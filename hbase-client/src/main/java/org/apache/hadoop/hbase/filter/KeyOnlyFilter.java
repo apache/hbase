@@ -199,6 +199,7 @@ public class KeyOnlyFilter extends FilterBase {
       return cell.getType();
     }
 
+
     @Override
     public long getSequenceId() {
       return 0;

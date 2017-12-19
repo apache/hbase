@@ -1592,7 +1592,7 @@ public class MetaTableAccessor {
         .setFamily(HConstants.CATALOG_FAMILY)
         .setQualifier(getRegionStateColumn())
         .setTimestamp(put.getTimeStamp())
-        .setType(CellBuilder.DataType.Put)
+        .setType(DataType.Put)
         .setValue(Bytes.toBytes(state.name()))
         .build());
   }
