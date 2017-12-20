@@ -3462,6 +3462,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         stats.addException(region.getRegionInfo().getRegionName(), e);
       }
     }
+    stats.withMaxCacheSize(regionServer.getCacheConfig().getBlockCache().getMaxSize());
     return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
   }
 }

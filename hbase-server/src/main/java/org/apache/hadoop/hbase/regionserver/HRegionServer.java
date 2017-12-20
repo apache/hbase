@@ -3632,7 +3632,6 @@ public class HRegionServer extends HasThread implements
 
     return CacheEvictionStats.builder()
         .withEvictedBlocks(evictedBlocks)
-        .withMaxCacheSize(blockCache.getMaxSize())
         .build();
   }
 
