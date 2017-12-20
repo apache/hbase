@@ -34,13 +34,6 @@ pipeline {
     // where we check out to across stages
     BASEDIR = "${env.WORKSPACE}/component"
     YETUS_RELEASE = '0.6.0'
-    // where we'll write everything from different steps.
-    OUTPUT_RELATIVE_GENERAL = 'output-general'
-    OUTPUTDIR_GENERAL = "${env.WORKSPACE}/output-general"
-    OUTPUT_RELATIVE_JDK7 = 'output-jdk7'
-    OUTPUTDIR_JDK7 = "${env.WORKSPACE}/output-jdk7"
-    OUTPUT_RELATIVE_JDK8 = 'output-jdk8'
-    OUTPUTDIR_JDK8 = "${env.WORKSPACE}/output-jdk8"
     PROJECT = 'hbase'
     PROJET_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
@@ -123,30 +116,30 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
         // on branches that don't support jdk7, this will already be JAVA_HOME, so we'll end up not
         // doing multijdk there.
         MULTIJDK = '/usr/lib/jvm/java-8-openjdk-amd64'
-        OUTPUT_RELATIVE = "${env.OUTPUT_RELATIVE_GENERAL}"
-        OUTPUTDIR = "${env.OUTPUTDIR_GENERAL}"
+        OUTPUT_DIR_RELATIVE = "output-general"
+        OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE}"
       }
       steps {
         unstash 'yetus'
         sh '''#!/usr/bin/env bash
-          rm -rf "${OUTPUTDIR}" && mkdir "${OUTPUTDIR}"
-          rm -rf "${OUTPUTDIR}/machine" && mkdir "${OUTPUTDIR}/machine"
-          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_RELATIVE}/machine"
+          rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+          rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
         // TODO should this be a download from master, similar to how the personality is?
         sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
       }
       post {
         always {
-          // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
-          archive 'output-general/*'
-          archive 'output-general/**/*'
+          // Has to be relative to WORKSPACE.
+          archive "${env.OUTPUT_DIR_RELATIVE}/*"
+          archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
           publishHTML target: [
             allowMissing: true,
             keepAll: true,
             alwaysLinkToLastBuild: true,
-            // has to be relative to WORKSPACE :(
-            reportDir: 'output-general',
+            // Has to be relative to WORKSPACE
+            reportDir: "${env.OUTPUT_DIR_RELATIVE}",
             reportFiles: 'console-report.html',
             reportName: 'General Nightly Build Report'
           ]
@@ -159,16 +152,16 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       environment {
         TESTS = 'mvninstall,compile,javac,unit,htmlout'
-        OUTPUT_RELATIVE = "${env.OUTPUT_RELATIVE_JDK7}"
-        OUTPUTDIR = "${env.OUTPUTDIR_JDK7}"
+        OUTPUT_DIR_RELATIVE = "output-jdk7"
+        OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE}"
         // On branches where we do jdk7 checks, jdk7 will be JAVA_HOME already.
       }
       steps {
         unstash 'yetus'
         sh '''#!/usr/bin/env bash
-          rm -rf "${OUTPUTDIR}" && mkdir "${OUTPUTDIR}"
-          rm -rf "${OUTPUTDIR}/machine" && mkdir "${OUTPUTDIR}/machine"
-          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_RELATIVE}/machine"
+          rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+          rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
         sh """#!/usr/bin/env bash
           # for branch-1.1 we don't do jdk8 findbugs, so do it here
@@ -180,14 +173,14 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       post {
         always {
-          junit testResults: 'output-jdk7/**/target/**/TEST-*.xml', allowEmptyResults: true
+          junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
           // zip surefire reports.
           sh '''#!/bin/bash -e
-            if [ -d "${OUTPUTDIR}/archiver" ]; then
-              count=$(find "${OUTPUTDIR}/archiver" -type f | wc -l)
+            if [ -d "${OUTPUT_DIR}/archiver" ]; then
+              count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
               if [[ 0 -ne ${count} ]]; then
                 echo "zipping ${count} archived files"
-                zip -q -m -r "${OUTPUTDIR}/test_logs.zip" "${OUTPUTDIR}/archiver"
+                zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
               else
                 echo "No archived files, skipping compressing."
               fi
@@ -195,17 +188,17 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
               echo "No archiver directory, skipping compressing."
             fi
 '''
-          // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
-          archive 'output-jdk7/*'
-          archive 'output-jdk7/**/*'
+          // Has to be relative to WORKSPACE.
+          archive "${env.OUTPUT_DIR_RELATIVE}/*"
+          archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
           publishHTML target: [
-            allowMissing: true,
-            keepAll: true,
+            allowMissing         : true,
+            keepAll              : true,
             alwaysLinkToLastBuild: true,
-            // has to be relative to WORKSPACE :(
-            reportDir: 'output-jdk7',
-            reportFiles: 'console-report.html',
-            reportName: 'JDK7 Nightly Build Report'
+            // Has to be relative to WORKSPACE.
+            reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+            reportFiles          : 'console-report.html',
+            reportName           : 'JDK7 Nightly Build Report'
           ]
         }
       }
@@ -218,8 +211,8 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       }
       environment {
         TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
-        OUTPUT_RELATIVE = "${env.OUTPUT_RELATIVE_JDK8}"
-        OUTPUTDIR = "${env.OUTPUTDIR_JDK8}"
+        OUTPUT_DIR_RELATIVE = "output-jdk8"
+        OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE}"
         // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
         // and is needed on branches that do both jdk7 and jdk8
         SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
@@ -227,22 +220,22 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
       steps {
         unstash 'yetus'
         sh '''#!/usr/bin/env bash
-          rm -rf "${OUTPUTDIR}" && mkdir "${OUTPUTDIR}"
-          rm -rf "${OUTPUTDIR}/machine" && mkdir "${OUTPUTDIR}/machine"
-          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_RELATIVE}/machine"
+          rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+          rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
 '''
         sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
       }
       post {
         always {
-          junit testResults: 'output-jdk8/**/target/**/TEST-*.xml', allowEmptyResults: true
+          junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
           // zip surefire reports.
           sh '''#!/bin/bash -e
-            if [ -d "${OUTPUTDIR}/archiver" ]; then
-              count=$(find "${OUTPUTDIR}/archiver" -type f | wc -l)
+            if [ -d "${OUTPUT_DIR}/archiver" ]; then
+              count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
               if [[ 0 -ne ${count} ]]; then
                 echo "zipping ${count} archived files"
-                zip -q -m -r "${OUTPUTDIR}/test_logs.zip" "${OUTPUTDIR}/archiver"
+                zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
               else
                 echo "No archived files, skipping compressing."
               fi
@@ -250,17 +243,17 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
               echo "No archiver directory, skipping compressing."
             fi
 '''
-          // env variables don't work in archive? or this has to be relative to WORKSPACE. :(
-          archive 'output-jdk8/*'
-          archive 'output-jdk8/**/*'
+          // Has to be relative to WORKSPACE.
+          archive "${env.OUTPUT_DIR_RELATIVE}/*"
+          archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
           publishHTML target: [
-            allowMissing: true,
-            keepAll: true,
+            allowMissing         : true,
+            keepAll              : true,
             alwaysLinkToLastBuild: true,
-            // has to be relative to WORKSPACE :(
-            reportDir: 'output-jdk8',
-            reportFiles: 'console-report.html',
-            reportName: 'JDK8 Nightly Build Report'
+            // Has to be relative to WORKSPACE.
+            reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+            reportFiles          : 'console-report.html',
+            reportName           : 'JDK8 Nightly Build Report'
           ]
         }
       }
