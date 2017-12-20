@@ -76,6 +76,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   // ReplicationLoad to access replication metrics
   private ReplicationLoad replicationLoad;
 
+  private PeerProcedureHandler peerProcedureHandler;
+
   /**
    * Empty constructor
    */
@@ -134,6 +136,13 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     LOG.debug("Replication stats-in-log period={} seconds",  this.statsThreadPeriod);
     this.replicationLoad = new ReplicationLoad();
+
+    this.peerProcedureHandler = new PeerProcedureHandlerImpl(replicationManager);
+  }
+
+  @Override
+  public PeerProcedureHandler getPeerProcedureHandler() {
+    return peerProcedureHandler;
   }
 
   /**

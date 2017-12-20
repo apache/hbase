@@ -15,34 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.replication;
 
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+package org.apache.hadoop.hbase.replication.regionserver;
 
-public class DummyModifyPeerProcedure extends ModifyPeerProcedure {
+import java.io.IOException;
 
-  public DummyModifyPeerProcedure() {
-  }
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.yetus.audience.InterfaceAudience;
 
-  public DummyModifyPeerProcedure(String peerId) {
-    super(peerId);
-  }
+@InterfaceAudience.Private
+public interface PeerProcedureHandler {
 
-  @Override
-  public PeerOperationType getPeerOperationType() {
-    return PeerOperationType.ADD;
-  }
+  public void addPeer(String peerId) throws ReplicationException, IOException;
 
-  @Override
-  protected void prePeerModification(MasterProcedureEnv env) {
-  }
+  public void removePeer(String peerId) throws ReplicationException, IOException;
 
-  @Override
-  protected void updatePeerStorage(MasterProcedureEnv env) {
-  }
+  public void disablePeer(String peerId) throws ReplicationException, IOException;
 
-  @Override
-  protected void postPeerModification(MasterProcedureEnv env) {
-  }
+  public void enablePeer(String peerId) throws ReplicationException, IOException;
 
+  public void updatePeerConfig(String peerId) throws ReplicationException, IOException;
 }
