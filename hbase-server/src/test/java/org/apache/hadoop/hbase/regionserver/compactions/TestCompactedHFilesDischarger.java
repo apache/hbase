@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -333,6 +334,49 @@ public class TestCompactedHFilesDischarger {
     assertTrue(compactedfiles.isEmpty());
   }
 
+  @Test
+  public void testStoreFileMissing() throws Exception {
+    // Write 3 records and create 3 store files.
+    write("row1");
+    region.flush(true);
+    write("row2");
+    region.flush(true);
+    write("row3");
+    region.flush(true);
+
+    Scan scan = new Scan();
+    scan.setCaching(1);
+    RegionScanner scanner = region.getScanner(scan);
+    List<Cell> res = new ArrayList<Cell>();
+    // Read first item
+    scanner.next(res);
+    assertEquals("row1", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+    res.clear();
+    // Create a new file in between scan nexts
+    write("row4");
+    region.flush(true);
+
+    // Compact the table
+    region.compact(true);
+
+    // Create the cleaner object
+    CompactedHFilesDischarger cleaner =
+        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+    cleaner.chore();
+    // This issues scan next
+    scanner.next(res);
+    assertEquals("row2", Bytes.toString(CellUtil.cloneRow(res.get(0))));
+
+    scanner.close();
+  }
+
+  private void write(String row1) throws IOException {
+    byte[] row = Bytes.toBytes(row1);
+    Put put = new Put(row);
+    put.addColumn(fam, qual1, row);
+    region.put(put);
+  }
+
   protected void countDown() {
     // count down 3 times
     latch.countDown();
@@ -366,7 +410,7 @@ public class TestCompactedHFilesDischarger {
       try {
         initiateScan(region);
       } catch (IOException e) {
-        // do nothing
+        e.printStackTrace();
       }
     }
 
