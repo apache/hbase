@@ -570,7 +570,7 @@ public class FixedFileTrailer {
         || (comparatorClassName
             .equals("org.apache.hadoop.hbase.CellComparator$MetaCellComparator"))) {
       comparatorKlass = MetaCellComparator.class;
-    } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue.RawBytesComparator")
+    } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$RawBytesComparator")
         || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")) {
       // When the comparator to be used is Bytes.BYTES_RAWCOMPARATOR, we just return null from here
       // Bytes.BYTES_RAWCOMPARATOR is not a CellComparator
