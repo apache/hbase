@@ -67,6 +67,14 @@ YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
 
+# Currently, flaky list is calculated only for master branch.
+if [[ -n "${EXCLUDE_TESTS_URL}" && "${BRANCH_NAME}" == "master" ]]; then
+  YETUS_ARGS=("--exclude-tests-url=${EXCLUDE_TESTS_URL}" "${YETUS_ARGS[@]}")
+fi
+if [[ -n "${INCLUDE_TESTS_URL}" && "${BRANCH_NAME}" == "master" ]]; then
+  YETUS_ARGS=("--include-tests-url=${INCLUDE_TESTS_URL}" "${YETUS_ARGS[@]}")
+fi
+
 if [[ true == "${DEBUG}" ]]; then
   YETUS_ARGS=("--debug" "${YETUS_ARGS[@]}")
 fi
