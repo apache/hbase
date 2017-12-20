@@ -87,7 +87,7 @@ public class WALFactory implements WALFileLengthProvider {
   public static final String WAL_PROVIDER = "hbase.wal.provider";
   static final String DEFAULT_WAL_PROVIDER = Providers.defaultProvider.name();
 
-  static final String META_WAL_PROVIDER = "hbase.wal.meta_provider";
+  public static final String META_WAL_PROVIDER = "hbase.wal.meta_provider";
   static final String DEFAULT_META_WAL_PROVIDER = Providers.defaultProvider.name();
 
   final String factoryId;
