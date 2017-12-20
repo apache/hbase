@@ -23,7 +23,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -119,11 +118,11 @@ public class TestTableName extends TestWatcher {
 
     Names(String ns, String tn) {
       this.ns = ns;
-      nsb = ns.getBytes(StandardCharsets.UTF_8);
+      nsb = Bytes.toBytes(ns);
       this.tn = tn;
-      tnb = tn.getBytes(StandardCharsets.UTF_8);
+      tnb = Bytes.toBytes(tn);
       nn = this.ns + ":" + this.tn;
-      nnb = nn.getBytes(StandardCharsets.UTF_8);
+      nnb = Bytes.toBytes(nn);
     }
 
     @Override

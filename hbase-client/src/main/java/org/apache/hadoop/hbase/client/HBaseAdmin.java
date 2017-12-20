@@ -23,7 +23,6 @@ import com.google.protobuf.RpcController;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -1675,8 +1674,8 @@ public class HBaseAdmin implements Admin {
     byte[][] encodedNameofRegionsToMerge = new byte[nameofRegionsToMerge.length][];
     for(int i = 0; i < nameofRegionsToMerge.length; i++) {
       encodedNameofRegionsToMerge[i] = HRegionInfo.isEncodedRegionName(nameofRegionsToMerge[i]) ?
-        nameofRegionsToMerge[i] : HRegionInfo.encodeRegionName(nameofRegionsToMerge[i])
-          .getBytes(StandardCharsets.UTF_8);
+          nameofRegionsToMerge[i] :
+          Bytes.toBytes(HRegionInfo.encodeRegionName(nameofRegionsToMerge[i]));
     }
 
     TableName tableName = null;
@@ -1774,7 +1773,7 @@ public class HBaseAdmin implements Admin {
   public Future<Void> splitRegionAsync(byte[] regionName, byte[] splitPoint)
       throws IOException {
     byte[] encodedNameofRegionToSplit = HRegionInfo.isEncodedRegionName(regionName) ?
-        regionName : HRegionInfo.encodeRegionName(regionName).getBytes(StandardCharsets.UTF_8);
+        regionName : Bytes.toBytes(HRegionInfo.encodeRegionName(regionName));
     Pair<RegionInfo, ServerName> pair = getRegion(regionName);
     if (pair != null) {
       if (pair.getFirst() != null &&

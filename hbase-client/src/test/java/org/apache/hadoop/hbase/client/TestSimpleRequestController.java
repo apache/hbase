@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,9 +52,9 @@ public class TestSimpleRequestController {
 
   private static final TableName DUMMY_TABLE
           = TableName.valueOf("DUMMY_TABLE");
-  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
+  private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
+  private static final byte[] DUMMY_BYTES_3 = Bytes.toBytes("DUMMY_BYTES_3");
   private static final ServerName SN = ServerName.valueOf("s1,1,1");
   private static final ServerName SN2 = ServerName.valueOf("s2,2,2");
   private static final HRegionInfo HRI1

@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,10 +87,10 @@ public class TestAsyncProcess {
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncProcess.class);
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
-  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] FAILS = "FAILS".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
+  private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
+  private static final byte[] DUMMY_BYTES_3 = Bytes.toBytes("DUMMY_BYTES_3");
+  private static final byte[] FAILS = Bytes.toBytes("FAILS");
   private static final Configuration CONF = new Configuration();
   private static final ConnectionConfiguration CONNECTION_CONFIG =
       new ConnectionConfiguration(CONF);
@@ -987,7 +986,7 @@ public class TestAsyncProcess {
 
 
     for (int i = 0; i < 1000; i++) {
-      ap.incTaskCounters(Collections.singleton("dummy".getBytes(StandardCharsets.UTF_8)), sn);
+      ap.incTaskCounters(Collections.singleton(Bytes.toBytes("dummy")), sn);
     }
 
     final Thread myThread = Thread.currentThread();
@@ -1018,7 +1017,7 @@ public class TestAsyncProcess {
       public void run() {
         Threads.sleep(sleepTime);
         while (controller.tasksInProgress.get() > 0) {
-          ap.decTaskCounters(Collections.singleton("dummy".getBytes(StandardCharsets.UTF_8)), sn);
+          ap.decTaskCounters(Collections.singleton(Bytes.toBytes("dummy")), sn);
         }
       }
     };

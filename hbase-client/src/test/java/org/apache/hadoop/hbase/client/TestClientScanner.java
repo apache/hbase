@@ -30,7 +30,6 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -132,8 +132,7 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoResultsHint() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
-        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
@@ -193,8 +192,7 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testSizeLimit() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
-      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
@@ -251,14 +249,11 @@ public class TestClientScanner {
   @Test
   @SuppressWarnings("unchecked")
   public void testCacheLimit() throws IOException {
-    KeyValue kv1 = new KeyValue("row1".getBytes(StandardCharsets.UTF_8),
-      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
-    KeyValue kv2 = new KeyValue("row2".getBytes(StandardCharsets.UTF_8),
-        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
-    KeyValue kv3 = new KeyValue("row3".getBytes(StandardCharsets.UTF_8),
-        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv3 = new KeyValue(Bytes.toBytes("row3"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     final Result[] results = new Result[] {Result.create(new Cell[] {kv1}),
         Result.create(new Cell[] {kv2}), Result.create(new Cell[] {kv3})};
@@ -331,8 +326,7 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoMoreResults() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
-      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results[0] = Result.create(new Cell[] {kv1});
 
@@ -390,14 +384,12 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testMoreResults() throws IOException {
     final Result[] results1 = new Result[1];
-    KeyValue kv1 = new KeyValue("row".getBytes(StandardCharsets.UTF_8),
-        "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results1[0] = Result.create(new Cell[] {kv1});
 
     final Result[] results2 = new Result[1];
-    KeyValue kv2 = new KeyValue("row2".getBytes(StandardCharsets.UTF_8),
-      "cf".getBytes(StandardCharsets.UTF_8), "cq".getBytes(StandardCharsets.UTF_8), 1,
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
         Type.Maximum);
     results2[0] = Result.create(new Cell[] {kv2});
 
