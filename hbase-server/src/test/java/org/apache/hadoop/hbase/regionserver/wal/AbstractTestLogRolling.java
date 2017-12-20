@@ -26,21 +26,21 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -89,11 +89,9 @@ public abstract class AbstractTestLogRolling  {
   // to the HDFS & HBase cluster startup.
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-
-
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
-    Configuration conf= TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HREGION_MAX_FILESIZE, 768L * 1024L);
 
     // We roll the log after every 32 writes
@@ -114,6 +112,10 @@ public abstract class AbstractTestLogRolling  {
     // Reduce thread wake frequency so that other threads can get
     // a chance to run.
     conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
+
+    // disable low replication check for log roller to get a more stable result
+    // TestWALOpenAfterDNRollingStart will test this option.
+    conf.setLong("hbase.regionserver.hlog.check.lowreplication.interval", 24L * 60 * 60 * 1000);
   }
 
   @Before
@@ -305,8 +307,8 @@ public abstract class AbstractTestLogRolling  {
 
   protected Table createTestTable(String tableName) throws IOException {
     // Create the test table and open it
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(desc);
     return TEST_UTIL.getConnection().getTable(desc.getTableName());
   }
