@@ -928,7 +928,7 @@ public class Base64 {
       bytes = s.getBytes(PREFERRED_ENCODING);
 
     } catch (UnsupportedEncodingException uee) {
-      bytes = s.getBytes(StandardCharsets.UTF_8);
+      bytes = Bytes.toBytes(s);
     } // end catch
 
     // Decode

@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -874,9 +873,9 @@ public class TestOrderedBytes {
   @Test
   public void testBlobVar() {
     byte[][] vals =
-      { "".getBytes(StandardCharsets.UTF_8),
-        "foo".getBytes(StandardCharsets.UTF_8),
-        "foobarbazbub".getBytes(StandardCharsets.UTF_8),
+      { Bytes.toBytes(""),
+        Bytes.toBytes("foo"),
+        Bytes.toBytes("foobarbazbub"),
         { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
           (byte) 0xaa, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
         { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
@@ -891,14 +890,14 @@ public class TestOrderedBytes {
         { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
           (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
           (byte) 0x55, (byte) 0x55, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
-        "1".getBytes(StandardCharsets.UTF_8),
-        "22".getBytes(StandardCharsets.UTF_8),
-        "333".getBytes(StandardCharsets.UTF_8),
-        "4444".getBytes(StandardCharsets.UTF_8),
-        "55555".getBytes(StandardCharsets.UTF_8),
-        "666666".getBytes(StandardCharsets.UTF_8),
-        "7777777".getBytes(StandardCharsets.UTF_8),
-        "88888888".getBytes(StandardCharsets.UTF_8)
+        Bytes.toBytes("1"),
+        Bytes.toBytes("22"),
+        Bytes.toBytes("333"),
+        Bytes.toBytes("4444"),
+        Bytes.toBytes("55555"),
+        Bytes.toBytes("666666"),
+        Bytes.toBytes("7777777"),
+        Bytes.toBytes("88888888")
       };
 
     /*
@@ -969,9 +968,9 @@ public class TestOrderedBytes {
   @Test
   public void testBlobCopy() {
     byte[][] vals =
-      { "".getBytes(StandardCharsets.UTF_8),
-        "foo".getBytes(StandardCharsets.UTF_8),
-        "foobarbazbub".getBytes(StandardCharsets.UTF_8),
+      { Bytes.toBytes(""),
+        Bytes.toBytes("foo"),
+        Bytes.toBytes("foobarbazbub"),
         { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
           (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
         { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
@@ -1046,9 +1045,9 @@ public class TestOrderedBytes {
       byte[] a = new byte[3 + (Order.ASCENDING == ord ? 1 : 2) + 2];
       PositionedByteRange buf =
           new SimplePositionedMutableByteRange(a, 1, 3 + (Order.ASCENDING == ord ? 1 : 2));
-      OrderedBytes.encodeBlobCopy(buf, "foobarbaz".getBytes(StandardCharsets.UTF_8), 3, 3, ord);
+      OrderedBytes.encodeBlobCopy(buf, Bytes.toBytes("foobarbaz"), 3, 3, ord);
       buf.setPosition(0);
-      assertArrayEquals("bar".getBytes(StandardCharsets.UTF_8), OrderedBytes.decodeBlobCopy(buf));
+      assertArrayEquals(Bytes.toBytes("bar"), OrderedBytes.decodeBlobCopy(buf));
     }
   }
 

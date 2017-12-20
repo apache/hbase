@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -41,8 +40,8 @@ public class TestLoadTestKVGenerator {
   @Test
   public void testValueLength() {
     for (int i = 0; i < 1000; ++i) {
-      byte[] v = gen.generateRandomSizeValue(Integer.toString(i).getBytes(StandardCharsets.UTF_8),
-          String.valueOf(rand.nextInt()).getBytes(StandardCharsets.UTF_8));
+      byte[] v = gen.generateRandomSizeValue(Bytes.toBytes(Integer.toString(i)),
+          Bytes.toBytes(String.valueOf(rand.nextInt())));
       assertTrue(MIN_LEN <= v.length);
       assertTrue(v.length <= MAX_LEN);
     }
@@ -52,8 +51,8 @@ public class TestLoadTestKVGenerator {
   public void testVerification() {
     for (int i = 0; i < 1000; ++i) {
       for (int qualIndex = 0; qualIndex < 20; ++qualIndex) {
-        byte[] qual = String.valueOf(qualIndex).getBytes(StandardCharsets.UTF_8);
-        byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes(StandardCharsets.UTF_8);
+        byte[] qual = Bytes.toBytes(String.valueOf(qualIndex));
+        byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
         byte[] v = gen.generateRandomSizeValue(rowKey, qual);
         assertTrue(LoadTestKVGenerator.verify(v, rowKey, qual));
         v[0]++;

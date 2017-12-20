@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client.example;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -138,7 +137,7 @@ public class HttpProxyExample {
       DefaultFullHttpResponse resp;
       if (content.isPresent()) {
         ByteBuf buf =
-            ctx.alloc().buffer().writeBytes(content.get().getBytes(StandardCharsets.UTF_8));
+            ctx.alloc().buffer().writeBytes(Bytes.toBytes(content.get()));
         resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, buf);
         resp.headers().set(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
       } else {

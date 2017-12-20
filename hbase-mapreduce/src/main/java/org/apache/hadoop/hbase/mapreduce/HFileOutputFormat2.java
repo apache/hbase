@@ -27,7 +27,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,8 +48,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -91,6 +90,7 @@ import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -134,10 +134,9 @@ public class HFileOutputFormat2
     }
   }
 
-  protected static final byte[] tableSeparator = ";".getBytes(StandardCharsets.UTF_8);
+  protected static final byte[] tableSeparator = Bytes.toBytes(";");
 
-  protected static byte[] combineTableNameSuffix(byte[] tableName,
-                                       byte[] suffix ) {
+  protected static byte[] combineTableNameSuffix(byte[] tableName, byte[] suffix) {
     return Bytes.add(tableName, tableSeparator, suffix);
   }
 
@@ -257,7 +256,7 @@ public class HFileOutputFormat2
                     "' not" + " expected");
           }
         } else {
-          tableNameBytes = writeTableNames.getBytes(StandardCharsets.UTF_8);
+          tableNameBytes = Bytes.toBytes(writeTableNames);
         }
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
         WriterLength wl = this.writers.get(tableAndFamily);
@@ -780,7 +779,7 @@ public class HFileOutputFormat2
         continue;
       }
       try {
-        confValMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(StandardCharsets.UTF_8),
+        confValMap.put(Bytes.toBytes(URLDecoder.decode(familySplit[0], "UTF-8")),
             URLDecoder.decode(familySplit[1], "UTF-8"));
       } catch (UnsupportedEncodingException e) {
         // will not happen with UTF-8 encoding
