@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2;
 
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * With this interface, the procedure framework provides means to collect following set of metrics
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.metrics.Histogram;
  *
  *  Please implement this interface to return appropriate metrics.
  */
+@InterfaceAudience.Private
 public interface ProcedureMetrics {
   /**
    * @return Total number of instances submitted for a type of a procedure

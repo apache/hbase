@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.procedure2.store;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An In-Memory store that does not keep track of the procedures inserted.
  */
+@InterfaceAudience.Private
 public class NoopProcedureStore extends ProcedureStoreBase {
   private int numThreads;
 
