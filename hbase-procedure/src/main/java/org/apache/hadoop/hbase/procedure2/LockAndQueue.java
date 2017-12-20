@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 /**
  * Locking for mutual exclusion between procedures. Used only by procedure framework internally.
  * {@link LockAndQueue} has two purposes:
@@ -42,6 +44,7 @@ package org.apache.hadoop.hbase.procedure2;
  * <br>
  * We do not use ReentrantReadWriteLock directly because of its high memory overhead.
  */
+@InterfaceAudience.Private
 public class LockAndQueue extends ProcedureDeque implements LockStatus {
   private Procedure<?> exclusiveLockOwnerProcedure = null;
   private int sharedLock = 0;
