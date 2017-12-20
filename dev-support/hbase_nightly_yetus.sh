@@ -18,8 +18,8 @@
 
 declare -i missing_env=0
 # Validate params
-for required_env in "TESTS" "TOOLS" "BASEDIR" "ARCHIVE_PATTERN_LIST" "OUTPUT_RELATIVE" \
-                    "BRANCH_SPECIFIC_DOCKERFILE" "OUTPUTDIR" "PROJECT" "AUTHOR_IGNORE_LIST" \
+for required_env in "TESTS" "TOOLS" "BASEDIR" "ARCHIVE_PATTERN_LIST" "OUTPUT_DIR_RELATIVE" \
+                    "BRANCH_SPECIFIC_DOCKERFILE" "OUTPUT_DIR" "PROJECT" "AUTHOR_IGNORE_LIST" \
                     "WHITESPACE_IGNORE_LIST" "BRANCH_NAME" "TESTS_FILTER" "DEBUG" \
                     "USE_YETUS_PRERELEASE" "WORKSPACE" "YETUS_RELEASE"; do
   if [ -z "${!required_env}" ]; then
@@ -49,15 +49,16 @@ YETUS_ARGS=("--basedir=${BASEDIR}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--archive-list=${ARCHIVE_PATTERN_LIST}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--console-urls" "${YETUS_ARGS[@]}")
 # YETUS-532, repeat this twice in case the fix is to update args rather than docs
-YETUS_ARGS=("--build-url-patchdir=artifact/${OUTPUT_RELATIVE}" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--build-url-artifacts=artifact/${OUTPUT_RELATIVE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--build-url-patchdir=artifact/${OUTPUT_DIR_RELATIVE}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--build-url-artifacts=artifact/${OUTPUT_DIR_RELATIVE}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--docker" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--dockerfile=${BRANCH_SPECIFIC_DOCKERFILE}" "${YETUS_ARGS[@]}")
+# Yetus sets BUILDMODE env variable to "full" if this arg is passed.
 YETUS_ARGS=("--empty-patch" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--html-report-file=${OUTPUTDIR}/console-report.html" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--html-report-file=${OUTPUT_DIR}/console-report.html" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--jenkins" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--mvn-custom-repos" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--patch-dir=${OUTPUTDIR}" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--patch-dir=${OUTPUT_DIR}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--project=${PROJECT}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--resetrepo" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--author-ignore-list=${AUTHOR_IGNORE_LIST}" "${YETUS_ARGS[@]}")
@@ -79,8 +80,8 @@ if [[ true == "${DEBUG}" ]]; then
   YETUS_ARGS=("--debug" "${YETUS_ARGS[@]}")
 fi
 
-rm -rf "${OUTPUTDIR}"
-mkdir -p "${OUTPUTDIR}"
+rm -rf "${OUTPUT_DIR}"
+mkdir -p "${OUTPUT_DIR}"
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then
   YETUS_ARGS=("--shelldocs=${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/shelldocs" "${YETUS_ARGS[@]}")
   TESTPATCHBIN="${WORKSPACE}/yetus-${YETUS_RELEASE}/bin/test-patch"
