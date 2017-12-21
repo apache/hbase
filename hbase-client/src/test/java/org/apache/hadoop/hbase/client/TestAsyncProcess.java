@@ -19,12 +19,13 @@
 
 package org.apache.hadoop.hbase.client;
 
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -65,12 +66,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFutureImpl;
 import org.apache.hadoop.hbase.client.AsyncProcess.ListRowAccess;
-import org.apache.hadoop.hbase.client.AsyncProcess.TaskCountChecker;
-import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
-import org.apache.hadoop.hbase.client.AsyncProcess.RowCheckerHost;
 import org.apache.hadoop.hbase.client.AsyncProcess.RequestSizeChecker;
 import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
+import org.apache.hadoop.hbase.client.AsyncProcess.RowCheckerHost;
 import org.apache.hadoop.hbase.client.AsyncProcess.SubmittedSizeChecker;
+import org.apache.hadoop.hbase.client.AsyncProcess.TaskCountChecker;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -80,9 +81,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,10 +93,10 @@ public class TestAsyncProcess {
   private final static Log LOG = LogFactory.getLog(TestAsyncProcess.class);
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
-  private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes(StandardCharsets.UTF_8);
-  private static final byte[] FAILS = "FAILS".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
+  private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
+  private static final byte[] DUMMY_BYTES_3 = Bytes.toBytes("DUMMY_BYTES_3");
+  private static final byte[] FAILS = Bytes.toBytes("FAILS");
   private static final Configuration conf = new Configuration();
 
   private static ServerName sn = ServerName.valueOf("s1:1,1");
@@ -954,7 +952,7 @@ public class TestAsyncProcess {
     final AsyncProcess ap = new MyAsyncProcess(createHConnection(), conf, false);
 
     for (int i = 0; i < 1000; i++) {
-      ap.incTaskCounters(Collections.singletonList("dummy".getBytes(StandardCharsets.UTF_8)), sn);
+      ap.incTaskCounters(Collections.singletonList(Bytes.toBytes("dummy")), sn);
     }
 
     final Thread myThread = Thread.currentThread();
@@ -985,7 +983,7 @@ public class TestAsyncProcess {
       public void run() {
         Threads.sleep(sleepTime);
         while (ap.tasksInProgress.get() > 0) {
-          ap.decTaskCounters(Collections.singletonList("dummy".getBytes(StandardCharsets.UTF_8)), sn);
+          ap.decTaskCounters(Collections.singletonList(Bytes.toBytes("dummy")), sn);
         }
       }
     };

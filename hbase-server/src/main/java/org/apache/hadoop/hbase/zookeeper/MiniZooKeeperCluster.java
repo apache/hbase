@@ -18,11 +18,13 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.InterruptedIOException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.net.BindException;
@@ -35,15 +37,14 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * TODO: Most of the code in this class is ripped from ZooKeeper tests. Instead
@@ -406,7 +407,7 @@ public class MiniZooKeeperCluster {
         Socket sock = new Socket("localhost", port);
         try {
           OutputStream outstream = sock.getOutputStream();
-          outstream.write("stat".getBytes(StandardCharsets.UTF_8));
+          outstream.write(Bytes.toBytes("stat"));
           outstream.flush();
         } finally {
           sock.close();
@@ -436,7 +437,7 @@ public class MiniZooKeeperCluster {
         BufferedReader reader = null;
         try {
           OutputStream outstream = sock.getOutputStream();
-          outstream.write("stat".getBytes(StandardCharsets.UTF_8));
+          outstream.write(Bytes.toBytes("stat"));
           outstream.flush();
 
           Reader isr = new InputStreamReader(sock.getInputStream(), StandardCharsets.UTF_8);

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.MessageDigest;
@@ -34,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -52,7 +52,7 @@ public class TestKeyStoreKeyProvider {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    KEY = MessageDigest.getInstance("SHA-256").digest(ALIAS.getBytes(StandardCharsets.UTF_8));
+    KEY = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(ALIAS));
     // Create a JKECS store containing a test secret key
     KeyStore store = KeyStore.getInstance("JCEKS");
     store.load(null, PASSWORD.toCharArray());

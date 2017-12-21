@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -33,7 +32,6 @@ import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
@@ -42,6 +40,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -147,7 +146,7 @@ public class TestGzipFilter {
     headers[1] = new Header("Accept", Constants.MIMETYPE_JSON);
     headers[2] = new Header("Accept-Encoding", "gzip");
     Response response = client.post("/" + TABLE + "/scanner", headers,
-        "<Scanner/>".getBytes(StandardCharsets.UTF_8));
+        Bytes.toBytes("<Scanner/>"));
     assertEquals(201, response.getCode());
     String scannerUrl = response.getLocation();
     assertNotNull(scannerUrl);

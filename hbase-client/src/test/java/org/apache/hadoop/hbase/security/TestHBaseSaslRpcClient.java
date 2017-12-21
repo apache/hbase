@@ -32,7 +32,6 @@ import com.google.common.base.Strings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -48,6 +47,7 @@ import javax.security.sasl.SaslClient;
 import org.apache.hadoop.hbase.security.AbstractHBaseSaslRpcClient.SaslClientCallbackHandler;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.token.Token;
@@ -101,18 +101,15 @@ public class TestHBaseSaslRpcClient {
   @Test
   public void testSaslClientCallbackHandler() throws UnsupportedCallbackException {
     final Token<? extends TokenIdentifier> token = createTokenMock();
-    when(token.getIdentifier())
-      .thenReturn(DEFAULT_USER_NAME.getBytes(StandardCharsets.UTF_8));
-    when(token.getPassword())
-      .thenReturn(DEFAULT_USER_PASSWORD.getBytes(StandardCharsets.UTF_8));
+    when(token.getIdentifier()).thenReturn(Bytes.toBytes(DEFAULT_USER_NAME));
+    when(token.getPassword()).thenReturn(Bytes.toBytes(DEFAULT_USER_PASSWORD));
 
     final NameCallback nameCallback = mock(NameCallback.class);
     final PasswordCallback passwordCallback = mock(PasswordCallback.class);
     final RealmCallback realmCallback = mock(RealmCallback.class);
     final RealmChoiceCallback realmChoiceCallback = mock(RealmChoiceCallback.class);
 
-    Callback[] callbackArray = {nameCallback, passwordCallback,
-        realmCallback, realmChoiceCallback};
+    Callback[] callbackArray = {nameCallback, passwordCallback, realmCallback, realmChoiceCallback};
     final SaslClientCallbackHandler saslClCallbackHandler = new SaslClientCallbackHandler(token);
     saslClCallbackHandler.handle(callbackArray);
     verify(nameCallback).setName(anyString());
@@ -123,10 +120,8 @@ public class TestHBaseSaslRpcClient {
   @Test
   public void testSaslClientCallbackHandlerWithException() {
     final Token<? extends TokenIdentifier> token = createTokenMock();
-    when(token.getIdentifier())
-      .thenReturn(DEFAULT_USER_NAME.getBytes(StandardCharsets.UTF_8));
-    when(token.getPassword())
-      .thenReturn(DEFAULT_USER_PASSWORD.getBytes(StandardCharsets.UTF_8));
+    when(token.getIdentifier()).thenReturn(Bytes.toBytes(DEFAULT_USER_NAME));
+    when(token.getPassword()).thenReturn(Bytes.toBytes(DEFAULT_USER_PASSWORD));
     final SaslClientCallbackHandler saslClCallbackHandler = new SaslClientCallbackHandler(token);
     try {
       saslClCallbackHandler.handle(new Callback[] { mock(TextOutputCallback.class) });
@@ -296,10 +291,8 @@ public class TestHBaseSaslRpcClient {
       throws IOException {
     Token<? extends TokenIdentifier> token = createTokenMock();
     if (!Strings.isNullOrEmpty(principal) && !Strings.isNullOrEmpty(password)) {
-      when(token.getIdentifier())
-        .thenReturn(DEFAULT_USER_NAME.getBytes(StandardCharsets.UTF_8));
-      when(token.getPassword())
-        .thenReturn(DEFAULT_USER_PASSWORD.getBytes(StandardCharsets.UTF_8));
+      when(token.getIdentifier()).thenReturn(Bytes.toBytes(DEFAULT_USER_NAME));
+      when(token.getPassword()).thenReturn(Bytes.toBytes(DEFAULT_USER_PASSWORD));
     }
     return token;
   }

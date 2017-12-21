@@ -30,6 +30,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class SaslUtil {
@@ -72,7 +73,7 @@ public class SaslUtil {
   }
 
   static byte[] decodeIdentifier(String identifier) {
-    return Base64.decodeBase64(identifier.getBytes(StandardCharsets.UTF_8));
+    return Base64.decodeBase64(Bytes.toBytes(identifier));
   }
 
   static char[] encodePassword(byte[] password) {

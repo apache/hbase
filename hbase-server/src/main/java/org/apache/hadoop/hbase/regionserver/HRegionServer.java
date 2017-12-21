@@ -18,6 +18,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -26,7 +37,6 @@ import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -189,18 +199,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
@@ -2957,14 +2955,12 @@ public class HRegionServer extends HasThread implements
     }
 
     final Boolean previous = this.regionsInTransitionInRS
-      .putIfAbsent(encodedName.getBytes(StandardCharsets.UTF_8),
-        Boolean.FALSE);
+      .putIfAbsent(Bytes.toBytes(encodedName), Boolean.FALSE);
 
     if (Boolean.TRUE.equals(previous)) {
       LOG.info("Received CLOSE for the region:" + encodedName + " , which we are already " +
           "trying to OPEN. Cancelling OPENING.");
-      if (!regionsInTransitionInRS.replace(encodedName.getBytes(StandardCharsets.UTF_8),
-            previous, Boolean.FALSE)){
+      if (!regionsInTransitionInRS.replace(Bytes.toBytes(encodedName), previous, Boolean.FALSE)) {
         // The replace failed. That should be an exceptional case, but theoretically it can happen.
         // We're going to try to do a standard close then.
         LOG.warn("The opening for region " + encodedName + " was done before we could cancel it." +
@@ -2994,7 +2990,7 @@ public class HRegionServer extends HasThread implements
 
     if (actualRegion == null) {
       LOG.error("Received CLOSE for a region which is not online, and we're not opening.");
-      this.regionsInTransitionInRS.remove(encodedName.getBytes(StandardCharsets.UTF_8));
+      this.regionsInTransitionInRS.remove(Bytes.toBytes(encodedName));
       // The master deletes the znode when it receives this exception.
       throw new NotServingRegionException("The region " + encodedName +
           " is not online, and is not opening.");

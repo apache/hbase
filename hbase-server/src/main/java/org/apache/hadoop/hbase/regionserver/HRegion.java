@@ -1016,7 +1016,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.stores.put(store.getFamily().getName(), store);
 
           long storeMaxSequenceId = store.getMaxSequenceId();
-          maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(StandardCharsets.UTF_8),
+          maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()),
               storeMaxSequenceId);
           if (maxSeqId == -1 || storeMaxSequenceId > maxSeqId) {
             maxSeqId = storeMaxSequenceId;
