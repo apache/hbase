@@ -81,6 +81,9 @@ function personality_parse_args
       --include-tests-url=*)
         INCLUDE_TESTS_URL=${i#*=}
       ;;
+      --hadoop-profile=*)
+        HADOOP_PROFILE=${i#*=}
+      ;;
     esac
   done
 }
@@ -103,6 +106,10 @@ function personality_modules
 
   extra="-DHBasePatchProcess"
 
+  if [[ -n "${HADOOP_PROFILE}" ]]; then
+    extra="${extra} -Dhadoop.profile=${HADOOP_PROFILE}"
+  fi
+
   # BUILDMODE value is 'full' when there is no patch to be tested, and we are running checks on
   # full source code instead. In this case, do full compiles, tests, etc instead of per
   # module.
@@ -115,6 +122,7 @@ function personality_modules
   fi
 
   if [[ ${testtype} == mvninstall ]]; then
+    # shellcheck disable=SC2086
     personality_enqueue_module . ${extra}
     return
   fi
