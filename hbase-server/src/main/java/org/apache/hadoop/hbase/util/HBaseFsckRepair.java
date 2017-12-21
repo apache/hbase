@@ -23,10 +23,9 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -120,7 +119,7 @@ public class HBaseFsckRepair {
       try {
         boolean inTransition = false;
         for (RegionState rs : admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-                                   .getRegionsInTransition()) {
+                                   .getRegionStatesInTransition()) {
           if (RegionInfo.COMPARATOR.compare(rs.getRegion(), region) == 0) {
             inTransition = true;
             break;

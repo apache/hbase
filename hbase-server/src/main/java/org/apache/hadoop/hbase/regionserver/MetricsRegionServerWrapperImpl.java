@@ -791,7 +791,7 @@ class MetricsRegionServerWrapperImpl
               avgAgeNumerator += storeAvgStoreFileAge.getAsDouble() * storeHFiles;
             }
 
-            tempStorefileIndexSize += store.getStorefilesIndexSize();
+            tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
             tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
             tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
             tempFlushedCellsCount += store.getFlushedCellsCount();

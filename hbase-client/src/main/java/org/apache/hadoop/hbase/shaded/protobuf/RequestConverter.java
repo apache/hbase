@@ -27,7 +27,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -1523,7 +1524,7 @@ public final class RequestConverter {
    */
   public static GetClusterStatusRequest buildGetClusterStatusRequest(EnumSet<Option> options) {
     return GetClusterStatusRequest.newBuilder()
-                                  .addAllOptions(ProtobufUtil.toOptions(options))
+                                  .addAllOptions(ClusterMetricsBuilder.toOptions(options))
                                   .build();
   }
 

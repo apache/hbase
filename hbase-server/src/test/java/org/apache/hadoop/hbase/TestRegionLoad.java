@@ -19,11 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -34,11 +39,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestRegionLoad {
@@ -123,6 +125,10 @@ public class TestRegionLoad {
 
   private void checkRegionsAndRegionLoads(Collection<HRegionInfo> regions,
       Collection<RegionLoad> regionLoads) {
+
+    for (RegionLoad load : regionLoads) {
+      assertNotNull(load.regionLoadPB);
+    }
 
     assertEquals("No of regions and regionloads doesn't match",
         regions.size(), regionLoads.size());

@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -168,8 +169,8 @@ public class MockMasterServices extends MockNoopMasterServices {
     startProcedureExecutor(remoteDispatcher);
     this.assignmentManager.start();
     for (int i = 0; i < numServes; ++i) {
-      serverManager.regionServerReport(
-        ServerName.valueOf("localhost", 100 + i, 1), ServerLoad.EMPTY_SERVERLOAD);
+      ServerName sn = ServerName.valueOf("localhost", 100 + i, 1);
+      serverManager.regionServerReport(sn, new ServerLoad(ServerMetricsBuilder.of(sn)));
     }
     this.procedureExecutor.getEnvironment().setEventReady(initialized, true);
   }
@@ -195,7 +196,7 @@ public class MockMasterServices extends MockNoopMasterServices {
       return;
     }
     ServerName sn = ServerName.valueOf(serverName.getAddress().toString(), startCode);
-    serverManager.regionServerReport(sn, ServerLoad.EMPTY_SERVERLOAD);
+    serverManager.regionServerReport(sn, new ServerLoad(ServerMetricsBuilder.of(sn)));
   }
 
   @Override

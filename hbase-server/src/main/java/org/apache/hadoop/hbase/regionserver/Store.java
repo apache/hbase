@@ -172,9 +172,9 @@ public interface Store {
   long getHFilesSize();
 
   /**
-   * @return The size of the store file indexes, in bytes.
+   * @return The size of the store file root-level indexes, in bytes.
    */
-  long getStorefilesIndexSize();
+  long getStorefilesRootLevelIndexSize();
 
   /**
    * Returns the total size of all index blocks in the data block indexes, including the root level,

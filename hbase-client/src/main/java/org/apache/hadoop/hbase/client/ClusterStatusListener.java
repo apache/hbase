@@ -264,7 +264,7 @@ class ClusterStatusListener implements Closeable {
         ByteBufInputStream bis = new ByteBufInputStream(dp.content());
         try {
           ClusterStatusProtos.ClusterStatus csp = ClusterStatusProtos.ClusterStatus.parseFrom(bis);
-          ClusterStatus ncs = ProtobufUtil.convert(csp);
+          ClusterStatus ncs = ProtobufUtil.toClusterStatus(csp);
           receive(ncs);
         } finally {
           bis.close();
