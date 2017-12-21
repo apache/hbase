@@ -15,11 +15,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * A HBase ReplicationLoad to present MetricsSink information
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class ReplicationLoadSink {
-  private long ageOfLastAppliedOp;
-  private long timeStampsOfLastAppliedOp;
+  private final long ageOfLastAppliedOp;
+  private final long timeStampsOfLastAppliedOp;
 
+  // TODO: add the builder for this class
+  @InterfaceAudience.Private
   public ReplicationLoadSink(long age, long timeStamp) {
     this.ageOfLastAppliedOp = age;
     this.timeStampsOfLastAppliedOp = timeStamp;

@@ -15,14 +15,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * A HBase ReplicationLoad to present MetricsSource information
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class ReplicationLoadSource {
-  private String peerID;
-  private long ageOfLastShippedOp;
-  private int sizeOfLogQueue;
-  private long timeStampOfLastShippedOp;
-  private long replicationLag;
+  private final String peerID;
+  private final long ageOfLastShippedOp;
+  private final int sizeOfLogQueue;
+  private final long timeStampOfLastShippedOp;
+  private final long replicationLag;
 
+  // TODO: add the builder for this class
+  @InterfaceAudience.Private
   public ReplicationLoadSource(String id, long age, int size, long timeStamp, long lag) {
     this.peerID = id;
     this.ageOfLastShippedOp = age;

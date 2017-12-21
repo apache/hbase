@@ -2084,7 +2084,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   @Override
-  public long getStorefilesIndexSize() {
+  public long getStorefilesRootLevelIndexSize() {
     return getStoreFileFieldSize(StoreFileReader::indexSize);
   }
 

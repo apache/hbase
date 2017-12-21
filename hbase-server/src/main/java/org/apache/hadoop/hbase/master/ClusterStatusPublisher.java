@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -35,8 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -66,7 +65,6 @@ import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.InternetProtocolFa
 import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioDatagramChannel;
 import org.apache.hadoop.hbase.shaded.io.netty.handler.codec.MessageToMessageEncoder;
 import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 
@@ -161,12 +159,12 @@ public class ClusterStatusPublisher extends ScheduledChore {
     // We're reusing an existing protobuf message, but we don't send everything.
     // This could be extended in the future, for example if we want to send stuff like the
     //  hbase:meta server name.
-    ClusterStatus.Builder csBuilder = ClusterStatus.newBuilder();
-    csBuilder.setHBaseVersion(VersionInfo.getVersion())
-             .setClusterId(master.getMasterFileSystem().getClusterId().toString())
-             .setMaster(master.getServerName())
-             .setDeadServers(sns);
-    publisher.publish(csBuilder.build());
+    publisher.publish(new ClusterStatus(ClusterMetricsBuilder.newBuilder()
+        .setHBaseVersion(VersionInfo.getVersion())
+        .setClusterId(master.getMasterFileSystem().getClusterId().toString())
+        .setMasterName(master.getServerName())
+        .setDeadServerNames(sns)
+        .build()));
   }
 
   protected void cleanup() {
@@ -340,7 +338,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
       @Override
       protected void encode(ChannelHandlerContext channelHandlerContext,
                             ClusterStatus clusterStatus, List<Object> objects) {
-        ClusterStatusProtos.ClusterStatus csp = ProtobufUtil.convert(clusterStatus);
+        ClusterStatusProtos.ClusterStatus csp
+          = ClusterMetricsBuilder.toClusterStatus(clusterStatus);
         objects.add(new DatagramPacket(Unpooled.wrappedBuffer(csp.toByteArray()), isa));
       }
     }

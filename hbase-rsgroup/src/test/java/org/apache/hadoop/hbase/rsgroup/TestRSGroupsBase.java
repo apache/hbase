@@ -33,9 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -59,6 +58,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -525,7 +525,7 @@ public abstract class TestRSGroupsBase {
             getTableRegionMap().get(tableName) != null &&
                 getTableRegionMap().get(tableName).size() == 6 &&
                 admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-                     .getRegionsInTransition().size() < 1;
+                     .getRegionStatesInTransition().size() < 1;
       }
     });
 
@@ -609,7 +609,7 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionsInTransition().isEmpty();
+        return cluster.getClusterStatus().getRegionStatesInTransition().isEmpty();
       }
     });
     Set<Address> newServers = Sets.newHashSet();
@@ -626,7 +626,7 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionsInTransition().isEmpty();
+        return cluster.getClusterStatus().getRegionStatesInTransition().isEmpty();
       }
     });
 
@@ -830,7 +830,7 @@ public abstract class TestRSGroupsBase {
                 getTableRegionMap().get(tableName).size() == 5 &&
                 getTableServerRegionMap().get(tableName).size() == 1 &&
                 admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-                     .getRegionsInTransition().size() < 1;
+                     .getRegionStatesInTransition().size() < 1;
       }
     });
 

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -25,14 +25,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -40,7 +38,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -85,6 +82,8 @@ public class TestClientClusterStatus {
   public void testDefaults() throws Exception {
     ClusterStatus origin = ADMIN.getClusterStatus();
     ClusterStatus defaults = ADMIN.getClusterStatus(EnumSet.allOf(Option.class));
+    checkPbObjectNotNull(origin);
+    checkPbObjectNotNull(defaults);
     Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
     Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
     Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
@@ -101,29 +100,30 @@ public class TestClientClusterStatus {
     ClusterStatus status0 = ADMIN.getClusterStatus(EnumSet.allOf(Option.class));
     ClusterStatus status1 = ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
     Assert.assertEquals(status0, status1);
+    checkPbObjectNotNull(status0);
+    checkPbObjectNotNull(status1);
   }
 
   @Test
   public void testAsyncClient() throws Exception {
-    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(UTIL.getConfiguration());
-    AsyncConnectionImpl asyncConnect = new AsyncConnectionImpl(UTIL.getConfiguration(), registry,
-      registry.getClusterId().get(), User.getCurrent());
-    AsyncAdmin asyncAdmin = asyncConnect.getAdmin();
-    CompletableFuture<ClusterStatus> originFuture =
+    try (AsyncConnection asyncConnect = ConnectionFactory.createAsyncConnection(
+      UTIL.getConfiguration()).get()) {
+      AsyncAdmin asyncAdmin = asyncConnect.getAdmin();
+      CompletableFuture<ClusterStatus> originFuture =
         asyncAdmin.getClusterStatus();
-    CompletableFuture<ClusterStatus> defaultsFuture =
+      CompletableFuture<ClusterStatus> defaultsFuture =
         asyncAdmin.getClusterStatus(EnumSet.allOf(Option.class));
-    ClusterStatus origin = originFuture.get();
-    ClusterStatus defaults = defaultsFuture.get();
-    Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-    Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-    Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
-    Assert.assertTrue(origin.getBackupMastersSize() == defaults.getBackupMastersSize());
-    Assert.assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
-    Assert.assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
-    Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
-    if (asyncConnect != null) {
-      asyncConnect.close();
+      ClusterStatus origin = originFuture.get();
+      ClusterStatus defaults = defaultsFuture.get();
+      checkPbObjectNotNull(origin);
+      checkPbObjectNotNull(defaults);
+      Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
+      Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
+      Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
+      Assert.assertTrue(origin.getBackupMastersSize() == defaults.getBackupMastersSize());
+      Assert.assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
+      Assert.assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
+      Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
     }
   }
 
@@ -151,6 +151,7 @@ public class TestClientClusterStatus {
     // Retrieve live servers and dead servers info.
     EnumSet<Option> options = EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS);
     ClusterStatus status = ADMIN.getClusterStatus(options);
+    checkPbObjectNotNull(status);
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
     // exclude a dead region server
@@ -219,6 +220,21 @@ public class TestClientClusterStatus {
         .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
     Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
     Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
+  }
+
+  /**
+   * HBASE-19496 do the refactor for ServerLoad and RegionLoad so the inner pb object is useless
+   * now. However, they are Public classes, and consequently we must make sure the all pb objects
+   * have initialized.
+   */
+  private static void checkPbObjectNotNull(ClusterStatus status) {
+    for (ServerName name : status.getLiveServerMetrics().keySet()) {
+      ServerLoad load = status.getLoad(name);
+      Assert.assertNotNull(load.obtainServerLoadPB());
+      for (RegionLoad rl : load.getRegionsLoad().values()) {
+        Assert.assertNotNull(rl.regionLoadPB);
+      }
+    }
   }
 
   public static class MyObserver implements MasterCoprocessor, MasterObserver {

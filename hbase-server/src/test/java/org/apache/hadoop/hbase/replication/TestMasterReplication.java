@@ -30,13 +30,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.ClusterStatus.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -189,7 +188,7 @@ public class TestMasterReplication {
       @Override
       public boolean evaluate() throws Exception {
         ClusterStatus clusterStatus = utilities[0].getAdmin()
-            .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+            .getClusterStatus(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
         ServerLoad serverLoad = clusterStatus.getLoad(rsName);
         List<ReplicationLoadSource> replicationLoadSourceList =
             serverLoad.getReplicationLoadSourceList();

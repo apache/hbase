@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -230,7 +231,7 @@ public class TestMasterNoCluster {
         RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();;
         ServerName sn = ServerName.parseVersionedServerName(sns[i].getVersionedBytes());
         request.setServer(ProtobufUtil.toServerName(sn));
-        request.setLoad(ServerLoad.EMPTY_SERVERLOAD.obtainServerLoadPB());
+        request.setLoad(ServerMetricsBuilder.toServerLoad(ServerMetricsBuilder.of(sn)));
         master.getMasterRpcServices().regionServerReport(null, request.build());
       }
        // Master should now come up.
@@ -272,7 +273,8 @@ public class TestMasterNoCluster {
           KeeperException, CoordinatedStateException {
         super.initializeZKBasedSystemTrackers();
         // Record a newer server in server manager at first
-        getServerManager().recordNewServerWithLock(newServer, ServerLoad.EMPTY_SERVERLOAD);
+        getServerManager().recordNewServerWithLock(newServer,
+          new ServerLoad(ServerMetricsBuilder.of(newServer)));
 
         List<ServerName> onlineServers = new ArrayList<>();
         onlineServers.add(deadServer);
