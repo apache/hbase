@@ -183,7 +183,6 @@ public abstract class RegionTransitionProcedure
   public void remoteCallFailed(final MasterProcedureEnv env,
       final ServerName serverName, final IOException exception) {
     final RegionStateNode regionNode = getRegionState(env);
-    assert serverName.equals(regionNode.getRegionLocation());
     String msg = exception.getMessage() == null? exception.getClass().getSimpleName():
       exception.getMessage();
     LOG.warn("Remote call failed " + this + "; " + regionNode.toShortString() +
@@ -208,7 +207,7 @@ public abstract class RegionTransitionProcedure
    */
   protected boolean addToRemoteDispatcher(final MasterProcedureEnv env,
       final ServerName targetServer) {
-    assert targetServer.equals(getRegionState(env).getRegionLocation()) :
+    assert targetServer == null || targetServer.equals(getRegionState(env).getRegionLocation()):
       "targetServer=" + targetServer + " getRegionLocation=" +
         getRegionState(env).getRegionLocation(); // TODO
 
