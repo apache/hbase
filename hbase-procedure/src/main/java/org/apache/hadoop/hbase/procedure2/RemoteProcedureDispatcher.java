@@ -167,6 +167,11 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
    * @return True if we successfully added the operation.
    */
   public boolean addOperationToNode(final TRemote key, RemoteProcedure rp) {
+    if (key == null) {
+      // Key is remote server name. Be careful. It could have been nulled by a concurrent
+      // ServerCrashProcedure shutting down outstanding RPC requests. See remoteCallFailed.
+      return false;
+    }
     assert key != null : "found null key for node";
     BufferNode node = nodeMap.get(key);
     if (node == null) {

@@ -18,17 +18,30 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,7 +50,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+import org.mockito.Mockito;
 
+import static junit.framework.TestCase.assertFalse;
 import static junit.framework.TestCase.assertTrue;
 
 
@@ -49,6 +64,100 @@ public class TestAssignProcedure {
       withTimeout(this.getClass()).
       withLookingForStuckThread(true).
       build();
+
+  /**
+   * An override that opens up the updateTransition method inside in AssignProcedure so can call it
+   * below directly in test and mess with targetServer. Used by test
+   * {@link #testTargetServerBeingNulledOnUs()}.
+   */
+  public static class TargetServerBeingNulledOnUsAssignProcedure extends AssignProcedure {
+    public final AtomicBoolean addToRemoteDispatcherWasCalled = new AtomicBoolean(false);
+    public final AtomicBoolean remoteCallFailedWasCalled = new AtomicBoolean(false);
+    private final RegionStates.RegionStateNode rsn;
+
+    public TargetServerBeingNulledOnUsAssignProcedure(RegionInfo regionInfo,
+        RegionStates.RegionStateNode rsn) {
+      super(regionInfo);
+      this.rsn = rsn;
+    }
+
+    /**
+     * Override so can change access from protected to public.
+     */
+    @Override
+    public boolean updateTransition(MasterProcedureEnv env, RegionStates.RegionStateNode regionNode)
+        throws IOException, ProcedureSuspendedException {
+      return super.updateTransition(env, regionNode);
+    }
+
+    @Override
+    protected boolean addToRemoteDispatcher(MasterProcedureEnv env, ServerName targetServer) {
+      // So, mock the ServerCrashProcedure nulling out the targetServer AFTER updateTransition
+      // has been called and BEFORE updateTransition gets to here.
+      // We used to throw a NullPointerException. Now we just say the assign failed so it will
+      // be rescheduled.
+      boolean b = super.addToRemoteDispatcher(env, null);
+      assertFalse(b);
+      // Assert we were actually called.
+      this.addToRemoteDispatcherWasCalled.set(true);
+      return b;
+    }
+
+    @Override
+    public RegionStates.RegionStateNode getRegionState(MasterProcedureEnv env) {
+      // Do this so we don't have to mock a bunch of stuff.
+      return this.rsn;
+    }
+
+    @Override
+    public void remoteCallFailed(final MasterProcedureEnv env,
+        final ServerName serverName, final IOException exception) {
+      // Just skip this remoteCallFailed. Its too hard to mock. Assert it is called though.
+      // Happens after the code we are testing has been called.
+      this.remoteCallFailedWasCalled.set(true);
+    }
+  };
+
+  /**
+   * Test that we deal with ServerCrashProcedure zero'ing out the targetServer in the
+   * RegionStateNode in the midst of our doing an assign. The trickery is done above in
+   * TargetServerBeingNulledOnUsAssignProcedure. We skip a bunch of logic to get at the guts
+   * where the problem happens (We also skip-out the failure handling because it'd take a bunch
+   * of mocking to get it to run). Fix is inside in RemoteProcedureDispatch#addOperationToNode.
+   * It now notices empty targetServer and just returns false so we fall into failure processing
+   * and we'll reassign elsewhere instead of NPE'ing. The fake of ServerCrashProcedure nulling out
+   * the targetServer happens inside in updateTransition just after it was called but before it
+   * gets to the near the end when addToRemoteDispatcher is called. See the
+   * TargetServerBeingNulledOnUsAssignProcedure class above. See HBASE-19218.
+   * Before fix, this test would fail w/ a NullPointerException.
+   */
+  @Test
+  public void testTargetServerBeingNulledOnUs() throws ProcedureSuspendedException, IOException {
+    TableName tn = TableName.valueOf(this.name.getMethodName());
+    RegionInfo ri = RegionInfoBuilder.newBuilder(tn).build();
+    // Create an RSN with location/target server. Will be cleared above in addToRemoteDispatcher to
+    // simulate issue in HBASE-19218
+    RegionStates.RegionStateNode rsn = new RegionStates.RegionStateNode(ri);
+    rsn.setRegionLocation(ServerName.valueOf("server.example.org", 0, 0));
+    MasterProcedureEnv env = Mockito.mock(MasterProcedureEnv.class);
+    AssignmentManager am = Mockito.mock(AssignmentManager.class);
+    ServerManager sm = Mockito.mock(ServerManager.class);
+    Mockito.when(sm.isServerOnline(Mockito.any())).thenReturn(true);
+    MasterServices ms = Mockito.mock(MasterServices.class);
+    Mockito.when(ms.getServerManager()).thenReturn(sm);
+    Configuration configuration = HBaseConfiguration.create();
+    Mockito.when(ms.getConfiguration()).thenReturn(configuration);
+    Mockito.when(env.getAssignmentManager()).thenReturn(am);
+    Mockito.when(env.getMasterServices()).thenReturn(ms);
+    RSProcedureDispatcher rsd = new RSProcedureDispatcher(ms);
+    Mockito.when(env.getRemoteDispatcher()).thenReturn(rsd);
+
+    TargetServerBeingNulledOnUsAssignProcedure assignProcedure =
+        new TargetServerBeingNulledOnUsAssignProcedure(ri, rsn);
+    assignProcedure.updateTransition(env, rsn);
+    assertTrue(assignProcedure.remoteCallFailedWasCalled.get());
+    assertTrue(assignProcedure.addToRemoteDispatcherWasCalled.get());
+  }
 
   @Test
   public void testSimpleComparator() {
