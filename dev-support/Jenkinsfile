@@ -35,7 +35,7 @@ pipeline {
     BASEDIR = "${env.WORKSPACE}/component"
     YETUS_RELEASE = '0.6.0'
     PROJECT = 'hbase'
-    PROJET_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
+    PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
     AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc,dev-support/test-patch.sh'
     WHITESPACE_IGNORE_LIST = '.*/generated/.*'
@@ -102,7 +102,7 @@ fi
         dir ("${env.TOOLS}") {
           sh """#!/usr/bin/env bash
 echo "Downloading Project personality."
-curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
+curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
           """
         }
         stash name: 'yetus', includes: "yetus-*/*,yetus-*/**/*,tools/personality.sh"
@@ -203,15 +203,15 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
         }
       }
     }
-    stage ('yetus jdk8 checks') {
+    stage ('yetus jdk8 hadoop2 checks') {
       when {
         not {
           branch 'branch-1.1*'
         }
       }
       environment {
-        TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
-        OUTPUT_DIR_RELATIVE = "output-jdk8"
+        TESTS = 'mvninstall,compile,javac,unit,htmlout'
+        OUTPUT_DIR_RELATIVE = "output-jdk8-hadoop2"
         OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE}"
         // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
         // and is needed on branches that do both jdk7 and jdk8
@@ -253,7 +253,68 @@ curl -L  -o personality.sh "${env.PROJET_PERSONALITY}"
             // Has to be relative to WORKSPACE.
             reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
             reportFiles          : 'console-report.html',
-            reportName           : 'JDK8 Nightly Build Report'
+            reportName           : 'JDK8 Nightly Build Report (Hadoop2)'
+          ]
+        }
+      }
+    }
+    stage ('yetus jdk8 hadoop3 checks') {
+      when {
+        not {
+          branch 'branch-1*'
+        }
+      }
+      environment {
+        // Failure in any stage fails the build and consecutive stages are not built.
+        // Findbugs is part of this last yetus stage to prevent findbugs precluding hadoop3
+        // tests.
+        TESTS = 'mvninstall,compile,javac,unit,findbugs,htmlout'
+        OUTPUT_DIR_RELATIVE = "output-jdk8-hadoop3"
+        OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE}"
+        // This isn't strictly needed on branches that only support jdk8, but doesn't hurt
+        // and is needed on branches that do both jdk7 and jdk8
+        SET_JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
+        // Activates hadoop 3.0 profile in maven runs.
+        HADOOP_PROFILE = '3.0'
+      }
+      steps {
+        unstash 'yetus'
+        sh '''#!/usr/bin/env bash
+          rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+          rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+'''
+        sh "${env.BASEDIR}/dev-support/hbase_nightly_yetus.sh"
+      }
+      post {
+        always {
+          // Not sure how two junit test reports will work. Disabling this for now.
+          // junit testResults: "${env.OUTPUT_DIR_RELATIVE}/**/target/**/TEST-*.xml", allowEmptyResults: true
+          // zip surefire reports.
+          sh '''#!/bin/bash -e
+            if [ -d "${OUTPUT_DIR}/archiver" ]; then
+              count=$(find "${OUTPUT_DIR}/archiver" -type f | wc -l)
+              if [[ 0 -ne ${count} ]]; then
+                echo "zipping ${count} archived files"
+                zip -q -m -r "${OUTPUT_DIR}/test_logs.zip" "${OUTPUT_DIR}/archiver"
+              else
+                echo "No archived files, skipping compressing."
+              fi
+            else
+              echo "No archiver directory, skipping compressing."
+            fi
+'''
+          // Has to be relative to WORKSPACE.
+          archive "${env.OUTPUT_DIR_RELATIVE}/*"
+          archive "${env.OUTPUT_DIR_RELATIVE}/**/*"
+          publishHTML target: [
+            allowMissing         : true,
+            keepAll              : true,
+            alwaysLinkToLastBuild: true,
+            // Has to be relative to WORKSPACE.
+            reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+            reportFiles          : 'console-report.html',
+            reportName           : 'JDK8 Nightly Build Report (Hadoop3)'
           ]
         }
       }
