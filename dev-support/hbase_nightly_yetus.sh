@@ -76,6 +76,11 @@ if [[ -n "${INCLUDE_TESTS_URL}" && "${BRANCH_NAME}" == "master" ]]; then
   YETUS_ARGS=("--include-tests-url=${INCLUDE_TESTS_URL}" "${YETUS_ARGS[@]}")
 fi
 
+# For testing with specific hadoop version. Activates corresponding profile in maven runs.
+if [[ -n "${HADOOP_PROFILE}" ]]; then
+  YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
+fi
+
 if [[ true == "${DEBUG}" ]]; then
   YETUS_ARGS=("--debug" "${YETUS_ARGS[@]}")
 fi
