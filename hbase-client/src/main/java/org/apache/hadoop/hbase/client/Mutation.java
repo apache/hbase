@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataInput;
@@ -87,12 +89,48 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
   private static final String RETURN_RESULTS = "_rr_";
 
+  // TODO: row should be final
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
 
+  // TODO: familyMap should be final
   // A Map sorted by column family.
-  protected NavigableMap<byte [], List<Cell>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  protected NavigableMap<byte [], List<Cell>> familyMap;
+
+  /**
+   * empty construction.
+   * We need this empty construction to keep binary compatibility.
+   */
+  protected Mutation() {
+    this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  }
+
+  protected Mutation(Mutation clone) {
+    super(clone);
+    this.row = clone.getRow();
+    this.ts = clone.getTimeStamp();
+    this.familyMap = clone.getFamilyCellMap().entrySet().stream()
+      .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()),
+        (k, v) -> {
+          throw new RuntimeException("collisions!!!");
+        }, () -> new TreeMap(Bytes.BYTES_COMPARATOR)));
+  }
+
+  /**
+   * Construct the mutation with user defined data.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  protected Mutation(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    this.row = Preconditions.checkNotNull(row);
+    if (row.length == 0) {
+      throw new IllegalArgumentException("Row can't be empty");
+    }
+    this.ts = ts;
+    this.familyMap = Preconditions.checkNotNull(familyMap);
+  }
 
   @Override
   public CellScanner cellScanner() {
@@ -260,8 +298,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * Method for setting the put's familyMap
+   * Method for setting the mutation's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Mutation#Mutation(byte[], long, NavigableMap)} instead
    */
+  @Deprecated
   public Mutation setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
     // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
     // this internal data member.

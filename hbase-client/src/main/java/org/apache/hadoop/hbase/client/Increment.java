@@ -72,17 +72,23 @@ public class Increment extends Mutation implements Comparable<Row> {
   }
   /**
    * Copy constructor
-   * @param i
+   * @param incrementToCopy increment to copy
    */
-  public Increment(Increment i) {
-    this.row = i.getRow();
-    this.ts = i.getTimeStamp();
-    this.tr = i.getTimeRange();
-    this.familyMap.putAll(i.getFamilyCellMap());
-    for (Map.Entry<String, byte[]> entry : i.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
-    super.setPriority(i.getPriority());
+  public Increment(Increment incrementToCopy) {
+    super(incrementToCopy);
+    this.tr = incrementToCopy.getTimeRange();
+  }
+
+  /**
+   * Construct the Increment with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the DataType.Put
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Increment(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
   }
 
   /**
@@ -309,6 +315,12 @@ public class Increment extends Mutation implements Comparable<Row> {
     return (Increment) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the Increment's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Increment#Increment(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Increment setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Increment) super.setFamilyCellMap(map);

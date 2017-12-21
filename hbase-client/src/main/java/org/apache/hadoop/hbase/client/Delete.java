@@ -135,17 +135,23 @@ public class Delete extends Mutation implements Comparable<Row> {
   }
 
   /**
-   * @param d Delete to clone.
+   * @param deleteToCopy delete to copy
    */
-  public Delete(final Delete d) {
-    this.row = d.getRow();
-    this.ts = d.getTimeStamp();
-    this.familyMap.putAll(d.getFamilyCellMap());
-    this.durability = d.durability;
-    for (Map.Entry<String, byte[]> entry : d.getAttributesMap().entrySet()) {
-      this.setAttribute(entry.getKey(), entry.getValue());
-    }
-    super.setPriority(d.getPriority());
+  public Delete(final Delete deleteToCopy) {
+    super(deleteToCopy);
+  }
+
+  /**
+   * Construct the Delete with user defined data. NOTED:
+   * 1) all cells in the familyMap must have the delete type.
+   * see {@link org.apache.hadoop.hbase.Cell.DataType}
+   * 2) the row of each cell must be same with passed row.
+   * @param row row. CAN'T be null
+   * @param ts timestamp
+   * @param familyMap the map to collect all cells internally. CAN'T be null
+   */
+  public Delete(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+    super(row, ts, familyMap);
   }
 
   /**
@@ -314,6 +320,12 @@ public class Delete extends Mutation implements Comparable<Row> {
     return (Delete) super.setDurability(d);
   }
 
+  /**
+   * Method for setting the Delete's familyMap
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Delete#Delete(byte[], long, NavigableMap)} instead
+   */
+  @Deprecated
   @Override
   public Delete setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Delete) super.setFamilyCellMap(map);
