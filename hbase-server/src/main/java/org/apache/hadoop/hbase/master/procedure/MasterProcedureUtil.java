@@ -147,7 +147,7 @@ public final class MasterProcedureUtil {
    * Pattern used to validate a Procedure WAL file name see
    * {@link #validateProcedureWALFilename(String)} for description.
    */
-  private static final Pattern pattern = Pattern.compile(".*pv-\\d{20}.log");
+  private static final Pattern pattern = Pattern.compile(".*pv2-\\d{20}.log");
 
   /**
    * A Procedure WAL file name is of the format: pv-&lt;wal-id&gt;.log where wal-id is 20 digits.

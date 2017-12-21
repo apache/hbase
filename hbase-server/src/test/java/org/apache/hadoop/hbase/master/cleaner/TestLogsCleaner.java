@@ -134,7 +134,7 @@ public class TestLogsCleaner {
 
     // Case 2: 5 Procedure WALs that are old which would be deleted
     for (int i = 1; i < 6; i++) {
-      Path fileName = new Path(oldProcedureWALDir, String.format("pv-%020d.log", i));
+      Path fileName = new Path(oldProcedureWALDir, String.format("pv2-%020d.log", i));
       fs.createNewFile(fileName);
     }
 
@@ -155,7 +155,7 @@ public class TestLogsCleaner {
 
     // Case 5: 5 Procedure WALs that are new, will stay
     for (int i = 6; i < 11; i++) {
-      Path fileName = new Path(oldProcedureWALDir, String.format("pv-%020d.log", i));
+      Path fileName = new Path(oldProcedureWALDir, String.format("pv2-%020d.log", i));
       fs.createNewFile(fileName);
     }
 
