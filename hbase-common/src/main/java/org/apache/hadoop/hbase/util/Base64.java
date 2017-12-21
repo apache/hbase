@@ -19,11 +19,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -43,6 +38,11 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Encodes and decodes to and from Base64 notation.
@@ -929,7 +929,7 @@ public class Base64 {
       bytes = s.getBytes(PREFERRED_ENCODING);
 
     } catch (UnsupportedEncodingException uee) {
-      bytes = s.getBytes(StandardCharsets.UTF_8);
+      bytes = Bytes.toBytes(s);
     } // end catch
 
     // Decode

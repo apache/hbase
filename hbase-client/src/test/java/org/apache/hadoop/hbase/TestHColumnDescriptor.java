@@ -21,8 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.nio.charset.StandardCharsets;
-
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -30,8 +28,9 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
 @Category(SmallTests.class)
@@ -80,7 +79,7 @@ public class TestHColumnDescriptor {
   public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
       throws Exception {
     try {
-      new HColumnDescriptor("".getBytes(StandardCharsets.UTF_8));
+      new HColumnDescriptor(Bytes.toBytes(""));
       fail("Did not throw");
     } catch (IllegalArgumentException e) {
       assertEquals("Family name can not be empty", e.getLocalizedMessage());

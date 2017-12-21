@@ -21,7 +21,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Constructor;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -71,16 +70,11 @@ public class TestStruct {
     };
 
     Object[][] pojo2Args = {
-        new Object[] { new byte[0], "it".getBytes(StandardCharsets.UTF_8), "was",
-          "the".getBytes(StandardCharsets.UTF_8) },
-        new Object[] { "best".getBytes(StandardCharsets.UTF_8), new byte[0], "of",
-          "times,".getBytes(StandardCharsets.UTF_8) },
-        new Object[] { "it".getBytes(StandardCharsets.UTF_8),
-          "was".getBytes(StandardCharsets.UTF_8), "",
-          "the".getBytes(StandardCharsets.UTF_8) },
-        new Object[] { "worst".getBytes(StandardCharsets.UTF_8),
-          "of".getBytes(StandardCharsets.UTF_8), "times,", new byte[0] },
-        new Object[] { new byte[0], new byte[0], "", new byte[0] },
+      new Object[] { new byte[0], Bytes.toBytes("it"), "was", Bytes.toBytes("the") },
+      new Object[] { Bytes.toBytes("best"), new byte[0], "of", Bytes.toBytes("times,") },
+      new Object[] { Bytes.toBytes("it"), Bytes.toBytes("was"), "", Bytes.toBytes("the") },
+      new Object[] { Bytes.toBytes("worst"), Bytes.toBytes("of"), "times,", new byte[0] },
+      new Object[] { new byte[0], new byte[0], "", new byte[0] },
     };
 
     Object[][] params = new Object[][] {

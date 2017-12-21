@@ -20,22 +20,18 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.ColumnPaginationFilter;
@@ -55,15 +51,18 @@ import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -81,66 +80,53 @@ public class TestOperation {
 
   private static List<Long> TS_LIST = Arrays.asList(2L, 3L, 5L);
   private static TimestampsFilter TS_FILTER = new TimestampsFilter(TS_LIST);
-  private static String STR_TS_FILTER =
-      TS_FILTER.getClass().getSimpleName() + " (3/3): [2, 3, 5]";
+  private static String STR_TS_FILTER = TS_FILTER.getClass().getSimpleName() + " (3/3): [2, 3, 5]";
 
-  private static List<Long> L_TS_LIST =
-      Arrays.asList(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
-  private static TimestampsFilter L_TS_FILTER =
-      new TimestampsFilter(L_TS_LIST);
+  private static List<Long> L_TS_LIST = Arrays.asList(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
+  private static TimestampsFilter L_TS_FILTER = new TimestampsFilter(L_TS_LIST);
   private static String STR_L_TS_FILTER =
       L_TS_FILTER.getClass().getSimpleName() + " (5/11): [0, 1, 2, 3, 4]";
 
   private static String COL_NAME_1 = "col1";
   private static ColumnPrefixFilter COL_PRE_FILTER =
-      new ColumnPrefixFilter(COL_NAME_1.getBytes(StandardCharsets.UTF_8));
+      new ColumnPrefixFilter(Bytes.toBytes(COL_NAME_1));
   private static String STR_COL_PRE_FILTER =
       COL_PRE_FILTER.getClass().getSimpleName() + " " + COL_NAME_1;
 
   private static String COL_NAME_2 = "col2";
-  private static ColumnRangeFilter CR_FILTER = new ColumnRangeFilter(
-      COL_NAME_1.getBytes(StandardCharsets.UTF_8), true,
-      COL_NAME_2.getBytes(StandardCharsets.UTF_8), false);
+  private static ColumnRangeFilter CR_FILTER =
+      new ColumnRangeFilter(Bytes.toBytes(COL_NAME_1), true, Bytes.toBytes(COL_NAME_2), false);
   private static String STR_CR_FILTER = CR_FILTER.getClass().getSimpleName()
       + " [" + COL_NAME_1 + ", " + COL_NAME_2 + ")";
 
   private static int COL_COUNT = 9;
-  private static ColumnCountGetFilter CCG_FILTER =
-      new ColumnCountGetFilter(COL_COUNT);
-  private static String STR_CCG_FILTER =
-      CCG_FILTER.getClass().getSimpleName() + " " + COL_COUNT;
+  private static ColumnCountGetFilter CCG_FILTER = new ColumnCountGetFilter(COL_COUNT);
+  private static String STR_CCG_FILTER = CCG_FILTER.getClass().getSimpleName() + " " + COL_COUNT;
 
   private static int LIMIT = 3;
   private static int OFFSET = 4;
-  private static ColumnPaginationFilter CP_FILTER =
-      new ColumnPaginationFilter(LIMIT, OFFSET);
+  private static ColumnPaginationFilter CP_FILTER = new ColumnPaginationFilter(LIMIT, OFFSET);
   private static String STR_CP_FILTER = CP_FILTER.getClass().getSimpleName()
       + " (" + LIMIT + ", " + OFFSET + ")";
 
   private static String STOP_ROW_KEY = "stop";
   private static InclusiveStopFilter IS_FILTER =
-      new InclusiveStopFilter(STOP_ROW_KEY.getBytes(StandardCharsets.UTF_8));
+      new InclusiveStopFilter(Bytes.toBytes(STOP_ROW_KEY));
   private static String STR_IS_FILTER =
       IS_FILTER.getClass().getSimpleName() + " " + STOP_ROW_KEY;
 
   private static String PREFIX = "prefix";
-  private static PrefixFilter PREFIX_FILTER =
-      new PrefixFilter(PREFIX.getBytes(StandardCharsets.UTF_8));
+  private static PrefixFilter PREFIX_FILTER = new PrefixFilter(Bytes.toBytes(PREFIX));
   private static String STR_PREFIX_FILTER = "PrefixFilter " + PREFIX;
 
-  private static byte[][] PREFIXES = {
-      "0".getBytes(StandardCharsets.UTF_8), "1".getBytes(StandardCharsets.UTF_8),
-      "2".getBytes(StandardCharsets.UTF_8)};
-  private static MultipleColumnPrefixFilter MCP_FILTER =
-      new MultipleColumnPrefixFilter(PREFIXES);
+  private static byte[][] PREFIXES = { Bytes.toBytes("0"), Bytes.toBytes("1"), Bytes.toBytes("2") };
+  private static MultipleColumnPrefixFilter MCP_FILTER = new MultipleColumnPrefixFilter(PREFIXES);
   private static String STR_MCP_FILTER =
       MCP_FILTER.getClass().getSimpleName() + " (3/3): [0, 1, 2]";
 
   private static byte[][] L_PREFIXES = {
-    "0".getBytes(StandardCharsets.UTF_8), "1".getBytes(StandardCharsets.UTF_8),
-    "2".getBytes(StandardCharsets.UTF_8), "3".getBytes(StandardCharsets.UTF_8),
-    "4".getBytes(StandardCharsets.UTF_8), "5".getBytes(StandardCharsets.UTF_8),
-    "6".getBytes(StandardCharsets.UTF_8), "7".getBytes(StandardCharsets.UTF_8)};
+    Bytes.toBytes("0"), Bytes.toBytes("1"), Bytes.toBytes("2"), Bytes.toBytes("3"),
+    Bytes.toBytes("4"), Bytes.toBytes("5"), Bytes.toBytes("6"), Bytes.toBytes("7") };
   private static MultipleColumnPrefixFilter L_MCP_FILTER =
       new MultipleColumnPrefixFilter(L_PREFIXES);
   private static String STR_L_MCP_FILTER =
@@ -148,29 +134,25 @@ public class TestOperation {
 
   private static int PAGE_SIZE = 9;
   private static PageFilter PAGE_FILTER = new PageFilter(PAGE_SIZE);
-  private static String STR_PAGE_FILTER =
-      PAGE_FILTER.getClass().getSimpleName() + " " + PAGE_SIZE;
+  private static String STR_PAGE_FILTER = PAGE_FILTER.getClass().getSimpleName() + " " + PAGE_SIZE;
 
   private static SkipFilter SKIP_FILTER = new SkipFilter(L_TS_FILTER);
   private static String STR_SKIP_FILTER =
       SKIP_FILTER.getClass().getSimpleName() + " " + STR_L_TS_FILTER;
 
-  private static WhileMatchFilter WHILE_FILTER =
-      new WhileMatchFilter(L_TS_FILTER);
+  private static WhileMatchFilter WHILE_FILTER = new WhileMatchFilter(L_TS_FILTER);
   private static String STR_WHILE_FILTER =
       WHILE_FILTER.getClass().getSimpleName() + " " + STR_L_TS_FILTER;
 
   private static KeyOnlyFilter KEY_ONLY_FILTER = new KeyOnlyFilter();
-  private static String STR_KEY_ONLY_FILTER =
-      KEY_ONLY_FILTER.getClass().getSimpleName();
+  private static String STR_KEY_ONLY_FILTER = KEY_ONLY_FILTER.getClass().getSimpleName();
 
-  private static FirstKeyOnlyFilter FIRST_KEY_ONLY_FILTER =
-      new FirstKeyOnlyFilter();
+  private static FirstKeyOnlyFilter FIRST_KEY_ONLY_FILTER = new FirstKeyOnlyFilter();
   private static String STR_FIRST_KEY_ONLY_FILTER =
       FIRST_KEY_ONLY_FILTER.getClass().getSimpleName();
 
   private static CompareOp CMP_OP = CompareOp.EQUAL;
-  private static byte[] CMP_VALUE = "value".getBytes(StandardCharsets.UTF_8);
+  private static byte[] CMP_VALUE = Bytes.toBytes("value");
   private static BinaryComparator BC = new BinaryComparator(CMP_VALUE);
   private static DependentColumnFilter DC_FILTER =
       new DependentColumnFilter(FAMILY, QUALIFIER, true, CMP_OP, BC);
@@ -183,14 +165,12 @@ public class TestOperation {
   private static String STR_FAMILY_FILTER =
       FAMILY_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
 
-  private static QualifierFilter QUALIFIER_FILTER =
-      new QualifierFilter(CMP_OP, BC);
+  private static QualifierFilter QUALIFIER_FILTER = new QualifierFilter(CMP_OP, BC);
   private static String STR_QUALIFIER_FILTER =
       QUALIFIER_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
 
   private static RowFilter ROW_FILTER = new RowFilter(CMP_OP, BC);
-  private static String STR_ROW_FILTER =
-      ROW_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
+  private static String STR_ROW_FILTER = ROW_FILTER.getClass().getSimpleName() + " (EQUAL, value)";
 
   private static ValueFilter VALUE_FILTER = new ValueFilter(CMP_OP, BC);
   private static String STR_VALUE_FILTER =
@@ -207,19 +187,16 @@ public class TestOperation {
       new SingleColumnValueExcludeFilter(FAMILY, QUALIFIER, CMP_OP, CMP_VALUE);
   private static String STR_SCVE_FILTER = String.format("%s (%s, %s, %s, %s)",
       SCVE_FILTER.getClass().getSimpleName(), Bytes.toStringBinary(FAMILY),
-      Bytes.toStringBinary(QUALIFIER), CMP_OP.name(),
-      Bytes.toStringBinary(CMP_VALUE));
+      Bytes.toStringBinary(QUALIFIER), CMP_OP.name(), Bytes.toStringBinary(CMP_VALUE));
 
   private static FilterList AND_FILTER_LIST = new FilterList(
-      Operator.MUST_PASS_ALL, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER,
-          CR_FILTER));
+      Operator.MUST_PASS_ALL, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER, CR_FILTER));
   private static String STR_AND_FILTER_LIST = String.format(
       "%s AND (3/3): [%s, %s, %s]", AND_FILTER_LIST.getClass().getSimpleName(),
       STR_TS_FILTER, STR_L_TS_FILTER, STR_CR_FILTER);
 
   private static FilterList OR_FILTER_LIST = new FilterList(
-      Operator.MUST_PASS_ONE, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER,
-          CR_FILTER));
+      Operator.MUST_PASS_ONE, Arrays.asList((Filter) TS_FILTER, L_TS_FILTER, CR_FILTER));
   private static String STR_OR_FILTER_LIST = String.format(
       "%s OR (3/3): [%s, %s, %s]", AND_FILTER_LIST.getClass().getSimpleName(),
       STR_TS_FILTER, STR_L_TS_FILTER, STR_CR_FILTER);

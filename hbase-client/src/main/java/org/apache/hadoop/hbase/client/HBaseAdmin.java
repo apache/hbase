@@ -24,7 +24,6 @@ import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -2612,9 +2611,9 @@ public class HBaseAdmin implements Admin {
       final byte[] nameOfRegionB, final boolean forcible)
       throws IOException {
     final byte[] encodedNameOfRegionA = isEncodedRegionName(nameOfRegionA) ? nameOfRegionA :
-      HRegionInfo.encodeRegionName(nameOfRegionA).getBytes(StandardCharsets.UTF_8);
+      Bytes.toBytes(HRegionInfo.encodeRegionName(nameOfRegionA));
     final byte[] encodedNameOfRegionB = isEncodedRegionName(nameOfRegionB) ? nameOfRegionB :
-      HRegionInfo.encodeRegionName(nameOfRegionB).getBytes(StandardCharsets.UTF_8);
+      Bytes.toBytes(HRegionInfo.encodeRegionName(nameOfRegionB));
 
     Pair<HRegionInfo, ServerName> pair = getRegion(nameOfRegionA);
     if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)

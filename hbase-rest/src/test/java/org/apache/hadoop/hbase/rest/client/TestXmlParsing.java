@@ -23,7 +23,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import javax.xml.bind.UnmarshalException;
 
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -50,7 +50,7 @@ public class TestXmlParsing {
         + "<ClusterVersion Version=\"2.0.0\"/>";
     Client client = mock(Client.class);
     RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
-    Response resp = new Response(200, null, xml.getBytes(StandardCharsets.UTF_8));
+    Response resp = new Response(200, null, Bytes.toBytes(xml));
 
     when(client.get("/version/cluster", Constants.MIMETYPE_XML)).thenReturn(resp);
 
@@ -66,7 +66,7 @@ public class TestXmlParsing {
         + " <ClusterVersion>&xee;</ClusterVersion>";
     Client client = mock(Client.class);
     RemoteAdmin admin = new RemoteAdmin(client, HBaseConfiguration.create(), null);
-    Response resp = new Response(200, null, externalEntitiesXml.getBytes(StandardCharsets.UTF_8));
+    Response resp = new Response(200, null, Bytes.toBytes(externalEntitiesXml));
 
     when(client.get("/version/cluster", Constants.MIMETYPE_XML)).thenReturn(resp);
 
