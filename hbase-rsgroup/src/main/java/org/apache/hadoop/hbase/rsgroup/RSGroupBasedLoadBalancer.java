@@ -43,16 +43,17 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.LinkedListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Maps;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * GroupBasedLoadBalancer, used when Region Server Grouping is configured (HBase-6721)
@@ -324,8 +325,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   private ServerName findServerForRegion(
-      Map<ServerName, List<RegionInfo>> existingAssignments, RegionInfo region)
-  {
+      Map<ServerName, List<RegionInfo>> existingAssignments, RegionInfo region) {
     for (Map.Entry<ServerName, List<RegionInfo>> entry : existingAssignments.entrySet()) {
       if (entry.getValue().contains(region)) {
         return entry.getKey();
@@ -392,7 +392,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   public boolean isOnline() {
-    if (this.rsGroupInfoManager == null) return false;
+    if (this.rsGroupInfoManager == null) {
+      return false;
+    }
+
     return this.rsGroupInfoManager.isOnline();
   }
 
