@@ -1314,16 +1314,14 @@ public class MetaTableAccessor {
   /**
    * Generates and returns a Put containing the region into for the catalog table
    */
-  public static Put makePutFromRegionInfo(RegionInfo regionInfo)
-    throws IOException {
+  public static Put makePutFromRegionInfo(RegionInfo regionInfo) throws IOException {
     return makePutFromRegionInfo(regionInfo, EnvironmentEdgeManager.currentTime());
   }
 
   /**
    * Generates and returns a Put containing the region into for the catalog table
    */
-  public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts)
-    throws IOException {
+  public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts) throws IOException {
     Put put = new Put(regionInfo.getRegionName(), ts);
     addRegionInfo(put, regionInfo);
     return put;
@@ -1448,9 +1446,7 @@ public class MetaTableAccessor {
    */
   private static void put(final Table t, final List<Put> puts) throws IOException {
     try {
-      if (METALOG.isDebugEnabled()) {
-        METALOG.debug(mutationsToString(puts));
-      }
+      debugLogMutations(puts);
       t.put(puts);
     } finally {
       t.close();
@@ -1467,9 +1463,7 @@ public class MetaTableAccessor {
     throws IOException {
     Table t = getMetaHTable(connection);
     try {
-      if (METALOG.isDebugEnabled()) {
-        METALOG.debug(mutationsToString(ps));
-      }
+      debugLogMutations(ps);
       t.put(ps);
     } finally {
       t.close();
@@ -1499,9 +1493,7 @@ public class MetaTableAccessor {
     throws IOException {
     Table t = getMetaHTable(connection);
     try {
-      if (METALOG.isDebugEnabled()) {
-        METALOG.debug(mutationsToString(deletes));
-      }
+      debugLogMutations(deletes);
       t.delete(deletes);
     } finally {
       t.close();
@@ -1546,9 +1538,7 @@ public class MetaTableAccessor {
     throws IOException {
     Table t = getMetaHTable(connection);
     try {
-      if (METALOG.isDebugEnabled()) {
-        METALOG.debug(mutationsToString(mutations));
-      }
+      debugLogMutations(mutations);
       t.batch(mutations, null);
     } catch (InterruptedException e) {
       InterruptedIOException ie = new InterruptedIOException(e.getMessage());
@@ -1559,33 +1549,7 @@ public class MetaTableAccessor {
     }
   }
 
-  /**
-   * Adds a hbase:meta row for the specified new region.
-   * @param connection connection we're using
-   * @param regionInfo region information
-   * @throws IOException if problem connecting or updating meta
-   */
-  @VisibleForTesting
-  static void addRegionToMeta(Connection connection,
-                                     RegionInfo regionInfo)
-    throws IOException {
-    putToMetaTable(connection, makePutFromRegionInfo(regionInfo));
-    LOG.info("Added " + regionInfo.getRegionNameAsString());
-  }
-
-  /**
-   * Adds a hbase:meta row for the specified new region to the given catalog table. The
-   * Table is not flushed or closed.
-   * @param meta the Table for META
-   * @param regionInfo region information
-   * @throws IOException if problem connecting or updating meta
-   */
-  public static void addRegionToMeta(Table meta, RegionInfo regionInfo) throws IOException {
-    addRegionToMeta(meta, regionInfo, null, null);
-  }
-
-  static void addRegionStateToPut(Put put, RegionState.State  state)
-      throws IOException {
+  static void addRegionStateToPut(Put put, RegionState.State  state) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
         .setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY)
@@ -1597,79 +1561,71 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
-   * does not add its daughter's as different rows, but adds information about the daughters
-   * in the same row as the parent. Use
-   * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName,int,boolean)}
-   * if you want to do that.
-   * @param meta the Table for META
-   * @param regionInfo region information
-   * @param splitA first split daughter of the parent regionInfo
-   * @param splitB second split daughter of the parent regionInfo
-   * @throws IOException if problem connecting or updating meta
-   */
-  public static void addRegionToMeta(Table meta, RegionInfo regionInfo,
-                                     RegionInfo splitA, RegionInfo splitB) throws IOException {
-    Put put = makePutFromRegionInfo(regionInfo);
-    addRegionStateToPut(put, RegionState.State.CLOSED);
-    addDaughtersToPut(put, splitA, splitB);
-    meta.put(put);
-    if (METALOG.isDebugEnabled()) {
-      METALOG.debug(mutationToString(put));
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Added " + regionInfo.getRegionNameAsString());
-    }
-  }
-
-  /**
-   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
-   * does not add its daughter's as different rows, but adds information about the daughters
-   * in the same row as the parent. Use
+   * Adds daughter region infos to hbase:meta row for the specified region. Note that this does not
+   * add its daughter's as different rows, but adds information about the daughters in the same row
+   * as the parent. Use
    * {@link #splitRegion(Connection, RegionInfo, RegionInfo, RegionInfo, ServerName,int,boolean)}
    * if you want to do that.
    * @param connection connection we're using
-   * @param regionInfo region information
+   * @param regionInfo RegionInfo of parent region
    * @param splitA first split daughter of the parent regionInfo
    * @param splitB second split daughter of the parent regionInfo
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(Connection connection, RegionInfo regionInfo,
-                                     RegionInfo splitA, RegionInfo splitB) throws IOException {
+  public static void addSpiltsToParent(Connection connection, RegionInfo regionInfo,
+      RegionInfo splitA, RegionInfo splitB) throws IOException {
     Table meta = getMetaHTable(connection);
     try {
-      addRegionToMeta(meta, regionInfo, splitA, splitB);
+      Put put = makePutFromRegionInfo(regionInfo);
+      addDaughtersToPut(put, splitA, splitB);
+      meta.put(put);
+      debugLogMutation(put);
+      LOG.debug("Added region {}", regionInfo.getRegionNameAsString());
     } finally {
       meta.close();
     }
   }
 
   /**
-   * Adds a hbase:meta row for each of the specified new regions.
+   * Adds a hbase:meta row for the specified new region. Initial state of new region is CLOSED.
+   * @param connection connection we're using
+   * @param regionInfo region information
+   * @throws IOException if problem connecting or updating meta
+   */
+  @VisibleForTesting
+  public static void addRegionToMeta(Connection connection, RegionInfo regionInfo)
+      throws IOException {
+    addRegionsToMeta(connection, Collections.singletonList(regionInfo), 1);
+  }
+
+  /**
+   * Adds a hbase:meta row for each of the specified new regions. Initial state for new regions
+   * is CLOSED.
    * @param connection connection we're using
    * @param regionInfos region information list
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionsToMeta(Connection connection,
-                                      List<RegionInfo> regionInfos, int regionReplication)
-    throws IOException {
+  public static void addRegionsToMeta(Connection connection, List<RegionInfo> regionInfos,
+      int regionReplication) throws IOException {
     addRegionsToMeta(connection, regionInfos, regionReplication, HConstants.LATEST_TIMESTAMP);
   }
   /**
-   * Adds a hbase:meta row for each of the specified new regions.
+   * Adds a hbase:meta row for each of the specified new regions. Initial state for new regions
+   * is CLOSED.
    * @param connection connection we're using
    * @param regionInfos region information list
    * @param regionReplication
    * @param ts desired timestamp
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionsToMeta(Connection connection,
-      List<RegionInfo> regionInfos, int regionReplication, long ts)
-          throws IOException {
+  public static void addRegionsToMeta(Connection connection, List<RegionInfo> regionInfos,
+      int regionReplication, long ts) throws IOException {
     List<Put> puts = new ArrayList<>();
     for (RegionInfo regionInfo : regionInfos) {
       if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
         Put put = makePutFromRegionInfo(regionInfo, ts);
+        // New regions are added with initial state of CLOSED.
+        addRegionStateToPut(put, RegionState.State.CLOSED);
         // Add empty locations for region replicas so that number of replicas can be cached
         // whenever the primary region is looked up from meta
         for (int i = 1; i < regionReplication; i++) {
@@ -1679,27 +1635,7 @@ public class MetaTableAccessor {
       }
     }
     putsToMetaTable(connection, puts);
-    LOG.info("Added " + puts.size());
-  }
-
-  /**
-   * Adds a daughter region entry to meta.
-   * @param regionInfo the region to put
-   * @param sn the location of the region
-   * @param openSeqNum the latest sequence number obtained when the region was open
-   */
-  public static void addDaughter(final Connection connection,
-      final RegionInfo regionInfo, final ServerName sn, final long openSeqNum)
-      throws NotAllMetaRegionsOnlineException, IOException {
-    long now = EnvironmentEdgeManager.currentTime();
-    Put put = new Put(regionInfo.getRegionName(), now);
-    addRegionInfo(put, regionInfo);
-    if (sn != null) {
-      addLocation(put, sn, openSeqNum, -1, regionInfo.getReplicaId());
-    }
-    putToMetaTable(connection, put);
-    LOG.info("Added daughter " + regionInfo.getEncodedName() +
-      (sn == null? ", serverName=null": ", serverName=" + sn.toString()));
+    LOG.info("Added {} regions to meta.", puts.size());
   }
 
   /**
@@ -1891,9 +1827,7 @@ public class MetaTableAccessor {
   public static void multiMutate(Connection connection, final Table table, byte[] row,
       final List<Mutation> mutations)
   throws IOException {
-    if (METALOG.isDebugEnabled()) {
-      METALOG.debug(mutationsToString(mutations));
-    }
+    debugLogMutations(mutations);
     // TODO: Need rollback!!!!
     // TODO: Need Retry!!!
     // TODO: What for a timeout? Default write timeout? GET FROM HTABLE?
@@ -2066,44 +2000,12 @@ public class MetaTableAccessor {
     }
     deleteFromMetaTable(connection, deletes);
     LOG.info("Deleted " + regionsInfo.size() + " regions from META");
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Deleted regions: " + regionsInfo);
-    }
+    LOG.debug("Deleted regions: {}", regionsInfo);
   }
 
   /**
-   * Adds and Removes the specified regions from hbase:meta
-   * @param connection connection we're using
-   * @param regionsToRemove list of regions to be deleted from META
-   * @param regionsToAdd list of regions to be added to META
-   * @throws IOException
-   */
-  public static void mutateRegions(Connection connection,
-                                   final List<RegionInfo> regionsToRemove,
-                                   final List<RegionInfo> regionsToAdd)
-    throws IOException {
-    List<Mutation> mutation = new ArrayList<>();
-    if (regionsToRemove != null) {
-      for (RegionInfo hri: regionsToRemove) {
-        mutation.add(makeDeleteFromRegionInfo(hri));
-      }
-    }
-    if (regionsToAdd != null) {
-      for (RegionInfo hri: regionsToAdd) {
-        mutation.add(makePutFromRegionInfo(hri));
-      }
-    }
-    mutateMetaTable(connection, mutation);
-    if (regionsToRemove != null && regionsToRemove.size() > 0) {
-      LOG.debug("Deleted " + RegionInfo.getShortNameToLog(regionsToRemove));
-    }
-    if (regionsToAdd != null && regionsToAdd.size() > 0) {
-      LOG.debug("Added " + RegionInfo.getShortNameToLog(regionsToAdd));
-    }
-  }
-
-  /**
-   * Overwrites the specified regions from hbase:meta
+   * Overwrites the specified regions from hbase:meta. Deletes old rows for the given regions and
+   * adds new ones. Regions added back have state CLOSED.
    * @param connection connection we're using
    * @param regionInfos list of regions to be added to META
    * @throws IOException
@@ -2121,9 +2023,7 @@ public class MetaTableAccessor {
     // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
     addRegionsToMeta(connection, regionInfos, regionReplication, now+1);
     LOG.info("Overwritten " + regionInfos.size() + " regions to Meta");
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Overwritten regions: " + regionInfos);
-    }
+    LOG.debug("Overwritten regions: {} ", regionInfos);
   }
 
   /**
@@ -2216,18 +2116,19 @@ public class MetaTableAccessor {
                 .build());
   }
 
-  private static String mutationsToString(List<? extends Mutation> mutations) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    String prefix = "";
-    for (Mutation mutation : mutations) {
-      sb.append(prefix).append(mutationToString(mutation));
-      prefix = ", ";
+  private static void debugLogMutations(List<? extends Mutation> mutations) throws IOException {
+    if (!METALOG.isDebugEnabled()) {
+      return;
     }
-    return sb.toString();
+    // Logging each mutation in separate line makes it easier to see diff between them visually
+    // because of common starting indentation.
+    for (Mutation mutation : mutations) {
+      debugLogMutation(mutation);
+    }
   }
 
-  private static String mutationToString(Mutation p) throws IOException {
-    return p.getClass().getSimpleName() + p.toJSON();
+  private static void debugLogMutation(Mutation p) throws IOException {
+    METALOG.debug("{} {}", p.getClass().getSimpleName(), p.toJSON());
   }
 
   public static Put addSequenceNum(final Put p, long openSeqNum, long time,
@@ -2328,57 +2229,45 @@ public class MetaTableAccessor {
     return map;
   }
 
-  /**
-   * Get daughter region(s) for a region, only used in serial replication.
-   * @param connection connection we're using
-   * @param encodedName region's encoded name
-   * @throws IOException
-   */
-  public static String getSerialReplicationDaughterRegion(Connection connection, byte[] encodedName)
-      throws IOException {
-    Get get = new Get(encodedName);
-    get.addColumn(HConstants.REPLICATION_META_FAMILY, daughterNameCq);
+  private static String getSerialReplicationColumnValue(Connection connection,
+      byte[] encodedRegionName, byte[] columnQualifier) throws IOException {
+    Get get = new Get(encodedRegionName);
+    get.addColumn(HConstants.REPLICATION_META_FAMILY, columnQualifier);
     Result result = get(getMetaHTable(connection), get);
     if (!result.isEmpty()) {
       Cell c = result.rawCells()[0];
       return Bytes.toString(c.getValueArray(), c.getValueOffset(), c.getValueLength());
     }
     return null;
+  }
+
+  /**
+   * Get daughter region(s) for a region, only used in serial replication.
+   * @param connection connection we're using
+   * @param encodedName region's encoded name
+   */
+  public static String getSerialReplicationDaughterRegion(Connection connection, byte[] encodedName)
+      throws IOException {
+    return getSerialReplicationColumnValue(connection, encodedName, daughterNameCq);
   }
 
   /**
    * Get parent region(s) for a region, only used in serial replication.
    * @param connection connection we're using
    * @param encodedName region's encoded name
-   * @throws IOException
    */
   public static String getSerialReplicationParentRegion(Connection connection, byte[] encodedName)
       throws IOException {
-    Get get = new Get(encodedName);
-    get.addColumn(HConstants.REPLICATION_META_FAMILY, parentNameCq);
-    Result result = get(getMetaHTable(connection), get);
-    if (!result.isEmpty()) {
-      Cell c = result.rawCells()[0];
-      return Bytes.toString(c.getValueArray(), c.getValueOffset(), c.getValueLength());
-    }
-    return null;
+    return getSerialReplicationColumnValue(connection, encodedName, parentNameCq);
   }
 
   /**
    * Get the table name for a region, only used in serial replication.
    * @param connection connection we're using
    * @param encodedName region's encoded name
-   * @throws IOException
    */
   public static String getSerialReplicationTableName(Connection connection, byte[] encodedName)
       throws IOException {
-    Get get = new Get(encodedName);
-    get.addColumn(HConstants.REPLICATION_META_FAMILY, tableNameCq);
-    Result result = get(getMetaHTable(connection), get);
-    if (!result.isEmpty()) {
-      Cell c = result.rawCells()[0];
-      return Bytes.toString(c.getValueArray(), c.getValueOffset(), c.getValueLength());
-    }
-    return null;
+    return getSerialReplicationColumnValue(connection, encodedName, tableNameCq);
   }
 }

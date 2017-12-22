@@ -2293,7 +2293,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           .setStartKey(startKeys[i])
           .setEndKey(startKeys[j])
           .build();
-      MetaTableAccessor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(getConnection(), hri);
       newRegions.add(hri);
     }
 
