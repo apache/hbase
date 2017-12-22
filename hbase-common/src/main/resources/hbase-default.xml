@@ -133,14 +133,14 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.master.logcleaner.ttl</name>
     <value>600000</value>
-    <description>How long a WAL remain in the {hbase.rootdir}/oldWALs directory,
+    <description>How long a WAL remain in the archive ({hbase.rootdir}/oldWALs) directory,
     after which it will be cleaned by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
     <name>hbase.master.procedurewalcleaner.ttl</name>
     <value>604800000</value>
     <description>How long a Procedure WAL will remain in the
-    {hbase.rootdir}/MasterProcedureWALs directory, after which it will be cleaned
+    archive directory, after which it will be cleaned
     by a Master thread. The value is in milliseconds.</description>
   </property>
   <property>
