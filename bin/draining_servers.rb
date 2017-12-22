@@ -27,8 +27,7 @@ java_import org.apache.hadoop.hbase.HBaseConfiguration
 java_import org.apache.hadoop.hbase.client.ConnectionFactory
 java_import org.apache.hadoop.hbase.client.HBaseAdmin
 java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
-java_import org.apache.commons.logging.Log
-java_import org.apache.commons.logging.LogFactory
+java_import org.slf4j.LoggerFactory
 
 # Name of this script
 NAME = 'draining_servers'.freeze
@@ -42,10 +41,6 @@ optparse = OptionParser.new do |opts|
   opts.on('-h', '--help', 'Display usage information') do
     puts opts
     exit
-  end
-  options[:debug] = false
-  opts.on('-d', '--debug', 'Display extra debug logging') do
-    options[:debug] = true
   end
 end
 optparse.parse!
@@ -133,21 +128,8 @@ end
 
 hostOrServers = ARGV[1..ARGV.size]
 
-# Create a logger and disable the DEBUG-level annoying client logging
-def configureLogging(options)
-  apacheLogger = LogFactory.getLog(NAME)
-  # Configure log4j to not spew so much
-  unless options[:debug]
-    logger = org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase')
-    logger.setLevel(org.apache.log4j.Level::WARN)
-    logger = org.apache.log4j.Logger.getLogger('org.apache.zookeeper')
-    logger.setLevel(org.apache.log4j.Level::WARN)
-  end
-  apacheLogger
-end
-
 # Create a logger and save it to ruby global
-$LOG = configureLogging(options)
+$LOG = LoggerFactory.getLogger(NAME)
 case ARGV[0]
 when 'add'
   if ARGV.length < 2
