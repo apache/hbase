@@ -7585,7 +7585,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       writeEntry = walKey.getWriteEntry();
     } catch (IOException ioe) {
-      if (walKey != null) {
+      if (walKey != null && walKey.getWriteEntry() != null) {
         mvcc.complete(walKey.getWriteEntry());
       }
       throw ioe;
