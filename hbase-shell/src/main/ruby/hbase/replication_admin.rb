@@ -19,21 +19,19 @@
 
 include Java
 
-java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
 java_import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil
 java_import org.apache.hadoop.hbase.replication.ReplicationPeerConfig
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.zookeeper.ZKConfig
 java_import org.apache.hadoop.hbase.TableName
 
-# Wrapper for org.apache.hadoop.hbase.client.replication.ReplicationAdmin
+# Used for replication administrative operations.
 
 module Hbase
   class RepAdmin
     include HBaseConstants
 
     def initialize(configuration)
-      @replication_admin = ReplicationAdmin.new(configuration)
       @configuration = configuration
       @admin = ConnectionFactory.createConnection(configuration).getAdmin
     end
@@ -272,10 +270,10 @@ module Hbase
     end
 
     def set_peer_replicate_all(id, replicate_all)
-      rpc = @replication_admin.getPeerConfig(id)
+      rpc = get_peer_config(id)
       return if rpc.nil?
       rpc.setReplicateAllUserTables(replicate_all)
-      @replication_admin.updatePeerConfig(id, rpc)
+      @admin.updateReplicationPeerConfig(id, rpc)
     end
 
     # Set exclude namespaces config for the specified peer
