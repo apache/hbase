@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,6 +67,20 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
     TEST_UTIL.startMiniCluster();
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+  }
+
+  @After
+  public void cleanupPeer() {
+    try {
+      admin.removeReplicationPeer(ID_ONE).join();
+    } catch (Exception e) {
+      LOG.debug("Replication peer " + ID_ONE + " may already be removed");
+    }
+    try {
+      admin.removeReplicationPeer(ID_SECOND).join();
+    } catch (Exception e) {
+      LOG.debug("Replication peer " + ID_SECOND + " may already be removed");
+    }
   }
 
   @Test
@@ -350,7 +365,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
 
     // update peer config only contains ns1
     rpc = admin.getReplicationPeerConfig(ID_ONE).get();
-    namespaces.clear();
+    namespaces = new HashSet<>();
     namespaces.add(ns1);
     rpc.setNamespaces(namespaces);
     admin.updateReplicationPeerConfig(ID_ONE, rpc).join();

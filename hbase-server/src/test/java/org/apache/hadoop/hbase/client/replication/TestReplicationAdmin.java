@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -97,6 +98,20 @@ public class TestReplicationAdmin {
       admin.close();
     }
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @After
+  public void cleanupPeer() {
+    try {
+      hbaseAdmin.removeReplicationPeer(ID_ONE);
+    } catch (Exception e) {
+      LOG.debug("Replication peer " + ID_ONE + " may already be removed");
+    }
+    try {
+      hbaseAdmin.removeReplicationPeer(ID_SECOND);
+    } catch (Exception e) {
+      LOG.debug("Replication peer " + ID_SECOND + " may already be removed");
+    }
   }
 
   /**
@@ -449,7 +464,7 @@ public class TestReplicationAdmin {
     assertTrue(namespaces.contains(ns2));
 
     rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
-    namespaces.clear();
+    namespaces = new HashSet<>();
     namespaces.add(ns1);
     rpc.setNamespaces(namespaces);
     hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
@@ -505,7 +520,7 @@ public class TestReplicationAdmin {
     assertTrue(namespaces.contains(ns2));
 
     rpc = hbaseAdmin.getReplicationPeerConfig(ID_ONE);
-    namespaces.clear();
+    namespaces = new HashSet<String>();
     namespaces.add(ns1);
     rpc.setExcludeNamespaces(namespaces);
     hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);

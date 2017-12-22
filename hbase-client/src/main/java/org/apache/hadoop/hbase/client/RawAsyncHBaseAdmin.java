@@ -26,7 +26,6 @@ import com.google.protobuf.RpcChannel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -1593,7 +1592,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> appendReplicationPeerTableCFs(String id,
-      Map<TableName, ? extends Collection<String>> tableCfs) {
+      Map<TableName, List<String>> tableCfs) {
     if (tableCfs == null) {
       return failedFuture(new ReplicationException("tableCfs is null"));
     }
@@ -1601,8 +1600,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     CompletableFuture<Void> future = new CompletableFuture<Void>();
     getReplicationPeerConfig(id).whenComplete((peerConfig, error) -> {
       if (!completeExceptionally(future, error)) {
-        ReplicationPeerConfigUtil.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
-        updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
+        ReplicationPeerConfig newPeerConfig =
+            ReplicationPeerConfigUtil.appendTableCFsToReplicationPeerConfig(tableCfs, peerConfig);
+        updateReplicationPeerConfig(id, newPeerConfig).whenComplete((result, err) -> {
           if (!completeExceptionally(future, error)) {
             future.complete(result);
           }
@@ -1614,7 +1614,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> removeReplicationPeerTableCFs(String id,
-      Map<TableName, ? extends Collection<String>> tableCfs) {
+      Map<TableName, List<String>> tableCfs) {
     if (tableCfs == null) {
       return failedFuture(new ReplicationException("tableCfs is null"));
     }
@@ -1623,14 +1623,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     getReplicationPeerConfig(id).whenComplete(
       (peerConfig, error) -> {
         if (!completeExceptionally(future, error)) {
+          ReplicationPeerConfig newPeerConfig = null;
           try {
-            ReplicationPeerConfigUtil.removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig,
-              id);
+            newPeerConfig = ReplicationPeerConfigUtil
+                .removeTableCFsFromReplicationPeerConfig(tableCfs, peerConfig, id);
           } catch (ReplicationException e) {
             future.completeExceptionally(e);
             return;
           }
-          updateReplicationPeerConfig(id, peerConfig).whenComplete((result, err) -> {
+          updateReplicationPeerConfig(id, newPeerConfig).whenComplete((result, err) -> {
             if (!completeExceptionally(future, error)) {
               future.complete(result);
             }

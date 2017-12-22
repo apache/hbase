@@ -597,7 +597,7 @@ public interface AsyncAdmin {
    * @param tableCfs A map from tableName to column family names
    */
   CompletableFuture<Void> appendReplicationPeerTableCFs(String peerId,
-      Map<TableName, ? extends Collection<String>> tableCfs);
+      Map<TableName, List<String>> tableCfs);
 
   /**
    * Remove some table-cfs from config of the specified peer
@@ -605,7 +605,7 @@ public interface AsyncAdmin {
    * @param tableCfs A map from tableName to column family names
    */
   CompletableFuture<Void> removeReplicationPeerTableCFs(String peerId,
-      Map<TableName, ? extends Collection<String>> tableCfs);
+      Map<TableName, List<String>> tableCfs);
 
   /**
    * Return a list of replication peers.
