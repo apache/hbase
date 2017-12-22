@@ -221,7 +221,7 @@ public class OfflineMetaRebuildTestCore {
     out.close();
 
     // add to meta.
-    MetaTableAccessor.addRegionToMeta(meta, hri);
+    MetaTableAccessor.addRegionToMeta(TEST_UTIL.getConnection(), hri);
     meta.close();
     return hri;
   }

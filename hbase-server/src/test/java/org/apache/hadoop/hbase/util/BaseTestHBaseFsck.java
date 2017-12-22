@@ -113,23 +113,6 @@ public class BaseTestHBaseFsck {
     Bytes.toBytes("00"), Bytes.toBytes("50"), Bytes.toBytes("A0"), Bytes.toBytes("A5"),
     Bytes.toBytes("B0"), Bytes.toBytes("B5"), Bytes.toBytes("C0"), Bytes.toBytes("C5") };
 
-
-  /**
-   * Create a new region in META.
-   */
-  protected RegionInfo createRegion(final HTableDescriptor
-      htd, byte[] startKey, byte[] endKey)
-      throws IOException {
-    Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
-    RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName())
-        .setStartKey(startKey)
-        .setEndKey(endKey)
-        .build();
-    MetaTableAccessor.addRegionToMeta(meta, hri);
-    meta.close();
-    return hri;
-  }
-
   /**
    * Debugging method to dump the contents of meta.
    */
