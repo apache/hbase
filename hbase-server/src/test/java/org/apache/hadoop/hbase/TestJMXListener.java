@@ -43,7 +43,7 @@ import org.junit.rules.ExpectedException;
 public class TestJMXListener {
   private static final Log LOG = LogFactory.getLog(TestJMXListener.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static int connectorPort = 61120;
+  private static int connectorPort = UTIL.randomFreePort();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
