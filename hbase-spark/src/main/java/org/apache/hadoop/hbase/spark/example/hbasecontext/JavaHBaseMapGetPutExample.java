@@ -73,24 +73,24 @@ final public class JavaHBaseMapGetPutExample {
 
       hbaseContext.foreachPartition(rdd,
               new VoidFunction<Tuple2<Iterator<byte[]>, Connection>>() {
-        public void call(Tuple2<Iterator<byte[]>, Connection> t)
-                throws Exception {
-          Table table = t._2().getTable(TableName.valueOf(tableName));
-          BufferedMutator mutator = t._2().getBufferedMutator(TableName.valueOf(tableName));
+          public void call(Tuple2<Iterator<byte[]>, Connection> t)
+                  throws Exception {
+            Table table = t._2().getTable(TableName.valueOf(tableName));
+            BufferedMutator mutator = t._2().getBufferedMutator(TableName.valueOf(tableName));
 
-          while (t._1().hasNext()) {
-            byte[] b = t._1().next();
-            Result r = table.get(new Get(b));
-            if (r.getExists()) {
-              mutator.mutate(new Put(b));
+            while (t._1().hasNext()) {
+              byte[] b = t._1().next();
+              Result r = table.get(new Get(b));
+              if (r.getExists()) {
+                mutator.mutate(new Put(b));
+              }
             }
-          }
 
-          mutator.flush();
-          mutator.close();
-          table.close();
-        }
-      });
+            mutator.flush();
+            mutator.close();
+            table.close();
+          }
+        });
     } finally {
       jsc.stop();
     }

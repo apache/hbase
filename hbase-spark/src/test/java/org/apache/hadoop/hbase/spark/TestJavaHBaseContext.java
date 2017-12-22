@@ -20,16 +20,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -41,12 +41,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.spark.example.hbasecontext.JavaHBaseBulkDeleteExample;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -61,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import scala.Tuple2;
+
 import org.apache.hadoop.hbase.shaded.com.google.common.io.Files;
 
 @Category({MiscTests.class, MediumTests.class})
@@ -317,10 +317,12 @@ public class TestJavaHBaseContext implements Serializable {
 
 
 
-    hbaseContext.bulkLoad(rdd, TableName.valueOf(tableName), new BulkLoadFunction(), output.toUri().getPath(),
-        new HashMap<byte[], FamilyHFileWriteOptions>(), false, HConstants.DEFAULT_MAX_FILE_SIZE);
+    hbaseContext.bulkLoad(rdd, TableName.valueOf(tableName), new BulkLoadFunction(),
+            output.toUri().getPath(), new HashMap<byte[], FamilyHFileWriteOptions>(), false,
+            HConstants.DEFAULT_MAX_FILE_SIZE);
 
-    try (Connection conn = ConnectionFactory.createConnection(conf); Admin admin = conn.getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+         Admin admin = conn.getAdmin()) {
       Table table = conn.getTable(TableName.valueOf(tableName));
       // Do bulk load
       LoadIncrementalHFiles load = new LoadIncrementalHFiles(conf);
@@ -387,11 +389,13 @@ public class TestJavaHBaseContext implements Serializable {
     Configuration conf = htu.getConfiguration();
     JavaHBaseContext hbaseContext = new JavaHBaseContext(jsc, conf);
 
-    hbaseContext.bulkLoadThinRows(rdd, TableName.valueOf(tableName), new BulkLoadThinRowsFunction(), output.toString(),
-        new HashMap<byte[], FamilyHFileWriteOptions>(), false, HConstants.DEFAULT_MAX_FILE_SIZE);
+    hbaseContext.bulkLoadThinRows(rdd, TableName.valueOf(tableName), new BulkLoadThinRowsFunction(),
+            output.toString(), new HashMap<byte[], FamilyHFileWriteOptions>(), false,
+            HConstants.DEFAULT_MAX_FILE_SIZE);
 
 
-    try (Connection conn = ConnectionFactory.createConnection(conf); Admin admin = conn.getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+         Admin admin = conn.getAdmin()) {
       Table table = conn.getTable(TableName.valueOf(tableName));
       // Do bulk load
       LoadIncrementalHFiles load = new LoadIncrementalHFiles(conf);
@@ -429,25 +433,31 @@ public class TestJavaHBaseContext implements Serializable {
     }
 
   }
-  public static class BulkLoadFunction implements Function<String, Pair<KeyFamilyQualifier, byte[]>> {
-
+  public static class BulkLoadFunction
+          implements Function<String, Pair<KeyFamilyQualifier, byte[]>> {
     @Override public Pair<KeyFamilyQualifier, byte[]> call(String v1) throws Exception {
-      if (v1 == null)
+      if (v1 == null) {
         return null;
+      }
+
       String[] strs = v1.split(",");
-      if(strs.length != 4)
+      if(strs.length != 4) {
         return null;
-      KeyFamilyQualifier kfq = new KeyFamilyQualifier(Bytes.toBytes(strs[0]), Bytes.toBytes(strs[1]),
-          Bytes.toBytes(strs[2]));
+      }
+
+      KeyFamilyQualifier kfq = new KeyFamilyQualifier(Bytes.toBytes(strs[0]),
+              Bytes.toBytes(strs[1]), Bytes.toBytes(strs[2]));
       return new Pair(kfq, Bytes.toBytes(strs[3]));
     }
   }
 
-  public static class BulkLoadThinRowsFunction implements Function<List<String>, Pair<ByteArrayWrapper, FamiliesQualifiersValues>> {
-
-    @Override public Pair<ByteArrayWrapper, FamiliesQualifiersValues> call(List<String> list) throws Exception {
-      if (list == null)
+  public static class BulkLoadThinRowsFunction
+          implements Function<List<String>, Pair<ByteArrayWrapper, FamiliesQualifiersValues>> {
+    @Override public Pair<ByteArrayWrapper, FamiliesQualifiersValues> call(List<String> list) {
+      if (list == null) {
         return null;
+      }
+
       ByteArrayWrapper rowKey = null;
       FamiliesQualifiersValues fqv = new FamiliesQualifiersValues();
       for (String cell : list) {

@@ -16,6 +16,9 @@
  */
 package org.apache.hadoop.hbase.spark.example.hbasecontext;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -26,9 +29,6 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This is a simple example of deleting records in HBase
