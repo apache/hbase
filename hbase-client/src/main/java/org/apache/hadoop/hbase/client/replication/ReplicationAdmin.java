@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
+import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
@@ -251,7 +252,7 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException, IOException {
-    this.admin.appendReplicationPeerTableCFs(id, tableCfs);
+    this.admin.appendReplicationPeerTableCFs(id, copyTableCFs(tableCfs));
   }
 
   /**
@@ -279,7 +280,17 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public void removePeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException, IOException {
-    this.admin.removeReplicationPeerTableCFs(id, tableCfs);
+    this.admin.removeReplicationPeerTableCFs(id, copyTableCFs(tableCfs));
+  }
+
+  private Map<TableName, List<String>>
+      copyTableCFs(Map<TableName, ? extends Collection<String>> tableCfs) {
+    Map<TableName, List<String>> newTableCfs = new HashMap<>();
+    if (tableCfs != null) {
+      tableCfs.forEach(
+        (table, cfs) -> newTableCfs.put(table, cfs != null ? Lists.newArrayList(cfs) : null));
+    }
+    return newTableCfs;
   }
 
   /**

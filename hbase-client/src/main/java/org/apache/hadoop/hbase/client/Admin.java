@@ -2527,7 +2527,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void appendReplicationPeerTableCFs(String id,
-      Map<TableName, ? extends Collection<String>> tableCfs)
+      Map<TableName, List<String>> tableCfs)
       throws ReplicationException, IOException;
 
   /**
@@ -2538,7 +2538,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void removeReplicationPeerTableCFs(String id,
-      Map<TableName, ? extends Collection<String>> tableCfs)
+      Map<TableName, List<String>> tableCfs)
       throws ReplicationException, IOException;
 
   /**

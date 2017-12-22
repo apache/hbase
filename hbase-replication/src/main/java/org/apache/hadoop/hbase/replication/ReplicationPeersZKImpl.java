@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -363,18 +365,19 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
     //Update existingConfig's peer config and peer data with the new values, but don't touch config
     // or data that weren't explicitly changed
-    existingConfig.getConfiguration().putAll(newConfig.getConfiguration());
-    existingConfig.getPeerData().putAll(newConfig.getPeerData());
-    existingConfig.setTableCFsMap(newConfig.getTableCFsMap());
-    existingConfig.setNamespaces(newConfig.getNamespaces());
-    existingConfig.setBandwidth(newConfig.getBandwidth());
-    existingConfig.setReplicateAllUserTables(newConfig.replicateAllUserTables());
-    existingConfig.setExcludeNamespaces(newConfig.getExcludeNamespaces());
-    existingConfig.setExcludeTableCFsMap(newConfig.getExcludeTableCFsMap());
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder(newConfig);
+    Map<byte[], byte[]> peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    existingConfig.getPeerData().forEach(peerData::put);
+    newConfig.getPeerData().forEach(peerData::put);
+    builder.setPeerData(peerData);
+    Map<String, String> configuration = new HashMap<>();
+    existingConfig.getConfiguration().forEach(configuration::put);
+    newConfig.getConfiguration().forEach(configuration::put);
+    builder.setConfiguration(configuration);
 
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),
-          ReplicationPeerConfigUtil.toByteArray(existingConfig));
+          ReplicationPeerConfigUtil.toByteArray(builder.build()));
     }
     catch(KeeperException ke){
       throw new ReplicationException("There was a problem trying to save changes to the " +
