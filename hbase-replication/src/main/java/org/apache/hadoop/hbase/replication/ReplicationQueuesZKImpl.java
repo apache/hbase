@@ -302,8 +302,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         // add delete op for peer
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
 
-        if (LOG.isTraceEnabled())
+        if (LOG.isTraceEnabled()) {
           LOG.trace(" The multi list size is: " + listOfOps.size());
+        }
       }
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
 

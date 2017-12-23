@@ -18,32 +18,6 @@
 */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.RetryCounter;
-import org.apache.hadoop.hbase.util.RetryCounterFactory;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -57,6 +31,32 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounterFactory;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /*
  * Abstract class that provides an interface to the Replication Table. Which is currently
@@ -321,12 +321,12 @@ abstract class ReplicationTableBase {
    *
    * @param server name of the server
    * @return a ResultScanner over the QueueIds belonging to the server
-   * @throws IOException
+   * @throws IOException if getting the table or the scanner fails
    */
   protected ResultScanner getQueuesBelongingToServer(String server) throws IOException {
     Scan scan = new Scan();
     SingleColumnValueFilter filterMyQueues = new SingleColumnValueFilter(CF_QUEUE, COL_QUEUE_OWNER,
-    CompareOperator.EQUAL, Bytes.toBytes(server));
+            CompareOperator.EQUAL, Bytes.toBytes(server));
     scan.setFilter(filterMyQueues);
     scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER);
     scan.addColumn(CF_QUEUE, COL_QUEUE_OWNER_HISTORY);
@@ -341,7 +341,7 @@ abstract class ReplicationTableBase {
    * the CreateReplicationWorker thread. It is up to the caller of this method to close the
    * returned Table
    * @return the Replication Table when it is created
-   * @throws IOException
+   * @throws IOException if getting the table or the scanner fails
    */
   protected Table getOrBlockOnReplicationTable() throws IOException {
     // Sleep until the Replication Table becomes available
@@ -359,7 +359,7 @@ abstract class ReplicationTableBase {
    * Creates a new copy of the Replication Table and sets up the proper Table time outs for it
    *
    * @return the Replication Table
-   * @throws IOException
+   * @throws IOException if getting the table fails
    */
   private Table getAndSetUpReplicationTable() throws IOException {
     Table replicationTable = connection.getTable(REPLICATION_TABLE_NAME);
@@ -413,7 +413,7 @@ abstract class ReplicationTableBase {
      * Create the replication table with the provided HColumnDescriptor REPLICATION_COL_DESCRIPTOR
      * in TableBasedReplicationQueuesImpl
      *
-     * @throws IOException
+     * @throws IOException if creating the table fails
      */
     private void createReplicationTable() throws IOException {
       HTableDescriptor replicationTableDescriptor = new HTableDescriptor(REPLICATION_TABLE_NAME);
@@ -429,7 +429,6 @@ abstract class ReplicationTableBase {
      * Checks whether the Replication Table exists yet
      *
      * @return whether the Replication Table exists
-     * @throws IOException
      */
     private boolean replicationTableExists() {
       try {

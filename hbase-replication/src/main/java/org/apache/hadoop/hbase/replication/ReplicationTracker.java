@@ -35,7 +35,7 @@ public interface ReplicationTracker {
 
   /**
    * Register a replication listener to receive replication events.
-   * @param listener
+   * @param listener the listener to register
    */
   public void registerListener(ReplicationListener listener);
 

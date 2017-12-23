@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -47,6 +46,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 /**
  * This class provides an implementation of the ReplicationPeers interface using ZooKeeper. The
@@ -462,8 +463,8 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
   /**
    * Update the state znode of a peer cluster.
-   * @param id
-   * @param state
+   * @param id the id of the peer
+   * @param state the state to update to
    */
   private void changePeerState(String id, ReplicationProtos.ReplicationState.State state)
       throws ReplicationException {
@@ -491,7 +492,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
    * Helper method to connect to a peer
    * @param peerId peer's identifier
    * @return object representing the peer
-   * @throws ReplicationException
+   * @throws ReplicationException if creating the peer fails
    */
   private ReplicationPeerZKImpl createPeer(String peerId) throws ReplicationException {
     Pair<ReplicationPeerConfig, Configuration> pair = getPeerConf(peerId);
@@ -520,7 +521,10 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   private void checkQueuesDeleted(String peerId) throws ReplicationException {
-    if (queuesClient == null) return;
+    if (queuesClient == null) {
+      return;
+    }
+
     try {
       List<String> replicators = queuesClient.getListOfReplicators();
       if (replicators == null || replicators.isEmpty()) {

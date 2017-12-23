@@ -19,17 +19,19 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.commons.lang3.reflect.ConstructorUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A factory class for instantiating replication objects that deal with replication state.
  */
 @InterfaceAudience.Private
-public class ReplicationFactory {
+public final class ReplicationFactory {
+  private ReplicationFactory() {
+  }
 
   public static ReplicationQueues getReplicationQueues(ReplicationQueuesArguments args)
       throws Exception {
@@ -49,7 +51,7 @@ public class ReplicationFactory {
   }
 
   public static ReplicationPeers getReplicationPeers(final ZKWatcher zk, Configuration conf,
-                                                     final ReplicationQueuesClient queuesClient, Abortable abortable) {
+      final ReplicationQueuesClient queuesClient, Abortable abortable) {
     return new ReplicationPeersZKImpl(zk, conf, queuesClient, abortable);
   }
 

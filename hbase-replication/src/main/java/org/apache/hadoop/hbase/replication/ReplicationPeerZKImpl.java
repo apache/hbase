@@ -31,16 +31,16 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 @InterfaceAudience.Private
 public class ReplicationPeerZKImpl extends ReplicationStateZKBase
@@ -77,10 +77,9 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    * start a state tracker to check whether this peer is enabled or not
    *
    * @param peerStateNode path to zk node which stores peer state
-   * @throws KeeperException
+   * @throws KeeperException if creating the znode fails
    */
-  public void startStateTracker(String peerStateNode)
-      throws KeeperException {
+  public void startStateTracker(String peerStateNode) throws KeeperException {
     ensurePeerEnabled(peerStateNode);
     this.peerStateTracker = new PeerStateTracker(peerStateNode, zookeeper, this);
     this.peerStateTracker.start();
@@ -101,10 +100,8 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   /**
    * start a table-cfs tracker to listen the (table, cf-list) map change
    * @param peerConfigNode path to zk node which stores table-cfs
-   * @throws KeeperException
    */
-  public void startPeerConfigTracker(String peerConfigNode)
-    throws KeeperException {
+  public void startPeerConfigTracker(String peerConfigNode) throws KeeperException {
     this.peerConfigTracker = new PeerConfigTracker(peerConfigNode, zookeeper,
         this);
     this.peerConfigTracker.start();
@@ -208,7 +205,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    * Parse the raw data from ZK to get a peer's state
    * @param bytes raw ZK data
    * @return True if the passed in <code>bytes</code> are those of a pb serialized ENABLED state.
-   * @throws DeserializationException
+   * @throws DeserializationException if parsing the state fails
    */
   public static boolean isStateEnabled(final byte[] bytes) throws DeserializationException {
     ReplicationProtos.ReplicationState.State state = parseStateFrom(bytes);
@@ -218,7 +215,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   /**
    * @param bytes Content of a state znode.
    * @return State parsed from the passed bytes.
-   * @throws DeserializationException
+   * @throws DeserializationException if a ProtoBuf operation fails
    */
   private static ReplicationProtos.ReplicationState.State parseStateFrom(final byte[] bytes)
       throws DeserializationException {
@@ -240,11 +237,9 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    * Utility method to ensure an ENABLED znode is in place; if not present, we create it.
    * @param path Path to znode to check
    * @return True if we created the znode.
-   * @throws NodeExistsException
-   * @throws KeeperException
+   * @throws KeeperException if creating the znode fails
    */
-  private boolean ensurePeerEnabled(final String path)
-      throws NodeExistsException, KeeperException {
+  private boolean ensurePeerEnabled(final String path) throws KeeperException {
     if (ZKUtil.checkExists(zookeeper, path) == -1) {
       // There is a race b/w PeerWatcher and ReplicationZookeeper#add method to create the
       // peer-state znode. This happens while adding a peer.

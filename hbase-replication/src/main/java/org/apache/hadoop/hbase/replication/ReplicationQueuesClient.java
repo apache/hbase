@@ -67,7 +67,7 @@ public interface ReplicationQueuesClient {
    * is concurrent queue failover. However, some newly created WALs during the call may
    * not be included.
    */
-   Set<String> getAllWALs() throws KeeperException;
+  Set<String> getAllWALs() throws KeeperException;
 
   /**
    * Get the change version number of replication hfile references node. This can be used as

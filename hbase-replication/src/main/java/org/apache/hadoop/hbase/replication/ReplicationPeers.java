@@ -25,8 +25,8 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This provides an interface for maintaining a set of peer clusters. These peers are remote slave
@@ -76,7 +76,7 @@ public interface ReplicationPeers {
    * newly connected cluster.
    * @param peerId a short that identifies the cluster
    * @return whether a ReplicationPeer was successfully created
-   * @throws ReplicationException
+   * @throws ReplicationException if connecting to the peer fails
    */
   boolean peerConnected(String peerId) throws ReplicationException;
 
@@ -182,7 +182,7 @@ public interface ReplicationPeers {
    * Update the peerConfig for the a given peer cluster
    * @param id a short that identifies the cluster
    * @param peerConfig new config for the peer cluster
-   * @throws ReplicationException
+   * @throws ReplicationException if updating the peer configuration fails
    */
   void updatePeerConfig(String id, ReplicationPeerConfig peerConfig) throws ReplicationException;
 }

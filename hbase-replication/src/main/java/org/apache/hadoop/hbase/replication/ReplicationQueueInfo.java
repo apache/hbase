@@ -18,15 +18,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ServerName;
 
 /**
  * This class is responsible for the parsing logic for a znode representing a queue.
@@ -66,8 +65,9 @@ public class ReplicationQueueInfo {
    */
   private static void
       extractDeadServersFromZNodeString(String deadServerListStr, List<ServerName> result) {
-
-    if(deadServerListStr == null || result == null || deadServerListStr.isEmpty()) return;
+    if(deadServerListStr == null || result == null || deadServerListStr.isEmpty()) {
+      return;
+    }
 
     // valid server name delimiter "-" has to be after "," in a server name
     int seenCommaCnt = 0;
@@ -76,25 +76,25 @@ public class ReplicationQueueInfo {
 
     for (int i = 0; i < len; i++) {
       switch (deadServerListStr.charAt(i)) {
-      case ',':
-        seenCommaCnt += 1;
-        break;
-      case '-':
-        if(seenCommaCnt>=2) {
-          if (i > startIndex) {
-            String serverName = deadServerListStr.substring(startIndex, i);
-            if(ServerName.isFullServerName(serverName)){
-              result.add(ServerName.valueOf(serverName));
-            } else {
-              LOG.error("Found invalid server name:" + serverName);
+        case ',':
+          seenCommaCnt += 1;
+          break;
+        case '-':
+          if(seenCommaCnt>=2) {
+            if (i > startIndex) {
+              String serverName = deadServerListStr.substring(startIndex, i);
+              if(ServerName.isFullServerName(serverName)){
+                result.add(ServerName.valueOf(serverName));
+              } else {
+                LOG.error("Found invalid server name:" + serverName);
+              }
+              startIndex = i + 1;
             }
-            startIndex = i + 1;
+            seenCommaCnt = 0;
           }
-          seenCommaCnt = 0;
-        }
-        break;
-      default:
-        break;
+          break;
+        default:
+          break;
       }
     }
 

@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.SortedSet;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This provides an interface for maintaining a region server's replication queues. These queues
@@ -90,7 +90,8 @@ public interface ReplicationQueues {
 
   /**
    * Get a list of all queues for this region server.
-   * @return a list of queueIds, an empty list if this region server is dead and has no outstanding queues
+   * @return a list of queueIds, an empty list if this region server is dead and has no outstanding
+   *         queues
    */
   List<String> getAllQueues();
 
@@ -111,7 +112,7 @@ public interface ReplicationQueues {
 
   /**
    * Remove the znode of region server if the queue is empty.
-   * @param regionserver
+   * @param regionserver the id of the region server
    */
   void removeReplicatorIfQueueIsEmpty(String regionserver);
 
