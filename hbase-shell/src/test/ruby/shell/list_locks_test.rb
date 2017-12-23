@@ -67,6 +67,25 @@ module Hbase
         proc_id)
     end
 
+    define_test 'list peer locks' do
+      lock = create_exclusive_lock(0)
+      peer_id = '1'
+
+      @scheduler.waitPeerExclusiveLock(lock, peer_id)
+      output = capture_stdout { @list_locks.command }
+      @scheduler.wakePeerExclusiveLock(lock, peer_id)
+
+      assert_equal(
+        "PEER(1)\n" \
+        "Lock type: EXCLUSIVE, procedure: {" \
+          "\"className\"=>\"org.apache.hadoop.hbase.master.locking.LockProcedure\", " \
+          "\"procId\"=>\"0\", \"submittedTime\"=>\"0\", \"state\"=>\"RUNNABLE\", " \
+          "\"lastUpdate\"=>\"0\", " \
+          "\"stateMessage\"=>[{\"lockType\"=>\"EXCLUSIVE\", \"description\"=>\"description\"}]" \
+        "}\n\n",
+        output)
+    end
+
     define_test 'list server locks' do
       lock = create_exclusive_lock(0)
 
