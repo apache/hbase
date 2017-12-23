@@ -566,10 +566,16 @@
       <email>zjushch@apache.org</email>
       <timezone>+8</timezone>
     </developer>
-     <developer>
+    <developer>
       <id>churro</id>
       <name>Rahul Gidwani</name>
       <email>churro@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>yiliang</id>
+      <name>Yi Liang</name>
+      <email>yiliang@apache.org</email>
       <timezone>-8</timezone>
     </developer>
   </developers>
