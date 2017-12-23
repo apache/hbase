@@ -36,7 +36,7 @@ public interface MetricsThriftServerSource extends ExceptionTrackingSource, JvmP
 
   /**
    * Add how long an operation was in the queue.
-   * @param time
+   * @param time the time to add
    */
   void incTimeInQueue(long time);
 

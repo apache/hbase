@@ -65,7 +65,8 @@ public interface MetricsMasterSource extends BaseSource {
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
-  String MASTER_FINISHED_INITIALIZATION_TIME_DESC = "Timestamp when Master has finished initializing";
+  String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
+          "Timestamp when Master has finished initializing";
   String AVERAGE_LOAD_DESC = "AverageLoad";
   String LIVE_REGION_SERVERS_DESC = "Names of live RegionServers";
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";

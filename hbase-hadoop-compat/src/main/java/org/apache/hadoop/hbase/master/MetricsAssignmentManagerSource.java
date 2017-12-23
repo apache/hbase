@@ -52,7 +52,8 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_COUNT_DESC = "Current number of Regions In Transition (Gauge).";
   String RIT_COUNT_OVER_THRESHOLD_DESC =
       "Current number of Regions In Transition over threshold time (Gauge).";
-  String RIT_OLDEST_AGE_DESC = "Timestamp in milliseconds of the oldest Region In Transition (Gauge).";
+  String RIT_OLDEST_AGE_DESC =
+      "Timestamp in milliseconds of the oldest Region In Transition (Gauge).";
   String RIT_DURATION_DESC =
       "Total durations in milliseconds for all Regions in Transition (Histogram).";
 

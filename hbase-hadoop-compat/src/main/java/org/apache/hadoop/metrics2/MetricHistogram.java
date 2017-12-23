@@ -40,7 +40,7 @@ public interface MetricHistogram {
 
   /**
    * Add a single value to a histogram's stream of values.
-   * @param value
+   * @param value the value to add
    */
   void add(long value);
 

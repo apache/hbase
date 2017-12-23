@@ -118,26 +118,28 @@ public interface MetricsRegionWrapper {
   long getNumCompactionsFailed();
 
   /**
-   * @return the total number of compactions that are currently queued(or being executed) at point in
-   *  time
+   * @return the total number of compactions that are currently queued(or being executed) at point
+   *         in time
    */
   long getNumCompactionsQueued();
 
   /**
-   * @return the total number of flushes currently queued(being executed) for this region at point in
-   *  time
+   * @return the total number of flushes currently queued(being executed) for this region at point
+   *         in time
    */
   long getNumFlushesQueued();
 
   /**
+   * Note that this metric is updated periodically and hence might miss some data points.
+   *
    * @return the max number of compactions queued for this region
-   * Note that this metric is updated periodically and hence might miss some data points
    */
   long getMaxCompactionQueueSize();
 
   /**
+   * Note that this metric is updated periodically and hence might miss some data points.
+   *
    * @return the max number of flushes queued for this region
-   * Note that this metric is updated periodically and hence might miss some data points
    */
   long getMaxFlushQueueSize();
 

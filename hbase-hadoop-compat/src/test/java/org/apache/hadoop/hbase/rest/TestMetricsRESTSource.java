@@ -19,9 +19,8 @@
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.rest.MetricsRESTSource;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -30,12 +29,9 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRESTSource {
-
-
   @Test(expected=RuntimeException.class)
   public void testGetInstanceNoHadoopCompat() throws Exception {
     //This should throw an exception because there is no compat lib on the class path.
     CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class);
   }
-
 }

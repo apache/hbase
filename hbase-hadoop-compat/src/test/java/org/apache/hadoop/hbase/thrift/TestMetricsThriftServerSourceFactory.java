@@ -19,9 +19,8 @@
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
-import org.apache.hadoop.hbase.thrift.MetricsThriftServerSourceFactory;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

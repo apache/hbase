@@ -123,7 +123,8 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   // Counters
   String DO_NOTHING_COUNTER_NAME = "tunerDoNothingCounter";
   String DO_NOTHING_COUNTER_DESC =
-      "The number of times that tuner neither expands memstore global size limit nor expands blockcache max size";
+      "The number of times that tuner neither expands memstore global size limit nor expands " +
+              "blockcache max size";
   String ABOVE_HEAP_LOW_WATERMARK_COUNTER_NAME = "aboveHeapOccupancyLowWaterMarkCounter";
   String ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC =
       "The number of times that heap occupancy percent is above low watermark";
