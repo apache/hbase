@@ -93,7 +93,10 @@ public final class ForeignExceptionUtil {
     GenericExceptionMessage payload = gemBuilder.build();
     ForeignExceptionMessage.Builder exception = ForeignExceptionMessage.newBuilder();
     exception.setGenericException(payload);
-    if (source != null) exception.setSource(source);
+    if (source != null) {
+      exception.setSource(source);
+    }
+
     return exception.build();
   }
 
@@ -104,7 +107,10 @@ public final class ForeignExceptionUtil {
    */
   public static List<StackTraceElementMessage> toProtoStackTraceElement(StackTraceElement[] trace) {
     // if there is no stack trace, ignore it and just return the message
-    if (trace == null) return null;
+    if (trace == null) {
+      return null;
+    }
+
     // build the stack trace for the message
     List<StackTraceElementMessage> pbTrace = new ArrayList<>(trace.length);
     for (StackTraceElement elem : trace) {
