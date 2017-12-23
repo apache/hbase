@@ -50,7 +50,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * If this is enabled, a replication peer named "region_replica_replication" will be created
    * which will tail the logs and replicate the mutatations to region replicas for tables that
    * have region replication &gt; 1. If this is enabled once, disabling this replication also
-   * requires disabling the replication peer using shell or ReplicationAdmin java class.
+   * requires disabling the replication peer using shell or {@link Admin} java class.
    * Replication to secondary region replicas works over standard inter-cluster replication.·
    */
   public static final String REGION_REPLICA_REPLICATION_CONF_KEY

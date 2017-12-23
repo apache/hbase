@@ -2521,7 +2521,7 @@ Committing writes in the same order as in primary ensures that the secondaries w
 Async WAL Replication is *disabled* by default. You can enable this feature by setting `hbase.region.replica.replication.enabled` to `true`.
 Asyn WAL Replication feature will add a new replication peer named `region_replica_replication` as a replication peer when you create a table with region replication > 1 for the first time. Once enabled, if you want to disable this feature, you need to do two actions:
 * Set configuration property `hbase.region.replica.replication.enabled` to false in `hbase-site.xml` (see Configuration section below)
-* Disable the replication peer named `region_replica_replication` in the cluster using hbase shell or `ReplicationAdmin` class:
+* Disable the replication peer named `region_replica_replication` in the cluster using hbase shell or `Admin` class:
 [source,bourne]
 ----
 	hbase> disable_peer 'region_replica_replication'
@@ -2574,7 +2574,7 @@ Instead you can change the number of region replicas per table to increase or de
     <name>hbase.region.replica.replication.enabled</name>
     <value>true</value>
     <description>
-      Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If this is enabled, a replication peer named "region_replica_replication" will be created which will tail the logs and replicate the mutations to region replicas for tables that have region replication > 1. If this is enabled once, disabling this replication also      requires disabling the replication peer using shell or ReplicationAdmin java class. Replication to secondary region replicas works over standard inter-cluster replication.
+      Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If this is enabled, a replication peer named "region_replica_replication" will be created which will tail the logs and replicate the mutations to region replicas for tables that have region replication > 1. If this is enabled once, disabling this replication also requires disabling the replication peer using shell or Admin java class. Replication to secondary region replicas works over standard inter-cluster replication.
     </description>
 </property>
 <property>
