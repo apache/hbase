@@ -16,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.metrics.impl;
 
 import static org.junit.Assert.assertEquals;
@@ -135,7 +133,7 @@ public class TestRefCountingMap {
     Set<String> keys = map.keySet();
     assertEquals(3, keys.size());
 
-    Lists.newArrayList("foo", "bar", "baz").stream().forEach( v -> assertTrue(keys.contains(v)));
+    Lists.newArrayList("foo", "bar", "baz").stream().forEach(v -> assertTrue(keys.contains(v)));
   }
 
   @Test
@@ -148,7 +146,7 @@ public class TestRefCountingMap {
     Collection<String> values = map.values();
     assertEquals(3, values.size());
 
-    Lists.newArrayList("foovalue", "foovalue3", "foovalue4").stream().forEach(
-        v -> assertTrue(values.contains(v)));
+    Lists.newArrayList("foovalue", "foovalue3", "foovalue4").stream()
+            .forEach(v -> assertTrue(values.contains(v)));
   }
 }

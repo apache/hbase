@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.metrics.impl;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Timer;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Custom implementation of {@link Timer}.
