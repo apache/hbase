@@ -16,14 +16,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.metrics.impl;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryFactory;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricRegistryFactoryImpl implements MetricRegistryFactory {
