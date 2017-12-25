@@ -31,21 +31,16 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 @InterfaceAudience.Private
 public class ReplicationFactory {
 
-  public static final Class defaultReplicationQueueClass = ReplicationQueuesZKImpl.class;
-
   public static ReplicationQueues getReplicationQueues(ReplicationQueuesArguments args)
       throws Exception {
-    Class<?> classToBuild = args.getConf().getClass("hbase.region.replica." +
-        "replication.replicationQueues.class", defaultReplicationQueueClass);
-    return (ReplicationQueues) ConstructorUtils.invokeConstructor(classToBuild, args);
+    return (ReplicationQueues) ConstructorUtils.invokeConstructor(ReplicationQueuesZKImpl.class,
+      args);
   }
 
-  public static ReplicationQueuesClient getReplicationQueuesClient(
-      ReplicationQueuesClientArguments args) throws Exception {
-    Class<?> classToBuild = args.getConf().getClass(
-      "hbase.region.replica.replication.replicationQueuesClient.class",
-      ReplicationQueuesClientZKImpl.class);
-    return (ReplicationQueuesClient) ConstructorUtils.invokeConstructor(classToBuild, args);
+  public static ReplicationQueuesClient
+      getReplicationQueuesClient(ReplicationQueuesClientArguments args) throws Exception {
+    return (ReplicationQueuesClient) ConstructorUtils
+        .invokeConstructor(ReplicationQueuesClientZKImpl.class, args);
   }
 
   public static ReplicationPeers getReplicationPeers(final ZKWatcher zk, Configuration conf,
