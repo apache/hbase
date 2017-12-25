@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
@@ -121,39 +122,39 @@ public class TestReplicationAdmin {
    */
   @Test
   public void testAddRemovePeer() throws Exception {
-    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    ReplicationPeerConfigBuilder rpc1 = ReplicationPeerConfig.newBuilder();
     rpc1.setClusterKey(KEY_ONE);
-    ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
+    ReplicationPeerConfigBuilder rpc2 = ReplicationPeerConfig.newBuilder();
     rpc2.setClusterKey(KEY_SECOND);
     // Add a valid peer
-    admin.addPeer(ID_ONE, rpc1, null);
+    hbaseAdmin.addReplicationPeer(ID_ONE, rpc1.build());
     // try adding the same (fails)
     try {
-      admin.addPeer(ID_ONE, rpc1, null);
+      hbaseAdmin.addReplicationPeer(ID_ONE, rpc1.build());
     } catch (Exception e) {
       // OK!
     }
-    assertEquals(1, admin.getPeersCount());
+    assertEquals(1, hbaseAdmin.listReplicationPeers().size());
     // Try to remove an inexisting peer
     try {
-      admin.removePeer(ID_SECOND);
+      hbaseAdmin.removeReplicationPeer(ID_SECOND);
       fail();
-    } catch (Exception iae) {
+    } catch (Exception e) {
       // OK!
     }
-    assertEquals(1, admin.getPeersCount());
+    assertEquals(1, hbaseAdmin.listReplicationPeers().size());
     // Add a second since multi-slave is supported
     try {
-      admin.addPeer(ID_SECOND, rpc2, null);
-    } catch (Exception iae) {
+      hbaseAdmin.addReplicationPeer(ID_SECOND, rpc2.build());
+    } catch (Exception e) {
       fail();
     }
-    assertEquals(2, admin.getPeersCount());
+    assertEquals(2, hbaseAdmin.listReplicationPeers().size());
     // Remove the first peer we added
-    admin.removePeer(ID_ONE);
-    assertEquals(1, admin.getPeersCount());
-    admin.removePeer(ID_SECOND);
-    assertEquals(0, admin.getPeersCount());
+    hbaseAdmin.removeReplicationPeer(ID_ONE);
+    assertEquals(1, hbaseAdmin.listReplicationPeers().size());
+    hbaseAdmin.removeReplicationPeer(ID_SECOND);
+    assertEquals(0, hbaseAdmin.listReplicationPeers().size());
   }
 
   @Test

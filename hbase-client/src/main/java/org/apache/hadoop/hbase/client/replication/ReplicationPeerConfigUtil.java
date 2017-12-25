@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -277,17 +276,13 @@ public final class ReplicationPeerConfigUtil {
       builder.setReplicationEndpointImpl(peer.getReplicationEndpointImpl());
     }
 
-    Map<byte[], byte[]> peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (HBaseProtos.BytesBytesPair pair : peer.getDataList()) {
-      peerData.put(pair.getFirst().toByteArray(), pair.getSecond().toByteArray());
+      builder.putPeerData(pair.getFirst().toByteArray(), pair.getSecond().toByteArray());
     }
-    builder.setPeerData(peerData);
 
-    Map<String, String> configuration = new HashMap<>();
     for (HBaseProtos.NameStringPair pair : peer.getConfigurationList()) {
-      configuration.put(pair.getName(), pair.getValue());
+      builder.putConfiguration(pair.getName(), pair.getValue());
     }
-    builder.setConfiguration(configuration);
 
     Map<TableName, List<String>> tableCFsMap = convert2Map(
       peer.getTableCfsList().toArray(new ReplicationProtos.TableCF[peer.getTableCfsCount()]));

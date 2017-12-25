@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.replication;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -363,17 +361,11 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
           + existingConfig.getReplicationEndpointImpl()
           + "' does not match new class '" + newConfig.getReplicationEndpointImpl() + "'");
     }
-    //Update existingConfig's peer config and peer data with the new values, but don't touch config
+    // Update existingConfig's peer config and peer data with the new values, but don't touch config
     // or data that weren't explicitly changed
     ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder(newConfig);
-    Map<byte[], byte[]> peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    existingConfig.getPeerData().forEach(peerData::put);
-    newConfig.getPeerData().forEach(peerData::put);
-    builder.setPeerData(peerData);
-    Map<String, String> configuration = new HashMap<>();
-    existingConfig.getConfiguration().forEach(configuration::put);
-    newConfig.getConfiguration().forEach(configuration::put);
-    builder.setConfiguration(configuration);
+    builder.putAllConfiguration(existingConfig.getConfiguration());
+    builder.putAllPeerData(existingConfig.getPeerData());
 
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),

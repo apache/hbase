@@ -219,7 +219,7 @@ public class ReplicationPeerConfig {
     ReplicationPeerConfigBuilderImpl builder = new ReplicationPeerConfigBuilderImpl();
     builder.setClusterKey(peerConfig.getClusterKey())
         .setReplicationEndpointImpl(peerConfig.getReplicationEndpointImpl())
-        .setPeerData(peerConfig.getPeerData()).setConfiguration(peerConfig.getConfiguration())
+        .putAllPeerData(peerConfig.getPeerData()).putAllConfiguration(peerConfig.getConfiguration())
         .setTableCFsMap(peerConfig.getTableCFsMap()).setNamespaces(peerConfig.getNamespaces())
         .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
         .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
@@ -264,14 +264,14 @@ public class ReplicationPeerConfig {
     }
 
     @Override
-    public ReplicationPeerConfigBuilder setPeerData(Map<byte[], byte[]> peerData) {
-      this.peerData = peerData;
+    public ReplicationPeerConfigBuilder putConfiguration(String key, String value) {
+      this.configuration.put(key, value);
       return this;
     }
 
     @Override
-    public ReplicationPeerConfigBuilder setConfiguration(Map<String, String> configuration) {
-      this.configuration = configuration;
+    public ReplicationPeerConfigBuilder putPeerData(byte[] key, byte[] value) {
+      this.peerData.put(key, value);
       return this;
     }
 
