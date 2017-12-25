@@ -28,11 +28,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -90,7 +90,7 @@ public class KeyValueUtil {
   public static int totalLengthWithMvccVersion(final Iterable<? extends KeyValue> kvs,
       final boolean includeMvccVersion) {
     int length = 0;
-    for (KeyValue kv : IterableUtils.nullSafe(kvs)) {
+    for (KeyValue kv : IterableUtils.emptyIfNull(kvs)) {
       length += lengthWithMvccVersion(kv, includeMvccVersion);
     }
     return length;

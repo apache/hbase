@@ -30,8 +30,10 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -47,7 +49,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 import com.google.protobuf.ByteString;
 
@@ -2339,21 +2340,24 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   public static boolean isSorted(Collection<byte[]> arrays) {
-    byte[] previous = new byte[0];
-    for (byte[] array : IterableUtils.nullSafe(arrays)) {
-      if (Bytes.compareTo(previous, array) > 0) {
-        return false;
+    if (!CollectionUtils.isEmpty(arrays)) {
+      byte[] previous = new byte[0];
+      for (byte[] array : arrays) {
+        if (Bytes.compareTo(previous, array) > 0) {
+          return false;
+        }
+        previous = array;
       }
-      previous = array;
     }
     return true;
   }
 
   public static List<byte[]> getUtf8ByteArrays(List<String> strings) {
-    List<byte[]> byteArrays = Lists.newArrayListWithCapacity(CollectionUtils.nullSafeSize(strings));
-    for (String s : IterableUtils.nullSafe(strings)) {
-      byteArrays.add(Bytes.toBytes(s));
+    if (CollectionUtils.isEmpty(strings)) {
+      return Collections.emptyList();
     }
+    List<byte[]> byteArrays = new ArrayList<>(strings.size());
+    strings.forEach(s -> byteArrays.add(Bytes.toBytes(s)));
     return byteArrays;
   }
 

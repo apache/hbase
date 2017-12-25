@@ -22,11 +22,10 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
@@ -64,7 +63,7 @@ public class KeyValueTestUtil {
       boolean includeMemstoreTS) {
     int totalBytes = KeyValueUtil.totalLengthWithMvccVersion(kvs, includeMemstoreTS);
     ByteBuffer bb = ByteBuffer.allocate(totalBytes);
-    for (KeyValue kv : IterableUtils.nullSafe(kvs)) {
+    for (KeyValue kv : IterableUtils.emptyIfNull(kvs)) {
       KeyValueUtil.appendToByteBuffer(bb, kv, includeMemstoreTS);
     }
     bb.rewind();
