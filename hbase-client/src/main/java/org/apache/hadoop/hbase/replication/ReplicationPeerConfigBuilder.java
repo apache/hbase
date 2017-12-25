@@ -43,9 +43,19 @@ public interface ReplicationPeerConfigBuilder {
    */
   ReplicationPeerConfigBuilder setReplicationEndpointImpl(String replicationEndpointImpl);
 
-  ReplicationPeerConfigBuilder setPeerData(Map<byte[], byte[]> peerData);
+  ReplicationPeerConfigBuilder putConfiguration(String key, String value);
 
-  ReplicationPeerConfigBuilder setConfiguration(Map<String, String> configuration);
+  default ReplicationPeerConfigBuilder putAllConfiguration(Map<String, String> configuration) {
+    configuration.forEach(this::putConfiguration);
+    return this;
+  }
+
+  ReplicationPeerConfigBuilder putPeerData(byte[] key, byte[] value);
+
+  default ReplicationPeerConfigBuilder putAllPeerData(Map<byte[], byte[]> peerData) {
+    peerData.forEach(this::putPeerData);
+    return this;
+  }
 
   ReplicationPeerConfigBuilder
       setTableCFsMap(Map<TableName, List<String>> tableCFsMap);
