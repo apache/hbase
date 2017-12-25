@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockType;
 import org.apache.hadoop.hbase.procedure2.LockedResource;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
@@ -1153,35 +1154,28 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
-
-      Procedure<?> result = master.getMasterProcedureExecutor()
-          .getResultOrProcedure(request.getProcId());
-      if (result == null) {
-        builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
-      } else {
-        boolean remove = false;
-
-        if (result.isFinished() || result.isFailed()) {
+      long procId = request.getProcId();
+      ProcedureExecutor<?> executor = master.getMasterProcedureExecutor();
+      Procedure<?> result = executor.getResultOrProcedure(procId);
+      if (result != null) {
+        builder.setSubmittedTime(result.getSubmittedTime());
+        builder.setLastUpdate(result.getLastUpdate());
+        if (executor.isFinished(procId)) {
           builder.setState(GetProcedureResultResponse.State.FINISHED);
-          remove = true;
+          if (result.isFailed()) {
+            IOException exception = result.getException().unwrapRemoteIOException();
+            builder.setException(ForeignExceptionUtil.toProtoForeignException(exception));
+          }
+          byte[] resultData = result.getResult();
+          if (resultData != null) {
+            builder.setResult(UnsafeByteOperations.unsafeWrap(resultData));
+          }
+          master.getMasterProcedureExecutor().removeResult(request.getProcId());
         } else {
           builder.setState(GetProcedureResultResponse.State.RUNNING);
         }
-
-        builder.setSubmittedTime(result.getSubmittedTime());
-        builder.setLastUpdate(result.getLastUpdate());
-        if (result.isFailed()) {
-          IOException exception = result.getException().unwrapRemoteIOException();
-          builder.setException(ForeignExceptionUtil.toProtoForeignException(exception));
-        }
-        byte[] resultData = result.getResult();
-        if (resultData != null) {
-          builder.setResult(UnsafeByteOperations.unsafeWrap(resultData));
-        }
-
-        if (remove) {
-          master.getMasterProcedureExecutor().removeResult(request.getProcId());
-        }
+      } else {
+        builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
       }
       return builder.build();
     } catch (IOException e) {
