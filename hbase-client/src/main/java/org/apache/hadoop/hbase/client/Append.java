@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Performs Append operations on a single row.
@@ -44,6 +46,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class Append extends Mutation {
+  private static final Logger LOG = LoggerFactory.getLogger(Append.class);
   private static final long HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
   private TimeRange tr = new TimeRange();
 
@@ -176,14 +179,12 @@ public class Append extends Mutation {
    */
   @SuppressWarnings("unchecked")
   public Append add(final Cell cell) {
-    // Presume it is KeyValue for now.
-    byte [] family = CellUtil.cloneFamily(cell);
-
-    // Get cell list for the family
-    List<Cell> list = getCellList(family);
-
-    // find where the new entry should be placed in the List
-    list.add(cell);
+    try {
+      super.add(cell);
+    } catch (IOException e) {
+      // we eat the exception of wrong row for BC..
+      LOG.error(e.toString(), e);
+    }
     return this;
   }
 

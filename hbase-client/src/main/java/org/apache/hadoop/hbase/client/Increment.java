@@ -98,14 +98,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @throws java.io.IOException e
    */
   public Increment add(Cell cell) throws IOException{
-    byte [] family = CellUtil.cloneFamily(cell);
-    List<Cell> list = getCellList(family);
-    //Checking that the row of the kv is the same as the put
-    if (!CellUtil.matchingRows(cell, this.row)) {
-      throw new WrongRowIOException("The row in " + cell +
-        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
-    }
-    list.add(cell);
+    super.add(cell);
     return this;
   }
 
