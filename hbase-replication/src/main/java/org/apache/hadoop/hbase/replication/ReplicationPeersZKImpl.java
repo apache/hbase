@@ -363,9 +363,14 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
     // Update existingConfig's peer config and peer data with the new values, but don't touch config
     // or data that weren't explicitly changed
-    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder(newConfig);
-    builder.putAllConfiguration(existingConfig.getConfiguration());
-    builder.putAllPeerData(existingConfig.getPeerData());
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder(existingConfig);
+    builder.putAllConfiguration(newConfig.getConfiguration())
+        .putAllPeerData(newConfig.getPeerData())
+        .setReplicateAllUserTables(newConfig.replicateAllUserTables())
+        .setNamespaces(newConfig.getNamespaces()).setTableCFsMap(newConfig.getTableCFsMap())
+        .setExcludeNamespaces(newConfig.getExcludeNamespaces())
+        .setExcludeTableCFsMap(newConfig.getExcludeTableCFsMap())
+        .setBandwidth(newConfig.getBandwidth());
 
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),
