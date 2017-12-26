@@ -22,8 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +42,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -73,10 +72,6 @@ public class TestReplicationTrackerZKImpl {
   private ReplicationTracker rt;
   private AtomicInteger rsRemovedCount;
   private String rsRemovedData;
-  private AtomicInteger plChangedCount;
-  private List<String> plChangedData;
-  private AtomicInteger peerRemovedCount;
-  private String peerRemovedData;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -93,7 +88,7 @@ public class TestReplicationTrackerZKImpl {
     String fakeRs1 = ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname1.example.org:1234");
     try {
       ZKClusterId.setClusterId(zkw, new ClusterId());
-      rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
+      rp = ReplicationFactory.getReplicationPeers(zkw, conf);
       rp.init();
       rt = ReplicationFactory.getReplicationTracker(zkw, rp, conf, zkw, new DummyServer(fakeRs1));
     } catch (Exception e) {
@@ -101,10 +96,6 @@ public class TestReplicationTrackerZKImpl {
     }
     rsRemovedCount = new AtomicInteger(0);
     rsRemovedData = "";
-    plChangedCount = new AtomicInteger(0);
-    plChangedData = new ArrayList<>();
-    peerRemovedCount = new AtomicInteger(0);
-    peerRemovedData = "";
   }
 
   @AfterClass
@@ -157,25 +148,22 @@ public class TestReplicationTrackerZKImpl {
   @Test(timeout = 30000)
   public void testPeerNameControl() throws Exception {
     int exists = 0;
-    int hyphen = 0;
-    rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
+    rp.getPeerStorage().addPeer("6",
+      ReplicationPeerConfig.newBuilder().setClusterKey(utility.getClusterKey()).build(), true);
 
-    try{
-      rp.registerPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    }catch(IllegalArgumentException e){
-      exists++;
+    try {
+      rp.getPeerStorage().addPeer("6",
+        ReplicationPeerConfig.newBuilder().setClusterKey(utility.getClusterKey()).build(), true);
+    } catch (ReplicationException e) {
+      if (e.getCause() instanceof KeeperException.NodeExistsException) {
+        exists++;
+      }
     }
 
-    try{
-      rp.registerPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
-    }catch(IllegalArgumentException e){
-      hyphen++;
-    }
     assertEquals(1, exists);
-    assertEquals(1, hyphen);
 
     // clean up
-    rp.unregisterPeer("6");
+    rp.getPeerStorage().removePeer("6");
   }
 
   private class DummyReplicationListener implements ReplicationListener {

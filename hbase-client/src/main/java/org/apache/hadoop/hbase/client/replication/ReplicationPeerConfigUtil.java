@@ -247,22 +247,22 @@ public final class ReplicationPeerConfigUtil {
   public static ReplicationPeerConfig parsePeerFrom(final byte[] bytes)
       throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
+      int pbLen = ProtobufUtil.lengthOfPBMagic();
       ReplicationProtos.ReplicationPeer.Builder builder =
           ReplicationProtos.ReplicationPeer.newBuilder();
       ReplicationProtos.ReplicationPeer peer;
       try {
-        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+        ProtobufUtil.mergeFrom(builder, bytes, pbLen, bytes.length - pbLen);
         peer = builder.build();
       } catch (IOException e) {
         throw new DeserializationException(e);
       }
       return convert(peer);
     } else {
-      if (bytes.length > 0) {
-        return ReplicationPeerConfig.newBuilder().setClusterKey(Bytes.toString(bytes)).build();
+      if (bytes == null || bytes.length <= 0) {
+        throw new DeserializationException("Bytes to deserialize should not be empty.");
       }
-      return ReplicationPeerConfig.newBuilder().setClusterKey("").build();
+      return ReplicationPeerConfig.newBuilder().setClusterKey(Bytes.toString(bytes)).build();
     }
   }
 

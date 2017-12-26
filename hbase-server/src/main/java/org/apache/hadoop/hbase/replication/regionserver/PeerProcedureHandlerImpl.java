@@ -19,9 +19,10 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
+import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,8 @@ import org.slf4j.LoggerFactory;
 public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
   private static final Logger LOG = LoggerFactory.getLogger(PeerProcedureHandlerImpl.class);
 
-  private ReplicationSourceManager replicationSourceManager;
+  private final ReplicationSourceManager replicationSourceManager;
+  private final ReentrantLock peersLock = new ReentrantLock();
 
   public PeerProcedureHandlerImpl(ReplicationSourceManager replicationSourceManager) {
     this.replicationSourceManager = replicationSourceManager;
@@ -38,45 +40,40 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
 
   @Override
   public void addPeer(String peerId) throws ReplicationException, IOException {
-    replicationSourceManager.addPeer(peerId);
+    peersLock.lock();
+    try {
+      replicationSourceManager.addPeer(peerId);
+    } finally {
+      peersLock.unlock();
+    }
   }
 
   @Override
   public void removePeer(String peerId) throws ReplicationException, IOException {
-    replicationSourceManager.removePeer(peerId);
+    peersLock.lock();
+    try {
+      if (replicationSourceManager.getReplicationPeers().getPeer(peerId) != null) {
+        replicationSourceManager.removePeer(peerId);
+      }
+    } finally {
+      peersLock.unlock();
+    }
   }
 
   @Override
   public void disablePeer(String peerId) throws ReplicationException, IOException {
-    ReplicationPeerImpl peer =
-        replicationSourceManager.getReplicationPeers().getConnectedPeer(peerId);
-    if (peer != null) {
-      peer.refreshPeerState();
-      LOG.info("disable replication peer, id: " + peerId + ", new state: " + peer.getPeerState());
-    } else {
-      throw new ReplicationException("No connected peer found, peerId=" + peerId);
-    }
+    PeerState newState = replicationSourceManager.getReplicationPeers().refreshPeerState(peerId);
+    LOG.info("disable replication peer, id: " + peerId + ", new state: " + newState);
   }
 
   @Override
   public void enablePeer(String peerId) throws ReplicationException, IOException {
-    ReplicationPeerImpl peer =
-        replicationSourceManager.getReplicationPeers().getConnectedPeer(peerId);
-    if (peer != null) {
-      peer.refreshPeerState();
-      LOG.info("enable replication peer, id: " + peerId + ", new state: " + peer.getPeerState());
-    } else {
-      throw new ReplicationException("No connected peer found, peerId=" + peerId);
-    }
+    PeerState newState = replicationSourceManager.getReplicationPeers().refreshPeerState(peerId);
+    LOG.info("enable replication peer, id: " + peerId + ", new state: " + newState);
   }
 
   @Override
   public void updatePeerConfig(String peerId) throws ReplicationException, IOException {
-    ReplicationPeerImpl peer =
-        replicationSourceManager.getReplicationPeers().getConnectedPeer(peerId);
-    if (peer == null) {
-      throw new ReplicationException("No connected peer found, peerId=" + peerId);
-    }
-    peer.refreshPeerConfig();
+    replicationSourceManager.getReplicationPeers().refreshPeerConfig(peerId);
   }
 }
