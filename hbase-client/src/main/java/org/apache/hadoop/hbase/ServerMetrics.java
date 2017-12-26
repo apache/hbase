@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -73,9 +74,9 @@ public interface ServerMetrics {
 
   /**
    * Return the RegionServer-level and Region-level coprocessors
-   * @return string list of loaded RegionServer-level and Region-level coprocessors
+   * @return string set of loaded RegionServer-level and Region-level coprocessors
    */
-  List<String> getCoprocessorNames();
+  Set<String> getCoprocessorNames();
 
   /**
    * @return the timestamp (server side) of generating this metrics

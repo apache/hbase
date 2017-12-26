@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
@@ -403,7 +404,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   @Override
-  public List<String> getCoprocessorNames() {
+  public Set<String> getCoprocessorNames() {
     return metrics.getCoprocessorNames();
   }
 

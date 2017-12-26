@@ -73,7 +73,7 @@ public class TestCoprocessorTableEndpoint {
   }
 
   @Test
-  public void testCoprocessorTableEndpoint() throws Throwable {    
+  public void testCoprocessorTableEndpoint() throws Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
