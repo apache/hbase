@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
@@ -73,7 +76,7 @@ public final class ServerMetricsBuilder {
         .build();
   }
 
-  public static List<HBaseProtos.Coprocessor> toCoprocessor(List<String> names) {
+  public static List<HBaseProtos.Coprocessor> toCoprocessor(Collection<String> names) {
     return names.stream()
         .map(n -> HBaseProtos.Coprocessor.newBuilder().setName(n).build())
         .collect(Collectors.toList());
@@ -116,7 +119,7 @@ public final class ServerMetricsBuilder {
   @Nullable
   private ReplicationLoadSink sink = null;
   private final Map<byte[], RegionMetrics> regionStatus = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-  private List<String> coprocessorNames = Collections.emptyList();
+  private final Set<String> coprocessorNames = new TreeSet<>();
   private long reportTimestamp = System.currentTimeMillis();
   private long lastReportTimestamp = 0;
   private ServerMetricsBuilder(ServerName serverName) {
@@ -164,7 +167,7 @@ public final class ServerMetricsBuilder {
   }
 
   public ServerMetricsBuilder setCoprocessorNames(List<String> value) {
-    this.coprocessorNames = value;
+    coprocessorNames.addAll(value);
     return this;
   }
 
@@ -205,14 +208,14 @@ public final class ServerMetricsBuilder {
     @Nullable
     private final ReplicationLoadSink sink;
     private final Map<byte[], RegionMetrics> regionStatus;
-    private final List<String> coprocessorNames;
+    private final Set<String> coprocessorNames;
     private final long reportTimestamp;
     private final long lastReportTimestamp;
 
     ServerMetricsImpl(ServerName serverName, long requestCountPerSecond, long requestCount,
       Size usedHeapSize, Size maxHeapSize, int infoServerPort, List<ReplicationLoadSource> sources,
       ReplicationLoadSink sink, Map<byte[], RegionMetrics> regionStatus,
-      List<String> coprocessorNames, long reportTimestamp, long lastReportTimestamp) {
+      Set<String> coprocessorNames, long reportTimestamp, long lastReportTimestamp) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.requestCountPerSecond = requestCountPerSecond;
       this.requestCount = requestCount;
@@ -272,8 +275,8 @@ public final class ServerMetricsBuilder {
     }
 
     @Override
-    public List<String> getCoprocessorNames() {
-      return Collections.unmodifiableList(coprocessorNames);
+    public Set<String> getCoprocessorNames() {
+      return Collections.unmodifiableSet(coprocessorNames);
     }
 
     @Override
