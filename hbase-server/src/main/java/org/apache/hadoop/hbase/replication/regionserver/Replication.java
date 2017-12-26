@@ -107,7 +107,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       this.queueStorage =
           ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
       this.replicationPeers =
-          ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf, this.server);
+          ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
       this.replicationTracker =
           ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.replicationPeers,

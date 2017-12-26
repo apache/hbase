@@ -339,15 +339,10 @@ public class VerifyReplication extends Configured implements Tool {
             @Override public boolean isAborted() {return false;}
           });
 
-      ReplicationPeers rp = ReplicationFactory.getReplicationPeers(localZKW, conf, localZKW);
+      ReplicationPeers rp = ReplicationFactory.getReplicationPeers(localZKW, conf);
       rp.init();
 
-      Pair<ReplicationPeerConfig, Configuration> pair = rp.getPeerConf(peerId);
-      if (pair == null) {
-        throw new IOException("Couldn't get peer conf!");
-      }
-
-      return pair;
+      return Pair.newPair(rp.getPeerConfig(peerId), rp.getPeerClusterConfiguration(peerId));
     } catch (ReplicationException e) {
       throw new IOException(
           "An error occurred while trying to connect to the remove peer cluster", e);

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -143,14 +144,14 @@ public class TestZKReplicationPeerStorage {
     assertEquals(peerCount, peerIds.size());
     for (String peerId : peerIds) {
       int seed = Integer.parseInt(peerId);
-      assertConfigEquals(getConfig(seed), STORAGE.getPeerConfig(peerId).get());
+      assertConfigEquals(getConfig(seed), STORAGE.getPeerConfig(peerId));
     }
     for (int i = 0; i < peerCount; i++) {
       STORAGE.updatePeerConfig(Integer.toString(i), getConfig(i + 1));
     }
     for (String peerId : peerIds) {
       int seed = Integer.parseInt(peerId);
-      assertConfigEquals(getConfig(seed + 1), STORAGE.getPeerConfig(peerId).get());
+      assertConfigEquals(getConfig(seed + 1), STORAGE.getPeerConfig(peerId));
     }
     for (int i = 0; i < peerCount; i++) {
       assertEquals(i % 2 == 0, STORAGE.isPeerEnabled(Integer.toString(i)));
@@ -166,6 +167,11 @@ public class TestZKReplicationPeerStorage {
     peerIds = STORAGE.listPeerIds();
     assertEquals(peerCount - 1, peerIds.size());
     assertFalse(peerIds.contains(toRemove));
-    assertFalse(STORAGE.getPeerConfig(toRemove).isPresent());
+
+    try {
+      STORAGE.getPeerConfig(toRemove);
+      fail("Should throw a ReplicationException when get peer config of a peerId");
+    } catch (ReplicationException e) {
+    }
   }
 }

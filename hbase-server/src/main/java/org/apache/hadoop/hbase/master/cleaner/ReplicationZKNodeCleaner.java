@@ -30,8 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationFactory;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
+import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
@@ -51,20 +50,14 @@ import org.slf4j.LoggerFactory;
 public class ReplicationZKNodeCleaner {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationZKNodeCleaner.class);
   private final ReplicationQueueStorage queueStorage;
-  private final ReplicationPeers replicationPeers;
+  private final ReplicationPeerStorage peerStorage;
   private final ReplicationQueueDeletor queueDeletor;
 
   public ReplicationZKNodeCleaner(Configuration conf, ZKWatcher zkw, Abortable abortable)
       throws IOException {
-    try {
-      this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
-      this.replicationPeers =
-          ReplicationFactory.getReplicationPeers(zkw, conf, this.queueStorage, abortable);
-      this.replicationPeers.init();
-      this.queueDeletor = new ReplicationQueueDeletor(zkw, conf, abortable);
-    } catch (ReplicationException e) {
-      throw new IOException("failed to construct ReplicationZKNodeCleaner", e);
-    }
+    this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
+    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zkw, conf);
+    this.queueDeletor = new ReplicationQueueDeletor(zkw, conf, abortable);
   }
 
   /**
@@ -73,8 +66,8 @@ public class ReplicationZKNodeCleaner {
    */
   public Map<ServerName, List<String>> getUnDeletedQueues() throws IOException {
     Map<ServerName, List<String>> undeletedQueues = new HashMap<>();
-    Set<String> peerIds = new HashSet<>(this.replicationPeers.getAllPeerIds());
     try {
+      Set<String> peerIds = new HashSet<>(peerStorage.listPeerIds());
       List<ServerName> replicators = this.queueStorage.getListOfReplicators();
       if (replicators == null || replicators.isEmpty()) {
         return undeletedQueues;
@@ -84,8 +77,7 @@ public class ReplicationZKNodeCleaner {
         for (String queueId : queueIds) {
           ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
           if (!peerIds.contains(queueInfo.getPeerId())) {
-            undeletedQueues.computeIfAbsent(replicator, (key) -> new ArrayList<>()).add(
-              queueId);
+            undeletedQueues.computeIfAbsent(replicator, (key) -> new ArrayList<>()).add(queueId);
             if (LOG.isDebugEnabled()) {
               LOG.debug("Undeleted replication queue for removed peer found: "
                   + String.format("[removedPeerId=%s, replicator=%s, queueId=%s]",
@@ -106,9 +98,9 @@ public class ReplicationZKNodeCleaner {
    */
   public Set<String> getUnDeletedHFileRefsQueues() throws IOException {
     Set<String> undeletedHFileRefsQueue = new HashSet<>();
-    Set<String> peerIds = new HashSet<>(this.replicationPeers.getAllPeerIds());
     String hfileRefsZNode = queueDeletor.getHfileRefsZNode();
     try {
+      Set<String> peerIds = new HashSet<>(peerStorage.listPeerIds());
       List<String> listOfPeers = this.queueStorage.getAllPeersFromHFileRefsQueue();
       Set<String> peers = new HashSet<>(listOfPeers);
       peers.removeAll(peerIds);
@@ -116,15 +108,15 @@ public class ReplicationZKNodeCleaner {
         undeletedHFileRefsQueue.addAll(peers);
       }
     } catch (ReplicationException e) {
-      throw new IOException(
-          "Failed to get list of all peers from hfile-refs znode " + hfileRefsZNode, e);
+      throw new IOException("Failed to get list of all peers from hfile-refs znode "
+          + hfileRefsZNode, e);
     }
     return undeletedHFileRefsQueue;
   }
 
   private class ReplicationQueueDeletor extends ReplicationStateZKBase {
 
-    public ReplicationQueueDeletor(ZKWatcher zk, Configuration conf, Abortable abortable) {
+    ReplicationQueueDeletor(ZKWatcher zk, Configuration conf, Abortable abortable) {
       super(zk, conf, abortable);
     }
 
@@ -132,19 +124,20 @@ public class ReplicationZKNodeCleaner {
      * @param replicator The regionserver which has undeleted queue
      * @param queueId The undeleted queue id
      */
-    public void removeQueue(final ServerName replicator, final String queueId) throws IOException {
-      String queueZnodePath = ZNodePaths
-          .joinZNode(ZNodePaths.joinZNode(this.queuesZNode, replicator.getServerName()), queueId);
+    void removeQueue(final ServerName replicator, final String queueId) throws IOException {
+      String queueZnodePath =
+          ZNodePaths.joinZNode(ZNodePaths.joinZNode(this.queuesZNode, replicator.getServerName()),
+            queueId);
       try {
         ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (!replicationPeers.getAllPeerIds().contains(queueInfo.getPeerId())) {
+        if (!peerStorage.listPeerIds().contains(queueInfo.getPeerId())) {
           ZKUtil.deleteNodeRecursively(this.zookeeper, queueZnodePath);
-          LOG.info("Successfully removed replication queue, replicator: " + replicator +
-            ", queueId: " + queueId);
+          LOG.info("Successfully removed replication queue, replicator: " + replicator
+              + ", queueId: " + queueId);
         }
-      } catch (KeeperException e) {
-        throw new IOException(
-            "Failed to delete queue, replicator: " + replicator + ", queueId: " + queueId);
+      } catch (ReplicationException | KeeperException e) {
+        throw new IOException("Failed to delete queue, replicator: " + replicator + ", queueId: "
+            + queueId);
       }
     }
 
@@ -152,17 +145,17 @@ public class ReplicationZKNodeCleaner {
      * @param hfileRefsQueueId The undeleted hfile-refs queue id
      * @throws IOException
      */
-    public void removeHFileRefsQueue(final String hfileRefsQueueId) throws IOException {
+    void removeHFileRefsQueue(final String hfileRefsQueueId) throws IOException {
       String node = ZNodePaths.joinZNode(this.hfileRefsZNode, hfileRefsQueueId);
       try {
-        if (!replicationPeers.getAllPeerIds().contains(hfileRefsQueueId)) {
+        if (!peerStorage.listPeerIds().contains(hfileRefsQueueId)) {
           ZKUtil.deleteNodeRecursively(this.zookeeper, node);
           LOG.info("Successfully removed hfile-refs queue " + hfileRefsQueueId + " from path "
               + hfileRefsZNode);
         }
-      } catch (KeeperException e) {
+      } catch (ReplicationException | KeeperException e) {
         throw new IOException("Failed to delete hfile-refs queue " + hfileRefsQueueId
-            + " from path " + hfileRefsZNode);
+            + " from path " + hfileRefsZNode, e);
       }
     }
 

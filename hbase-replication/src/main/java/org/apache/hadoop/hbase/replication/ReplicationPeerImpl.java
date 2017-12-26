@@ -18,28 +18,16 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
 @InterfaceAudience.Private
 public class ReplicationPeerImpl implements ReplicationPeer {
-  private static final Logger LOG = LoggerFactory.getLogger(ReplicationPeerImpl.class);
-
-  private final ReplicationPeerStorage peerStorage;
-
   private final Configuration conf;
 
   private final String id;
@@ -57,21 +45,21 @@ public class ReplicationPeerImpl implements ReplicationPeer {
    * @param id string representation of this peer's identifier
    * @param peerConfig configuration for the replication peer
    */
-  public ReplicationPeerImpl(ZKWatcher zkWatcher, Configuration conf, String id,
+  public ReplicationPeerImpl(Configuration conf, String id, boolean peerState,
       ReplicationPeerConfig peerConfig) {
-    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zkWatcher, conf);
     this.conf = conf;
-    this.peerConfig = peerConfig;
     this.id = id;
+    this.peerState = peerState ? PeerState.ENABLED : PeerState.DISABLED;
+    this.peerConfig = peerConfig;
     this.peerConfigListeners = new ArrayList<>();
   }
 
-  public void refreshPeerState() throws ReplicationException {
-    this.peerState = peerStorage.isPeerEnabled(id) ? PeerState.ENABLED : PeerState.DISABLED;
+  void setPeerState(boolean enabled) {
+    this.peerState = enabled ? PeerState.ENABLED : PeerState.DISABLED;
   }
 
-  public void refreshPeerConfig() throws ReplicationException {
-    this.peerConfig = peerStorage.getPeerConfig(id).orElse(peerConfig);
+  void setPeerConfig(ReplicationPeerConfig peerConfig) {
+    this.peerConfig = peerConfig;
     peerConfigListeners.forEach(listener -> listener.peerConfigUpdated(peerConfig));
   }
 
@@ -133,37 +121,5 @@ public class ReplicationPeerImpl implements ReplicationPeer {
   @Override
   public void registerPeerConfigListener(ReplicationPeerConfigListener listener) {
     this.peerConfigListeners.add(listener);
-  }
-
-  /**
-   * Parse the raw data from ZK to get a peer's state
-   * @param bytes raw ZK data
-   * @return True if the passed in <code>bytes</code> are those of a pb serialized ENABLED state.
-   * @throws DeserializationException
-   */
-  public static boolean isStateEnabled(final byte[] bytes) throws DeserializationException {
-    ReplicationProtos.ReplicationState.State state = parseStateFrom(bytes);
-    return ReplicationProtos.ReplicationState.State.ENABLED == state;
-  }
-
-  /**
-   * @param bytes Content of a state znode.
-   * @return State parsed from the passed bytes.
-   * @throws DeserializationException
-   */
-  private static ReplicationProtos.ReplicationState.State parseStateFrom(final byte[] bytes)
-      throws DeserializationException {
-    ProtobufUtil.expectPBMagicPrefix(bytes);
-    int pbLen = ProtobufUtil.lengthOfPBMagic();
-    ReplicationProtos.ReplicationState.Builder builder =
-        ReplicationProtos.ReplicationState.newBuilder();
-    ReplicationProtos.ReplicationState state;
-    try {
-      ProtobufUtil.mergeFrom(builder, bytes, pbLen, bytes.length - pbLen);
-      state = builder.build();
-      return state.getState();
-    } catch (IOException e) {
-      throw new DeserializationException(e);
-    }
   }
 }

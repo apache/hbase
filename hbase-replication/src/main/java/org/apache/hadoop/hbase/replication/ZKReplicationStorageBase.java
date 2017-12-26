@@ -48,8 +48,7 @@ class ZKReplicationStorageBase {
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
 
     this.replicationZNode =
-      ZNodePaths.joinZNode(this.zookeeper.znodePaths.baseZNode, replicationZNodeName);
-
+        ZNodePaths.joinZNode(this.zookeeper.znodePaths.baseZNode, replicationZNodeName);
   }
 
   /**

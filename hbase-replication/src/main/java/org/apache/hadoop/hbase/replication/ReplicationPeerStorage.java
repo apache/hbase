@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -70,5 +69,5 @@ public interface ReplicationPeerStorage {
    * Get the peer config of a replication peer.
    * @throws ReplicationException if there are errors accessing the storage service.
    */
-  Optional<ReplicationPeerConfig> getPeerConfig(String peerId) throws ReplicationException;
+  ReplicationPeerConfig getPeerConfig(String peerId) throws ReplicationException;
 }

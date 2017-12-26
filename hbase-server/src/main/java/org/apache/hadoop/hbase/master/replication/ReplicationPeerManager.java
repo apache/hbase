@@ -314,12 +314,12 @@ public class ReplicationPeerManager {
   public static ReplicationPeerManager create(ZKWatcher zk, Configuration conf)
       throws ReplicationException {
     ReplicationPeerStorage peerStorage =
-      ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
+        ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
     for (String peerId : peerStorage.listPeerIds()) {
-      Optional<ReplicationPeerConfig> peerConfig = peerStorage.getPeerConfig(peerId);
+      ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
       boolean enabled = peerStorage.isPeerEnabled(peerId);
-      peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig.get()));
+      peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig));
     }
     return new ReplicationPeerManager(peerStorage,
         ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers);

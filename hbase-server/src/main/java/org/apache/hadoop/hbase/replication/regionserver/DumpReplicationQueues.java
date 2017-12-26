@@ -310,7 +310,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
     replicationPeers =
-        ReplicationFactory.getReplicationPeers(zkw, getConf(), queueStorage, connection);
+        ReplicationFactory.getReplicationPeers(zkw, getConf());
     replicationTracker = ReplicationFactory.getReplicationTracker(zkw, replicationPeers, getConf(),
       new WarnOnlyAbortable(), new WarnOnlyStoppable());
     Set<String> liveRegionServers = new HashSet<>(replicationTracker.getListOfRegionServers());

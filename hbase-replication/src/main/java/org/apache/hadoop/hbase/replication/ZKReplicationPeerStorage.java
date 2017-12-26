@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
@@ -144,7 +143,7 @@ class ZKReplicationPeerStorage extends ZKReplicationStorageBase implements Repli
   }
 
   @Override
-  public Optional<ReplicationPeerConfig> getPeerConfig(String peerId) throws ReplicationException {
+  public ReplicationPeerConfig getPeerConfig(String peerId) throws ReplicationException {
     byte[] data;
     try {
       data = ZKUtil.getData(zookeeper, getPeerNode(peerId));
@@ -152,13 +151,14 @@ class ZKReplicationPeerStorage extends ZKReplicationStorageBase implements Repli
       throw new ReplicationException("Error getting configuration for peer with id=" + peerId, e);
     }
     if (data == null || data.length == 0) {
-      return Optional.empty();
+      throw new ReplicationException(
+          "Replication peer config data shouldn't be empty, peerId=" + peerId);
     }
     try {
-      return Optional.of(ReplicationPeerConfigUtil.parsePeerFrom(data));
+      return ReplicationPeerConfigUtil.parsePeerFrom(data);
     } catch (DeserializationException e) {
-      LOG.warn("Failed to parse replication peer config for peer with id=" + peerId, e);
-      return Optional.empty();
+      throw new ReplicationException(
+          "Failed to parse replication peer config for peer with id=" + peerId, e);
     }
   }
 }

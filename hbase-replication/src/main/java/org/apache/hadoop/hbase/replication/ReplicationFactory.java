@@ -29,14 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ReplicationFactory {
 
-  public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf,
-      Abortable abortable) {
-    return getReplicationPeers(zk, conf, null, abortable);
-  }
-
-  public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf,
-      ReplicationQueueStorage queueStorage, Abortable abortable) {
-    return new ReplicationPeersZKImpl(zk, conf, queueStorage, abortable);
+  public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf) {
+    return new ReplicationPeers(zk, conf);
   }
 
   public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper,
