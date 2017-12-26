@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -275,30 +274,12 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * Add the specified KeyValue to this Put operation.  Operation assumes that
    * the passed KeyValue is immutable and its backing array will not be modified
    * for the duration of this Put.
-   * @param kv individual KeyValue
+   * @param cell individual cell
    * @return this
    * @throws java.io.IOException e
    */
-  public Put add(Cell kv) throws IOException {
-    // Family can not be null, otherwise NullPointerException is thrown when putting
-    // the cell into familyMap
-    if (kv.getFamilyArray() == null) {
-      throw new IllegalArgumentException("Family cannot be null");
-    }
-
-    // Check timestamp
-    if (ts < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
-    }
-
-    byte [] family = CellUtil.cloneFamily(kv);
-    List<Cell> list = getCellList(family);
-    //Checking that the row of the kv is the same as the put
-    if (!CellUtil.matchingRows(kv, this.row)) {
-      throw new WrongRowIOException("The row in " + kv.toString() +
-        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
-    }
-    list.add(kv);
+  public Put add(Cell cell) throws IOException {
+    super.add(cell);
     return this;
   }
 

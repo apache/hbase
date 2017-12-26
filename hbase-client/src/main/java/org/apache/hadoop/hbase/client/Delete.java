@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -170,22 +169,12 @@ public class Delete extends Mutation implements Comparable<Row> {
 
   /**
    * Add an existing delete marker to this Delete object.
-   * @param kv An existing KeyValue of type "delete".
+   * @param cell An existing cell of type "delete".
    * @return this for invocation chaining
    * @throws IOException
    */
-  public Delete add(Cell kv) throws IOException {
-    if (!CellUtil.isDelete(kv)) {
-      throw new IOException("The recently added KeyValue is not of type "
-          + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
-    }
-    if (!CellUtil.matchingRows(kv, this.row)) {
-      throw new WrongRowIOException("The row in " + kv.toString() +
-        " doesn't match the original one " +  Bytes.toStringBinary(this.row));
-    }
-    byte [] family = CellUtil.cloneFamily(kv);
-    List<Cell> list = getCellList(family);
-    list.add(kv);
+  public Delete add(Cell cell) throws IOException {
+    super.add(cell);
     return this;
   }
 
