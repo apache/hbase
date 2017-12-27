@@ -17,14 +17,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.HashMap;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of {@link MetricsTableLatencies} to track latencies for one table in a
