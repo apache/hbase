@@ -836,6 +836,27 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     return totalLen;
   }
 
+  // for controlling the val size when adding a new cell
+  protected int addRowsByKeys(final AbstractMemStore hmc, String[] keys, byte[] val) {
+    byte[] fam = Bytes.toBytes("testfamily");
+    byte[] qf = Bytes.toBytes("testqualifier");
+    long size = hmc.getActive().keySize();
+    long heapOverhead = hmc.getActive().heapSize();
+    int totalLen = 0;
+    for (int i = 0; i < keys.length; i++) {
+      long timestamp = System.currentTimeMillis();
+      Threads.sleep(1); // to make sure each kv gets a different ts
+      byte[] row = Bytes.toBytes(keys[i]);
+      KeyValue kv = new KeyValue(row, fam, qf, timestamp, val);
+      totalLen += kv.getLength();
+      hmc.add(kv, null);
+      LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
+    }
+    regionServicesForStores.addMemStoreSize(new MemStoreSize(hmc.getActive().keySize() - size,
+            hmc.getActive().heapSize() - heapOverhead));
+    return totalLen;
+  }
+
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
     long t = 1234;
 

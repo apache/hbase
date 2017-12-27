@@ -45,6 +45,11 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
     throw new IllegalStateException("This is an Immutable MemStoreLAB.");
   }
 
+  @Override
+  public Cell forceCopyOfBigCellInto(Cell cell) {
+    throw new IllegalStateException("This is an Immutable MemStoreLAB.");
+  }
+
   /* Creating chunk to be used as index chunk in CellChunkMap, part of the chunks array.
   ** Returning a new chunk, without replacing current chunk,
   ** meaning MSLABImpl does not make the returned chunk as CurChunk.

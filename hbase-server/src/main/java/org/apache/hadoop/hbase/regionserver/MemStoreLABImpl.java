@@ -107,6 +107,32 @@ public class MemStoreLABImpl implements MemStoreLAB {
 
   @Override
   public Cell copyCellInto(Cell cell) {
+    return copyCellInto(cell, maxAlloc);
+  }
+
+  /**
+   * When a cell's size is too big (bigger than maxAlloc),
+   * copyCellInto does not allocate it on MSLAB.
+   * Since the process of flattening to CellChunkMap assumes that
+   * all cells are allocated on MSLAB, during this process,
+   * the big cells are copied into MSLAB using this method.
+   */
+  @Override
+  public Cell forceCopyOfBigCellInto(Cell cell) {
+    int size = KeyValueUtil.length(cell);
+    Preconditions.checkArgument(size >= 0, "negative size");
+    if (size <= chunkSize) {
+      // Using copyCellInto for cells which are bigger than the original maxAlloc
+      Cell newCell = copyCellInto(cell, chunkSize);
+      return newCell;
+    } else {
+      Chunk c = getNewExternalJumboChunk(size);
+      int allocOffset = c.alloc(size);
+      return copyToChunkCell(cell, c.getData(), allocOffset, size);
+    }
+  }
+
+  private Cell copyCellInto(Cell cell, int maxAlloc) {
     int size = KeyValueUtil.length(cell);
     Preconditions.checkArgument(size >= 0, "negative size");
     // Callers should satisfy large allocations directly from JVM since they

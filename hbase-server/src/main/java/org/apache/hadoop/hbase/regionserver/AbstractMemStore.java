@@ -104,7 +104,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public void add(Cell cell, MemStoreSizing memstoreSizing) {
-    Cell toAdd = maybeCloneWithAllocator(cell);
+    Cell toAdd = maybeCloneWithAllocator(cell, false);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). By
     // default MSLAB is ON and we might have copied cell to MSLAB area. If not we must do below deep
@@ -268,8 +268,21 @@ public abstract class AbstractMemStore implements MemStore {
     return result;
   }
 
-  private Cell maybeCloneWithAllocator(Cell cell) {
-    return active.maybeCloneWithAllocator(cell);
+  /**
+   * If the segment has a memory allocator the cell is being cloned to this space, and returned;
+   * Otherwise the given cell is returned
+   *
+   * When a cell's size is too big (bigger than maxAlloc), it is not allocated on MSLAB.
+   * Since the process of flattening to CellChunkMap assumes that all cells are allocated on MSLAB,
+   * during this process, the input parameter forceCloneOfBigCell is set to 'true'
+   * and the cell is copied into MSLAB.
+   *
+   * @param cell the cell to clone
+   * @param forceCloneOfBigCell true only during the process of flattening to CellChunkMap.
+   * @return either the given cell or its clone
+   */
+  private Cell maybeCloneWithAllocator(Cell cell, boolean forceCloneOfBigCell) {
+    return active.maybeCloneWithAllocator(cell, forceCloneOfBigCell);
   }
 
   /*
