@@ -133,7 +133,7 @@ public class TestRpcMetrics {
     HELPER.assertCounter("exceptions", 1, serverSource);
 
     mrpc.exception(new RegionMovedException(ServerName.parseServerName("localhost:60020"), 100));
-    mrpc.exception(new RegionTooBusyException());
+    mrpc.exception(new RegionTooBusyException("Some region"));
     mrpc.exception(new OutOfOrderScannerNextException());
     mrpc.exception(new NotServingRegionException());
     HELPER.assertCounter("exceptions.RegionMovedException", 1, serverSource);
