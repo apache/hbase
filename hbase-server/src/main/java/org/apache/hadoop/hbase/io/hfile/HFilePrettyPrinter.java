@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -399,7 +398,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
                   cell.getValueLength()));
           int i = 0;
-          List<Tag> tags = ((RawCell)cell).getTags();
+          List<Tag> tags = PrivateCellUtil.getTags(cell);
           for (Tag tag : tags) {
             out.print(String.format(" T[%d]: %s", i++, tag.toString()));
           }

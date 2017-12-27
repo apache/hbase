@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -33,7 +31,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -60,7 +57,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataInput;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteArrayDataOutput;
 import org.apache.hadoop.hbase.shaded.com.google.common.io.ByteStreams;
@@ -915,35 +911,23 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       if (cell instanceof RawCell) {
         return ((RawCell) cell).getTag(type);
       }
-      int length = getTagsLength();
-      int offset = getTagsOffset();
-      int pos = offset;
-      while (pos < offset + length) {
-        int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
-        if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-          return Optional.of(new ArrayBackedTag(getTagsArray(), pos,
-            tagLen + TAG_LENGTH_SIZE));
-        }
-        pos += TAG_LENGTH_SIZE + tagLen;
-      }
-      return Optional.empty();
+      return PrivateCellUtil.getTag(cell, type);
     }
 
     @Override
-    public List<Tag> getTags() {
+    public Iterator<Tag> getTags() {
       if (cell instanceof RawCell) {
         return ((RawCell) cell).getTags();
       }
-      return Lists.newArrayList(PrivateCellUtil.tagsIterator(cell));
+      return PrivateCellUtil.tagsIterator(cell);
     }
 
     @Override
     public byte[] cloneTags() {
       if (cell instanceof RawCell) {
         return ((RawCell) cell).cloneTags();
-      } else {
-        return PrivateCellUtil.cloneTags(cell);
       }
+      return PrivateCellUtil.cloneTags(cell);
     }
 
     private long heapOverhead() {

@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -32,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -45,6 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility methods helpful slinging {@link Cell} instances. It has more powerful and
@@ -314,32 +312,6 @@ public final class PrivateCellUtil {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       return new TagRewriteCell(clonedBaseCell, this.tags);
     }
-
-    @Override
-    public Optional<Tag> getTag(byte type) {
-      int length = getTagsLength();
-      int offset = getTagsOffset();
-      int pos = offset;
-      while (pos < offset + length) {
-        int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
-        if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-          return Optional
-              .ofNullable(new ArrayBackedTag(getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
-        }
-        pos += TAG_LENGTH_SIZE + tagLen;
-      }
-      return Optional.ofNullable(null);
-    }
-
-    @Override
-    public List<Tag> getTags() {
-      List<Tag> tags = new ArrayList<>();
-      Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
-      while (tagsItr.hasNext()) {
-        tags.add(tagsItr.next());
-      }
-      return tags;
-    }
   }
 
   static class TagRewriteByteBufferCell extends ByteBufferCell implements ExtendedCell {
@@ -572,33 +544,6 @@ public final class PrivateCellUtil {
     @Override
     public int getTagsPosition() {
       return 0;
-    }
-
-    @Override
-    public Optional<Tag> getTag(byte type) {
-      int length = getTagsLength();
-      int offset = getTagsPosition();
-      int pos = offset;
-      int tagLen;
-      while (pos < offset + length) {
-        ByteBuffer tagsBuffer = getTagsByteBuffer();
-        tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
-        if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
-          return Optional.ofNullable(new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE));
-        }
-        pos += TAG_LENGTH_SIZE + tagLen;
-      }
-      return Optional.ofNullable(null);
-    }
-
-    @Override
-    public List<Tag> getTags() {
-      List<Tag> tags = new ArrayList<>();
-      Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
-      while (tagsItr.hasNext()) {
-        tags.add(tagsItr.next());
-      }
-      return tags;
     }
   }
 
@@ -952,18 +897,18 @@ public final class PrivateCellUtil {
         ByteBuffer tagsBuffer = ((ByteBufferCell) cell).getTagsByteBuffer();
         tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
         if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
-          return Optional.ofNullable(new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE));
+          return Optional.of(new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE));
         }
       } else {
         tagLen = Bytes.readAsInt(cell.getTagsArray(), pos, TAG_LENGTH_SIZE);
         if (cell.getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
           return Optional
-              .ofNullable(new ArrayBackedTag(cell.getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
+            .of(new ArrayBackedTag(cell.getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
         }
       }
       pos += TAG_LENGTH_SIZE + tagLen;
     }
-    return Optional.ofNullable(null);
+    return Optional.empty();
   }
 
   /**
@@ -1424,32 +1369,6 @@ public final class PrivateCellUtil {
     public int getTagsLength() {
       return 0;
     }
-
-    @Override
-    public Optional<Tag> getTag(byte type) {
-      int length = getTagsLength();
-      int offset = getTagsOffset();
-      int pos = offset;
-      while (pos < offset + length) {
-        int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
-        if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-          return Optional
-              .ofNullable(new ArrayBackedTag(getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
-        }
-        pos += TAG_LENGTH_SIZE + tagLen;
-      }
-      return Optional.ofNullable(null);
-    }
-
-    @Override
-    public List<Tag> getTags() {
-      List<Tag> tags = new ArrayList<>();
-      Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
-      while (tagsItr.hasNext()) {
-        tags.add(tagsItr.next());
-      }
-      return tags;
-    }
   }
 
   /**
@@ -1602,33 +1521,6 @@ public final class PrivateCellUtil {
     @Override
     public int getValuePosition() {
       return 0;
-    }
-
-    @Override
-    public Optional<Tag> getTag(byte type) {
-      int length = getTagsLength();
-      int offset = getTagsPosition();
-      int pos = offset;
-      int tagLen;
-      while (pos < offset + length) {
-        ByteBuffer tagsBuffer = getTagsByteBuffer();
-        tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
-        if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
-          return Optional.ofNullable(new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE));
-        }
-        pos += TAG_LENGTH_SIZE + tagLen;
-      }
-      return Optional.ofNullable(null);
-    }
-
-    @Override
-    public List<Tag> getTags() {
-      List<Tag> tags = new ArrayList<>();
-      Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
-      while (tagsItr.hasNext()) {
-        tags.add(tagsItr.next());
-      }
-      return tags;
     }
   }
 
