@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +43,7 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
 
   protected long flushSizeLowerBound = -1;
 
-  protected long getFlushSizeLowerBound(HRegion region) {
-    int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
+  protected long getFlushSizeLowerBound(HRegion region) { int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
     // For multiple families, lower bound is the "average flush size" by default
     // unless setting in configuration is larger.
     long flushSizeLowerBound = region.getMemStoreFlushSize() / familyNumber;
@@ -57,20 +57,23 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
     String flushedSizeLowerBoundString =
         region.getTableDescriptor().getValue(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
     if (flushedSizeLowerBoundString == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No " + HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND
-            + " set in description of table " + region.getTableDescriptor().getTableName()
-            + ", use config (" + flushSizeLowerBound + ") instead");
-      }
+      LOG.debug("No {} set in table {} descriptor;" +
+          "using region.getMemStoreFlushSize/# of families ({}) instead.",
+          HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
+          region.getTableDescriptor().getTableName(),
+          StringUtils.humanSize(flushSizeLowerBound) + ")");
     } else {
       try {
         flushSizeLowerBound = Long.parseLong(flushedSizeLowerBoundString);
       } catch (NumberFormatException nfe) {
         // fall back for fault setting
-        LOG.warn("Number format exception when parsing "
-            + HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND + " for table "
-            + region.getTableDescriptor().getTableName() + ":" + flushedSizeLowerBoundString + ". " + nfe
-            + ", use config (" + flushSizeLowerBound + ") instead");
+        LOG.warn("Number format exception parsing {} for table {}: {}, {}; " +
+            "using region.getMemStoreFlushSize/# of families ({}) instead.",
+            HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
+            region.getTableDescriptor().getTableName(),
+            flushedSizeLowerBoundString,
+            nfe,
+            flushSizeLowerBound);
 
       }
     }
@@ -79,15 +82,13 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
 
   protected boolean shouldFlush(HStore store) {
     if (store.getMemStoreSize().getDataSize() > this.flushSizeLowerBound) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Flush Column Family " + store.getColumnFamilyName() + " of " +
-            region.getRegionInfo().getEncodedName() + " because memstoreSize=" +
-            store.getMemStoreSize().getDataSize() + " > lower bound="
-            + this.flushSizeLowerBound);
-      }
+      LOG.debug("Flush {} of {}; memstoreSize={} > lowerBound={}",
+          store.getColumnFamilyName(),
+          region.getRegionInfo().getEncodedName(),
+          store.getMemStoreSize().getDataSize(),
+          this.flushSizeLowerBound);
       return true;
     }
     return false;
   }
-
 }

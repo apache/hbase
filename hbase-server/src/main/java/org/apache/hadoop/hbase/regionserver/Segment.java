@@ -351,13 +351,13 @@ public abstract class Segment {
 
   @Override
   public String toString() {
-    String res = "Store segment of type "+this.getClass().getName()+"; ";
-    res += "isEmpty "+(isEmpty()?"yes":"no")+"; ";
-    res += "cellsCount "+getCellsCount()+"; ";
-    res += "cellsSize "+keySize()+"; ";
-    res += "totalHeapSize "+heapSize()+"; ";
-    res += "Min ts " + timeRangeTracker.getMin() + "; ";
-    res += "Max ts " + timeRangeTracker.getMax() + "; ";
+    String res = "Type=" + this.getClass().getSimpleName() + ", ";
+    res += "empty=" + (isEmpty()? "yes": "no") + ", ";
+    res += "cellCount=" + getCellsCount() + ", ";
+    res += "cellSize=" + keySize() + ", ";
+    res += "totalHeapSize=" + heapSize() + ", ";
+    res += "min timestamp=" + timeRangeTracker.getMin() + ", ";
+    res += "max timestamp=" + timeRangeTracker.getMax();
     return res;
   }
 }

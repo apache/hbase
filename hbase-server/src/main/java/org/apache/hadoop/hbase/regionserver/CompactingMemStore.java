@@ -405,9 +405,7 @@ public class CompactingMemStore extends AbstractMemStore {
       // Phase I: Update the pipeline
       getRegionServices().blockUpdates();
       try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("IN-MEMORY FLUSH: Pushing active segment into compaction pipeline");
-        }
+        LOG.trace("IN-MEMORY FLUSH: Pushing active segment into compaction pipeline");
         pushActiveToPipeline(this.active);
       } finally {
         getRegionServices().unblockUpdates();
@@ -429,9 +427,7 @@ public class CompactingMemStore extends AbstractMemStore {
       }
     } finally {
       inMemoryFlushInProgress.set(false);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("IN-MEMORY FLUSH: end");
-      }
+      LOG.trace("IN-MEMORY FLUSH: end");
     }
   }
 
