@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -383,14 +383,15 @@ public class HFileWriterImpl implements HFile.Writer {
           + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
     }
     byte[] midRow;
-    boolean bufferBacked = left instanceof ByteBufferCell && right instanceof ByteBufferCell;
+    boolean bufferBacked = left instanceof ByteBufferExtendedCell
+        && right instanceof ByteBufferExtendedCell;
     if (diff < 0) {
       // Left row is < right row.
       if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferCell) left).getRowByteBuffer(),
-            ((ByteBufferCell) left).getRowPosition(), left.getRowLength(),
-            ((ByteBufferCell) right).getRowByteBuffer(),
-            ((ByteBufferCell) right).getRowPosition(), right.getRowLength());
+        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getRowByteBuffer(),
+            ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(),
+            ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+            ((ByteBufferExtendedCell) right).getRowPosition(), right.getRowLength());
       } else {
         midRow = getMinimumMidpointArray(left.getRowArray(), left.getRowOffset(),
             left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
@@ -407,10 +408,10 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     if (diff < 0) {
       if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferCell) left).getFamilyByteBuffer(),
-            ((ByteBufferCell) left).getFamilyPosition(), left.getFamilyLength(),
-            ((ByteBufferCell) right).getFamilyByteBuffer(),
-            ((ByteBufferCell) right).getFamilyPosition(), right.getFamilyLength());
+        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
+            ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
+            ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
+            ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
       } else {
         midRow = getMinimumMidpointArray(left.getFamilyArray(), left.getFamilyOffset(),
             left.getFamilyLength(), right.getFamilyArray(), right.getFamilyOffset(),
@@ -429,10 +430,10 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     if (diff < 0) {
       if (bufferBacked) {
-        midRow = getMinimumMidpointArray(((ByteBufferCell) left).getQualifierByteBuffer(),
-            ((ByteBufferCell) left).getQualifierPosition(), left.getQualifierLength(),
-            ((ByteBufferCell) right).getQualifierByteBuffer(),
-            ((ByteBufferCell) right).getQualifierPosition(), right.getQualifierLength());
+        midRow = getMinimumMidpointArray(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
+            ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(),
+            ((ByteBufferExtendedCell) right).getQualifierByteBuffer(),
+            ((ByteBufferExtendedCell) right).getQualifierPosition(), right.getQualifierLength());
       } else {
         midRow = getMinimumMidpointArray(left.getQualifierArray(), left.getQualifierOffset(),
             left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),

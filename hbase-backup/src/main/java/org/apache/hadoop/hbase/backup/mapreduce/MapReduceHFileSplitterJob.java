@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.mapreduce.HFileInputFormat;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -78,7 +78,8 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
     @Override
     public void map(NullWritable key, Cell value, Context context)
         throws IOException, InterruptedException {
-      context.write(new ImmutableBytesWritable(CellUtil.cloneRow(value)), new MapReduceCell(value));
+      context.write(new ImmutableBytesWritable(CellUtil.cloneRow(value)),
+          new MapReduceExtendedCell(value));
     }
 
     @Override
@@ -113,7 +114,7 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
       job.setReducerClass(CellSortReducer.class);
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputValueClass(MapReduceCell.class);
+      job.setMapOutputValueClass(MapReduceExtendedCell.class);
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {

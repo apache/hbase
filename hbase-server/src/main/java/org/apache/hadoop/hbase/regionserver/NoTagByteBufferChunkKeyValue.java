@@ -19,24 +19,23 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.ByteBufferKeyValue;
+import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
+
 /**
- * ByteBuffer based cell which has the chunkid at the 0th offset
+ * ByteBuffer based cell which has the chunkid at the 0th offset and with no tags
  * @see MemStoreLAB
  */
-//TODO : When moving this cell to CellChunkMap we will have the following things
-// to be serialized
-// chunkId (Integer) + offset (Integer) + length (Integer) + seqId (Long) = 20 bytes
 @InterfaceAudience.Private
-public class ByteBufferChunkCell extends ByteBufferKeyValue {
-  public ByteBufferChunkCell(ByteBuffer buf, int offset, int length) {
+public class NoTagByteBufferChunkKeyValue extends NoTagsByteBufferKeyValue {
+
+  public NoTagByteBufferChunkKeyValue(ByteBuffer buf, int offset, int length) {
     super(buf, offset, length);
   }
 
-  public ByteBufferChunkCell(ByteBuffer buf, int offset, int length, long seqId) {
+  public NoTagByteBufferChunkKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
     super(buf, offset, length, seqId);
   }
 
@@ -45,4 +44,5 @@ public class ByteBufferChunkCell extends ByteBufferKeyValue {
     // The chunkId is embedded at the 0th offset of the bytebuffer
     return ByteBufferUtils.toInt(buf, 0);
   }
+
 }
