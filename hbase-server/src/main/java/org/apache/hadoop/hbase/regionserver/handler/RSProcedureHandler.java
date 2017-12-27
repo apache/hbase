@@ -49,6 +49,6 @@ public class RSProcedureHandler extends EventHandler {
       LOG.error("Catch exception when call RSProcedureCallable: ", e);
       error = e;
     }
-    ((HRegionServer) server).reportProcedureDone(procId, error);
+    ((HRegionServer) server).remoteProcedureComplete(procId, error);
   }
 }

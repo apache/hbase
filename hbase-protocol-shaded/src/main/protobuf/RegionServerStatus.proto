@@ -146,7 +146,7 @@ message RegionSpaceUseReportRequest {
 message RegionSpaceUseReportResponse {
 }
 
-message ReportProcedureDoneRequest {
+message RemoteProcedureResult {
   required uint64 proc_id = 1;
   enum Status {
     SUCCESS = 1;
@@ -154,6 +154,9 @@ message ReportProcedureDoneRequest {
   }
   required Status status = 2;
   optional ForeignExceptionMessage error = 3;
+}
+message ReportProcedureDoneRequest {
+  repeated RemoteProcedureResult result = 1;
 }
 
 message ReportProcedureDoneResponse {
