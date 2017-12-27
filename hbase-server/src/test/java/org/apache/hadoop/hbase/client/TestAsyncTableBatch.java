@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -175,6 +176,31 @@ public class TestAsyncTableBatch {
           IntStream.range(0, COUNT).mapToObj(i -> new Get(getRow(i))).collect(Collectors.toList()))
         .get();
     assertEquals(COUNT, results.size());
+    results.forEach(r -> assertTrue(r.isEmpty()));
+  }
+
+  @Test
+  public void testWithRegionServerFailover() throws Exception {
+    AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
+    table.putAll(IntStream.range(0, COUNT)
+        .mapToObj(i -> new Put(getRow(i)).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
+        .collect(Collectors.toList())).get();
+    TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).abort("Aborting for tests");
+    Thread.sleep(100);
+    table.putAll(IntStream.range(COUNT, 2 * COUNT)
+        .mapToObj(i -> new Put(getRow(i)).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
+        .collect(Collectors.toList())).get();
+    List<Result> results = table.getAll(
+      IntStream.range(0, 2 * COUNT).mapToObj(i -> new Get(getRow(i))).collect(Collectors.toList()))
+        .get();
+    assertEquals(2 * COUNT, results.size());
+    results.forEach(r -> assertFalse(r.isEmpty()));
+    table.deleteAll(IntStream.range(0, 2 * COUNT).mapToObj(i -> new Delete(getRow(i)))
+        .collect(Collectors.toList())).get();
+    results = table.getAll(
+      IntStream.range(0, 2 * COUNT).mapToObj(i -> new Get(getRow(i))).collect(Collectors.toList()))
+        .get();
+    assertEquals(2 * COUNT, results.size());
     results.forEach(r -> assertTrue(r.isEmpty()));
   }
 
