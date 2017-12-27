@@ -125,12 +125,8 @@ public class CompactionPipeline {
         return false;
       }
       suffix = versionedList.getStoreSegments();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Swapping pipeline suffix. "
-            + "Just before the swap the number of segments in pipeline is:"
-            + versionedList.getStoreSegments().size()
-            + ", and the new segment is:" + segment);
-      }
+      LOG.debug("Swapping pipeline suffix; before={}, new segement={}",
+          versionedList.getStoreSegments().size(), segment);
       swapSuffix(suffix, segment, closeSuffix);
       readOnlyCopy = new LinkedList<>(pipeline);
       version++;
@@ -146,11 +142,12 @@ public class CompactionPipeline {
       if(segment != null) newHeapSize = segment.heapSize();
       long heapSizeDelta = suffixHeapSize - newHeapSize;
       region.addMemStoreSize(new MemStoreSizing(-dataSizeDelta, -heapSizeDelta));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Suffix data size: " + suffixDataSize + " new segment data size: "
-            + newDataSize + ". Suffix heap size: " + suffixHeapSize
-            + " new segment heap size: " + newHeapSize);
-      }
+      LOG.debug("Suffix data size={}, new segment data size={}, suffix heap size={}," +
+              "new segment heap size={}",
+          suffixDataSize,
+          newDataSize,
+          suffixHeapSize,
+          newHeapSize);
     }
     return true;
   }
@@ -206,7 +203,7 @@ public class CompactionPipeline {
             // upon flattening there is no change in the data size
             region.addMemStoreSize(new MemStoreSize(0, newMemstoreAccounting.getHeapSize()));
           }
-          LOG.debug("Compaction pipeline segment " + s + " was flattened");
+          LOG.debug("Compaction pipeline segment {} flattened", s);
           return true;
         }
         i++;
