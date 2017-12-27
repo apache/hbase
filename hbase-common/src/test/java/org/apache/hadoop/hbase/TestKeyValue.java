@@ -453,7 +453,7 @@ public class TestKeyValue extends TestCase {
       kv.getQualifierLength(), q, 0, q.length));
     assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value, 0,
       value.length));
-    List<Tag> tags = kv.getTags();
+    List<Tag> tags = PrivateCellUtil.getTags(kv);
     assertNotNull(tags);
     assertEquals(2, tags.size());
     boolean meta1Ok = false, meta2Ok = false;

@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.hadoop.hbase.RawCell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -285,7 +284,7 @@ public class TestVisibilityLabelsReplication {
     for (Cell cell : cells) {
       if ((Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row, 0,
           row.length))) {
-        List<Tag> tags = ((RawCell)cell).getTags();
+        List<Tag> tags = PrivateCellUtil.getTags(cell);
         for (Tag tag : tags) {
           if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
             assertEquals(visTag, Tag.getValueAsString(tag));
@@ -413,9 +412,9 @@ public class TestVisibilityLabelsReplication {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag((byte) NON_VIS_TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<>(kv.getTags().size() + 1);
+            List<Tag> tagList = new ArrayList<>(PrivateCellUtil.getTags(cell).size() + 1);
             tagList.add(tag);
-            tagList.addAll(kv.getTags());
+            tagList.addAll(PrivateCellUtil.getTags(cell));
             Cell newcell = PrivateCellUtil.createCell(kv, tagList);
             ((List<Cell>) updatedCells).add(newcell);
           }
@@ -442,7 +441,7 @@ public class TestVisibilityLabelsReplication {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          tags = ((RawCell)cell).getTags();
+          tags = PrivateCellUtil.getTags(cell);
         }
       }
     }

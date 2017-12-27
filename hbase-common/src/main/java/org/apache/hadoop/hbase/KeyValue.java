@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 import static org.apache.hadoop.hbase.util.Bytes.len;
 
 import java.io.DataInput;
@@ -33,8 +32,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1165,11 +1162,11 @@ public class KeyValue implements ExtendedCell {
       Bytes.toStringBinary(getQualifierArray(), getQualifierOffset(), getQualifierLength()));
     stringMap.put("timestamp", getTimestamp());
     stringMap.put("vlen", getValueLength());
-    List<Tag> tags = getTags();
+    Iterator<Tag> tags = getTags();
     if (tags != null) {
-      List<String> tagsString = new ArrayList<>(tags.size());
-      for (Tag t : tags) {
-        tagsString.add(t.toString());
+      List<String> tagsString = new ArrayList<String>();
+      while (tags.hasNext()) {
+        tagsString.add(tags.next().toString());
       }
       stringMap.put("tag", tagsString);
     }
@@ -2554,31 +2551,5 @@ public class KeyValue implements ExtendedCell {
     KeyValue kv = new KeyValue(copy, 0, copy.length);
     kv.setSequenceId(this.getSequenceId());
     return kv;
-  }
-
-  @Override
-  public Optional<Tag> getTag(byte type) {
-    int length = getTagsLength();
-    int offset = getTagsOffset();
-    int pos = offset;
-    while (pos < offset + length) {
-      int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
-      if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-        return Optional
-            .ofNullable(new ArrayBackedTag(getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
-      }
-      pos += TAG_LENGTH_SIZE + tagLen;
-    }
-    return Optional.ofNullable(null);
-  }
-
-  @Override
-  public List<Tag> getTags() {
-    List<Tag> tags = new ArrayList<>();
-    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
-    while (tagsItr.hasNext()) {
-      tags.add(tagsItr.next());
-    }
-    return tags;
   }
 }

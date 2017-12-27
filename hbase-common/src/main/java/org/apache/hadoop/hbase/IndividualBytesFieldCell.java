@@ -18,13 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -303,31 +296,5 @@ public class IndividualBytesFieldCell implements ExtendedCell {
   @Override
   public String toString() {
     return CellUtil.toString(this, true);
-  }
-
-  @Override
-  public Optional<Tag> getTag(byte type) {
-    int length = getTagsLength();
-    int offset = getTagsOffset();
-    int pos = offset;
-    while (pos < offset + length) {
-      int tagLen = Bytes.readAsInt(getTagsArray(), pos, TAG_LENGTH_SIZE);
-      if (getTagsArray()[pos + TAG_LENGTH_SIZE] == type) {
-        return Optional
-            .ofNullable(new ArrayBackedTag(getTagsArray(), pos, tagLen + TAG_LENGTH_SIZE));
-      }
-      pos += TAG_LENGTH_SIZE + tagLen;
-    }
-    return Optional.ofNullable(null);
-  }
-
-  @Override
-  public List<Tag> getTags() {
-    List<Tag> tags = new ArrayList<>();
-    Iterator<Tag> tagsItr = PrivateCellUtil.tagsIterator(this);
-    while (tagsItr.hasNext()) {
-      tags.add(tagsItr.next());
-    }
-    return tags;
   }
 }

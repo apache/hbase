@@ -158,7 +158,7 @@ public class TestByteBufferKeyValue {
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
     // change tags to handle both onheap and offheap stuff
-    List<Tag> resTags = offheapKV.getTags();
+    List<Tag> resTags = PrivateCellUtil.getTags(offheapKV);
     Tag tag1 = resTags.get(0);
     assertEquals(t1.getType(), tag1.getType());
     assertEquals(Tag.getValueAsString(t1),

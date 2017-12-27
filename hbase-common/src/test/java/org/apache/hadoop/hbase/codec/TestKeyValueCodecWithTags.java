@@ -27,13 +27,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.RawCell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -80,7 +79,7 @@ public class TestKeyValueCodecWithTags {
     Cell c = decoder.current();
     assertTrue(CellUtil.equals(c, kv1));
     List<Tag> tags =
-        ((RawCell)c).getTags();
+        PrivateCellUtil.getTags(c);
     assertEquals(2, tags.size());
     Tag tag = tags.get(0);
     assertEquals(1, tag.getType());
@@ -91,7 +90,7 @@ public class TestKeyValueCodecWithTags {
     assertTrue(decoder.advance());
     c = decoder.current();
     assertTrue(CellUtil.equals(c, kv2));
-    tags = ((RawCell)c).getTags();
+    tags = PrivateCellUtil.getTags(c);
     assertEquals(1, tags.size());
     tag = tags.get(0);
     assertEquals(1, tag.getType());
@@ -99,7 +98,7 @@ public class TestKeyValueCodecWithTags {
     assertTrue(decoder.advance());
     c = decoder.current();
     assertTrue(CellUtil.equals(c, kv3));
-    tags = ((RawCell)c).getTags();
+    tags = PrivateCellUtil.getTags(c);
     assertEquals(3, tags.size());
     tag = tags.get(0);
     assertEquals(2, tag.getType());
