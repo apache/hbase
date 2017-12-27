@@ -70,7 +70,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -676,12 +676,12 @@ public class TestCellBasedImportExport2 {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
+        MapReduceExtendedCell key = (MapReduceExtendedCell) invocation.getArguments()[1];
         assertEquals("Key", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(ctx).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
+    }).when(ctx).write(any(ImmutableBytesWritable.class), any(MapReduceExtendedCell.class));
 
     importer.setup(ctx);
     Result value = mock(Result.class);

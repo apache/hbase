@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -185,12 +185,12 @@ public class TestCellBasedWALPlayer2 {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
-        MapReduceCell key = (MapReduceCell) invocation.getArguments()[1];
+        MapReduceExtendedCell key = (MapReduceExtendedCell) invocation.getArguments()[1];
         assertEquals("row", Bytes.toString(writer.get()));
         assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
-    }).when(context).write(any(ImmutableBytesWritable.class), any(MapReduceCell.class));
+    }).when(context).write(any(ImmutableBytesWritable.class), any(MapReduceExtendedCell.class));
 
     mapper.map(key, value, context);
 

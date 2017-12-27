@@ -123,6 +123,6 @@ public class CellChunkMap extends CellFlatMap {
           + chunk.isFromPool() + ". We were looking for a cell at index " + i);
     }
 
-    return new ByteBufferChunkCell(buf, offsetOfCell, lengthOfCell, cellSeqID);
+    return new ByteBufferChunkKeyValue(buf, offsetOfCell, lengthOfCell, cellSeqID);
   }
 }

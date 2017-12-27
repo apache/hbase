@@ -99,9 +99,9 @@ public final class TagUtil {
     }
     byte[] b = new byte[tags.length + cellTagsLen];
     int pos = Bytes.putBytes(b, 0, tags, 0, tags.length);
-    if (cell instanceof ByteBufferCell) {
-      ByteBufferUtils.copyFromBufferToArray(b, ((ByteBufferCell) cell).getTagsByteBuffer(),
-          ((ByteBufferCell) cell).getTagsPosition(), pos, cellTagsLen);
+    if (cell instanceof ByteBufferExtendedCell) {
+      ByteBufferUtils.copyFromBufferToArray(b, ((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
+          ((ByteBufferExtendedCell) cell).getTagsPosition(), pos, cellTagsLen);
     } else {
       Bytes.putBytes(b, pos, cell.getTagsArray(), cell.getTagsOffset(), cellTagsLen);
     }

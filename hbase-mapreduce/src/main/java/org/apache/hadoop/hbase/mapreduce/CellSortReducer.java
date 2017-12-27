@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.MapReduceCell;
+import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -53,7 +53,7 @@ public class CellSortReducer
     context.setStatus("Read " + map.getClass());
     int index = 0;
     for (Cell kv: map) {
-      context.write(row, new MapReduceCell(kv));
+      context.write(row, new MapReduceExtendedCell(kv));
       if (++index % 100 == 0) context.setStatus("Wrote " + index);
     }
   }
