@@ -18,3 +18,5 @@ dependency-reduced-pom.xml
 link_report/
 linklint-*.zip
 linklint/
+.checkstyle
+**/.checkstyle
