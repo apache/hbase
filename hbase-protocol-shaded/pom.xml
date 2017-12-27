@@ -120,7 +120,7 @@
             <replacements>
               <replacement>
                 <token>([^\.])com.google.protobuf</token> 
-                <value>$1org.apache.hadoop.hbase.shaded.com.google.protobuf</value> 
+                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
               </replacement>
             </replacements>
         </configuration> 

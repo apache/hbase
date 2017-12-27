@@ -76,9 +76,6 @@
               <value>org.apache.hadoop.hbase.ServerResourceCheckerJUnitListener</value>
             </property>
           </properties>
-          <systemPropertyVariables>
-            <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
-          </systemPropertyVariables>
         </configuration>
       </plugin>
       <!-- Make a jar and put the sources in the jar -->

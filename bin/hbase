@@ -474,16 +474,9 @@ fi
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # Exec unless HBASE_NOEXEC is set.
 export CLASSPATH
-# Netty is shaded in hbase. The shaded netty is pulled in with org.apache.hbase.thirdparty:hbase-shaded-netty.
-# It has a .so in it. Shading requires rename of the .so and then passing a system property so netty finds the
-# renamed .so and associates it w/ the relocated netty files.
-# So we can find the relocated .so, we need to add a system property pointing at new location. Trick is from:
-#  https://stackoverflow.com/questions/33825743/rename-files-inside-a-jar-using-some-maven-plugin
-# See toward the end of this issue for how to pass config: https://github.com/netty/netty/issues/6665
-#
-NETTY_PROP="-Dorg.apache.hadoop.hbase.shaded.io.netty.packagePrefix=org.apache.hadoop.hbase.shaded."
+
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -Dproc_$COMMAND "$NETTY_PROP" -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
+  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
 else
-  exec "$JAVA" -Dproc_$COMMAND  "$NETTY_PROP" -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
+  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
 fi

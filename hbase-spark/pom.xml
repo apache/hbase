@@ -608,9 +608,6 @@
           <junitxml>.</junitxml>
           <filereports>WDF TestSuite.txt</filereports>
           <parallel>false</parallel>
-          <systemProperties>
-            <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
-          </systemProperties>
         </configuration>
         <executions>
           <execution>
@@ -620,11 +617,7 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <systemProperties>
-                <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
-              </systemProperties>
-              <argLine> -Xmx1536m -XX:ReservedCodeCacheSize=512m
-              </argLine>
+              <argLine>-Xmx1536m -XX:ReservedCodeCacheSize=512m</argLine>
               <parallel>false</parallel>
             </configuration>
           </execution>

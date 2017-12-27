@@ -2187,56 +2187,24 @@ libraries such as guava, netty, and protobuf. The mainline HBase project
 relies on the relocated versions of these libraries gotten from hbase-thirdparty
 rather than on finding these classes in their usual locations. We do this so
 we can specify whatever the version we wish. If we don't relocate, we must
-harmonize our version to match that which hadoop and/or spark uses.
+harmonize our version to match that which hadoop, spark, and other projects use.
 
 For developers, this means you need to be careful referring to classes from
 netty, guava, protobuf, gson, etc. (see the hbase-thirdparty pom.xml for what
 it provides). Devs must refer to the hbase-thirdparty provided classes. In
 practice, this is usually not an issue (though it can be a bit of a pain). You
 will have to hunt for the relocated version of your particular class. You'll
-find it by prepending the general relocation prefix of `org.apache.hadoop.hbase.shaded.`.
+find it by prepending the general relocation prefix of `org.apache.hbase.thirdparty.`.
 For example if you are looking for `com.google.protobuf.Message`, the relocated
 version used by HBase internals can be found at
-`org.apache.hadoop.hbase.shaded.com.google.protobuf.Message`.
+`org.apache.hbase.thirdparty.com.google.protobuf.Message`.
 
 For a few thirdparty libs, like protobuf (see the protobuf chapter in this book
 for the why), your IDE may give you both options -- the `com.google.protobuf.*`
-and the `org.apache.hadoop.hbase.shaded.com.google.protobuf.*` -- because both
+and the `org.apache.hbase.thirdparty.com.google.protobuf.*` -- because both
 classes are on your CLASSPATH. Unless you are doing the particular juggling
 required in Coprocessor Endpoint development (again see above cited protobuf
 chapter), you'll want to use the shaded version, always.
-
-Of note, the relocation of netty is particular. The netty folks have put in
-place facility to aid relocation; it seems like shading netty is a popular project.
-One case of this requires the setting of a peculiar system property on the JVM
-so that classes out in the bundld shared library (.so) can be found in their
-relocated location. Here is the property that needs to be set:
-
-`-Dorg.apache.hadoop.hbase.shaded.io.netty.packagePrefix=org.apache.hadoop.hbase.shaded.`
-
-(Note that the trailing '.' is required). Starting hbase normally or when running
-test suites, the setting of this property is done for you. If you are doing something
-out of the ordinary, starting hbase from your own context, you'll need to provide
-this property on platforms that favor the bundled .so. See release notes on HBASE-18271
-for more. The complaint you see is something like the following:
-`Cause: java.lang.RuntimeException: Failed construction of Master: class org.apache.hadoop.hbase.master.HMasterorg.apache.hadoop.hbase.shaded.io.netty.channel.epoll.`
-
-If running unit tests and you run into the above message, add the system property
-to your surefire configuration by doing like the below:
-
-[source,xml]
-----
-  <plugin>
-    <artifactId>maven-surefire-plugin</artifactId>
-    <configuration>
-      <systemPropertyVariables>
-        <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
-      </systemPropertyVariables>
-    </configuration>
-  </plugin>
-----
-
-Again the trailing period in the value above is intended.
 
 The `hbase-thirdparty` project has groupid of `org.apache.hbase.thirdparty`.
 As of this writing, it provides three jars; one for netty with an artifactid of

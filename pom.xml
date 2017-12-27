@@ -604,25 +604,13 @@
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <systemPropertyVariables>
               <test.build.classes>${test.build.classes}</test.build.classes>
-              <!--For shaded netty, to find the relocated .so.
-                   Trick from
-                https://stackoverflow.com/questions/33825743/rename-files-inside-a-jar-using-some-maven-plugin
-
-                The netty jar has a .so in it. Shading requires rename of the .so and then passing a system
-                property so netty finds the renamed .so and associates it w/ the relocated netty files.
-
-                The relocated netty is in hbase-thirdparty dependency. Just set this propery globally rather
-                than per module.
-               -->
-              <org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>org.apache.hadoop.hbase.shaded.</org.apache.hadoop.hbase.shaded.io.netty.packagePrefix>
             </systemPropertyVariables>
-
             <excludes>
-	      <!-- users can add -D option to skip particular test classes
-		   ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
-	      -->
-	      <exclude>${test.exclude.pattern}</exclude>
-	    </excludes>
+              <!-- users can add -D option to skip particular test classes
+             ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
+              -->
+              <exclude>${test.exclude.pattern}</exclude>
+            </excludes>
           </configuration>
           <executions>
             <execution>
@@ -1407,7 +1395,7 @@
     <spotbugs.version>3.1.0-RC3</spotbugs.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <hbase-thirdparty.version>1.0.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>2.0.0</hbase-thirdparty.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
