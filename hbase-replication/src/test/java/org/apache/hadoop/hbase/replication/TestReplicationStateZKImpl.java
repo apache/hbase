@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,7 +36,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +49,6 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   private static HBaseZKTestingUtility utility;
   private static ZKWatcher zkw;
   private static String replicationZNode;
-  private ReplicationQueuesZKImpl rqZK;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -84,23 +78,9 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   @Before
   public void setUp() {
     zkTimeoutCount = 0;
-    WarnOnlyAbortable abortable = new WarnOnlyAbortable();
-    try {
-      rq1 = ReplicationFactory
-          .getReplicationQueues(new ReplicationQueuesArguments(conf, abortable, zkw));
-      rq2 = ReplicationFactory
-          .getReplicationQueues(new ReplicationQueuesArguments(conf, abortable, zkw));
-      rq3 = ReplicationFactory
-          .getReplicationQueues(new ReplicationQueuesArguments(conf, abortable, zkw));
-      rqs = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
-    } catch (Exception e) {
-      // This should not occur, because getReplicationQueues() only throws for
-      // TableBasedReplicationQueuesImpl
-      fail("ReplicationFactory.getReplicationQueues() threw an IO Exception");
-    }
-    rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
+    rqs = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
+    rp = ReplicationFactory.getReplicationPeers(zkw, conf, new WarnOnlyAbortable());
     OUR_KEY = ZKConfig.getZooKeeperClusterKey(conf);
-    rqZK = new ReplicationQueuesZKImpl(zkw, conf, abortable);
   }
 
   @After
@@ -111,23 +91,6 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     utility.shutdownMiniZKCluster();
-  }
-
-  @Test
-  public void testIsPeerPath_PathToParentOfPeerNode() {
-    assertFalse(rqZK.isPeerPath(rqZK.peersZNode));
-  }
-
-  @Test
-  public void testIsPeerPath_PathToChildOfPeerNode() {
-    String peerChild = ZNodePaths.joinZNode(ZNodePaths.joinZNode(rqZK.peersZNode, "1"), "child");
-    assertFalse(rqZK.isPeerPath(peerChild));
-  }
-
-  @Test
-  public void testIsPeerPath_ActualPeerPath() {
-    String peerPath = ZNodePaths.joinZNode(rqZK.peersZNode, "1");
-    assertTrue(rqZK.isPeerPath(peerPath));
   }
 
   private static class WarnOnlyAbortable implements Abortable {

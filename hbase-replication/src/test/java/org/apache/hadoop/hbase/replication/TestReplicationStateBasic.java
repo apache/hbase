@@ -42,9 +42,8 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class TestReplicationStateBasic {
 
-  protected ReplicationQueues rq1;
-  protected ReplicationQueues rq2;
-  protected ReplicationQueues rq3;
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationStateBasic.class);
+
   protected ReplicationQueueStorage rqs;
   protected ServerName server1 = ServerName.valueOf("hostname1.example.org", 1234, 12345);
   protected ServerName server2 = ServerName.valueOf("hostname2.example.org", 1234, 12345);
@@ -63,8 +62,6 @@ public abstract class TestReplicationStateBasic {
   protected static final int ZK_MAX_COUNT = 300;
   protected static final int ZK_SLEEP_INTERVAL = 100; // millis
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationStateBasic.class);
-
   @Test
   public void testReplicationQueueStorage() throws ReplicationException {
     // Test methods with empty state
@@ -76,15 +73,13 @@ public abstract class TestReplicationStateBasic {
      * Set up data Two replicators: -- server1: three queues with 0, 1 and 2 log files each --
      * server2: zero queues
      */
-    rq1.init(server1.getServerName());
-    rq2.init(server2.getServerName());
-    rq1.addLog("qId1", "trash");
-    rq1.removeLog("qId1", "trash");
-    rq1.addLog("qId2", "filename1");
-    rq1.addLog("qId3", "filename2");
-    rq1.addLog("qId3", "filename3");
-    rq2.addLog("trash", "trash");
-    rq2.removeQueue("trash");
+    rqs.addWAL(server1, "qId1", "trash");
+    rqs.removeWAL(server1, "qId1", "trash");
+    rqs.addWAL(server1,"qId2", "filename1");
+    rqs.addWAL(server1,"qId3", "filename2");
+    rqs.addWAL(server1,"qId3", "filename3");
+    rqs.addWAL(server2,"trash", "trash");
+    rqs.removeQueue(server2,"trash");
 
     List<ServerName> reps = rqs.getListOfReplicators();
     assertEquals(2, reps.size());
@@ -105,62 +100,55 @@ public abstract class TestReplicationStateBasic {
     assertTrue(list.contains("qId3"));
   }
 
+  private void removeAllQueues(ServerName serverName) throws ReplicationException {
+    for (String queue: rqs.getAllQueues(serverName)) {
+      rqs.removeQueue(serverName, queue);
+    }
+  }
   @Test
   public void testReplicationQueues() throws ReplicationException {
-    rq1.init(server1.getServerName());
-    rq2.init(server2.getServerName());
-    rq3.init(server3.getServerName());
     // Initialize ReplicationPeer so we can add peers (we don't transfer lone queues)
     rp.init();
 
-    // 3 replicators should exist
-    assertEquals(3, rq1.getListOfReplicators().size());
-    rq1.removeQueue("bogus");
-    rq1.removeLog("bogus", "bogus");
-    rq1.removeAllQueues();
-    assertEquals(0, rq1.getAllQueues().size());
-    assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
-    assertNull(rq1.getLogsInQueue("bogus"));
-    assertNull(rq1.getUnClaimedQueueIds(ServerName.valueOf("bogus", 1234, -1L).toString()));
-
-    rq1.setLogPosition("bogus", "bogus", 5L);
+    rqs.removeQueue(server1, "bogus");
+    rqs.removeWAL(server1, "bogus", "bogus");
+    removeAllQueues(server1);
+    assertEquals(0, rqs.getAllQueues(server1).size());
+    assertEquals(0, rqs.getWALPosition(server1, "bogus", "bogus"));
+    assertTrue(rqs.getWALsInQueue(server1, "bogus").isEmpty());
+    assertTrue(rqs.getAllQueues(ServerName.valueOf("bogus", 1234, 12345)).isEmpty());
 
     populateQueues();
 
-    assertEquals(3, rq1.getListOfReplicators().size());
-    assertEquals(0, rq2.getLogsInQueue("qId1").size());
-    assertEquals(5, rq3.getLogsInQueue("qId5").size());
-    assertEquals(0, rq3.getLogPosition("qId1", "filename0"));
-    rq3.setLogPosition("qId5", "filename4", 354L);
-    assertEquals(354L, rq3.getLogPosition("qId5", "filename4"));
+    assertEquals(3, rqs.getListOfReplicators().size());
+    assertEquals(0, rqs.getWALsInQueue(server2, "qId1").size());
+    assertEquals(5, rqs.getWALsInQueue(server3, "qId5").size());
+    assertEquals(0, rqs.getWALPosition(server3, "qId1", "filename0"));
+    rqs.setWALPosition(server3, "qId5", "filename4", 354L);
+    assertEquals(354L, rqs.getWALPosition(server3, "qId5", "filename4"));
 
-    assertEquals(5, rq3.getLogsInQueue("qId5").size());
-    assertEquals(0, rq2.getLogsInQueue("qId1").size());
-    assertEquals(0, rq1.getAllQueues().size());
-    assertEquals(1, rq2.getAllQueues().size());
-    assertEquals(5, rq3.getAllQueues().size());
+    assertEquals(5, rqs.getWALsInQueue(server3, "qId5").size());
+    assertEquals(0, rqs.getWALsInQueue(server2, "qId1").size());
+    assertEquals(0, rqs.getAllQueues(server1).size());
+    assertEquals(1, rqs.getAllQueues(server2).size());
+    assertEquals(5, rqs.getAllQueues(server3).size());
 
-    assertEquals(0, rq3.getUnClaimedQueueIds(server1.getServerName()).size());
-    rq3.removeReplicatorIfQueueIsEmpty(server1.getServerName());
-    assertEquals(2, rq3.getListOfReplicators().size());
+    assertEquals(0, rqs.getAllQueues(server1).size());
+    rqs.removeReplicatorIfQueueIsEmpty(server1);
+    assertEquals(2, rqs.getListOfReplicators().size());
 
-    List<String> queues = rq2.getUnClaimedQueueIds(server3.getServerName());
+    List<String> queues = rqs.getAllQueues(server3);
     assertEquals(5, queues.size());
     for (String queue : queues) {
-      rq2.claimQueue(server3.getServerName(), queue);
+      rqs.claimQueue(server3, queue, server2);
     }
-    rq2.removeReplicatorIfQueueIsEmpty(server3.getServerName());
-    assertEquals(1, rq2.getListOfReplicators().size());
+    rqs.removeReplicatorIfQueueIsEmpty(server3);
+    assertEquals(1, rqs.getListOfReplicators().size());
 
-    // Try to claim our own queues
-    assertNull(rq2.getUnClaimedQueueIds(server2.getServerName()));
-    rq2.removeReplicatorIfQueueIsEmpty(server2.getServerName());
-
-    assertEquals(6, rq2.getAllQueues().size());
-
-    rq2.removeAllQueues();
-
-    assertEquals(0, rq2.getListOfReplicators().size());
+    assertEquals(6, rqs.getAllQueues(server2).size());
+    removeAllQueues(server2);
+    rqs.removeReplicatorIfQueueIsEmpty(server2);
+    assertEquals(0, rqs.getListOfReplicators().size());
   }
 
   @Test
@@ -197,7 +185,6 @@ public abstract class TestReplicationStateBasic {
   @Test
   public void testHfileRefsReplicationQueues() throws ReplicationException, KeeperException {
     rp.init();
-    rq1.init(server1.getServerName());
 
     List<Pair<Path, Path>> files1 = new ArrayList<>(3);
     files1.add(new Pair<>(null, new Path("file_1")));
@@ -206,8 +193,8 @@ public abstract class TestReplicationStateBasic {
     assertTrue(rqs.getReplicableHFiles(ID_ONE).isEmpty());
     assertEquals(0, rqs.getAllPeersFromHFileRefsQueue().size());
     rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
-    rq1.addPeerToHFileRefs(ID_ONE);
-    rq1.addHFileRefs(ID_ONE, files1);
+    rqs.addPeerToHFileRefs(ID_ONE);
+    rqs.addHFileRefs(ID_ONE, files1);
     assertEquals(1, rqs.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, rqs.getReplicableHFiles(ID_ONE).size());
     List<String> hfiles2 = new ArrayList<>(files1.size());
@@ -215,43 +202,41 @@ public abstract class TestReplicationStateBasic {
       hfiles2.add(p.getSecond().getName());
     }
     String removedString = hfiles2.remove(0);
-    rq1.removeHFileRefs(ID_ONE, hfiles2);
+    rqs.removeHFileRefs(ID_ONE, hfiles2);
     assertEquals(1, rqs.getReplicableHFiles(ID_ONE).size());
     hfiles2 = new ArrayList<>(1);
     hfiles2.add(removedString);
-    rq1.removeHFileRefs(ID_ONE, hfiles2);
+    rqs.removeHFileRefs(ID_ONE, hfiles2);
     assertEquals(0, rqs.getReplicableHFiles(ID_ONE).size());
     rp.unregisterPeer(ID_ONE);
   }
 
   @Test
   public void testRemovePeerForHFileRefs() throws ReplicationException, KeeperException {
-    rq1.init(server1.getServerName());
-
     rp.init();
     rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
-    rq1.addPeerToHFileRefs(ID_ONE);
+    rqs.addPeerToHFileRefs(ID_ONE);
     rp.registerPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO));
-    rq1.addPeerToHFileRefs(ID_TWO);
+    rqs.addPeerToHFileRefs(ID_TWO);
 
     List<Pair<Path, Path>> files1 = new ArrayList<>(3);
     files1.add(new Pair<>(null, new Path("file_1")));
     files1.add(new Pair<>(null, new Path("file_2")));
     files1.add(new Pair<>(null, new Path("file_3")));
-    rq1.addHFileRefs(ID_ONE, files1);
-    rq1.addHFileRefs(ID_TWO, files1);
+    rqs.addHFileRefs(ID_ONE, files1);
+    rqs.addHFileRefs(ID_TWO, files1);
     assertEquals(2, rqs.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, rqs.getReplicableHFiles(ID_ONE).size());
     assertEquals(3, rqs.getReplicableHFiles(ID_TWO).size());
 
     rp.unregisterPeer(ID_ONE);
-    rq1.removePeerFromHFileRefs(ID_ONE);
+    rqs.removePeerFromHFileRefs(ID_ONE);
     assertEquals(1, rqs.getAllPeersFromHFileRefsQueue().size());
     assertTrue(rqs.getReplicableHFiles(ID_ONE).isEmpty());
     assertEquals(3, rqs.getReplicableHFiles(ID_TWO).size());
 
     rp.unregisterPeer(ID_TWO);
-    rq1.removePeerFromHFileRefs(ID_TWO);
+    rqs.removePeerFromHFileRefs(ID_TWO);
     assertEquals(0, rqs.getAllPeersFromHFileRefsQueue().size());
     assertTrue(rqs.getReplicableHFiles(ID_TWO).isEmpty());
   }
@@ -363,15 +348,15 @@ public abstract class TestReplicationStateBasic {
    * 3, 4, 5 log files respectively
    */
   protected void populateQueues() throws ReplicationException {
-    rq1.addLog("trash", "trash");
-    rq1.removeQueue("trash");
+    rqs.addWAL(server1, "trash", "trash");
+    rqs.removeQueue(server1, "trash");
 
-    rq2.addLog("qId1", "trash");
-    rq2.removeLog("qId1", "trash");
+    rqs.addWAL(server2, "qId1", "trash");
+    rqs.removeWAL(server2, "qId1", "trash");
 
     for (int i = 1; i < 6; i++) {
       for (int j = 0; j < i; j++) {
-        rq3.addLog("qId" + i, "filename" + j);
+        rqs.addWAL(server3, "qId" + i, "filename" + j);
       }
       // Add peers for the corresponding queues so they are not orphans
       rp.registerPeer("qId" + i,

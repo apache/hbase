@@ -54,6 +54,28 @@ import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTe
 
 /**
  * ZK based replication queue storage.
+ * <p>
+ * The base znode for each regionserver is the regionserver name. For example:
+ *
+ * <pre>
+ * /hbase/replication/rs/hostname.example.org,6020,1234
+ * </pre>
+ *
+ * Within this znode, the region server maintains a set of WAL replication queues. These queues are
+ * represented by child znodes named using there give queue id. For example:
+ *
+ * <pre>
+ * /hbase/replication/rs/hostname.example.org,6020,1234/1
+ * /hbase/replication/rs/hostname.example.org,6020,1234/2
+ * </pre>
+ *
+ * Each queue has one child znode for every WAL that still needs to be replicated. The value of
+ * these WAL child znodes is the latest position that has been replicated. This position is updated
+ * every time a WAL entry is replicated. For example:
+ *
+ * <pre>
+ * /hbase/replication/rs/hostname.example.org,6020,1234/1/23522342.23422 [VALUE: 254]
+ * </pre>
  */
 @InterfaceAudience.Private
 class ZKReplicationQueueStorage extends ZKReplicationStorageBase

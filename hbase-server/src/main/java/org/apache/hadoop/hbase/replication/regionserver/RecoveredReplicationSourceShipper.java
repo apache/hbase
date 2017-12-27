@@ -23,13 +23,13 @@ import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader.WALEntryBatch;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  *  Used by a {@link RecoveredReplicationSource}.
@@ -40,14 +40,14 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
       LoggerFactory.getLogger(RecoveredReplicationSourceShipper.class);
 
   protected final RecoveredReplicationSource source;
-  private final ReplicationQueues replicationQueues;
+  private final ReplicationQueueStorage replicationQueues;
 
   public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
       PriorityBlockingQueue<Path> queue, RecoveredReplicationSource source,
-      ReplicationQueues replicationQueues) {
+      ReplicationQueueStorage queueStorage) {
     super(conf, walGroupId, queue, source);
     this.source = source;
-    this.replicationQueues = replicationQueues;
+    this.replicationQueues = queueStorage;
   }
 
   @Override
@@ -116,11 +116,11 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
     long startPosition = 0;
     String peerClusterZnode = source.getPeerClusterZnode();
     try {
-      startPosition = this.replicationQueues.getLogPosition(peerClusterZnode,
-        this.queue.peek().getName());
+      startPosition = this.replicationQueues.getWALPosition(source.getServerWALsBelongTo(),
+        peerClusterZnode, this.queue.peek().getName());
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Recovered queue started with log " + this.queue.peek() + " at position "
-            + startPosition);
+        LOG.trace("Recovered queue started with log " + this.queue.peek() + " at position " +
+          startPosition);
       }
     } catch (ReplicationException e) {
       terminate("Couldn't get the position of this recovered queue " + peerClusterZnode, e);
