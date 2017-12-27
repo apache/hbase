@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -307,14 +305,10 @@ public class DumpReplicationQueues extends Configured implements Tool {
       boolean hdfs) throws Exception {
     ReplicationQueueStorage queueStorage;
     ReplicationPeers replicationPeers;
-    ReplicationQueues replicationQueues;
     ReplicationTracker replicationTracker;
-    ReplicationQueuesArguments replicationArgs =
-        new ReplicationQueuesArguments(getConf(), new WarnOnlyAbortable(), zkw);
     StringBuilder sb = new StringBuilder();
 
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
-    replicationQueues = ReplicationFactory.getReplicationQueues(replicationArgs);
     replicationPeers =
         ReplicationFactory.getReplicationPeers(zkw, getConf(), queueStorage, connection);
     replicationTracker = ReplicationFactory.getReplicationTracker(zkw, replicationPeers, getConf(),
@@ -328,7 +322,6 @@ public class DumpReplicationQueues extends Configured implements Tool {
     }
     for (ServerName regionserver : regionservers) {
       List<String> queueIds = queueStorage.getAllQueues(regionserver);
-      replicationQueues.init(regionserver.getServerName());
       if (!liveRegionServers.contains(regionserver.getServerName())) {
         deadRegionServers.add(regionserver.getServerName());
       }
@@ -338,17 +331,17 @@ public class DumpReplicationQueues extends Configured implements Tool {
         if (!peerIds.contains(queueInfo.getPeerId())) {
           deletedQueues.add(regionserver + "/" + queueId);
           sb.append(
-            formatQueue(regionserver, replicationQueues, queueInfo, queueId, wals, true, hdfs));
+            formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, true, hdfs));
         } else {
           sb.append(
-            formatQueue(regionserver, replicationQueues, queueInfo, queueId, wals, false, hdfs));
+            formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, false, hdfs));
         }
       }
     }
     return sb.toString();
   }
 
-  private String formatQueue(ServerName regionserver, ReplicationQueues replicationQueues,
+  private String formatQueue(ServerName regionserver, ReplicationQueueStorage queueStorage,
       ReplicationQueueInfo queueInfo, String queueId, List<String> wals, boolean isDeleted,
       boolean hdfs) throws Exception {
     StringBuilder sb = new StringBuilder();
@@ -370,7 +363,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     peersQueueSize.addAndGet(queueInfo.getPeerId(), wals.size());
 
     for (String wal : wals) {
-      long position = replicationQueues.getLogPosition(queueInfo.getPeerId(), wal);
+      long position = queueStorage.getWALPosition(regionserver, queueInfo.getPeerId(), wal);
       sb.append("    Replication position for " + wal + ": " + (position > 0 ? position : "0"
           + " (not started or nothing to replicate)") + "\n");
     }

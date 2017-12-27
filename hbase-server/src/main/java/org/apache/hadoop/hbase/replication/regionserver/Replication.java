@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,8 +37,8 @@ import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
-import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
+import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -53,7 +52,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
@@ -63,7 +61,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
-  private ReplicationQueues replicationQueues;
+  private ReplicationQueueStorage queueStorage;
   private ReplicationPeers replicationPeers;
   private ReplicationTracker replicationTracker;
   private Configuration conf;
@@ -106,10 +104,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     }
 
     try {
-      this.replicationQueues =
-          ReplicationFactory.getReplicationQueues(new ReplicationQueuesArguments(conf, this.server,
-            server.getZooKeeper()));
-      this.replicationQueues.init(this.server.getServerName().toString());
+      this.queueStorage =
+          ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
       this.replicationPeers =
           ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf, this.server);
       this.replicationPeers.init();
@@ -125,8 +121,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     } catch (KeeperException ke) {
       throw new IOException("Could not read cluster id", ke);
     }
-    this.replicationManager = new ReplicationSourceManager(replicationQueues, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId,
+    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers, replicationTracker, conf,
+      this.server, fs, logDir, oldLogDir, clusterId,
         walProvider != null ? walProvider.getWALFileLengthProvider() : p -> OptionalLong.empty());
     if (walProvider != null) {
       walProvider

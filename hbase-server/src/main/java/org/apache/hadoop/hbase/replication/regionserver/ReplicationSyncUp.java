@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ import org.apache.hadoop.util.ToolRunner;
  * tool is used to sync-up the delta from Master to Slave using the info from ZooKeeper. The tool
  * will run on Master-Cluser, and assume ZK, Filesystem and NetWork still available after hbase
  * crashes
- * 
+ *
  * <pre>
  * hbase org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp
  * </pre>
@@ -83,11 +83,12 @@ public class ReplicationSyncUp extends Configured implements Tool {
       Replication replication = new Replication();
       replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir, null);
       ReplicationSourceManager manager = replication.getReplicationManager();
-      manager.init();
-      int numberOfOldSource = 1; // default wait once
-      while (numberOfOldSource > 0) {
+      manager.init().get();
+      while (manager.activeFailoverTaskCount() > 0) {
         Thread.sleep(SLEEP_TIME);
-        numberOfOldSource = manager.getOldSources().size();
+      }
+      while (manager.getOldSources().size() > 0) {
+        Thread.sleep(SLEEP_TIME);
       }
       manager.join();
     } catch (InterruptedException e) {

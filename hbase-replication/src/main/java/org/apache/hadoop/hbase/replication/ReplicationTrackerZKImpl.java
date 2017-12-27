@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,6 +53,8 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
     super(zookeeper, conf, abortable);
     this.stopper = stopper;
     this.zookeeper.registerListener(new OtherRegionServerWatcher(this.zookeeper));
+    // watch the changes
+    refreshOtherRegionServersList(true);
   }
 
   @Override
@@ -71,7 +72,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
    */
   @Override
   public List<String> getListOfRegionServers() {
-    refreshOtherRegionServersList();
+    refreshOtherRegionServersList(false);
 
     List<String> list = null;
     synchronized (otherRegionServers) {
@@ -137,7 +138,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
       if (!path.startsWith(this.watcher.znodePaths.rsZNode)) {
         return false;
       }
-      return refreshOtherRegionServersList();
+      return refreshOtherRegionServersList(true);
     }
   }
 
@@ -157,8 +158,8 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
    * @return true if the local list of the other region servers was updated with the ZK data (even
    *         if it was empty), false if the data was missing in ZK
    */
-  private boolean refreshOtherRegionServersList() {
-    List<String> newRsList = getRegisteredRegionServers();
+  private boolean refreshOtherRegionServersList(boolean watch) {
+    List<String> newRsList = getRegisteredRegionServers(watch);
     if (newRsList == null) {
       return false;
     } else {
@@ -174,10 +175,14 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
    * Get a list of all the other region servers in this cluster and set a watch
    * @return a list of server nanes
    */
-  private List<String> getRegisteredRegionServers() {
+  private List<String> getRegisteredRegionServers(boolean watch) {
     List<String> result = null;
     try {
-      result = ZKUtil.listChildrenAndWatchThem(this.zookeeper, this.zookeeper.znodePaths.rsZNode);
+      if (watch) {
+        result = ZKUtil.listChildrenAndWatchThem(this.zookeeper, this.zookeeper.znodePaths.rsZNode);
+      } else {
+        result = ZKUtil.listChildrenNoWatch(this.zookeeper, this.zookeeper.znodePaths.rsZNode);
+      }
     } catch (KeeperException e) {
       this.abortable.abort("Get list of registered region servers", e);
     }
