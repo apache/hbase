@@ -187,7 +187,7 @@ public class TestMetaCache {
   public static List<Throwable> metaCachePreservingExceptions() {
     return new ArrayList<Throwable>() {{
       add(new RegionOpeningException(" "));
-      add(new RegionTooBusyException());
+      add(new RegionTooBusyException("Some old message"));
       add(new ThrottlingException(" "));
       add(new MultiActionResultTooLarge(" "));
       add(new RetryImmediatelyException(" "));

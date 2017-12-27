@@ -157,6 +157,8 @@ extends RetriesExhaustedException {
       if (t instanceof DoNotRetryIOException ||
           t instanceof RegionTooBusyException) {
         // If RegionTooBusyException, print message since it has Region name in it.
+        // RegionTooBusyException message was edited to remove variance. Has regionname, server,
+        // and why the exception; no longer has duration it waited on lock nor current memsize.
         name = t.getMessage();
       } else {
         name = t.getClass().getSimpleName();
