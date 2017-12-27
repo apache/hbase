@@ -20,19 +20,14 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-
-import com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Container for Actions (i.e. Get, Delete, or Put), which are grouped by

@@ -31,16 +31,14 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
-import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.BucketSizeInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -51,6 +49,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableMap;
 
 /**
  * Basic test of BucketCache.Puts and gets.
@@ -336,7 +336,8 @@ public class TestBucketCache {
     float[] configValues = {-1f, 0f, 0.96f, 1.05f};
     //throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
     boolean[] expectedOutcomes = {false, true, false, false};
-    Map<String, float[]> configMappings = ImmutableMap.of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
+    Map<String, float[]> configMappings = ImmutableMap
+      .of(BucketCache.MIN_FACTOR_CONFIG_NAME, configValues);
     Configuration conf = HBaseConfiguration.create();
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
