@@ -66,22 +66,22 @@ module Hbase
         peer_state = args.fetch(STATE, nil)
 
         # Create and populate a ReplicationPeerConfig
-        replication_peer_config = ReplicationPeerConfig.new
-        replication_peer_config.set_cluster_key(cluster_key)
+        builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+          .newBuilder()
+        builder.set_cluster_key(cluster_key)
 
         unless endpoint_classname.nil?
-          replication_peer_config.set_replication_endpoint_impl(endpoint_classname)
+          builder.set_replication_endpoint_impl(endpoint_classname)
         end
 
         unless config.nil?
-          replication_peer_config.get_configuration.put_all(config)
+          builder.putAllConfiguration(config)
         end
 
         unless data.nil?
           # Convert Strings to Bytes for peer_data
-          peer_data = replication_peer_config.get_peer_data
           data.each do |key, val|
-            peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
+            builder.putPeerData(Bytes.to_bytes(key), Bytes.to_bytes(val))
           end
         end
 
@@ -90,8 +90,8 @@ module Hbase
           namespaces.each do |n|
             ns_set.add(n)
           end
-          replication_peer_config.setReplicateAllUserTables(false)
-          replication_peer_config.set_namespaces(ns_set)
+          builder.setReplicateAllUserTables(false)
+          builder.set_namespaces(ns_set)
         end
 
         unless table_cfs.nil?
@@ -100,15 +100,15 @@ module Hbase
           table_cfs.each do |key, val|
             map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
           end
-          replication_peer_config.setReplicateAllUserTables(false)
-          replication_peer_config.set_table_cfs_map(map)
+          builder.setReplicateAllUserTables(false)
+          builder.set_table_cfs_map(map)
         end
 
         enabled = true
         unless peer_state.nil?
           enabled = false if peer_state == 'DISABLED'
         end
-        @admin.addReplicationPeer(id, replication_peer_config, enabled)
+        @admin.addReplicationPeer(id, builder.build, enabled)
       else
         raise(ArgumentError, 'args must be a Hash')
       end
@@ -220,13 +220,18 @@ module Hbase
       unless namespaces.nil?
         rpc = get_peer_config(id)
         unless rpc.nil?
-          ns_set = rpc.getNamespaces
-          ns_set = java.util.HashSet.new if ns_set.nil?
+          if rpc.getNamespaces.nil?
+            ns_set = java.util.HashSet.new
+          else
+            ns_set = java.util.HashSet.new(rpc.getNamespaces)
+          end
           namespaces.each do |n|
             ns_set.add(n)
           end
-          rpc.setNamespaces(ns_set)
-          @admin.updateReplicationPeerConfig(id, rpc)
+          builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+            .newBuilder(rpc)
+          builder.setNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
         end
       end
     end
@@ -238,12 +243,15 @@ module Hbase
         unless rpc.nil?
           ns_set = rpc.getNamespaces
           unless ns_set.nil?
+            ns_set = java.util.HashSet.new(ns_set)
             namespaces.each do |n|
               ns_set.remove(n)
             end
           end
-          rpc.setNamespaces(ns_set)
-          @admin.updateReplicationPeerConfig(id, rpc)
+          builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+            .newBuilder(rpc)
+          builder.setNamespaces(ns_set)
+          @admin.updateReplicationPeerConfig(id, builder.build)
         end
       end
     end
@@ -353,19 +361,20 @@ module Hbase
 
       # Create and populate a ReplicationPeerConfig
       replication_peer_config = get_peer_config(id)
+      builder = org.apache.hadoop.hbase.replication.ReplicationPeerConfig
+        .newBuilder(replication_peer_config)
       unless config.nil?
-        replication_peer_config.get_configuration.put_all(config)
+        builder.putAllConfiguration(config)
       end
 
       unless data.nil?
         # Convert Strings to Bytes for peer_data
-        peer_data = replication_peer_config.get_peer_data
         data.each do |key, val|
-          peer_data.put(Bytes.to_bytes(key), Bytes.to_bytes(val))
+          builder.putPeerData(Bytes.to_bytes(key), Bytes.to_bytes(val))
         end
       end
 
-      @admin.updateReplicationPeerConfig(id, replication_peer_config)
+      @admin.updateReplicationPeerConfig(id, builder.build)
     end
   end
 end
