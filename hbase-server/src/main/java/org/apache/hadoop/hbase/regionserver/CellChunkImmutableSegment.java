@@ -18,18 +18,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+
 
 /**
  * CellChunkImmutableSegment extends the API supported by a {@link Segment},
@@ -109,15 +111,24 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       chunks[i] = this.getMemStoreLAB().getNewExternalChunk();
     }
     while (iterator.hasNext()) {        // the iterator hides the elimination logic for compaction
+      boolean alreadyCopied = false;
       Cell c = iterator.next();
       numOfCellsAfterCompaction++;
-      assert (c instanceof ByteBufferKeyValue); // shouldn't get here anything but ByteBufferKeyValue
+      assert(c instanceof ExtendedCell);
+      if (((ExtendedCell)c).getChunkId() == ExtendedCell.CELL_NOT_BASED_ON_CHUNK) {
+        // CellChunkMap assumes all cells are allocated on MSLAB.
+        // Therefore, cells which are not allocated on MSLAB initially,
+        // are copied into MSLAB here.
+        c = copyCellIntoMSLAB(c);
+        alreadyCopied = true;
+      }
       if (offsetInCurentChunk + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkSize) {
         currentChunkIdx++;              // continue to the next index chunk
         offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
-      if (action == MemStoreCompactionStrategy.Action.COMPACT) {
-        c = maybeCloneWithAllocator(c); // for compaction copy cell to the new segment (MSLAB copy)
+      if (action == MemStoreCompactionStrategy.Action.COMPACT && !alreadyCopied) {
+        // for compaction copy cell to the new segment (MSLAB copy)
+        c = maybeCloneWithAllocator(c, false);
       }
       offsetInCurentChunk = // add the Cell reference to the index chunk
           createCellReference((ByteBufferKeyValue)c, chunks[currentChunkIdx].getData(),
@@ -153,7 +164,6 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   // Create CellSet based on CellChunkMap from current ConcurrentSkipListMap based CellSet
   // (without compacting iterator)
   // This is a service for not-flat immutable segments
-  // Assumption: cells do not exceed chunk size!
   private void reinitializeCellSet(
       int numOfCells, KeyValueScanner segmentScanner, CellSet oldCellSet,
       MemStoreCompactionStrategy.Action action) {
@@ -175,7 +185,13 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     Cell prev = null;
     try {
       while ((curCell = segmentScanner.next()) != null) {
-        assert (curCell instanceof ByteBufferKeyValue); // shouldn't get here anything but ByteBufferKeyValue
+        assert(curCell instanceof ExtendedCell);
+        if (((ExtendedCell)curCell).getChunkId() == ExtendedCell.CELL_NOT_BASED_ON_CHUNK) {
+          // CellChunkMap assumes all cells are allocated on MSLAB.
+          // Therefore, cells which are not allocated on MSLAB initially,
+          // are copied into MSLAB here.
+          curCell = copyCellIntoMSLAB(curCell);
+        }
         if (offsetInCurentChunk + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkSize) {
           // continue to the next metadata chunk
           currentChunkIdx++;
@@ -230,5 +246,24 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       numberOfChunks++;                   // add one additional chunk
     }
     return numberOfChunks;
+  }
+
+  private Cell copyCellIntoMSLAB(Cell cell) {
+    // Take care for a special case when a cell is copied from on-heap to (probably off-heap) MSLAB.
+    // The cell allocated as an on-heap JVM object (byte array) occupies slightly different
+    // amount of memory, than when the cell serialized and allocated on the MSLAB.
+    // Here, we update the heap size of the new segment only for the difference between object and
+    // serialized size. This is a decrease of the size as serialized cell is a bit smaller.
+    // The actual size of the cell is not added yet, and will be added (only in compaction)
+    // in initializeCellSet#updateMetaInfo().
+    long oldHeapSize = heapSizeChange(cell, true);
+    long oldCellSize = getCellLength(cell);
+    cell = maybeCloneWithAllocator(cell, true);
+    long newHeapSize = heapSizeChange(cell, true);
+    long newCellSize = getCellLength(cell);
+    long heapOverhead = newHeapSize - oldHeapSize;
+    //TODO: maybe need to update the dataSize of the region
+    incSize(newCellSize - oldCellSize, heapOverhead);
+    return cell;
   }
 }

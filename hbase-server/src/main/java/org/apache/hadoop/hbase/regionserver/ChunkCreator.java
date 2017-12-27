@@ -165,9 +165,11 @@ public class ChunkCreator {
     if (jumboSize <= chunkSize) {
       LOG.warn("Jumbo chunk size " + jumboSize + " must be more than regular chunk size "
           + chunkSize + ". Converting to regular chunk.");
-      getChunk(chunkIndexType,chunkSize);
+      return getChunk(chunkIndexType,chunkSize);
     }
-    return getChunk(chunkIndexType, jumboSize);
+    // the size of the allocation includes
+    // both the size requested and a place for the Chunk's header
+    return getChunk(chunkIndexType, jumboSize + SIZEOF_CHUNK_HEADER);
   }
 
   /**

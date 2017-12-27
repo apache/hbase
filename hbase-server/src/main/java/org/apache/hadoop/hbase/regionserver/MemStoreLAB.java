@@ -69,6 +69,17 @@ public interface MemStoreLAB {
   Cell copyCellInto(Cell cell);
 
   /**
+   * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
+   * over the copied the data. When this MemStoreLAB can not copy this Cell, it returns null.
+   *
+   * Since the process of flattening to CellChunkMap assumes all cells are allocated on MSLAB,
+   * and since copyCellInto does not copy big cells (for whom size > maxAlloc) into MSLAB,
+   * this method is called while the process of flattening to CellChunkMap is running,
+   * for forcing the allocation of big cells on this MSLAB.
+   */
+  Cell forceCopyOfBigCellInto(Cell cell);
+
+  /**
    * Close instance since it won't be used any more, try to put the chunks back to pool
    */
   void close();
@@ -92,7 +103,7 @@ public interface MemStoreLAB {
   Chunk getNewExternalChunk();
 
   /* Creating chunk to be used as data chunk in CellChunkMap.
-  ** This chunk is bigger the normal constant chunk size, and thus called JumboChunk it is used for
+  ** This chunk is bigger than normal constant chunk size, and thus called JumboChunk it is used for
   ** jumbo cells (which size is bigger than normal chunks).
   ** Jumbo Chunks are needed only for CCM and thus are created only in
   ** CompactingMemStore.IndexType.CHUNK_MAP type.
