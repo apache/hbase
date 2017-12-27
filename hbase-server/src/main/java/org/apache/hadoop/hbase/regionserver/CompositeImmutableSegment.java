@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -56,7 +55,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   @VisibleForTesting
   @Override
   public List<Segment> getAllSegments() {
-    return new LinkedList<>(segments);
+    return new ArrayList<>(segments);
   }
 
   @Override
