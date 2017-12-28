@@ -2754,7 +2754,7 @@ public class TestFromClientSide {
   throws Exception {
     Get get = new Get(row);
     get.addColumn(family, qualifier);
-    get.setTimeStamp(stamp);
+    get.setTimestamp(stamp);
     get.setMaxVersions(Integer.MAX_VALUE);
     Result result = ht.get(get);
     assertSingleResult(result, row, family, qualifier, stamp, value);
@@ -2765,7 +2765,7 @@ public class TestFromClientSide {
   throws Exception {
     Get get = new Get(row);
     get.addColumn(family, qualifier);
-    get.setTimeStamp(stamp);
+    get.setTimestamp(stamp);
     get.setMaxVersions(Integer.MAX_VALUE);
     Result result = ht.get(get);
     assertEmptyResult(result);
@@ -2776,7 +2776,7 @@ public class TestFromClientSide {
   throws Exception {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
-    scan.setTimeStamp(stamp);
+    scan.setTimestamp(stamp);
     scan.setMaxVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, qualifier, stamp, value);
@@ -2787,7 +2787,7 @@ public class TestFromClientSide {
   throws Exception {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
-    scan.setTimeStamp(stamp);
+    scan.setTimestamp(stamp);
     scan.setMaxVersions(Integer.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);

@@ -164,7 +164,7 @@ implements Configurable {
     }
 
     if (conf.get(SCAN_TIMESTAMP) != null) {
-      scan.setTimeStamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
+      scan.setTimestamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
     }
 
     if (conf.get(SCAN_TIMERANGE_START) != null && conf.get(SCAN_TIMERANGE_END) != null) {

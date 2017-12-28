@@ -92,7 +92,7 @@ public class TestReplicationStatus extends TestReplicationBase {
         assertTrue("failed to get ReplicationLoadSink.AgeOfLastShippedOp ",
           (rLoadSink.getAgeOfLastAppliedOp() >= 0));
         assertTrue("failed to get ReplicationLoadSink.TimeStampsOfLastAppliedOp ",
-          (rLoadSink.getTimeStampsOfLastAppliedOp() >= 0));
+          (rLoadSink.getTimestampsOfLastAppliedOp() >= 0));
       }
 
       // Stop rs1, then the queue of rs1 will be transfered to rs0

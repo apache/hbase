@@ -2826,7 +2826,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if(delete.getFamilyCellMap().isEmpty()){
       for(byte [] family : this.htableDescriptor.getColumnFamilyNames()){
         // Don't eat the timestamp
-        delete.addFamily(family, delete.getTimeStamp());
+        delete.addFamily(family, delete.getTimestamp());
       }
     } else {
       for(byte [] family : delete.getFamilyCellMap().keySet()) {
@@ -2909,10 +2909,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (coprocessorHost != null) {
             if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell,
                 byteNow, get)) {
-              updateDeleteLatestVersionTimeStamp(cell, get, count, byteNow);
+              updateDeleteLatestVersionTimestamp(cell, get, count, byteNow);
             }
           } else {
-            updateDeleteLatestVersionTimeStamp(cell, get, count, byteNow);
+            updateDeleteLatestVersionTimestamp(cell, get, count, byteNow);
           }
         } else {
           PrivateCellUtil.updateLatestStamp(cell, byteNow);
@@ -2921,7 +2921,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  void updateDeleteLatestVersionTimeStamp(Cell cell, Get get, int count, byte[] byteNow)
+  void updateDeleteLatestVersionTimestamp(Cell cell, Get get, int count, byte[] byteNow)
       throws IOException {
     List<Cell> result = get(get, false);
 

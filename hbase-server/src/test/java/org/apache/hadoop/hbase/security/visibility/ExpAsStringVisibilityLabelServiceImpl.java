@@ -110,7 +110,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
           .setRow(p.getRow())
           .setFamily(LABELS_TABLE_FAMILY)
           .setQualifier(auth)
-          .setTimestamp(p.getTimeStamp())
+          .setTimestamp(p.getTimestamp())
           .setType(Cell.Type.Put)
           .setValue(DUMMY_VALUE)
           .build());

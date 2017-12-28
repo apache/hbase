@@ -20,16 +20,16 @@ public class ReplicationLoadSource {
   private final String peerID;
   private final long ageOfLastShippedOp;
   private final int sizeOfLogQueue;
-  private final long timeStampOfLastShippedOp;
+  private final long timestampOfLastShippedOp;
   private final long replicationLag;
 
   // TODO: add the builder for this class
   @InterfaceAudience.Private
-  public ReplicationLoadSource(String id, long age, int size, long timeStamp, long lag) {
+  public ReplicationLoadSource(String id, long age, int size, long timestamp, long lag) {
     this.peerID = id;
     this.ageOfLastShippedOp = age;
     this.sizeOfLogQueue = size;
-    this.timeStampOfLastShippedOp = timeStamp;
+    this.timestampOfLastShippedOp = timestamp;
     this.replicationLag = lag;
   }
 
@@ -45,8 +45,17 @@ public class ReplicationLoadSource {
     return this.sizeOfLogQueue;
   }
 
+  /**
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0.
+   * @see #getTimestampOfLastShippedOp()
+   */
+  @Deprecated
   public long getTimeStampOfLastShippedOp() {
-    return this.timeStampOfLastShippedOp;
+    return getTimestampOfLastShippedOp();
+  }
+
+  public long getTimestampOfLastShippedOp() {
+    return this.timestampOfLastShippedOp;
   }
 
   public long getReplicationLag() {

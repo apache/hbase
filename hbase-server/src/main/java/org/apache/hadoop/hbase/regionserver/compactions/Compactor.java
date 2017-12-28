@@ -142,11 +142,11 @@ public abstract class Compactor<T extends CellSink> {
   private FileDetails getFileDetails(
       Collection<HStoreFile> filesToCompact, boolean allFiles) throws IOException {
     FileDetails fd = new FileDetails();
-    long oldestHFileTimeStampToKeepMVCC = System.currentTimeMillis() -
+    long oldestHFileTimestampToKeepMVCC = System.currentTimeMillis() -
       (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);
 
     for (HStoreFile file : filesToCompact) {
-      if(allFiles && (file.getModificationTimeStamp() < oldestHFileTimeStampToKeepMVCC)) {
+      if(allFiles && (file.getModificationTimestamp() < oldestHFileTimestampToKeepMVCC)) {
         // when isAllFiles is true, all files are compacted so we can calculate the smallest
         // MVCC value to keep
         if(fd.minSeqIdToKeep < file.getMaxMemStoreTS()) {

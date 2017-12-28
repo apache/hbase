@@ -18,21 +18,29 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class ReplicationLoadSink {
   private final long ageOfLastAppliedOp;
-  private final long timeStampsOfLastAppliedOp;
+  private final long timestampsOfLastAppliedOp;
 
   // TODO: add the builder for this class
   @InterfaceAudience.Private
-  public ReplicationLoadSink(long age, long timeStamp) {
+  public ReplicationLoadSink(long age, long timestamp) {
     this.ageOfLastAppliedOp = age;
-    this.timeStampsOfLastAppliedOp = timeStamp;
+    this.timestampsOfLastAppliedOp = timestamp;
   }
 
   public long getAgeOfLastAppliedOp() {
     return this.ageOfLastAppliedOp;
   }
 
+  /**
+   * @deprecated Since hbase-2.0.0. Will be removed in 3.0.0.
+   * @see #getTimestampsOfLastAppliedOp()
+   */
+  @Deprecated
   public long getTimeStampsOfLastAppliedOp() {
-    return this.timeStampsOfLastAppliedOp;
+    return getTimestampsOfLastAppliedOp();
   }
 
+  public long getTimestampsOfLastAppliedOp() {
+    return this.timestampsOfLastAppliedOp;
+  }
 }

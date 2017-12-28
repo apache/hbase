@@ -238,7 +238,7 @@ public class TestMultiVersions {
       for (int j = 0; j < timestamp.length; j++) {
         Get get = new Get(rows[i]);
         get.addFamily(HConstants.CATALOG_FAMILY);
-        get.setTimeStamp(timestamp[j]);
+        get.setTimestamp(timestamp[j]);
         Result result = table.get(get);
         int cellCount = 0;
         for(@SuppressWarnings("unused")Cell kv : result.listCells()) {
@@ -286,7 +286,7 @@ public class TestMultiVersions {
 
     count = 0;
     scan = new Scan();
-    scan.setTimeStamp(1000L);
+    scan.setTimestamp(1000L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
 
     s = table.getScanner(scan);
@@ -322,7 +322,7 @@ public class TestMultiVersions {
 
     count = 0;
     scan = new Scan();
-    scan.setTimeStamp(100L);
+    scan.setTimestamp(100L);
     scan.addFamily(HConstants.CATALOG_FAMILY);
 
     s = table.getScanner(scan);

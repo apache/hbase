@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To only retrieve columns within a specific range of version timestamps, call
  * {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
- * To only retrieve columns with a specific timestamp, call {@link #setTimeStamp(long) setTimestamp}
+ * To only retrieve columns with a specific timestamp, call {@link #setTimestamp(long) setTimestamp}
  * .
  * <p>
  * To limit the number of versions of each column to be returned, call {@link #setMaxVersions(int)
@@ -376,16 +376,34 @@ public class Scan extends Query {
    * @see #setMaxVersions()
    * @see #setMaxVersions(int)
    * @return this
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setTimestamp(long)} instead
    */
+  @Deprecated
   public Scan setTimeStamp(long timestamp)
   throws IOException {
+    return this.setTimestamp(timestamp);
+  }
+
+  /**
+   * Get versions of columns with the specified timestamp. Note, default maximum
+   * versions to return is 1.  If your time range spans more than one version
+   * and you want all versions returned, up the number of versions beyond the
+   * defaut.
+   * @param timestamp version timestamp
+   * @see #setMaxVersions()
+   * @see #setMaxVersions(int)
+   * @return this
+   */
+  public Scan setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp+1);
+      tr = new TimeRange(timestamp, timestamp + 1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
+
     return this;
   }
 
