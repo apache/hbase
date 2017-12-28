@@ -100,9 +100,10 @@ public class MemStoreLABImpl implements MemStoreLAB {
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
     Preconditions.checkArgument(maxAlloc <= chunkSize,
         MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
-    idxType = CompactingMemStore.IndexType.valueOf(conf.get(
-        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
-        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_DEFAULT));
+
+    // if user requested to work with MSLABs (whether on- or off-heap), then the
+    // immutable segments are going to use CellChunkMap as their index
+    idxType = CompactingMemStore.IndexType.CHUNK_MAP;
   }
 
   @Override
