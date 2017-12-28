@@ -814,10 +814,10 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.metrics.impl.FastLongHistogram.class,  // hbase-metrics
       org.apache.hadoop.hbase.metrics.Snapshot.class,                // hbase-metrics-api
       org.apache.zookeeper.ZooKeeper.class,
-      org.apache.hadoop.hbase.shaded.io.netty.channel.Channel.class,
+      org.apache.hbase.thirdparty.io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.class,
-      org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists.class,
+      org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.class,
+      org.apache.hbase.thirdparty.com.google.common.collect.Lists.class,
       org.apache.htrace.core.Tracer.class,
       com.codahale.metrics.MetricRegistry.class,
       org.apache.commons.lang3.ArrayUtils.class,

@@ -21,7 +21,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * It is used to represent the size with different units.

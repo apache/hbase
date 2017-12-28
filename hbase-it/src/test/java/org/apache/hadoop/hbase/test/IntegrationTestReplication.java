@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.test;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;

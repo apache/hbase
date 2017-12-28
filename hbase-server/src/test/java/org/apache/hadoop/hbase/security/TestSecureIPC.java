@@ -28,7 +28,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
+import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -317,7 +317,7 @@ public class TestSecureIPC {
               .getMessage();
           assertEquals(input, result);
         }
-      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
+      } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
         throw new RuntimeException(e);
       }
     }

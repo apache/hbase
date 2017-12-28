@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * A RegionServerCallable set to use the Client protocol.
@@ -46,12 +46,12 @@ public abstract class ClientServiceCallable<T> extends
 
   // Below here are simple methods that contain the stub and the rpcController.
   protected ClientProtos.GetResponse doGet(ClientProtos.GetRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().get(getRpcController(), request);
   }
 
   protected ClientProtos.MutateResponse doMutate(ClientProtos.MutateRequest request)
-  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().mutate(getRpcController(), request);
   }
 }

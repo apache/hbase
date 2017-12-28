@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.Unpooled;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelOutboundHandlerAdapter;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelPromise;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.CoalescingBufferQueue;
-import org.apache.hadoop.hbase.shaded.io.netty.util.ReferenceCountUtil;
-import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.PromiseCombiner;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundHandlerAdapter;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
+import org.apache.hbase.thirdparty.io.netty.channel.CoalescingBufferQueue;
+import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
 
 import java.io.IOException;
 

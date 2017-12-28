@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 public class ChaosMonkeyRunner extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(ChaosMonkeyRunner.class);

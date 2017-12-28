@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.zookeeper;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.annotations.VisibleForTesting;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Class used to push numbers about ZooKeeper into the metrics subsystem. This will take a

@@ -53,7 +53,7 @@ public class OOMERegionServer extends HRegionServer {
         // Add the batch update 30 times to bring on the OOME faster.
         this.retainer.add(put);
       }
-    } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
   }

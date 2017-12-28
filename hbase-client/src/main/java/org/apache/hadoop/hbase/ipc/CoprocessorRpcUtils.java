@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -98,12 +98,12 @@ public final class CoprocessorRpcUtils {
   private static CoprocessorServiceCall getCoprocessorServiceCall(
       final Descriptors.MethodDescriptor method, final Message request, final byte [] row) {
     return CoprocessorServiceCall.newBuilder()
-    .setRow(org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
+    .setRow(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
     .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
     .setMethodName(method.getName())
     // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
     // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
-    .setRequest(org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.
+    .setRequest(org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.
         unsafeWrap(request.toByteArray())).build();
   }
 
@@ -120,7 +120,7 @@ public final class CoprocessorRpcUtils {
 
   public static Message getRequest(Service service,
       Descriptors.MethodDescriptor methodDesc,
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString shadedRequest)
+      org.apache.hbase.thirdparty.com.google.protobuf.ByteString shadedRequest)
   throws IOException {
     Message.Builder builderForType =
         service.getRequestPrototype(methodDesc).newBuilderForType();
@@ -159,7 +159,7 @@ public final class CoprocessorRpcUtils {
       regionName));
     // TODO: UGLY COPY IN HERE!!!!
     builder.setValue(builder.getValueBuilder().setName(result.getClass().getName())
-        .setValue(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.
+        .setValue(org.apache.hbase.thirdparty.com.google.protobuf.ByteString.
             copyFrom(result.toByteArray())));
     return builder.build();
   }

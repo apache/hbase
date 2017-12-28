@@ -36,7 +36,7 @@ import org.joni.Regex;
 import org.joni.Syntax;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This comparator is for use with {@link CompareFilter} implementations, such

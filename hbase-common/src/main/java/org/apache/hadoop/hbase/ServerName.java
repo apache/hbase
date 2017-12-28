@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.net.InetAddresses;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
 
 /**

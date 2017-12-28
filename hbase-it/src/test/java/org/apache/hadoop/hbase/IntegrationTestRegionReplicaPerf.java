@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import com.codahale.metrics.Histogram;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;

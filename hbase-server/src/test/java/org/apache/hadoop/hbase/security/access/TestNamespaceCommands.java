@@ -54,7 +54,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import com.google.protobuf.BlockingRpcChannel;
 
 @Category({SecurityTests.class, MediumTests.class})

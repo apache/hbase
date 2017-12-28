@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.io.netty.util.internal.StringUtil;
+import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 
 /**
  * A very simple {@code }RpcScheduler} that serves incoming requests in order.

@@ -87,7 +87,7 @@ public class TestInterfaceAudienceAnnotations {
     @Override
     public boolean isCandidateClass(Class<?> c) {
       return c.getPackage().getName().
-          contains("org.apache.hadoop.hbase.shaded.com.google.protobuf");
+          contains("org.apache.hbase.thirdparty.com.google.protobuf");
     }
   }
 

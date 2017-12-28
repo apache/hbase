@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequ
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy {
 

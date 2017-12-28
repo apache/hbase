@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.BaseConfigurable;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 import java.util.Map;
 
