@@ -89,6 +89,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     compactingSetUp();
     this.memstore = new MyCompactingMemStore(HBaseConfiguration.create(), CellComparator.getInstance(),
         store, regionServicesForStores, MemoryCompactionPolicy.EAGER);
+    ((CompactingMemStore)memstore).setIndexType(CompactingMemStore.IndexType.ARRAY_MAP);
   }
 
   protected void compactingSetUp() throws Exception {

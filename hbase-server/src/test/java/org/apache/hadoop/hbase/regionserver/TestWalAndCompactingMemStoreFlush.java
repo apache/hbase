@@ -768,8 +768,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
         FlushNonSloppyStoresFirstPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
-        75 * 1024);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.8);
     // set memstore to do index compaction with merge
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
@@ -796,6 +795,12 @@ public class TestWalAndCompactingMemStoreFlush {
     }
 
     long totalMemstoreSize = region.getMemStoreSize();
+
+    // test in-memory flashing into CAM here
+    ((CompactingMemStore) ((HStore)region.getStore(FAMILY1)).memstore).setIndexType(
+        CompactingMemStore.IndexType.ARRAY_MAP);
+    ((CompactingMemStore) ((HStore)region.getStore(FAMILY3)).memstore).setIndexType(
+        CompactingMemStore.IndexType.ARRAY_MAP);
 
     // Find the sizes of the memstores of each CF.
     MemStoreSize cf1MemstoreSizePhaseI = region.getStore(FAMILY1).getMemStoreSize();

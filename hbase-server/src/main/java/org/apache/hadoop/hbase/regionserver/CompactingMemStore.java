@@ -58,16 +58,10 @@ public class CompactingMemStore extends AbstractMemStore {
       "hbase.hregion.compacting.memstore.type";
   public static final String COMPACTING_MEMSTORE_TYPE_DEFAULT =
       String.valueOf(MemoryCompactionPolicy.BASIC);
-  // The external setting of the compacting MemStore behaviour
-  public static final String COMPACTING_MEMSTORE_INDEX_KEY =
-      "hbase.hregion.compacting.memstore.index";
-  // usage of CellArrayMap is default, later it will be decided how to use CellChunkMap
-  public static final String COMPACTING_MEMSTORE_INDEX_DEFAULT =
-      String.valueOf(IndexType.ARRAY_MAP);
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
-  private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.02;
+  private static final double IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT = 0.1;
 
   private static final Logger LOG = LoggerFactory.getLogger(CompactingMemStore.class);
   private HStore store;
@@ -114,9 +108,16 @@ public class CompactingMemStore extends AbstractMemStore {
     this.regionServices = regionServices;
     this.pipeline = new CompactionPipeline(getRegionServices());
     this.compactor = createMemStoreCompactor(compactionPolicy);
+    if (conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
+      // if user requested to work with MSLABs (whether on- or off-heap), then the
+      // immutable segments are going to use CellChunkMap as their index
+      indexType = IndexType.CHUNK_MAP;
+    } else {
+      indexType = IndexType.ARRAY_MAP;
+    }
+    // initialization of the flush size should happen after initialization of the index type
+    // so do not transfer the following method
     initInmemoryFlushSize(conf);
-    indexType = IndexType.valueOf(conf.get(CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
-        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_DEFAULT));
   }
 
   @VisibleForTesting
@@ -126,6 +127,7 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   private void initInmemoryFlushSize(Configuration conf) {
+    double factor = 0;
     long memstoreFlushSize = getRegionServices().getMemStoreFlushSize();
     int numStores = getRegionServices().getNumStores();
     if (numStores <= 1) {
@@ -133,11 +135,17 @@ public class CompactingMemStore extends AbstractMemStore {
       numStores = 1;
     }
     inmemoryFlushSize = memstoreFlushSize / numStores;
-    // multiply by a factor
-    double factor =  conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
-        IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
+    // multiply by a factor (different factors for different index types)
+    if (indexType == IndexType.ARRAY_MAP) {
+      factor = conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
+          IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
+    } else {
+      factor = conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
+          IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
+    }
     inmemoryFlushSize *= factor;
-    LOG.info("Setting in-memory flush size threshold to " + inmemoryFlushSize);
+    LOG.info("Setting in-memory flush size threshold to " + inmemoryFlushSize
+        + " and immutable segments index to be of type " + indexType);
   }
 
   /**
@@ -318,10 +326,11 @@ public class CompactingMemStore extends AbstractMemStore {
 
   // setter is used only for testability
   @VisibleForTesting
-  public void setIndexType() {
-    indexType = IndexType.valueOf(getConfiguration().get(
-        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_KEY,
-        CompactingMemStore.COMPACTING_MEMSTORE_INDEX_DEFAULT));
+  void setIndexType(IndexType type) {
+    indexType = type;
+    // Because this functionality is for testing only and tests are setting in-memory flush size
+    // according to their need, there is no setting of in-memory flush size, here.
+    // If it is needed, please change in-memory flush size explicitly
   }
 
   public IndexType getIndexType() {
@@ -572,7 +581,7 @@ public class CompactingMemStore extends AbstractMemStore {
   // debug method
   public void debug() {
     String msg = "active size=" + this.active.keySize();
-    msg += " threshold="+IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT* inmemoryFlushSize;
+    msg += " in-memory flush size is "+ inmemoryFlushSize;
     msg += " allow compaction is "+ (allowCompaction.get() ? "true" : "false");
     msg += " inMemoryFlushInProgress is "+ (inMemoryFlushInProgress.get() ? "true" : "false");
     LOG.debug(msg);
