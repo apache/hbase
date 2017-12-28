@@ -180,8 +180,8 @@ class DefaultStoreFileManager implements StoreFileManager {
     return files.stream().limit(Math.max(0, files.size() - 1)).filter(sf -> {
       long fileTs = sf.getReader().getMaxTimestamp();
       if (fileTs < maxTs && !filesCompacting.contains(sf)) {
-        LOG.info("Found an expired store file: " + sf.getPath() + " whose maxTimeStamp is " +
-            fileTs + ", which is below " + maxTs);
+        LOG.info("Found an expired store file {} whose maxTimestamp is {}, which is below {}",
+            sf.getPath(), fileTs,  maxTs);
         return true;
       } else {
         return false;

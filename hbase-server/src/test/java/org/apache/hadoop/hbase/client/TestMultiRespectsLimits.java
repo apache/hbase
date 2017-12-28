@@ -161,7 +161,7 @@ public class TestMultiRespectsLimits {
               .setRow(row)
               .setFamily(FAMILY)
               .setQualifier(col)
-              .setTimestamp(p.getTimeStamp())
+              .setTimestamp(p.getTimestamp())
               .setType(Cell.Type.Put)
               .setValue(value)
               .build());

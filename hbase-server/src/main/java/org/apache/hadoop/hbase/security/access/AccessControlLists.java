@@ -173,7 +173,7 @@ public class AccessControlLists {
         .setRow(p.getRow())
         .setFamily(ACL_LIST_FAMILY)
         .setQualifier(key)
-        .setTimestamp(p.getTimeStamp())
+        .setTimestamp(p.getTimestamp())
         .setType(Type.Put)
         .setValue(value)
         .build());

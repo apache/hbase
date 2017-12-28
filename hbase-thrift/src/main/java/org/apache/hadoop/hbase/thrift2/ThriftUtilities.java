@@ -96,7 +96,7 @@ public final class ThriftUtilities {
 
     // Timestamp overwrites time range if both are set
     if (in.isSetTimestamp()) {
-      out.setTimeStamp(in.getTimestamp());
+      out.setTimestamp(in.getTimestamp());
     } else if (in.isSetTimeRange()) {
       out.setTimeRange(in.getTimeRange().getMinStamp(), in.getTimeRange().getMaxStamp());
     }
@@ -234,7 +234,7 @@ public final class ThriftUtilities {
               .setRow(out.getRow())
               .setFamily(columnValue.getFamily())
               .setQualifier(columnValue.getQualifier())
-              .setTimestamp(out.getTimeStamp())
+              .setTimestamp(out.getTimestamp())
               .setType(Cell.Type.Put)
               .setValue(columnValue.getValue())
               .build());
@@ -364,7 +364,7 @@ public final class ThriftUtilities {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
     List<TColumn> columns = new ArrayList<>(in.getFamilyCellMap().entrySet().size());
-    long rowTimestamp = in.getTimeStamp();
+    long rowTimestamp = in.getTimestamp();
     if (rowTimestamp != HConstants.LATEST_TIMESTAMP) {
       out.setTimestamp(rowTimestamp);
     }

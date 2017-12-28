@@ -64,11 +64,12 @@ public class ReplicationLoad {
     ClusterStatusProtos.ReplicationLoadSink.Builder rLoadSinkBuild =
         ClusterStatusProtos.ReplicationLoadSink.newBuilder();
     rLoadSinkBuild.setAgeOfLastAppliedOp(sinkMetrics.getAgeOfLastAppliedOp());
-    rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimeStampOfLastAppliedOp());
+    rLoadSinkBuild.setTimeStampsOfLastAppliedOp(sinkMetrics.getTimestampOfLastAppliedOp());
     this.replicationLoadSink = rLoadSinkBuild.build();
 
     // build the SourceLoad List
-    Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap = new HashMap<>();
+    Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap =
+        new HashMap<>();
     for (MetricsSource sm : this.sourceMetricsList) {
       // Get the actual peer id
       String peerId = sm.getPeerID();
@@ -77,7 +78,7 @@ public class ReplicationLoad {
 
       long ageOfLastShippedOp = sm.getAgeOfLastShippedOp();
       int sizeOfLogQueue = sm.getSizeOfLogQueue();
-      long timeStampOfLastShippedOp = sm.getTimeStampOfLastShippedOp();
+      long timeStampOfLastShippedOp = sm.getTimestampOfLastShippedOp();
       long replicationLag;
       long timePassedAfterLastShippedOp =
           EnvironmentEdgeManager.currentTime() - timeStampOfLastShippedOp;
@@ -128,7 +129,7 @@ public class ReplicationLoad {
       sb = Strings.appendKeyValue(sb, "AgeOfLastShippedOp", rls.getAgeOfLastShippedOp());
       sb = Strings.appendKeyValue(sb, "SizeOfLogQueue", rls.getSizeOfLogQueue());
       sb =
-          Strings.appendKeyValue(sb, "TimeStampsOfLastShippedOp",
+          Strings.appendKeyValue(sb, "TimestampsOfLastShippedOp",
             (new Date(rls.getTimeStampOfLastShippedOp()).toString()));
       sb = Strings.appendKeyValue(sb, "Replication Lag", rls.getReplicationLag());
     }
@@ -148,7 +149,7 @@ public class ReplicationLoad {
         Strings.appendKeyValue(sb, "AgeOfLastAppliedOp",
           this.replicationLoadSink.getAgeOfLastAppliedOp());
     sb =
-        Strings.appendKeyValue(sb, "TimeStampsOfLastAppliedOp",
+        Strings.appendKeyValue(sb, "TimestampsOfLastAppliedOp",
           (new Date(this.replicationLoadSink.getTimeStampsOfLastAppliedOp()).toString()));
 
     return sb.toString();

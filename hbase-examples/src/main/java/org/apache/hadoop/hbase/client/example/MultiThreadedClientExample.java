@@ -227,7 +227,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
                 .setRow(rk)
                 .setFamily(FAMILY)
                 .setQualifier(QUAL)
-                .setTimestamp(p.getTimeStamp())
+                .setTimestamp(p.getTimestamp())
                 .setType(Cell.Type.Put)
                 .setValue(value)
                 .build());
@@ -264,7 +264,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
                 .setRow(rk)
                 .setFamily(FAMILY)
                 .setQualifier(QUAL)
-                .setTimestamp(p.getTimeStamp())
+                .setTimestamp(p.getTimestamp())
                 .setType(Type.Put)
                 .setValue(value)
                 .build());

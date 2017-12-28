@@ -39,7 +39,7 @@ public class MetricsSource implements BaseSource {
   private static final Logger LOG = LoggerFactory.getLogger(MetricsSource.class);
 
   // tracks last shipped timestamp for each wal group
-  private Map<String, Long> lastTimeStamps = new HashMap<>();
+  private Map<String, Long> lastTimestamps = new HashMap<>();
   private long lastHFileRefsQueueSize = 0;
   private String id;
 
@@ -82,7 +82,7 @@ public class MetricsSource implements BaseSource {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
-    this.lastTimeStamps.put(walGroup, timestamp);
+    this.lastTimestamps.put(walGroup, timestamp);
   }
 
   /**
@@ -91,9 +91,9 @@ public class MetricsSource implements BaseSource {
    * @param walGroupId id of the group to update
    */
   public void refreshAgeOfLastShippedOp(String walGroupId) {
-    Long lastTimestamp = this.lastTimeStamps.get(walGroupId);
+    Long lastTimestamp = this.lastTimestamps.get(walGroupId);
     if (lastTimestamp == null) {
-      this.lastTimeStamps.put(walGroupId, 0L);
+      this.lastTimestamps.put(walGroupId, 0L);
       lastTimestamp = 0L;
     }
     if (lastTimestamp > 0) {
@@ -185,7 +185,7 @@ public class MetricsSource implements BaseSource {
     singleSourceSource.decrSizeOfLogQueue(lastQueueSize);
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfHFileRefsQueue(lastHFileRefsQueueSize);
-    lastTimeStamps.clear();
+    lastTimestamps.clear();
     lastHFileRefsQueueSize = 0;
   }
 
@@ -208,10 +208,21 @@ public class MetricsSource implements BaseSource {
   /**
    * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
    * @return lastTimestampForAge
+   * @deprecated Since 2.0.0. Removed in 3.0.0.
+   * @see #getTimestampOfLastShippedOp()
    */
+  @Deprecated
   public long getTimeStampOfLastShippedOp() {
+    return getTimestampOfLastShippedOp();
+  }
+
+  /**
+   * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one
+   * @return lastTimestampForAge
+   */
+  public long getTimestampOfLastShippedOp() {
     long lastTimestamp = 0L;
-    for (long ts : lastTimeStamps.values()) {
+    for (long ts : lastTimestamps.values()) {
       if (ts > lastTimestamp) {
         lastTimestamp = ts;
       }

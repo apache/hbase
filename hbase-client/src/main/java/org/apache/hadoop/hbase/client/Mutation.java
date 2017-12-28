@@ -113,7 +113,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected Mutation(Mutation clone) {
     super(clone);
     this.row = clone.getRow();
-    this.ts = clone.getTimeStamp();
+    this.ts = clone.getTimestamp();
     this.familyMap = clone.getFamilyCellMap().entrySet().stream()
       .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()),
         (k, v) -> {
@@ -344,8 +344,20 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   /**
    * Method for retrieving the timestamp
    * @return timestamp
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #getTimestamp()} instead
    */
+  @Deprecated
   public long getTimeStamp() {
+    return this.getTimestamp();
+  }
+
+  /**
+   * Method for retrieving the timestamp.
+   *
+   * @return timestamp
+   */
+  public long getTimestamp() {
     return this.ts;
   }
 
