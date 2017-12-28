@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.metrics;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Container class for commonly collected metrics for most operations. Instantiate this class to

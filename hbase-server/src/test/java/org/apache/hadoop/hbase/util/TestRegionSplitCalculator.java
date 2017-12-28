@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ComparisonChain;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Multimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ComparisonChain;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;

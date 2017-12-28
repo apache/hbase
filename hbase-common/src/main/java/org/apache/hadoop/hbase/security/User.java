@@ -38,7 +38,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.cache.LoadingCache;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
  * Wrapper to abstract out usage of user and group information in HBase.

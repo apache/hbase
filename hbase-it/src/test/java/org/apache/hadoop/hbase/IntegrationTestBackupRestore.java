@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,8 +52,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Objects;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.base.Objects;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * An integration test to detect regressions in HBASE-7912. Create

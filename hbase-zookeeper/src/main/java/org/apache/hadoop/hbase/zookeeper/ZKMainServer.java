@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeperMain;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 
 /**
  * Tool for running ZookeeperMain from HBase by  reading a ZooKeeper server

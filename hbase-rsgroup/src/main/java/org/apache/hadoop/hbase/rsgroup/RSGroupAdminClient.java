@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveServe
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Client used for managing region server group information.

@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.primitives.Longs;
+import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or

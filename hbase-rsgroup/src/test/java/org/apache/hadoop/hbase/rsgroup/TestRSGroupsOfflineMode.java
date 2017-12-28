@@ -44,7 +44,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 // This tests that GroupBasedBalancer will use data in zk to do balancing during master startup.
 // This does not test retain assignment.

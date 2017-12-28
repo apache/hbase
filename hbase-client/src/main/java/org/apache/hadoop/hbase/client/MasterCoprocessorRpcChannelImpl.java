@@ -54,7 +54,7 @@ class MasterCoprocessorRpcChannelImpl implements RpcChannel {
     stub.execMasterService(
       controller,
       csr,
-      new org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
+      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
 
         @Override
         public void run(CoprocessorServiceResponse resp) {

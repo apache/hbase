@@ -209,7 +209,7 @@ public class TestRegionReplicas {
 
   // build a mock rpc
   private void assertGetRpc(HRegionInfo info, int value, boolean expect)
-      throws IOException, org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+      throws IOException, org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     byte[] row = Bytes.toBytes(String.valueOf(value));
     Get get = new Get(row);
     ClientProtos.GetRequest getReq = RequestConverter.buildGetRequest(info.getRegionName(), get);

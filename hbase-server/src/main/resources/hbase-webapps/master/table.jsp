@@ -52,7 +52,7 @@
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
   import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString"%>
+  import="org.apache.hbase.thirdparty.com.google.protobuf.ByteString"%>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos" %>
 <%@ page import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas" %>

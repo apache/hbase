@@ -58,7 +58,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.hash.Hashing;
+import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy

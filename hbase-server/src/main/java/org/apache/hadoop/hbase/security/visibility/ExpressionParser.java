@@ -86,7 +86,7 @@ public class ExpressionParser {
           // This could be costly. but do we have any alternative?
           // If we don't do this way then we may have to handle while checking the authorizations.
           // Better to do it here.
-          byte[] array = org.apache.hadoop.hbase.shaded.com.google.common.primitives.Bytes.toArray(list);
+          byte[] array = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.toArray(list);
           String leafExp = Bytes.toString(array).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);

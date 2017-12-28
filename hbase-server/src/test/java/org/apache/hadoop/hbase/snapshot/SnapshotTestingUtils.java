@@ -283,11 +283,11 @@ public final class SnapshotTestingUtils {
    * @param snapshot: the snapshot to check
    * @param sleep: amount to sleep between checks to see if the snapshot is done
    * @throws ServiceException if the snapshot fails
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException
+   * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
    */
   public static void waitForSnapshotToComplete(HMaster master,
       SnapshotProtos.SnapshotDescription snapshot, long sleep)
-          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+          throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder()
         .setSnapshot(snapshot).build();
     IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder()
@@ -297,7 +297,7 @@ public final class SnapshotTestingUtils {
       try {
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
-        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException(e);
+        throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
       }
     }
   }
@@ -348,7 +348,7 @@ public final class SnapshotTestingUtils {
     try {
       master.getMasterRpcServices().isSnapshotDone(null, snapshot);
       Assert.fail("didn't fail to lookup a snapshot");
-    } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException se) {
+    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
       try {
         throw ProtobufUtil.handleRemoteException(se);
       } catch (HBaseSnapshotException e) {

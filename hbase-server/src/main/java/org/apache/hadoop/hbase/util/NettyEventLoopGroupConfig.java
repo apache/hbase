@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.shaded.io.netty.channel.Channel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.EventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ServerChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.epoll.EpollEventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.epoll.EpollServerSocketChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.epoll.EpollSocketChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.socket.nio.NioSocketChannel;
-import org.apache.hadoop.hbase.shaded.io.netty.util.concurrent.DefaultThreadFactory;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollServerSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.concurrent.ThreadFactory;
 

@@ -28,7 +28,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;

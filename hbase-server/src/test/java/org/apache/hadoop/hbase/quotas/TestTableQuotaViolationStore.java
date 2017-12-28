@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables.size;
+import static org.apache.hbase.thirdparty.com.google.common.collect.Iterables.size;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;

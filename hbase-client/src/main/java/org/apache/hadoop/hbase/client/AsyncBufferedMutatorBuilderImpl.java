@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * The implementation of {@link AsyncBufferedMutatorBuilder}.

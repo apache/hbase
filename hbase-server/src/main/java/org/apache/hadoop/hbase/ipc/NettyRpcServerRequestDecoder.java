@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.shaded.io.netty.buffer.ByteBuf;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelHandlerContext;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.ChannelInboundHandlerAdapter;
-import org.apache.hadoop.hbase.shaded.io.netty.channel.group.ChannelGroup;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelInboundHandlerAdapter;
+import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 
 import org.apache.yetus.audience.InterfaceAudience;
 

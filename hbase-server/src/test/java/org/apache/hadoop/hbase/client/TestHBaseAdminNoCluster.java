@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Ignore;
@@ -77,7 +77,7 @@ public class TestHBaseAdminNoCluster {
    * @throws ZooKeeperConnectionException
    * @throws MasterNotRunningException
    * @throws ServiceException
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException 
+   * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException 
    */
   //TODO: Clean up, with Procedure V2 and nonce to prevent the same procedure to call mulitple
   // time, this test is invalid anymore. Just keep the test around for some time before
@@ -86,7 +86,7 @@ public class TestHBaseAdminNoCluster {
   @Test
   public void testMasterMonitorCallableRetries()
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException, 
-  org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+  org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     Configuration configuration = HBaseConfiguration.create();
     // Set the pause and retry count way down.
     configuration.setLong(HConstants.HBASE_CLIENT_PAUSE, 1);

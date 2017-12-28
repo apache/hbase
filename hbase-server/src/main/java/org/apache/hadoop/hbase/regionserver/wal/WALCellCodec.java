@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
 
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 
 /**

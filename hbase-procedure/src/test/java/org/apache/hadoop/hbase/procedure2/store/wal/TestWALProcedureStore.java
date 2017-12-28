@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.procedure2.SequentialProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Int64Value;
+import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.io.IOUtils;

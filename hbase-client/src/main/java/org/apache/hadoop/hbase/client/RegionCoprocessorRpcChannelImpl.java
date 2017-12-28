@@ -81,7 +81,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
       request, row, loc.getRegionInfo().getRegionName());
     stub.execService(controller, csr,
-      new org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
+      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
 
         @Override
         public void run(CoprocessorServiceResponse resp) {

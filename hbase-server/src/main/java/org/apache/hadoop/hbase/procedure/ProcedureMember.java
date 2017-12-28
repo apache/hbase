@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 
 /**
  * Process to kick off and manage a running {@link Subprocedure} on a member. This is the

@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.shaded.com.google.common.io.CountingInputStream;
-import org.apache.hadoop.hbase.shaded.com.google.common.io.CountingOutputStream;
+import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
+import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCellCodec {
