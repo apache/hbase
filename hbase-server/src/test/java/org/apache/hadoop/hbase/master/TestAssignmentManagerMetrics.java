@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.fail;
 
+@Ignore // Disabled temporarily; reenable 
 @Category(MediumTests.class)
 public class TestAssignmentManagerMetrics {
 
