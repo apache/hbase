@@ -506,7 +506,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.client.retries.number</name>
-    <value>10</value>
+    <value>15</value>
     <description>Maximum retries.  Used as maximum for all retryable
     operations such as the getting of a cell's value, starting a row update,
     etc.  Retry interval is a rough function based on hbase.client.pause.  At
@@ -737,7 +737,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.blockingStoreFiles</name>
-    <value>10</value>
+    <value>16</value>
     <description> If more than this number of StoreFiles exist in any one Store (one StoreFile
      is written per flush of MemStore), updates are blocked for this region until a compaction is
       completed, or until hbase.hstore.blockingWaitTime has been exceeded.</description>

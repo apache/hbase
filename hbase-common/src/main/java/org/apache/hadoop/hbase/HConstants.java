@@ -790,7 +790,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 10;
+  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 15;
 
   public static final String HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER =
       "hbase.client.serverside.retries.multiplier";
