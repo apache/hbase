@@ -223,7 +223,7 @@ public class TestRemoteTable {
     get = new Get(ROW_2);
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
-    get.setTimeStamp(TS_1);
+    get.setTimestamp(TS_1);
     result = remoteTable.get(get);
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);

@@ -172,7 +172,7 @@ public class RegionStateStore {
           .setRow(put.getRow())
           .setFamily(HConstants.CATALOG_FAMILY)
           .setQualifier(getServerNameColumn(replicaId))
-          .setTimestamp(put.getTimeStamp())
+          .setTimestamp(put.getTimestamp())
           .setType(Cell.Type.Put)
           .setValue(Bytes.toBytes(regionLocation.getServerName()))
           .build());
@@ -182,7 +182,7 @@ public class RegionStateStore {
         .setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY)
         .setQualifier(getStateColumn(replicaId))
-        .setTimestamp(put.getTimeStamp())
+        .setTimestamp(put.getTimestamp())
         .setType(Cell.Type.Put)
         .setValue(Bytes.toBytes(state.name()))
         .build());

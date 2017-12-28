@@ -282,6 +282,11 @@ public class HStoreFile implements StoreFile {
 
   @Override
   public long getModificationTimeStamp() throws IOException {
+    return getModificationTimestamp();
+  }
+
+  @Override
+  public long getModificationTimestamp() throws IOException {
     return fileInfo.getModificationTime();
   }
 

@@ -135,6 +135,11 @@ public class MockHStoreFile extends HStoreFile {
 
   @Override
   public long getModificationTimeStamp() {
+    return getModificationTimestamp();
+  }
+
+  @Override
+  public long getModificationTimestamp() {
     return modificationTime;
   }
 

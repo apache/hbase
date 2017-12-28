@@ -160,7 +160,7 @@ public class TableNamespaceManager implements Stoppable {
           .setRow(row)
           .setFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
           .setQualifier(TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
-          .setTimestamp(p.getTimeStamp())
+          .setTimestamp(p.getTimestamp())
           .setType(Cell.Type.Put)
           .setValue(ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray())
           .build());

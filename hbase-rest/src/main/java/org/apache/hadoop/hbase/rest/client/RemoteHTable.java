@@ -201,7 +201,7 @@ public class RemoteHTable implements Table {
 
   protected CellSetModel buildModelFromPut(Put put) {
     RowModel row = new RowModel(put.getRow());
-    long ts = put.getTimeStamp();
+    long ts = put.getTimestamp();
     for (List<Cell> cells: put.getFamilyCellMap().values()) {
       for (Cell cell: cells) {
         row.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
@@ -468,7 +468,7 @@ public class RemoteHTable implements Table {
   @Override
   public void delete(Delete delete) throws IOException {
     String spec = buildRowSpec(delete.getRow(), delete.getFamilyCellMap(),
-      delete.getTimeStamp(), delete.getTimeStamp(), 1);
+      delete.getTimestamp(), delete.getTimestamp(), 1);
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.delete(spec);
       int code = response.getCode();

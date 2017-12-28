@@ -157,7 +157,7 @@ public class TestMutation {
       byte[] cloneValue = clone.getAttributesMap().get(name);
       assertTrue(Bytes.equals(originValue, cloneValue));
     }
-    Assert.assertEquals(origin.getTimeStamp(), clone.getTimeStamp());
+    Assert.assertEquals(origin.getTimestamp(), clone.getTimestamp());
     Assert.assertEquals(origin.getPriority(), clone.getPriority());
     if (origin instanceof Append) {
       assertEquals(((Append)origin).getTimeRange(), ((Append)clone).getTimeRange());
@@ -205,7 +205,7 @@ public class TestMutation {
             .setRow(row)
             .setFamily(family)
             .setQualifier(qualifier0)
-            .setTimestamp(put.getTimeStamp())
+            .setTimestamp(put.getTimestamp())
             .setType(Type.Put)
             .setValue(value0)
             .build())
@@ -227,7 +227,7 @@ public class TestMutation {
     assertTrue(cell0.getValueArray()     == value0);
 
     // Verify timestamp
-    assertTrue(cell0.getTimestamp()      == put.getTimeStamp());
+    assertTrue(cell0.getTimestamp()      == put.getTimestamp());
 
     // Verify the cell of family:qualifier1
     Cell cell1 = put.get(family, qualifier1).get(0);

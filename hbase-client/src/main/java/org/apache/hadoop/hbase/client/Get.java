@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * execute {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
  * To only retrieve columns with a specific timestamp, execute
- * {@link #setTimeStamp(long) setTimestamp}.
+ * {@link #setTimestamp(long) setTimestamp}.
  * <p>
  * To limit the number of versions of each column to be returned, execute
  * {@link #setMaxVersions(int) setMaxVersions}.
@@ -231,16 +231,28 @@ public class Get extends Query implements Row {
    * Get versions of columns with the specified timestamp.
    * @param timestamp version timestamp
    * @return this for invocation chaining
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link #setTimestamp(long)} instead
    */
-  public Get setTimeStamp(long timestamp)
-  throws IOException {
+  @Deprecated
+  public Get setTimeStamp(long timestamp) throws IOException {
+    return this.setTimestamp(timestamp);
+  }
+
+  /**
+   * Get versions of columns with the specified timestamp.
+   * @param timestamp version timestamp
+   * @return this for invocation chaining
+   */
+  public Get setTimestamp(long timestamp) {
     try {
-      tr = new TimeRange(timestamp, timestamp+1);
+      tr = new TimeRange(timestamp, timestamp + 1);
     } catch(Exception e) {
       // This should never happen, unless integer overflow or something extremely wrong...
       LOG.error("TimeRange failed, likely caused by integer overflow. ", e);
       throw e;
     }
+
     return this;
   }
 
