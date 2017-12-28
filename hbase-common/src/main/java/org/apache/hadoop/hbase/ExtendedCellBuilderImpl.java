@@ -89,7 +89,7 @@ public abstract class ExtendedCellBuilderImpl implements ExtendedCellBuilder {
   }
 
   @Override
-  public ExtendedCellBuilder setType(final Cell.DataType type) {
+  public ExtendedCellBuilder setType(final Cell.Type type) {
     this.type = PrivateCellUtil.toTypeByte(type);
     return this;
   }

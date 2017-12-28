@@ -33,7 +33,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -184,7 +184,7 @@ public class FavoredNodeAssignmentHelper {
           .setFamily(HConstants.CATALOG_FAMILY)
           .setQualifier(FAVOREDNODES_QUALIFIER)
           .setTimestamp(EnvironmentEdgeManager.currentTime())
-          .setType(DataType.Put)
+          .setType(Type.Put)
           .setValue(favoredNodes)
           .build());
       LOG.debug("Create the region " + regionInfo.getRegionNameAsString() +

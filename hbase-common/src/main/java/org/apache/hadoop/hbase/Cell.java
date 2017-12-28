@@ -201,15 +201,15 @@ public interface Cell {
   int getTagsLength();
 
   /**
-   * Returns the type of cell in a human readable format using {@link DataType}
+   * Returns the type of cell in a human readable format using {@link Type}
    * @return The data type this cell: one of Put, Delete, etc
    */
-  DataType getType();
+  Type getType();
 
   /**
    * The valid types for user to build the cell. Currently, This is subset of {@link KeyValue.Type}.
    */
-  public enum DataType {
+  enum Type {
     Put((byte) 4),
 
     Delete((byte) 8),
@@ -222,7 +222,7 @@ public interface Cell {
 
     private final byte code;
 
-    DataType(final byte c) {
+    Type(final byte c) {
       this.code = c;
     }
 

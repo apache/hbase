@@ -30,8 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -199,8 +197,8 @@ public class TestCellUtil {
     }
 
     @Override
-    public DataType getType() {
-      return PrivateCellUtil.toDataType(getTypeByte());
+    public Type getType() {
+      return PrivateCellUtil.toType(getTypeByte());
     }
   }
 
@@ -352,7 +350,7 @@ public class TestCellUtil {
         + kv6.getFamilyLength() + kv6.getQualifierLength() + 7,
         PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv7, true, true));
     // rk, cf, q and ts are same. Only type differs
-    KeyValue kv8 = new KeyValue(Bytes.toBytes("rk"), 1234L, Type.Delete);
+    KeyValue kv8 = new KeyValue(Bytes.toBytes("rk"), 1234L, KeyValue.Type.Delete);
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + KeyValue.TIMESTAMP_SIZE,
         PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, true));
@@ -393,7 +391,7 @@ public class TestCellUtil {
     String family = "test.family";
     String qualifier = "test.qualifier";
     long timestamp = 42;
-    Type type = Type.Put;
+    KeyValue.Type type = KeyValue.Type.Put;
     String value = "test.value";
     long seqId = 1042;
 
@@ -428,7 +426,8 @@ public class TestCellUtil {
     byte[] q = Bytes.toBytes("qual1");
     byte[] v = Bytes.toBytes("val1");
     byte[] tags = Bytes.toBytes("tag1");
-    KeyValue kv = new KeyValue(r, f, q, 0, q.length, 1234L, Type.Put, v, 0, v.length, tags);
+    KeyValue kv =
+        new KeyValue(r, f, q, 0, q.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
     Cell bbCell = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
     byte[] rDest = CellUtil.cloneRow(bbCell);
@@ -452,10 +451,11 @@ public class TestCellUtil {
     byte[] q2 = Bytes.toBytes("qual2");
     byte[] v = Bytes.toBytes("val1");
     byte[] tags = Bytes.toBytes("tag1");
-    KeyValue kv = new KeyValue(r, f, q1, 0, q1.length, 1234L, Type.Put, v, 0, v.length, tags);
+    KeyValue kv =
+        new KeyValue(r, f, q1, 0, q1.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
     Cell bbCell1 = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
-    kv = new KeyValue(r, f, q2, 0, q2.length, 1234L, Type.Put, v, 0, v.length, tags);
+    kv = new KeyValue(r, f, q2, 0, q2.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
     buffer = ByteBuffer.wrap(kv.getBuffer());
     Cell bbCell2 = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
     assertTrue(CellUtil.matchingRows(bbCell1, bbCell2));
@@ -512,7 +512,8 @@ public class TestCellUtil {
     byte[] q2 = Bytes.toBytes("qual2");
     byte[] v = Bytes.toBytes("val1");
     byte[] tags = Bytes.toBytes("tag1");
-    KeyValue kv = new KeyValue(r, f, q1, 0, q1.length, 1234L, Type.Put, v, 0, v.length, tags);
+    KeyValue kv =
+        new KeyValue(r, f, q1, 0, q1.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
     NonExtendedCell nonExtCell = new NonExtendedCell(kv);
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     int writeCell = PrivateCellUtil.writeCell(nonExtCell, os, true);
@@ -619,8 +620,8 @@ public class TestCellUtil {
     }
 
     @Override
-    public DataType getType() {
-      return PrivateCellUtil.toDataType(getTypeByte());
+    public Type getType() {
+      return PrivateCellUtil.toType(getTypeByte());
     }
   }
 }

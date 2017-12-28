@@ -49,7 +49,7 @@ public interface ExtendedCellBuilder extends RawCellBuilder {
   ExtendedCellBuilder setTimestamp(final long timestamp);
 
   @Override
-  ExtendedCellBuilder setType(final Cell.DataType type);
+  ExtendedCellBuilder setType(final Cell.Type type);
 
   ExtendedCellBuilder setType(final byte type);
 

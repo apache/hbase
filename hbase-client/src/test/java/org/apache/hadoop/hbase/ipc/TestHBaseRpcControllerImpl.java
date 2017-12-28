@@ -179,7 +179,7 @@ public class TestHBaseRpcControllerImpl {
               }
 
               @Override
-              public DataType getType() {
+              public Type getType() {
                 // unused
                 return null;
               }

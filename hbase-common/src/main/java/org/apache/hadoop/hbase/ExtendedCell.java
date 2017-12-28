@@ -169,8 +169,8 @@ public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
    * {@link KeyValue.Type#Minimum}
    */
   @Override
-  default DataType getType() {
-    return PrivateCellUtil.toDataType(getTypeByte());
+  default Type getType() {
+    return PrivateCellUtil.toType(getTypeByte());
   }
 
   /**

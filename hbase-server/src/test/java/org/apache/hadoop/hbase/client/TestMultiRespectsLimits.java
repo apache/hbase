@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CompatibilityFactory;
@@ -157,7 +157,7 @@ public class TestMultiRespectsLimits {
               .setFamily(FAMILY)
               .setQualifier(col)
               .setTimestamp(p.getTimeStamp())
-              .setType(DataType.Put)
+              .setType(Cell.Type.Put)
               .setValue(value)
               .build());
       t.put(p);

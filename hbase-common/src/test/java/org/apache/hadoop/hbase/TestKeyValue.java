@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
@@ -49,14 +48,14 @@ public class TestKeyValue extends TestCase {
     byte [] family2 = Bytes.toBytes("abcd");
     byte [] qualifier2 = Bytes.toBytes("ef");
 
-    KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
+    KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, KeyValue.Type.Put, a);
     assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
     assertTrue(CellUtil.matchingColumn(aaa, family1, qualifier1));
-    aaa = new KeyValue(a, family2, qualifier2, 0L, Type.Put, a);
+    aaa = new KeyValue(a, family2, qualifier2, 0L, KeyValue.Type.Put, a);
     assertFalse(CellUtil.matchingColumn(aaa, family1, qualifier1));
     assertTrue(CellUtil.matchingColumn(aaa, family2,qualifier2));
     byte [] nullQualifier = new byte[0];
-    aaa = new KeyValue(a, family1, nullQualifier, 0L, Type.Put, a);
+    aaa = new KeyValue(a, family1, nullQualifier, 0L, KeyValue.Type.Put, a);
     assertTrue(CellUtil.matchingColumn(aaa, family1,null));
     assertFalse(CellUtil.matchingColumn(aaa, family2,qualifier2));
   }
@@ -72,7 +71,7 @@ public class TestKeyValue extends TestCase {
     byte [] family2 = Bytes.toBytes("ab");
     byte [] qualifier2 = Bytes.toBytes("def");
 
-    KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
+    KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, KeyValue.Type.Put, a);
     assertFalse(CellUtil.matchingColumn(aaa, family2, qualifier2));
   }
 
@@ -301,15 +300,15 @@ public class TestKeyValue extends TestCase {
     long ts = 1;
 
     // 'fa:'
-    KeyValue kv_0 = new KeyValue(row, fa, qual0, ts, Type.Put);
+    KeyValue kv_0 = new KeyValue(row, fa, qual0, ts, KeyValue.Type.Put);
     // 'fami:'
-    KeyValue kv0_0 = new KeyValue(row, fami, qual0, ts, Type.Put);
+    KeyValue kv0_0 = new KeyValue(row, fami, qual0, ts, KeyValue.Type.Put);
     // 'fami:qf1'
-    KeyValue kv0_1 = new KeyValue(row, fami, qual1, ts, Type.Put);
+    KeyValue kv0_1 = new KeyValue(row, fami, qual1, ts, KeyValue.Type.Put);
     // 'fami:qf2'
-    KeyValue kv0_2 = new KeyValue(row, fami, qual2, ts, Type.Put);
+    KeyValue kv0_2 = new KeyValue(row, fami, qual2, ts, KeyValue.Type.Put);
     // 'fami1:'
-    KeyValue kv1_0 = new KeyValue(row, fami1, qual0, ts, Type.Put);
+    KeyValue kv1_0 = new KeyValue(row, fami1, qual0, ts, KeyValue.Type.Put);
 
     // 'fami:qf1' < 'fami:qf2'
     assertKVLessWithoutRow(c, 0, kv0_1, kv0_2);
@@ -347,14 +346,14 @@ public class TestKeyValue extends TestCase {
     final KeyValue firstOnRowA = KeyValueUtil.createFirstOnRow(rowA);
     final KeyValue firstOnRowABufferFamQual = KeyValueUtil.createFirstOnRow(bufferA, offsetA,
         rowA, 0, rowA.length, family, 0, family.length, qualA, 0, qualA.length);
-    final KeyValue kvA_1 = new KeyValue(rowA, null, null, ts, Type.Put);
-    final KeyValue kvA_2 = new KeyValue(rowA, family, qualA, ts, Type.Put);
+    final KeyValue kvA_1 = new KeyValue(rowA, null, null, ts, KeyValue.Type.Put);
+    final KeyValue kvA_2 = new KeyValue(rowA, family, qualA, ts, KeyValue.Type.Put);
 
     final KeyValue lastOnRowA = KeyValueUtil.createLastOnRow(rowA);
     final KeyValue firstOnRowB = KeyValueUtil.createFirstOnRow(rowB);
     final KeyValue firstOnRowBBufferFam = KeyValueUtil.createFirstOnRow(bufferB, offsetB,
         rowB, 0, rowB.length, family, 0, family.length, null, 0, 0);
-    final KeyValue kvB = new KeyValue(rowB, family, qualA, ts, Type.Put);
+    final KeyValue kvB = new KeyValue(rowB, family, qualA, ts, KeyValue.Type.Put);
 
     assertKVLess(c, firstOnRowA, firstOnRowB);
     assertKVLess(c, firstOnRowA, firstOnRowBBufferFam);
@@ -740,8 +739,8 @@ public class TestKeyValue extends TestCase {
     }
 
     @Override
-    public DataType getType() {
-      return PrivateCellUtil.toDataType(getTypeByte());
+    public Type getType() {
+      return PrivateCellUtil.toType(getTypeByte());
     }
   }
 }

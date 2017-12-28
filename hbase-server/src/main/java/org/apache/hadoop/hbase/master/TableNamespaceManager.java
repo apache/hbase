@@ -24,7 +24,7 @@ import java.util.NavigableSet;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -158,7 +158,7 @@ public class TableNamespaceManager {
           .setFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
           .setQualifier(TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
           .setTimestamp(p.getTimeStamp())
-          .setType(DataType.Put)
+          .setType(Cell.Type.Put)
           .setValue(ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray())
           .build());
     nsTable.put(p);

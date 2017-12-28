@@ -44,7 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -218,7 +218,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
                     .setFamily(LABELS_TABLE_FAMILY)
                     .setQualifier(LABEL_QUALIFIER)
                     .setTimestamp(p.getTimeStamp())
-                    .setType(DataType.Put)
+                    .setType(Type.Put)
                     .setValue(Bytes.toBytes(SYSTEM_LABEL))
                     .build());
       region.put(p);
@@ -246,7 +246,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
               .setFamily(LABELS_TABLE_FAMILY)
               .setQualifier(LABEL_QUALIFIER)
               .setTimestamp(p.getTimeStamp())
-              .setType(DataType.Put)
+              .setType(Type.Put)
               .setValue(label)
               .setTags(TagUtil.fromList(Arrays.asList(LABELS_TABLE_TAGS)))
               .build());
@@ -286,7 +286,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
             .setFamily(LABELS_TABLE_FAMILY)
             .setQualifier(user)
             .setTimestamp(p.getTimeStamp())
-            .setType(DataType.Put)
+            .setType(Cell.Type.Put)
             .setValue(DUMMY_VALUE)
             .setTags(TagUtil.fromList(Arrays.asList(LABELS_TABLE_TAGS)))
             .build());

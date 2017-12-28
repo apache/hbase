@@ -35,7 +35,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -173,7 +173,7 @@ public class AccessControlLists {
         .setFamily(ACL_LIST_FAMILY)
         .setQualifier(key)
         .setTimestamp(p.getTimeStamp())
-        .setType(DataType.Put)
+        .setType(Type.Put)
         .setValue(value)
         .build());
     if (LOG.isDebugEnabled()) {

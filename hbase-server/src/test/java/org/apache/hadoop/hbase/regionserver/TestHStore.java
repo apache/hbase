@@ -1047,13 +1047,13 @@ public class TestHStore {
     long seqId = 100;
     long timestamp = System.currentTimeMillis();
     Cell cell0 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qf1).setTimestamp(timestamp).setType(Cell.DataType.Put)
+        .setQualifier(qf1).setTimestamp(timestamp).setType(Cell.Type.Put)
         .setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell0, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Collections.emptyList());
 
     Cell cell1 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.DataType.Put)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put)
         .setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell1, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1));
@@ -1061,7 +1061,7 @@ public class TestHStore {
     seqId = 101;
     timestamp = System.currentTimeMillis();
     Cell cell2 = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row2).setFamily(family)
-        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.DataType.Put)
+        .setQualifier(qf2).setTimestamp(timestamp).setType(Cell.Type.Put)
         .setValue(qf1).build();
     PrivateCellUtil.setSequenceId(cell2, seqId);
     testNumberOfMemStoreScannersAfterFlush(Arrays.asList(cell0), Arrays.asList(cell1, cell2));
@@ -1116,7 +1116,7 @@ public class TestHStore {
   private Cell createCell(byte[] row, byte[] qualifier, long ts, long sequenceId, byte[] value)
       throws IOException {
     Cell c = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
-        .setQualifier(qualifier).setTimestamp(ts).setType(Cell.DataType.Put)
+        .setQualifier(qualifier).setTimestamp(ts).setType(Cell.Type.Put)
         .setValue(value).build();
     PrivateCellUtil.setSequenceId(c, sequenceId);
     return c;

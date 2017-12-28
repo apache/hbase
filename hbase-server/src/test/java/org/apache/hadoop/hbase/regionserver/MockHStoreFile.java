@@ -190,7 +190,7 @@ public class MockHStoreFile extends HStoreFile {
       public Optional<Cell> getLastKey() {
         if (splitPoint != null) {
           return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setType(Cell.DataType.Put)
+              .setType(Cell.Type.Put)
               .setRow(Arrays.copyOf(splitPoint, splitPoint.length + 1)).build());
         } else {
           return Optional.empty();
@@ -201,7 +201,7 @@ public class MockHStoreFile extends HStoreFile {
       public Optional<Cell> midKey() throws IOException {
         if (splitPoint != null) {
           return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setType(Cell.DataType.Put).setRow(splitPoint).build());
+              .setType(Cell.Type.Put).setRow(splitPoint).build());
         } else {
           return Optional.empty();
         }
@@ -211,7 +211,7 @@ public class MockHStoreFile extends HStoreFile {
       public Optional<Cell> getFirstKey() {
         if (splitPoint != null) {
           return Optional.of(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setType(Cell.DataType.Put).setRow(splitPoint, 0, splitPoint.length - 1)
+              .setType(Cell.Type.Put).setRow(splitPoint, 0, splitPoint.length - 1)
               .build());
         } else {
           return Optional.empty();

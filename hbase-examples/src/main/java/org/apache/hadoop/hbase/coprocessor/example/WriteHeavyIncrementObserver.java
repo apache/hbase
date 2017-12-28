@@ -79,7 +79,7 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
 
   private Cell createCell(byte[] row, byte[] family, byte[] qualifier, long ts, long value) {
     return CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
-        .setType(Cell.DataType.Put).setFamily(family).setQualifier(qualifier)
+        .setType(Cell.Type.Put).setFamily(family).setQualifier(qualifier)
         .setTimestamp(ts).setValue(Bytes.toBytes(value)).build();
   }
 
@@ -249,7 +249,7 @@ public class WriteHeavyIncrementObserver implements RegionCoprocessor, RegionObs
             .setQualifier(cell.getQualifierArray(), cell.getQualifierOffset(),
               cell.getQualifierLength())
             .setValue(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength())
-            .setType(Cell.DataType.Put).setTimestamp(ts).build());
+            .setType(Cell.Type.Put).setTimestamp(ts).build());
       }
     }
     c.getEnvironment().getRegion().put(put);

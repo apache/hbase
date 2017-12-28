@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
@@ -799,30 +798,30 @@ public final class PrivateCellUtil {
    *         or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
   public static boolean isDelete(final byte type) {
-    return Type.Delete.getCode() <= type && type <= Type.DeleteFamily.getCode();
+    return KeyValue.Type.Delete.getCode() <= type && type <= KeyValue.Type.DeleteFamily.getCode();
   }
 
   /**
    * @return True if this cell is a {@link KeyValue.Type#Delete} type.
    */
   public static boolean isDeleteType(Cell cell) {
-    return cell.getTypeByte() == Type.Delete.getCode();
+    return cell.getTypeByte() == KeyValue.Type.Delete.getCode();
   }
 
   public static boolean isDeleteFamily(final Cell cell) {
-    return cell.getTypeByte() == Type.DeleteFamily.getCode();
+    return cell.getTypeByte() == KeyValue.Type.DeleteFamily.getCode();
   }
 
   public static boolean isDeleteFamilyVersion(final Cell cell) {
-    return cell.getTypeByte() == Type.DeleteFamilyVersion.getCode();
+    return cell.getTypeByte() == KeyValue.Type.DeleteFamilyVersion.getCode();
   }
 
   public static boolean isDeleteColumns(final Cell cell) {
-    return cell.getTypeByte() == Type.DeleteColumn.getCode();
+    return cell.getTypeByte() == KeyValue.Type.DeleteColumn.getCode();
   }
 
   public static boolean isDeleteColumnVersion(final Cell cell) {
-    return cell.getTypeByte() == Type.Delete.getCode();
+    return cell.getTypeByte() == KeyValue.Type.Delete.getCode();
   }
 
   /**
@@ -830,7 +829,7 @@ public final class PrivateCellUtil {
    */
   public static boolean isDeleteColumnOrFamily(Cell cell) {
     int t = cell.getTypeByte();
-    return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
+    return t == KeyValue.Type.DeleteColumn.getCode() || t == KeyValue.Type.DeleteFamily.getCode();
   }
 
   public static byte[] cloneTags(Cell cell) {
@@ -1166,11 +1165,11 @@ public final class PrivateCellUtil {
     // "lexicographically last column" (it would be infinitely long). The
     // "maximum" key type does not need this behavior.
     if (nextIndexedCell.getFamilyLength() + nextIndexedCell.getQualifierLength() == 0
-        && nextIndexedCell.getTypeByte() == Type.Minimum.getCode()) {
+        && nextIndexedCell.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    if (flen + clen == 0 && type == Type.Minimum.getCode()) {
+    if (flen + clen == 0 && type == KeyValue.Type.Minimum.getCode()) {
       return -1;
     }
 
@@ -1254,19 +1253,19 @@ public final class PrivateCellUtil {
       cell.getQualifierLength());
   }
 
-  public static Cell.DataType toDataType(byte type) {
-    Type codeToType = KeyValue.Type.codeToType(type);
+  public static Cell.Type toType(byte type) {
+    KeyValue.Type codeToType = KeyValue.Type.codeToType(type);
     switch (codeToType) {
-      case Put: return Cell.DataType.Put;
-      case Delete: return Cell.DataType.Delete;
-      case DeleteColumn: return Cell.DataType.DeleteColumn;
-      case DeleteFamily: return Cell.DataType.DeleteFamily;
-      case DeleteFamilyVersion: return Cell.DataType.DeleteFamilyVersion;
+      case Put: return Cell.Type.Put;
+      case Delete: return Cell.Type.Delete;
+      case DeleteColumn: return Cell.Type.DeleteColumn;
+      case DeleteFamily: return Cell.Type.DeleteFamily;
+      case DeleteFamilyVersion: return Cell.Type.DeleteFamilyVersion;
       default: throw new UnsupportedOperationException("Invalid type of cell "+type);
     }
   }
 
-  public static KeyValue.Type toTypeByte(Cell.DataType type) {
+  public static KeyValue.Type toTypeByte(Cell.Type type) {
     switch (type) {
       case Put: return KeyValue.Type.Put;
       case Delete: return KeyValue.Type.Delete;
@@ -1590,11 +1589,11 @@ public final class PrivateCellUtil {
 
     @Override
     public byte getTypeByte() {
-      return Type.Maximum.getCode();
+      return KeyValue.Type.Maximum.getCode();
     }
 
     @Override
-    public DataType getType() {
+    public Type getType() {
       throw new UnsupportedOperationException();
     }
   }
@@ -1645,11 +1644,11 @@ public final class PrivateCellUtil {
 
     @Override
     public byte getTypeByte() {
-      return Type.Maximum.getCode();
+      return KeyValue.Type.Maximum.getCode();
     }
 
     @Override
-    public DataType getType() {
+    public Type getType() {
       throw new UnsupportedOperationException();
     }
   }
@@ -1700,11 +1699,11 @@ public final class PrivateCellUtil {
 
     @Override
     public byte getTypeByte() {
-      return Type.Minimum.getCode();
+      return KeyValue.Type.Minimum.getCode();
     }
 
     @Override
-    public DataType getType() {
+    public Type getType() {
       throw new UnsupportedOperationException();
     }
   }
@@ -1935,11 +1934,11 @@ public final class PrivateCellUtil {
 
     @Override
     public byte getTypeByte() {
-      return Type.Minimum.getCode();
+      return KeyValue.Type.Minimum.getCode();
     }
 
     @Override
-    public DataType getType() {
+    public Type getType() {
       throw new UnsupportedOperationException();
     }
   }
@@ -2125,12 +2124,12 @@ public final class PrivateCellUtil {
 
     @Override
     public byte getTypeByte() {
-      return Type.DeleteFamily.getCode();
+      return KeyValue.Type.DeleteFamily.getCode();
     }
 
     @Override
-    public DataType getType() {
-      return DataType.DeleteFamily;
+    public Type getType() {
+      return Type.DeleteFamily;
     }
   }
 
@@ -2633,11 +2632,11 @@ public final class PrivateCellUtil {
     // for specifying the last key/value in a given row, because there is no
     // "lexicographically last column" (it would be infinitely long). The
     // "maximum" key type does not need this behavior.
-    if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
+    if (lcolumnlength == 0 && ltype == KeyValue.Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    if (rcolumnlength == 0 && rtype == Type.Minimum.getCode()) {
+    if (rcolumnlength == 0 && rtype == KeyValue.Type.Minimum.getCode()) {
       return -1;
     }
 
@@ -2683,11 +2682,11 @@ public final class PrivateCellUtil {
   public static Cell createNextOnRowCol(Cell cell) {
     long ts = cell.getTimestamp();
     byte type = cell.getTypeByte();
-    if (type != Type.Minimum.getCode()) {
+    if (type != KeyValue.Type.Minimum.getCode()) {
       type = KeyValue.Type.values()[KeyValue.Type.codeToType(type).ordinal() - 1].getCode();
     } else if (ts != HConstants.OLDEST_TIMESTAMP) {
       ts = ts - 1;
-      type = Type.Maximum.getCode();
+      type = KeyValue.Type.Maximum.getCode();
     } else {
       return cell;
     }
