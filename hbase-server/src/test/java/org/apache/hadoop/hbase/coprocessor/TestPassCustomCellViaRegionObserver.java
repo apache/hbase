@@ -215,7 +215,7 @@ public class TestPassCustomCellViaRegionObserver {
   }
 
   private static Cell createCustomCell(byte[] row, byte[] family, byte[] qualifier,
-    Cell.DataType type, byte[] value) {
+    Cell.Type type, byte[] value) {
     return new Cell() {
 
       private byte[] getArray(byte[] array) {
@@ -317,28 +317,28 @@ public class TestPassCustomCellViaRegionObserver {
       }
 
       @Override
-      public DataType getType() {
+      public Type getType() {
         return type;
       }
     };
   }
 
   private static Cell createCustomCell(Put put) {
-    return createCustomCell(put.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.DataType.Put, VALUE);
+    return createCustomCell(put.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.Type.Put, VALUE);
   }
 
   private static Cell createCustomCell(Append append) {
-    return createCustomCell(append.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.DataType.Put,
+    return createCustomCell(append.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.Type.Put,
       APPEND_VALUE);
   }
 
   private static Cell createCustomCell(Increment inc) {
-    return createCustomCell(inc.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.DataType.Put, VALUE);
+    return createCustomCell(inc.getRow(), FAMILY, QUALIFIER_FROM_CP, Cell.Type.Put, VALUE);
   }
 
   private static Cell createCustomCell(Delete delete) {
     return createCustomCell(delete.getRow(), FAMILY, QUALIFIER_FROM_CP,
-      Cell.DataType.DeleteColumn, null);
+      Cell.Type.DeleteColumn, null);
   }
 
   public static class RegionObserverImpl implements RegionCoprocessor, RegionObserver {

@@ -136,7 +136,7 @@ public class Append extends Mutation {
 
   /**
    * Construct the Append with user defined data. NOTED:
-   * 1) all cells in the familyMap must have the DataType.Put
+   * 1) all cells in the familyMap must have the Type.Put
    * 2) the row of each cell must be same with passed row.
    * @param row row. CAN'T be null
    * @param ts timestamp

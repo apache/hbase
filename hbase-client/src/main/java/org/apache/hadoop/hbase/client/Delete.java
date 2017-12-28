@@ -143,7 +143,7 @@ public class Delete extends Mutation implements Comparable<Row> {
   /**
    * Construct the Delete with user defined data. NOTED:
    * 1) all cells in the familyMap must have the delete type.
-   * see {@link org.apache.hadoop.hbase.Cell.DataType}
+   * see {@link org.apache.hadoop.hbase.Cell.Type}
    * 2) the row of each cell must be same with passed row.
    * @param row row. CAN'T be null
    * @param ts timestamp

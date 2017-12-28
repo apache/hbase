@@ -45,7 +45,7 @@ public interface RawCellBuilder extends CellBuilder {
   RawCellBuilder setTimestamp(final long timestamp);
 
   @Override
-  RawCellBuilder setType(final Cell.DataType type);
+  RawCellBuilder setType(final Cell.Type type);
 
   @Override
   RawCellBuilder setValue(final byte[] value);

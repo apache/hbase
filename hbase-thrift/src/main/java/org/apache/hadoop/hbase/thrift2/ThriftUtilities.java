@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.DataType;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -227,7 +226,7 @@ public class ThriftUtilities {
               .setFamily(columnValue.getFamily())
               .setQualifier(columnValue.getQualifier())
               .setTimestamp(columnValue.getTimestamp())
-              .setType(DataType.Put)
+              .setType(Cell.Type.Put)
               .setValue(columnValue.getValue())
               .build());
         } else {
@@ -236,7 +235,7 @@ public class ThriftUtilities {
               .setFamily(columnValue.getFamily())
               .setQualifier(columnValue.getQualifier())
               .setTimestamp(out.getTimeStamp())
-              .setType(DataType.Put)
+              .setType(Cell.Type.Put)
               .setValue(columnValue.getValue())
               .build());
         }

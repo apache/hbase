@@ -88,7 +88,7 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
               cellBuilder.setFamily(CellUtil.cloneFamily(c));
               cellBuilder.setQualifier(CellUtil.cloneQualifier(c));
               cellBuilder.setTimestamp(c.getTimestamp());
-              cellBuilder.setType(Cell.DataType.Put);
+              cellBuilder.setType(Cell.Type.Put);
               // Make sure each cell gets a unique value
               byte[] clonedValue = new byte[replacedValue.length];
               System.arraycopy(replacedValue, 0, clonedValue, 0, replacedValue.length);

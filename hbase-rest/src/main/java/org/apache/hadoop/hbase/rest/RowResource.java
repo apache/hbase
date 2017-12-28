@@ -38,7 +38,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -246,7 +246,7 @@ public class RowResource extends ResourceBase {
               .setFamily(parts[0])
               .setQualifier(parts[1])
               .setTimestamp(cell.getTimestamp())
-              .setType(DataType.Put)
+              .setType(Type.Put)
               .setValue(cell.getValue())
               .build());
         }
@@ -321,7 +321,7 @@ public class RowResource extends ResourceBase {
         .setFamily(parts[0])
         .setQualifier(parts[1])
         .setTimestamp(timestamp)
-        .setType(DataType.Put)
+        .setType(Type.Put)
         .setValue(message)
         .build());
       table = servlet.getTable(tableResource.getName());
@@ -518,7 +518,7 @@ public class RowResource extends ResourceBase {
               .setFamily(parts[0])
               .setQualifier(parts[1])
               .setTimestamp(cell.getTimestamp())
-              .setType(DataType.Put)
+              .setType(Type.Put)
               .setValue(cell.getValue())
               .build());
           if(Bytes.equals(col,

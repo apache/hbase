@@ -158,7 +158,7 @@ public class TestWALEntrySinkFilter {
           setRow(bytes).
           setFamily(bytes).
           setQualifier(bytes).
-          setType(Cell.DataType.Put).
+          setType(Cell.Type.Put).
           setTimestamp(i).
           setValue(bytes).build();
       cells.add(cell);

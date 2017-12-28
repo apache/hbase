@@ -152,8 +152,8 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
     return ByteBufferUtils.toByte(this.buf, this.offset + this.length - 1);
   }
 
-  public DataType getType() {
-    return PrivateCellUtil.toDataType(getTypeByte());
+  public Type getType() {
+    return PrivateCellUtil.toType(getTypeByte());
   }
 
   @Override

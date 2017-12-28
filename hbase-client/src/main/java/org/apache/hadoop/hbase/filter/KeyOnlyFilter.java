@@ -198,7 +198,7 @@ public class KeyOnlyFilter extends FilterBase {
     }
 
     @Override
-    public DataType getType() {
+    public Type getType() {
       return cell.getType();
     }
 
@@ -334,7 +334,7 @@ public class KeyOnlyFilter extends FilterBase {
     }
 
     @Override
-    public DataType getType() {
+    public Type getType() {
       return cell.getType();
     }
 

@@ -28,7 +28,7 @@ import java.io.InterruptedIOException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -200,7 +200,7 @@ public class TestFlushLifeCycleTracker {
                         .setFamily(CF)
                         .setQualifier(QUALIFIER)
                         .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(DataType.Put)
+                        .setType(Type.Put)
                         .setValue(Bytes.toBytes(i))
                         .build()));
       }
@@ -234,7 +234,7 @@ public class TestFlushLifeCycleTracker {
                         .setFamily(CF)
                         .setQualifier(QUALIFIER)
                         .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(DataType.Put)
+                        .setType(Type.Put)
                         .setValue(Bytes.toBytes(i))
                         .build()));
       }

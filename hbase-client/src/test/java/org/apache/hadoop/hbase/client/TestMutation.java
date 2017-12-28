@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.DataType;
+import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -50,7 +50,7 @@ public class TestMutation {
       .setRow(origin.getRow())
       .setFamily(family)
       .setQualifier(Bytes.toBytes("q"))
-      .setType(DataType.Put)
+      .setType(Type.Put)
       .setValue(Bytes.toBytes(100))
       .build());
     origin.addColumn(family, Bytes.toBytes("q0"), Bytes.toBytes("value"));
@@ -73,7 +73,7 @@ public class TestMutation {
       .setRow(origin.getRow())
       .setFamily(family)
       .setQualifier(Bytes.toBytes("q"))
-      .setType(DataType.Put)
+      .setType(Cell.Type.Put)
       .setValue(Bytes.toBytes(100))
       .build());
     origin.addColumn(family, Bytes.toBytes("q0"), 4);
@@ -96,7 +96,7 @@ public class TestMutation {
       .setRow(origin.getRow())
       .setFamily(family)
       .setQualifier(Bytes.toBytes("q"))
-      .setType(DataType.Delete)
+      .setType(Type.Delete)
       .build());
     origin.addColumn(family, Bytes.toBytes("q0"));
     origin.addColumns(family, Bytes.toBytes("q1"));
@@ -121,7 +121,7 @@ public class TestMutation {
       .setRow(origin.getRow())
       .setFamily(family)
       .setQualifier(Bytes.toBytes("q"))
-      .setType(DataType.Put)
+      .setType(Cell.Type.Put)
       .setValue(Bytes.toBytes("value"))
       .build());
     origin.addColumn(family, Bytes.toBytes("q0"), Bytes.toBytes("V-01"));
@@ -202,7 +202,7 @@ public class TestMutation {
             .setFamily(family)
             .setQualifier(qualifier0)
             .setTimestamp(put.getTimeStamp())
-            .setType(DataType.Put)
+            .setType(Type.Put)
             .setValue(value0)
             .build())
         .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
@@ -210,7 +210,7 @@ public class TestMutation {
             .setFamily(family)
             .setQualifier(qualifier1)
             .setTimestamp(ts1)
-            .setType(DataType.Put)
+            .setType(Type.Put)
             .setValue(value1)
             .build());
 
