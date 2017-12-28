@@ -28,6 +28,8 @@ allowed_expr="(^org/$|^org/apache/$"
 #   * classes in packages that start with org.apache.hadoop, which by
 #     convention should be in a path that looks like org/apache/hadoop
 allowed_expr+="|^org/apache/hadoop/"
+#   * classes in packages that start with org.apache.hbase
+allowed_expr+="|^org/apache/hbase/"
 #   * whatever in the "META-INF" directory
 allowed_expr+="|^META-INF/"
 #   * the folding tables from jcodings
