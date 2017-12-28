@@ -122,7 +122,7 @@ public abstract class PressureAwareThroughputController extends Configured imple
       // do not log too much
       if (now - operation.lastLogTime > 5L * 1000) {
         LOG.debug("deltaSize: " + deltaSize + " bytes; elapseTime: " + elapsedTime + " ns");
-        LOG.debug(opName + " sleep " + sleepTime + " ms because current throughput is "
+        LOG.debug(opName + " sleep=" + sleepTime + "ms because current throughput is "
             + throughputDesc(deltaSize, elapsedTime) + ", max allowed is "
             + throughputDesc(maxThroughputPerOperation) + ", already slept "
             + operation.numberOfSleeps + " time(s) and total slept time is "

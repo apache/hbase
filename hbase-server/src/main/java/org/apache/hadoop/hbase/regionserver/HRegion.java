@@ -4173,10 +4173,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Don't print current limit because it will vary too much. The message is used as a key
       // over in RetriesExhaustedWithDetailsException processing.
       throw new RegionTooBusyException("Over memstore limit; regionName=" +
-          (this.getRegionInfo() == null? "unknown": this.getRegionInfo().getRegionNameAsString()) +
+          (this.getRegionInfo() == null? "unknown": this.getRegionInfo().getEncodedName()) +
           ", server=" + (this.getRegionServerServices() == null ? "unknown":
           this.getRegionServerServices().getServerName()) +
-          ", blockingMemStoreSize=" + blockingMemStoreSize);
+          ", blockingMemStoreSize=" +
+          org.apache.hadoop.hbase.procedure2.util.StringUtils.humanSize(blockingMemStoreSize));
     }
   }
 
