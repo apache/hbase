@@ -32,10 +32,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RegionTooBusyException extends IOException {
   private static final long serialVersionUID = 1728345723728342L;
 
-  /**
-   * Constructor
-   * @param msg message
-   */
   // Be careful. Keep variance in the passed 'msg' low because its msg is used as a key over in
   // RetriesExhaustedWithDetailsException grouping failure types.
   public RegionTooBusyException(final String msg) {

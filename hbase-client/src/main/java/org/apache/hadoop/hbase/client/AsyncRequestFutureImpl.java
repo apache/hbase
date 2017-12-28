@@ -977,12 +977,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
                            Throwable error, long backOffTime, boolean willRetry, String startTime,
                            int failed, int stopped) {
     StringBuilder sb = new StringBuilder();
-    sb.append("#").append(asyncProcess.id).append(", table=").append(tableName).append(", ")
+    sb.append("id=").append(asyncProcess.id).append(", table=").append(tableName).append(", ")
         .append("attempt=").append(numAttempt)
         .append("/").append(asyncProcess.numTries).append(" ");
 
     if (failureCount > 0 || error != null){
-      sb.append("failed=").append(failureCount).append("ops").append(", last exception: ").
+      sb.append("failed=").append(failureCount).append("ops").append(", last exception=").
           append(error == null ? "null" : error);
     } else {
       sb.append("succeeded");
