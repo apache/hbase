@@ -95,12 +95,12 @@ class AsyncProcess {
   /**
    * Configure the number of failures after which the client will start logging. A few failures
    * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
-   * heuristic for the number of errors we don't log. 9 was chosen because we wait for 1s at
+   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at
    * this stage.
    */
   public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
       "hbase.client.start.log.errors.counter";
-  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 9;
+  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 5;
 
   /**
    * Configuration to decide whether to log details for batch error
