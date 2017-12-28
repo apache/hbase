@@ -26,7 +26,7 @@
 # Presumes that dev-support/generate-hadoopX-poms.sh has already been run.
 # Presumes your settings.xml all set up so can sign artifacts published to mvn, etc.
 
-set -e
+set -e -x
 
 # Script checks out a tag, cleans the checkout and then builds src and bin
 # tarballs. It then deploys to the apache maven repository.
