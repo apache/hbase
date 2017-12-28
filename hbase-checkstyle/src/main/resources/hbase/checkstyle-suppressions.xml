@@ -40,6 +40,7 @@
   <suppress checks="EmptyBlockCheck" files="TestServletFilter.java"/>
   <suppress checks="EmptyBlockCheck" files="TestGlobalFilter.java"/>
   <suppress checks="EmptyBlockCheck" files="TestPathFilter.java"/>
+  <suppress checks="EmptyBlockCheck" files="TestZooKeeperTableArchiveClient.java"/>
   <suppress checks="EqualsHashCode" files="StartcodeAgnosticServerName.java"/>
   <suppress checks="MethodLength" files="Branch1CoprocessorMethods.java"/>
   <suppress checks="IllegalImport" message="org\.apache\.htrace\.core"/>
