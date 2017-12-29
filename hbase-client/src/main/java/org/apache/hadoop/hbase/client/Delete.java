@@ -65,7 +65,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * timestamp.  The constructor timestamp is not referenced.
  */
 @InterfaceAudience.Public
-public class Delete extends Mutation implements Comparable<Row> {
+public class Delete extends Mutation {
   /**
    * Create a Delete operation for the specified row.
    * <p>

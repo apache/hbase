@@ -331,6 +331,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     return this.row;
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Row#COMPARATOR} instead
+   */
+  @Deprecated
   @Override
   public int compareTo(final Row d) {
     return Bytes.compareTo(this.getRow(), d.getRow());

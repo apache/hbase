@@ -44,7 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * setting the timestamp.
  */
 @InterfaceAudience.Public
-public class Put extends Mutation implements HeapSize, Comparable<Row> {
+public class Put extends Mutation implements HeapSize {
   /**
    * Create a Put operation for the specified row.
    * @param row row key

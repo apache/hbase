@@ -98,8 +98,7 @@ public class RegionCoprocessorServiceExec implements Row {
     if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    Row other = (Row) obj;
-    return compareTo(other) == 0;
+    return compareTo((RegionCoprocessorServiceExec) obj) == 0;
   }
 
   @Override
