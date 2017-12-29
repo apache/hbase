@@ -363,6 +363,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (params.getWriteBufferSize() == BufferedMutatorParams.UNSET) {
       params.writeBufferSize(connectionConfig.getWriteBufferSize());
     }
+    if (params.getWriteBufferPeriodicFlushTimeoutMs() == BufferedMutatorParams.UNSET) {
+      params.setWriteBufferPeriodicFlushTimeoutMs(
+              connectionConfig.getWriteBufferPeriodicFlushTimeoutMs());
+    }
+    if (params.getWriteBufferPeriodicFlushTimerTickMs() == BufferedMutatorParams.UNSET) {
+      params.setWriteBufferPeriodicFlushTimerTickMs(
+              connectionConfig.getWriteBufferPeriodicFlushTimerTickMs());
+    }
     if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
       params.maxKeyValueSize(connectionConfig.getMaxKeyValueSize());
     }

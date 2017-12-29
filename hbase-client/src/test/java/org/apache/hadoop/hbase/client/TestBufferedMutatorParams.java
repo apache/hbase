@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -30,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -136,13 +134,21 @@ public class TestBufferedMutatorParams {
     BufferedMutatorParams bmp = new BufferedMutatorParams(TableName.valueOf(tableName));
 
     BufferedMutator.ExceptionListener listener = new MockExceptionListener();
-    bmp.writeBufferSize(17).maxKeyValueSize(13).pool(pool).listener(listener);
+    bmp
+            .writeBufferSize(17)
+            .setWriteBufferPeriodicFlushTimeoutMs(123)
+            .setWriteBufferPeriodicFlushTimerTickMs(456)
+            .maxKeyValueSize(13)
+            .pool(pool)
+            .listener(listener);
     bmp.implementationClassName("someClassName");
     BufferedMutatorParams clone = bmp.clone();
 
     // Confirm some literals
     assertEquals(tableName, clone.getTableName().toString());
     assertEquals(17, clone.getWriteBufferSize());
+    assertEquals(123, clone.getWriteBufferPeriodicFlushTimeoutMs());
+    assertEquals(456, clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(13, clone.getMaxKeyValueSize());
     assertEquals("someClassName", clone.getImplementationClassName());
 
@@ -168,6 +174,10 @@ public class TestBufferedMutatorParams {
     assertEquals(some.getTableName().toString(),
         clone.getTableName().toString());
     assertEquals(some.getWriteBufferSize(), clone.getWriteBufferSize());
+    assertEquals(some.getWriteBufferPeriodicFlushTimeoutMs(),
+        clone.getWriteBufferPeriodicFlushTimeoutMs());
+    assertEquals(some.getWriteBufferPeriodicFlushTimerTickMs(),
+        clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(some.getMaxKeyValueSize(), clone.getMaxKeyValueSize());
     assertTrue(some.getListener() == clone.getListener());
     assertTrue(some.getPool() == clone.getPool());
