@@ -18,15 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.io.TimeRange;
-
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
@@ -75,8 +71,7 @@ public abstract class ImmutableSegment extends Segment {
   }
 
   public List<Segment> getAllSegments() {
-    List<Segment> res = new ArrayList<>(Arrays.asList(this));
-    return res;
+    return Collections.singletonList(this);
   }
 
   @Override
