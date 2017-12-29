@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -969,7 +970,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       // Sort to improve lock efficiency for non-atomic batch of operations. If atomic (mostly
       // called from mutateRows()), order is preserved as its expected from the client
       if (!atomic) {
-        Arrays.sort(mArray);
+        Arrays.sort(mArray, (v1, v2) -> Row.COMPARATOR.compare(v1, v2));
       }
 
       OperationStatus[] codes = region.batchMutate(mArray, atomic, HConstants.NO_NONCE,
@@ -2091,7 +2092,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if(edits!=null && !edits.isEmpty()) {
           // HBASE-17924
           // sort to improve lock efficiency
-          Collections.sort(edits);
+          Collections.sort(edits, (v1, v2) -> Row.COMPARATOR.compare(v1.mutation, v2.mutation));
           long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
             entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
           OperationStatus[] result = doReplayBatchOp(region, edits, replaySeqId);

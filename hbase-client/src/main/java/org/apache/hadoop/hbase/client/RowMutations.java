@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * The mutations are performed in the order in which they
  * were added.
- * 
+ *
  * <p>We compare and equate mutations based off their row so be careful putting RowMutations
  * into Sets or using them as keys in Maps.
  */
@@ -87,11 +87,21 @@ public class RowMutations implements Row {
     mutations.add(m);
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Row#COMPARATOR} instead
+   */
+  @Deprecated
   @Override
   public int compareTo(Row i) {
     return Bytes.compareTo(this.getRow(), i.getRow());
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             No replacement
+   */
+  @Deprecated
   @Override
   public boolean equals(Object obj) {
     if (obj == this) return true;
@@ -102,6 +112,11 @@ public class RowMutations implements Row {
     return false;
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             No replacement
+   */
+  @Deprecated
   @Override
   public int hashCode(){
     return Arrays.hashCode(row);

@@ -46,7 +46,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * {@link #addColumn(byte[], byte[], long)} method.
  */
 @InterfaceAudience.Public
-public class Increment extends Mutation implements Comparable<Row> {
+public class Increment extends Mutation {
   private static final int HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
   private TimeRange tr = new TimeRange();
 
@@ -262,12 +262,11 @@ public class Increment extends Mutation implements Comparable<Row> {
     return sb.toString();
   }
 
-  @Override
-  public int compareTo(Row i) {
-    // TODO: This is wrong.  Can't have two the same just because on same row.
-    return Bytes.compareTo(this.getRow(), i.getRow());
-  }
-
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             No replacement.
+   */
+  @Deprecated
   @Override
   public int hashCode() {
     // TODO: This is wrong.  Can't have two gets the same just because on same row.  But it
@@ -275,6 +274,11 @@ public class Increment extends Mutation implements Comparable<Row> {
     return Bytes.hashCode(this.getRow());
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Use {@link Row#COMPARATOR} instead
+   */
+  @Deprecated
   @Override
   public boolean equals(Object obj) {
     // TODO: This is wrong.  Can't have two the same just because on same row.
