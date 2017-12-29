@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -34,7 +35,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
  * zookeeper.
  */
 @InterfaceAudience.Private
-class ZKReplicationStorageBase {
+public class ZKReplicationStorageBase {
+
+  public static final String REPLICATION_ZNODE = "zookeeper.znode.replication";
+  public static final String REPLICATION_ZNODE_DEFAULT = "replication";
 
   /** The name of the base znode that contains all replication state. */
   protected final String replicationZNode;
@@ -45,10 +49,9 @@ class ZKReplicationStorageBase {
   protected ZKReplicationStorageBase(ZKWatcher zookeeper, Configuration conf) {
     this.zookeeper = zookeeper;
     this.conf = conf;
-    String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
 
-    this.replicationZNode =
-        ZNodePaths.joinZNode(this.zookeeper.znodePaths.baseZNode, replicationZNodeName);
+    this.replicationZNode = ZNodePaths.joinZNode(this.zookeeper.znodePaths.baseZNode,
+      conf.get(REPLICATION_ZNODE, REPLICATION_ZNODE_DEFAULT));
   }
 
   /**
@@ -58,7 +61,7 @@ class ZKReplicationStorageBase {
    */
   protected static byte[] toByteArray(final ReplicationProtos.ReplicationState.State state) {
     ReplicationProtos.ReplicationState msg =
-      ReplicationProtos.ReplicationState.newBuilder().setState(state).build();
+        ReplicationProtos.ReplicationState.newBuilder().setState(state).build();
     // There is no toByteArray on this pb Message?
     // 32 bytes is default which seems fair enough here.
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

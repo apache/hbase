@@ -132,8 +132,7 @@ public class Replication implements
           ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
       this.replicationTracker =
-          ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.replicationPeers,
-            this.conf, this.server, this.server);
+          ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.server, this.server);
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
     }
