@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -136,6 +137,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion.MutationBatchOperation;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestHStore.FaultyFileSystem;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
@@ -843,6 +845,7 @@ public class TestHRegion {
   }
 
   public void testRecoveredEditsReplayCompaction(boolean mismatchedRegionName) throws Exception {
+    CONF.setClass(HConstants.REGION_IMPL, HRegionForTesting.class, Region.class);
     byte[] family = Bytes.toBytes("family");
     this.region = initHRegion(tableName, method, CONF, family);
     final WALFactory wals = new WALFactory(CONF, null, method);
@@ -945,6 +948,7 @@ public class TestHRegion {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
+      CONF.setClass(HConstants.REGION_IMPL, HRegion.class, Region.class);
     }
   }
 
@@ -6485,6 +6489,82 @@ public class TestHRegion {
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
+    }
+  }
+
+  /**
+   * The same as HRegion class, the only difference is that instantiateHStore will
+   * create a different HStore - HStoreForTesting. [HBASE-8518]
+   */
+  public static class HRegionForTesting extends HRegion {
+
+    public HRegionForTesting(final Path tableDir, final WAL wal, final FileSystem fs,
+                             final Configuration confParam, final RegionInfo regionInfo,
+                             final TableDescriptor htd, final RegionServerServices rsServices) {
+      this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
+          wal, confParam, htd, rsServices);
+    }
+
+    public HRegionForTesting(HRegionFileSystem fs, WAL wal,
+                             Configuration confParam, TableDescriptor htd,
+                             RegionServerServices rsServices) {
+      super(fs, wal, confParam, htd, rsServices);
+    }
+
+    /**
+     * Create HStore instance.
+     * @return If Mob is enabled, return HMobStore, otherwise return HStoreForTesting.
+     */
+    @Override
+    protected HStore instantiateHStore(final ColumnFamilyDescriptor family) throws IOException {
+      if (family.isMobEnabled()) {
+        if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+          throw new IOException("A minimum HFile version of "
+              + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+              + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
+              + " accordingly.");
+        }
+        return new HMobStore(this, family, this.conf);
+      }
+      return new HStoreForTesting(this, family, this.conf);
+    }
+  }
+
+  /**
+   * HStoreForTesting is merely the same as HStore, the difference is in the doCompaction method
+   * of HStoreForTesting there is a checkpoint "hbase.hstore.compaction.complete" which
+   * doesn't let hstore compaction complete. In the former edition, this config is set in
+   * HStore class inside compact method, though this is just for testing, otherwise it
+   * doesn't do any help. In HBASE-8518, we try to get rid of all "hbase.hstore.compaction.complete"
+   * config (except for testing code).
+   */
+  public static class HStoreForTesting extends HStore {
+
+    protected HStoreForTesting(final HRegion region,
+        final ColumnFamilyDescriptor family,
+        final Configuration confParam) throws IOException {
+      super(region, family, confParam);
+    }
+
+    @Override
+    protected List<HStoreFile> doCompaction(CompactionRequestImpl cr,
+        Collection<HStoreFile> filesToCompact, User user, long compactionStartTime,
+        List<Path> newFiles) throws IOException {
+      // let compaction incomplete.
+      if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
+        LOG.warn("hbase.hstore.compaction.complete is set to false");
+        List<HStoreFile> sfs = new ArrayList<>(newFiles.size());
+        final boolean evictOnClose =
+            cacheConf != null? cacheConf.shouldEvictOnClose(): true;
+        for (Path newFile : newFiles) {
+          // Create storefile around what we wrote with a reader on it.
+          HStoreFile sf = createStoreFileAndReader(newFile);
+          sf.closeStoreFile(evictOnClose);
+          sfs.add(sf);
+        }
+        return sfs;
+      }
+      return super.doCompaction(cr, filesToCompact, user, compactionStartTime, newFiles);
     }
   }
 }

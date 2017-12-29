@@ -654,7 +654,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     completeCompaction(toBeRemovedStoreFiles);
   }
 
-  private HStoreFile createStoreFileAndReader(final Path p) throws IOException {
+  @VisibleForTesting
+  protected HStoreFile createStoreFileAndReader(final Path p) throws IOException {
     StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
     return createStoreFileAndReader(info);
   }
@@ -1353,52 +1354,43 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         " into tmpdir=" + fs.getTempDir() + ", totalSize=" +
           TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
 
-      // Commence the compaction.
-      List<Path> newFiles = compaction.compact(throughputController, user);
-
-      // TODO: get rid of this!
-      if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
-        LOG.warn("hbase.hstore.compaction.complete is set to false");
-        sfs = new ArrayList<>(newFiles.size());
-        final boolean evictOnClose =
-            cacheConf != null? cacheConf.shouldEvictOnClose(): true;
-        for (Path newFile : newFiles) {
-          // Create storefile around what we wrote with a reader on it.
-          HStoreFile sf = createStoreFileAndReader(newFile);
-          sf.closeStoreFile(evictOnClose);
-          sfs.add(sf);
-        }
-        return sfs;
-      }
-      // Do the steps necessary to complete the compaction.
-      sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
-      writeCompactionWalRecord(filesToCompact, sfs);
-      replaceStoreFiles(filesToCompact, sfs);
-      if (cr.isMajor()) {
-        majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
-        majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
-      } else {
-        compactedCellsCount += getCompactionProgress().totalCompactingKVs;
-        compactedCellsSize += getCompactionProgress().totalCompactedSize;
-      }
-      long outputBytes = getTotalSize(sfs);
-
-      // At this point the store will use new files for all new scanners.
-      completeCompaction(filesToCompact); // update store size.
-
-      long now = EnvironmentEdgeManager.currentTime();
-      if (region.getRegionServerServices() != null
-          && region.getRegionServerServices().getMetrics() != null) {
-        region.getRegionServerServices().getMetrics().updateCompaction(cr.isMajor(),
-          now - compactionStartTime, cr.getFiles().size(), newFiles.size(), cr.getSize(),
-          outputBytes);
-      }
-
-      logCompactionEndMessage(cr, sfs, now, compactionStartTime);
-      return sfs;
+      return doCompaction(cr, filesToCompact, user, compactionStartTime,
+          compaction.compact(throughputController, user));
     } finally {
       finishCompactionRequest(cr);
     }
+  }
+
+  @VisibleForTesting
+  protected List<HStoreFile> doCompaction(CompactionRequestImpl cr,
+      Collection<HStoreFile> filesToCompact, User user, long compactionStartTime,
+      List<Path> newFiles) throws IOException {
+    // Do the steps necessary to complete the compaction.
+    List<HStoreFile> sfs = moveCompactedFilesIntoPlace(cr, newFiles, user);
+    writeCompactionWalRecord(filesToCompact, sfs);
+    replaceStoreFiles(filesToCompact, sfs);
+    if (cr.isMajor()) {
+      majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
+      majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
+    } else {
+      compactedCellsCount += getCompactionProgress().totalCompactingKVs;
+      compactedCellsSize += getCompactionProgress().totalCompactedSize;
+    }
+    long outputBytes = getTotalSize(sfs);
+
+    // At this point the store will use new files for all new scanners.
+    completeCompaction(filesToCompact); // update store size.
+
+    long now = EnvironmentEdgeManager.currentTime();
+    if (region.getRegionServerServices() != null
+        && region.getRegionServerServices().getMetrics() != null) {
+      region.getRegionServerServices().getMetrics().updateCompaction(cr.isMajor(),
+          now - compactionStartTime, cr.getFiles().size(), newFiles.size(), cr.getSize(),
+          outputBytes);
+    }
+
+    logCompactionEndMessage(cr, sfs, now, compactionStartTime);
+    return sfs;
   }
 
   private List<HStoreFile> moveCompactedFilesIntoPlace(CompactionRequestImpl cr, List<Path> newFiles,

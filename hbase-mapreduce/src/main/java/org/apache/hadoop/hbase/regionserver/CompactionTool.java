@@ -80,14 +80,12 @@ public class CompactionTool extends Configured implements Tool {
   private final static String CONF_COMPACT_ONCE = "hbase.compactiontool.compact.once";
   private final static String CONF_COMPACT_MAJOR = "hbase.compactiontool.compact.major";
   private final static String CONF_DELETE_COMPACTED = "hbase.compactiontool.delete";
-  private final static String CONF_COMPLETE_COMPACTION = "hbase.hstore.compaction.complete";
 
   /**
    * Class responsible to execute the Compaction on the specified path.
    * The path can be a table, region or family directory.
    */
   private static class CompactionWorker {
-    private final boolean keepCompactedFiles;
     private final boolean deleteCompacted;
     private final Configuration conf;
     private final FileSystem fs;
@@ -95,7 +93,6 @@ public class CompactionTool extends Configured implements Tool {
 
     public CompactionWorker(final FileSystem fs, final Configuration conf) {
       this.conf = conf;
-      this.keepCompactedFiles = !conf.getBoolean(CONF_COMPLETE_COMPACTION, true);
       this.deleteCompacted = conf.getBoolean(CONF_DELETE_COMPACTED, false);
       this.tmpDir = new Path(conf.get(CONF_TMP_DIR));
       this.fs = fs;
@@ -169,7 +166,7 @@ public class CompactionTool extends Configured implements Tool {
         List<HStoreFile> storeFiles =
             store.compact(compaction.get(), NoLimitThroughputController.INSTANCE, null);
         if (storeFiles != null && !storeFiles.isEmpty()) {
-          if (keepCompactedFiles && deleteCompacted) {
+          if (deleteCompacted) {
             for (HStoreFile storeFile: storeFiles) {
               fs.delete(storeFile.getPath(), false);
             }
@@ -458,7 +455,6 @@ public class CompactionTool extends Configured implements Tool {
     System.err.println();
     System.err.println("Note: -D properties will be applied to the conf used. ");
     System.err.println("For example: ");
-    System.err.println(" To preserve input files, pass -D"+CONF_COMPLETE_COMPACTION+"=false");
     System.err.println(" To stop delete of compacted file, pass -D"+CONF_DELETE_COMPACTED+"=false");
     System.err.println(" To set tmp dir, pass -D"+CONF_TMP_DIR+"=ALTERNATE_DIR");
     System.err.println();
