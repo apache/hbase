@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -80,7 +79,6 @@ public class MasterCoprocessorHost
    */
   private static class MasterEnvironment extends BaseEnvironment<MasterCoprocessor>
       implements MasterCoprocessorEnvironment {
-    private final boolean supportGroupCPs;
     private final MetricRegistry metricRegistry;
     private final MasterServices services;
 
@@ -88,8 +86,6 @@ public class MasterCoprocessorHost
         final Configuration conf, final MasterServices services) {
       super(impl, priority, seq, conf);
       this.services = services;
-      supportGroupCPs = !useLegacyMethod(impl.getClass(),
-          "preBalanceRSGroup", ObserverContext.class, String.class);
       this.metricRegistry =
           MetricsCoprocessor.createRegistryForMasterCoprocessor(impl.getClass().getName());
     }
@@ -1264,9 +1260,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preMoveServersAndTables(this, servers, tables, targetGroup);
-        }
+        observer.preMoveServersAndTables(this, servers, tables, targetGroup);
       }
     });
   }
@@ -1276,9 +1270,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postMoveServersAndTables(this, servers, tables, targetGroup);
-        }
+        observer.postMoveServersAndTables(this, servers, tables, targetGroup);
       }
     });
   }
@@ -1288,9 +1280,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preMoveServers(this, servers, targetGroup);
-        }
+        observer.preMoveServers(this, servers, targetGroup);
       }
     });
   }
@@ -1300,9 +1290,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postMoveServers(this, servers, targetGroup);
-        }
+        observer.postMoveServers(this, servers, targetGroup);
       }
     });
   }
@@ -1312,9 +1300,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preMoveTables(this, tables, targetGroup);
-        }
+        observer.preMoveTables(this, tables, targetGroup);
       }
     });
   }
@@ -1324,9 +1310,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postMoveTables(this, tables, targetGroup);
-        }
+        observer.postMoveTables(this, tables, targetGroup);
       }
     });
   }
@@ -1336,9 +1320,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preAddRSGroup(this, name);
-        }
+        observer.preAddRSGroup(this, name);
       }
     });
   }
@@ -1348,9 +1330,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if (((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postAddRSGroup(this, name);
-        }
+        observer.postAddRSGroup(this, name);
       }
     });
   }
@@ -1360,9 +1340,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preRemoveRSGroup(this, name);
-        }
+        observer.preRemoveRSGroup(this, name);
       }
     });
   }
@@ -1372,9 +1350,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postRemoveRSGroup(this, name);
-        }
+        observer.postRemoveRSGroup(this, name);
       }
     });
   }
@@ -1384,9 +1360,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preBalanceRSGroup(this, name);
-        }
+        observer.preBalanceRSGroup(this, name);
       }
     });
   }
@@ -1396,9 +1370,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postBalanceRSGroup(this, name, balanceRan);
-        }
+        observer.postBalanceRSGroup(this, name, balanceRan);
       }
     });
   }
@@ -1408,9 +1380,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.preRemoveServers(this, servers);
-        }
+        observer.preRemoveServers(this, servers);
       }
     });
   }
@@ -1420,9 +1390,7 @@ public class MasterCoprocessorHost
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        if(((MasterEnvironment)getEnvironment()).supportGroupCPs) {
-          observer.postRemoveServers(this, servers);
-        }
+        observer.postRemoveServers(this, servers);
       }
     });
   }

@@ -460,49 +460,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
   }
 
   /**
-   * Used to gracefully handle fallback to deprecated methods when we
-   * evolve coprocessor APIs.
-   *
-   * When a particular Coprocessor API is updated to change methods, hosts can support fallback
-   * to the deprecated API by using this method to determine if an instance implements the new API.
-   * In the event that said support is partial, then in the face of a runtime issue that prevents
-   * proper operation {@link #legacyWarning(Class, String)} should be used to let operators know.
-   *
-   * For examples of this in action, see the implementation of
-   * <ul>
-   *   <li>{@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost}
-   *   <li>{@link org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost}
-   * </ul>
-   *
-   * @param clazz Coprocessor you wish to evaluate
-   * @param methodName the name of the non-deprecated method version
-   * @param parameterTypes the Class of the non-deprecated method's arguments in the order they are
-   *     declared.
-   */
-  @InterfaceAudience.Private
-  protected static boolean useLegacyMethod(final Class<? extends Coprocessor> clazz,
-      final String methodName, final Class<?>... parameterTypes) {
-    boolean useLegacy;
-    // Use reflection to see if they implement the non-deprecated version
-    try {
-      clazz.getDeclaredMethod(methodName, parameterTypes);
-      LOG.debug("Found an implementation of '" + methodName + "' that uses updated method " +
-          "signature. Skipping legacy support for invocations in '" + clazz +"'.");
-      useLegacy = false;
-    } catch (NoSuchMethodException exception) {
-      useLegacy = true;
-    } catch (SecurityException exception) {
-      LOG.warn("The Security Manager denied our attempt to detect if the coprocessor '" + clazz +
-          "' requires legacy support; assuming it does. If you get later errors about legacy " +
-          "coprocessor use, consider updating your security policy to allow access to the package" +
-          " and declared members of your implementation.");
-      LOG.debug("Details of Security Manager rejection.", exception);
-      useLegacy = true;
-    }
-    return useLegacy;
-  }
-
-  /**
    * Used to limit legacy handling to once per Coprocessor class per classloader.
    */
   private static final Set<Class<? extends Coprocessor>> legacyWarning =
@@ -516,21 +473,6 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
               return c1.getName().compareTo(c2.getName());
             }
           });
-
-  /**
-   * limits the amount of logging to once per coprocessor class.
-   * Used in concert with {@link #useLegacyMethod(Class, String, Class[])} when a runtime issue
-   * prevents properly supporting the legacy version of a coprocessor API.
-   * Since coprocessors can be in tight loops this serves to limit the amount of log spam we create.
-   */
-  @InterfaceAudience.Private
-  protected void legacyWarning(final Class<? extends Coprocessor> clazz, final String message) {
-    if(legacyWarning.add(clazz)) {
-      LOG.error("You have a legacy coprocessor loaded and there are events we can't map to the " +
-          " deprecated API. Your coprocessor will not see these events.  Please update '" + clazz +
-          "'. Details of the problem: " + message);
-    }
-  }
 
   /**
    * Implementations defined function to get an observer of type {@code O} from a coprocessor of
