@@ -33,9 +33,8 @@ public class ReplicationFactory {
     return new ReplicationPeers(zk, conf);
   }
 
-  public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper,
-      final ReplicationPeers replicationPeers, Configuration conf, Abortable abortable,
+  public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper, Abortable abortable,
       Stoppable stopper) {
-    return new ReplicationTrackerZKImpl(zookeeper, replicationPeers, conf, abortable, stopper);
+    return new ReplicationTrackerZKImpl(zookeeper, abortable, stopper);
   }
 }

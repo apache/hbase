@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
@@ -237,7 +236,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
         LOG.info("Found [--distributed], will poll each RegionServer.");
         Set<String> peerIds = peers.stream().map((peer) -> peer.getPeerId())
             .collect(Collectors.toSet());
-        System.out.println(dumpQueues(connection, zkw, peerIds, opts.isHdfs()));
+        System.out.println(dumpQueues(zkw, peerIds, opts.isHdfs()));
         System.out.println(dumpReplicationSummary());
       } else {
         // use ZK instead
@@ -301,18 +300,15 @@ public class DumpReplicationQueues extends Configured implements Tool {
     return sb.toString();
   }
 
-  public String dumpQueues(ClusterConnection connection, ZKWatcher zkw, Set<String> peerIds,
+  public String dumpQueues(ZKWatcher zkw, Set<String> peerIds,
       boolean hdfs) throws Exception {
     ReplicationQueueStorage queueStorage;
-    ReplicationPeers replicationPeers;
     ReplicationTracker replicationTracker;
     StringBuilder sb = new StringBuilder();
 
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
-    replicationPeers =
-        ReplicationFactory.getReplicationPeers(zkw, getConf());
-    replicationTracker = ReplicationFactory.getReplicationTracker(zkw, replicationPeers, getConf(),
-      new WarnOnlyAbortable(), new WarnOnlyStoppable());
+    replicationTracker = ReplicationFactory.getReplicationTracker(zkw, new WarnOnlyAbortable(),
+      new WarnOnlyStoppable());
     Set<String> liveRegionServers = new HashSet<>(replicationTracker.getListOfRegionServers());
 
     // Loops each peer on each RS and dumps the queues
@@ -330,11 +326,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
         List<String> wals = queueStorage.getWALsInQueue(regionserver, queueId);
         if (!peerIds.contains(queueInfo.getPeerId())) {
           deletedQueues.add(regionserver + "/" + queueId);
-          sb.append(
-            formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, true, hdfs));
+          sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, true, hdfs));
         } else {
-          sb.append(
-            formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, false, hdfs));
+          sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, false, hdfs));
         }
       }
     }

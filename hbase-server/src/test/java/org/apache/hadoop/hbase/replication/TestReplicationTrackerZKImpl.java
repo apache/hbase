@@ -94,7 +94,8 @@ public class TestReplicationTrackerZKImpl {
       ZKClusterId.setClusterId(zkw, new ClusterId());
       rp = ReplicationFactory.getReplicationPeers(zkw, conf);
       rp.init();
-      rt = ReplicationFactory.getReplicationTracker(zkw, rp, conf, zkw, new DummyServer(fakeRs1));
+      rt = ReplicationFactory.getReplicationTracker(zkw, new DummyServer(fakeRs1),
+        new DummyServer(fakeRs1));
     } catch (Exception e) {
       fail("Exception during test setup: " + e);
     }

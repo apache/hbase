@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
@@ -36,7 +37,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
  * ZK based replication peer storage.
  */
 @InterfaceAudience.Private
-class ZKReplicationPeerStorage extends ZKReplicationStorageBase implements ReplicationPeerStorage {
+public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
+    implements ReplicationPeerStorage {
+
+  public static final String PEERS_ZNODE = "zookeeper.znode.replication.peers";
+  public static final String PEERS_ZNODE_DEFAULT = "peers";
+
+  public static final String PEERS_STATE_ZNODE = "zookeeper.znode.replication.peers.state";
+  public static final String PEERS_STATE_ZNODE_DEFAULT = "peer-state";
 
   public static final byte[] ENABLED_ZNODE_BYTES =
     toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
@@ -56,16 +64,18 @@ class ZKReplicationPeerStorage extends ZKReplicationStorageBase implements Repli
 
   public ZKReplicationPeerStorage(ZKWatcher zookeeper, Configuration conf) {
     super(zookeeper, conf);
-    this.peerStateNodeName = conf.get("zookeeper.znode.replication.peers.state", "peer-state");
-    String peersZNodeName = conf.get("zookeeper.znode.replication.peers", "peers");
+    this.peerStateNodeName = conf.get(PEERS_STATE_ZNODE, PEERS_STATE_ZNODE_DEFAULT);
+    String peersZNodeName = conf.get(PEERS_ZNODE, PEERS_ZNODE_DEFAULT);
     this.peersZNode = ZNodePaths.joinZNode(replicationZNode, peersZNodeName);
   }
 
-  private String getPeerStateNode(String peerId) {
+  @VisibleForTesting
+  public String getPeerStateNode(String peerId) {
     return ZNodePaths.joinZNode(getPeerNode(peerId), peerStateNodeName);
   }
 
-  private String getPeerNode(String peerId) {
+  @VisibleForTesting
+  public String getPeerNode(String peerId) {
     return ZNodePaths.joinZNode(peersZNode, peerId);
   }
 
@@ -82,8 +92,8 @@ class ZKReplicationPeerStorage extends ZKReplicationStorageBase implements Repli
             enabled ? ENABLED_ZNODE_BYTES : DISABLED_ZNODE_BYTES)),
         false);
     } catch (KeeperException e) {
-      throw new ReplicationException("Could not add peer with id=" + peerId + ", peerConfif=>" +
-        peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED"), e);
+      throw new ReplicationException("Could not add peer with id=" + peerId + ", peerConfif=>"
+          + peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED"), e);
     }
   }
 

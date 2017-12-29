@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import org.apache.hadoop.hbase.zookeeper.ZKListener;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,9 +36,14 @@ import org.slf4j.LoggerFactory;
  * interface.
  */
 @InterfaceAudience.Private
-public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements ReplicationTracker {
+public class ReplicationTrackerZKImpl implements ReplicationTracker {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationTrackerZKImpl.class);
+
+  // Zookeeper
+  private final ZKWatcher zookeeper;
+  // Server to abort.
+  private final Abortable abortable;
   // All about stopping
   private final Stoppable stopper;
   // listeners to be notified
@@ -48,9 +51,9 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
   // List of all the other region servers in this cluster
   private final ArrayList<String> otherRegionServers = new ArrayList<>();
 
-  public ReplicationTrackerZKImpl(ZKWatcher zookeeper, final ReplicationPeers replicationPeers,
-      Configuration conf, Abortable abortable, Stoppable stopper) {
-    super(zookeeper, conf, abortable);
+  public ReplicationTrackerZKImpl(ZKWatcher zookeeper, Abortable abortable, Stoppable stopper) {
+    this.zookeeper = zookeeper;
+    this.abortable = abortable;
     this.stopper = stopper;
     this.zookeeper.registerListener(new OtherRegionServerWatcher(this.zookeeper));
     // watch the changes
