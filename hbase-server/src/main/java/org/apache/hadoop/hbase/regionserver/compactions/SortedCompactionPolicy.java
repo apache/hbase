@@ -119,16 +119,21 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
    * @return When to run next major compaction
    */
   public long getNextMajorCompactTime(Collection<HStoreFile> filesToCompact) {
-    // default = 24hrs
+    /** Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_PERIOD}. */
     long period = comConf.getMajorCompactionPeriod();
     if (period <= 0) {
       return period;
     }
-    // default = 20% = +/- 4.8 hrs
+
+    /**
+     * Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_JITTER},
+     * that is, +/- 3.5 days (7 days * 0.5).
+     */
     double jitterPct = comConf.getMajorCompactionJitter();
     if (jitterPct <= 0) {
       return period;
     }
+
     // deterministic jitter avoids a major compaction storm on restart
     OptionalInt seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
     if (seed.isPresent()) {

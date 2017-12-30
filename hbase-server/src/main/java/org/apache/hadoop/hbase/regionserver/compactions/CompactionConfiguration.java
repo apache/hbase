@@ -127,9 +127,10 @@ public class CompactionConfiguration {
 
     throttlePoint = conf.getLong("hbase.regionserver.thread.compaction.throttle",
           2 * maxFilesToCompact * storeConfigInfo.getMemStoreFlushSize());
-    majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
-    // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
-    majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
+    majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD,
+                                         HConstants.DEFAULT_MAJOR_COMPACTION_PERIOD);
+    majorCompactionJitter = conf.getFloat(HConstants.MAJOR_COMPACTION_JITTER,
+                                          HConstants.DEFAULT_MAJOR_COMPACTION_JITTER);
     minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
 
     dateTieredMaxStoreFileAgeMillis = conf.getLong(DATE_TIERED_MAX_AGE_MILLIS_KEY, Long.MAX_VALUE);
