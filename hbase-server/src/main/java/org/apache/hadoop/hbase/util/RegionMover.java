@@ -63,6 +63,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -101,6 +102,7 @@ public class RegionMover extends AbstractHBaseTool {
     this.ack = builder.ack;
     this.port = builder.port;
     this.timeout = builder.timeout;
+    setConf(builder.conf);
   }
 
   private RegionMover() {
@@ -118,27 +120,43 @@ public class RegionMover extends AbstractHBaseTool {
     private String hostname;
     private String filename;
     private String excludeFile = null;
-    String defaultDir = System.getProperty("java.io.tmpdir");
+    private String defaultDir = System.getProperty("java.io.tmpdir");
 
-    private int port = HConstants.DEFAULT_REGIONSERVER_PORT;
+    @VisibleForTesting
+    final int port;
+    private final Configuration conf;
+
+    public RegionMoverBuilder(String hostname) {
+      this(hostname, createConf());
+    }
+
+    /**
+     * Creates a new configuration and sets region mover specific overrides
+     */
+    private static Configuration createConf() {
+      Configuration conf = HBaseConfiguration.create();
+      conf.setInt("hbase.client.prefetch.limit", 1);
+      conf.setInt("hbase.client.pause", 500);
+      conf.setInt("hbase.client.retries.number", 100);
+      return conf;
+    }
 
     /**
      * @param hostname Hostname to unload regions from or load regions to. Can be either hostname
      *     or hostname:port.
+     * @param conf Configuration object
      */
-    public RegionMoverBuilder(String hostname) {
+    public RegionMoverBuilder(String hostname, Configuration conf) {
       String[] splitHostname = hostname.toLowerCase().split(":");
       this.hostname = splitHostname[0];
       if (splitHostname.length == 2) {
         this.port = Integer.parseInt(splitHostname[1]);
+      } else {
+        this.port = conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
       }
-      setDefaultfilename(this.hostname);
-    }
-
-    private void setDefaultfilename(String hostname) {
-      this.filename =
-          defaultDir + File.separator + System.getProperty("user.name") + this.hostname + ":"
-              + Integer.toString(this.port);
+      this.filename = defaultDir + File.separator + System.getProperty("user.name") + this.hostname
+        + ":" + Integer.toString(this.port);
+      this.conf = conf;
     }
 
     /**
@@ -216,7 +234,6 @@ public class RegionMover extends AbstractHBaseTool {
    * @throws TimeoutException
    */
   public boolean load() throws ExecutionException, InterruptedException, TimeoutException {
-    setConf();
     ExecutorService loadPool = Executors.newFixedThreadPool(1);
     Future<Boolean> loadTask = loadPool.submit(new Load(this));
     loadPool.shutdown();
@@ -285,7 +302,6 @@ public class RegionMover extends AbstractHBaseTool {
    * @throws TimeoutException
    */
   public boolean unload() throws InterruptedException, ExecutionException, TimeoutException {
-    setConf();
     deleteFile(this.filename);
     ExecutorService unloadPool = Executors.newFixedThreadPool(1);
     Future<Boolean> unloadTask = unloadPool.submit(new Unload(this));
@@ -350,18 +366,6 @@ public class RegionMover extends AbstractHBaseTool {
         }
       }
       return true;
-    }
-  }
-
-  /**
-   * Creates a new configuration if not already set and sets region mover specific overrides
-   */
-  private void setConf() {
-    if (conf == null) {
-      conf = HBaseConfiguration.create();
-      conf.setInt("hbase.client.prefetch.limit", 1);
-      conf.setInt("hbase.client.pause", 500);
-      conf.setInt("hbase.client.retries.number", 100);
     }
   }
 
