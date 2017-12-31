@@ -20,8 +20,9 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -40,8 +41,8 @@ public final class Superusers {
   /** Configuration key for superusers */
   public static final String SUPERUSER_CONF_KEY = "hbase.superuser"; // Not getting a name
 
-  private static List<String> superUsers;
-  private static List<String> superGroups;
+  private static Set<String> superUsers;
+  private static Set<String> superGroups;
   private static User systemUser;
 
   private Superusers(){}
@@ -54,8 +55,8 @@ public final class Superusers {
    * @throws IllegalStateException if current user is null
    */
   public static void initialize(Configuration conf) throws IOException {
-    superUsers = new ArrayList<>();
-    superGroups = new ArrayList<>();
+    superUsers = new HashSet<>();
+    superGroups = new HashSet<>();
     systemUser = User.getCurrent();
 
     if (systemUser == null) {
@@ -63,10 +64,10 @@ public final class Superusers {
         + "authorization checks for internal operations will not work correctly!");
     }
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Current user name is " + systemUser.getShortName());
-    }
     String currentUser = systemUser.getShortName();
+    LOG.trace("Current user name is {}", currentUser);
+    superUsers.add(currentUser);
+
     String[] superUserList = conf.getStrings(SUPERUSER_CONF_KEY, new String[0]);
     for (String name : superUserList) {
       if (AuthUtil.isGroupPrincipal(name)) {
@@ -75,7 +76,6 @@ public final class Superusers {
         superUsers.add(name);
       }
     }
-    superUsers.add(currentUser);
   }
 
   /**
@@ -88,12 +88,11 @@ public final class Superusers {
   public static boolean isSuperUser(User user) {
     if (superUsers == null) {
       throw new IllegalStateException("Super users/super groups lists"
-        + " haven't been initialized properly.");
+        + " have not been initialized properly.");
     }
     if (superUsers.contains(user.getShortName())) {
       return true;
     }
-
     for (String group : user.getGroupNames()) {
       if (superGroups.contains(group)) {
         return true;
@@ -102,7 +101,7 @@ public final class Superusers {
     return false;
   }
 
-  public static List<String> getSuperUsers() {
+  public static Collection<String> getSuperUsers() {
     return superUsers;
   }
 
