@@ -87,6 +87,14 @@ public class HbckTestingUtil {
     return hbck;
   }
 
+  public static HBaseFsck checkRegionBoundaries(Configuration conf) throws Exception {
+    HBaseFsck hbck = new HBaseFsck(conf, exec);
+    hbck.connect();
+    hbck.checkRegionBoundaries();
+    hbck.close();
+    return hbck;
+  }
+
   public static boolean inconsistencyFound(HBaseFsck fsck) throws Exception {
     List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
     return (errs != null && !errs.isEmpty());

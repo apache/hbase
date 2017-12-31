@@ -804,15 +804,17 @@ public class HBaseFsck extends Configured implements Closeable {
             for (FileStatus storeFile : storeFiles) {
               HFile.Reader reader = HFile.createReader(fs, storeFile.getPath(), new CacheConfig(
                   getConf()), getConf());
-              if ((reader.getFirstKey() != null)
-                  && ((storeFirstKey == null) || (comparator.compare(storeFirstKey,
-                      reader.getFirstKey()) > 0))) {
-                storeFirstKey = reader.getFirstKey();
+              if (reader.getFirstKey() != null) {
+                byte[] firstKey = keyOnly(reader.getFirstKey());
+                if (storeFirstKey == null || comparator.compare(storeFirstKey, firstKey) > 0) {
+                  storeFirstKey = firstKey;
+                }
               }
-              if ((reader.getLastKey() != null)
-                  && ((storeLastKey == null) || (comparator.compare(storeLastKey,
-                      reader.getLastKey())) < 0)) {
-                storeLastKey = reader.getLastKey();
+              if (reader.getLastKey() != null) {
+                byte[] lastKey = keyOnly(reader.getLastKey());
+                if (storeLastKey == null || comparator.compare(storeLastKey, lastKey) < 0) {
+                  storeLastKey = lastKey;
+                }
               }
               reader.close();
             }
@@ -820,8 +822,8 @@ public class HBaseFsck extends Configured implements Closeable {
         }
         currentRegionBoundariesInformation.metaFirstKey = regionInfo.getStartKey();
         currentRegionBoundariesInformation.metaLastKey = regionInfo.getEndKey();
-        currentRegionBoundariesInformation.storesFirstKey = keyOnly(storeFirstKey);
-        currentRegionBoundariesInformation.storesLastKey = keyOnly(storeLastKey);
+        currentRegionBoundariesInformation.storesFirstKey = storeFirstKey;
+        currentRegionBoundariesInformation.storesLastKey = storeLastKey;
         if (currentRegionBoundariesInformation.metaFirstKey.length == 0)
           currentRegionBoundariesInformation.metaFirstKey = null;
         if (currentRegionBoundariesInformation.metaLastKey.length == 0)

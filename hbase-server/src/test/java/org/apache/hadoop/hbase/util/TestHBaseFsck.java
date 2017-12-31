@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.checkRegionBoundaries;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -2998,15 +2999,73 @@ public class TestHBaseFsck {
 
   @Test (timeout = 180000)
   public void testRegionBoundariesCheck() throws Exception {
-    HBaseFsck hbck = doFsck(conf, false);
+    TableName tableName = TableName.valueOf("testRegionBoundariesCheck");
+
+    // setup a table
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
+    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
+    createTable(TEST_UTIL, desc, SPLITS);
+
+    Table table = connection.getTable(tableName, tableExecutorService);
+    List<Put> puts = new ArrayList<>();
+
+    // for the first region
+    puts.add(new Put(Bytes.toBytes("0")).addColumn(FAM, Bytes.toBytes("col"),
+      Bytes.toBytes("val")));
+    puts.add(new Put(Bytes.toBytes("999")).addColumn(FAM, Bytes.toBytes("col"),
+      Bytes.toBytes("val")));
+
+    // for the second region
+    puts.add(new Put(Bytes.toBytes("AA")).addColumn(FAM, Bytes.toBytes("col"),
+      Bytes.toBytes("val")));
+    puts.add(new Put(Bytes.toBytes("AZ")).addColumn(FAM, Bytes.toBytes("col"),
+      Bytes.toBytes("val")));
+
+    table.put(puts);
+
+    // to guarantee all data flushed, disable and enable the table
+    admin.disableTable(tableName);
+    admin.enableTable(tableName);
+
+    // check region boundaries before moving an HFile
+    HBaseFsck hbck = checkRegionBoundaries(conf);
     assertNoErrors(hbck); // no errors
-    try {
-      hbck.checkRegionBoundaries();
-    } catch (IllegalArgumentException e) {
-      if (e.getMessage().endsWith("not a valid DFS filename.")) {
-        fail("Table directory path is not valid." + e.getMessage());
+
+    // move an HFile in the second region to the first region directory
+    admin.disableTable(tableName);
+
+    List<HRegionInfo> tableRegions = admin.getTableRegions(tableName);
+    HRegionInfo firstRegion = tableRegions.get(0);
+    HRegionInfo secondRegion = tableRegions.get(1);
+
+    FileSystem fs = FileSystem.get(conf);
+    Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), tableName);
+    Path firstRegionFamDir = new Path(new Path(tableDir, firstRegion.getEncodedName()), FAM_STR);
+    Path hfileInFirstRegion = getHFilePath(fs, firstRegionFamDir);
+    Path secondRegionFamDir = new Path(new Path(tableDir, secondRegion.getEncodedName()), FAM_STR);
+    Path hfileInSecondRegion = getHFilePath(fs, secondRegionFamDir);
+
+    // rename HFile names (to "0" and "1") in order to guarantee the same file iteration order of
+    // fs.listStatus()
+    fs.rename(hfileInFirstRegion, new Path(firstRegionFamDir, "0"));
+    fs.rename(hfileInSecondRegion, new Path(firstRegionFamDir, "1"));
+
+    admin.enableTable(tableName);
+
+    // check region boundaries after moving an HFile
+    hbck = checkRegionBoundaries(conf);
+    assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.BOUNDARIES_ERROR });
+  }
+
+  private static Path getHFilePath(FileSystem fs, Path famDir) throws IOException {
+    FileStatus[] hfFss = fs.listStatus(famDir);
+    for (FileStatus hfs : hfFss) {
+      if (!hfs.isDirectory()) {
+        return hfs.getPath();
       }
     }
+    return null;
   }
 
   @org.junit.Rule
