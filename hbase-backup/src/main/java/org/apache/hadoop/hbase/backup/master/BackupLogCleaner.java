@@ -96,14 +96,18 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
         return files;
       }
 
-      for (FileStatus file : files) {
+      Map<FileStatus, Boolean> walFilesDeletableMap = table.areWALFilesDeletable(files);
+      for (Map.Entry<FileStatus, Boolean> entry: walFilesDeletableMap.entrySet()) {
+        FileStatus file = entry.getKey();
         String wal = file.getPath().toString();
-        boolean logInSystemTable = table.isWALFileDeletable(wal);
-        if (LOG.isDebugEnabled()) {
-          if (logInSystemTable) {
+        boolean deletable = entry.getValue();
+        if (deletable) {
+          if (LOG.isDebugEnabled()) {
             LOG.debug("Found log file in backup system table, deleting: " + wal);
-            list.add(file);
-          } else {
+          }
+          list.add(file);
+        } else {
+          if (LOG.isDebugEnabled()) {
             LOG.debug("Didn't find this log in backup system table, keeping: " + wal);
           }
         }

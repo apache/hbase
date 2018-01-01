@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -1088,6 +1089,47 @@ public final class BackupSystemTable implements Closeable {
       Result res = table.get(get);
       return (!res.isEmpty());
     }
+  }
+
+  /**
+   * Check if WAL file is eligible for deletion using multi-get
+   * @param files names of a file to check
+   * @return map of results
+   *         (key: FileStatus object. value: true if the file is deletable, false otherwise)
+   * @throws IOException exception
+   */
+  public Map<FileStatus, Boolean> areWALFilesDeletable(Iterable<FileStatus> files)
+    throws IOException {
+    final int BUF_SIZE = 100;
+
+    Map<FileStatus, Boolean> ret = new HashMap<>();
+    try (Table table = connection.getTable(tableName)) {
+      List<Get> getBuffer = new ArrayList<>();
+      List<FileStatus> fileStatuses = new ArrayList<>();
+
+      for (FileStatus file : files) {
+        String wal = file.getPath().toString();
+        Get get = createGetForCheckWALFile(wal);
+        getBuffer.add(get);
+        fileStatuses.add(file);
+        if (getBuffer.size() >= BUF_SIZE) {
+          Result[] results = table.get(getBuffer);
+          for (int i = 0; i < results.length; i++) {
+            ret.put(fileStatuses.get(i), !results[i].isEmpty());
+          }
+          getBuffer.clear();
+          fileStatuses.clear();
+        }
+      }
+
+      if (!getBuffer.isEmpty()) {
+        Result[] results = table.get(getBuffer);
+        for (int i = 0; i < results.length; i++) {
+          ret.put(fileStatuses.get(i), !results[i].isEmpty());
+        }
+      }
+    }
+    return ret;
   }
 
   /**

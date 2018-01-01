@@ -32,10 +32,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -334,6 +337,25 @@ public class TestBackupSystemTable {
     assertTrue(table.isWALFileDeletable(files.get(1)));
     assertTrue(table.isWALFileDeletable(files.get(2)));
     assertFalse(table.isWALFileDeletable(newFile));
+
+    // test for isWALFilesDeletable
+    List<FileStatus> fileStatues = new ArrayList<>();
+    for (String file : files) {
+      FileStatus fileStatus = new FileStatus();
+      fileStatus.setPath(new Path(file));
+      fileStatues.add(fileStatus);
+    }
+
+    FileStatus newFileStatus = new FileStatus();
+    newFileStatus.setPath(new Path(newFile));
+    fileStatues.add(newFileStatus);
+
+    Map<FileStatus, Boolean> walFilesDeletableMap = table.areWALFilesDeletable(fileStatues);
+
+    assertTrue(walFilesDeletableMap.get(fileStatues.get(0)));
+    assertTrue(walFilesDeletableMap.get(fileStatues.get(1)));
+    assertTrue(walFilesDeletableMap.get(fileStatues.get(2)));
+    assertFalse(walFilesDeletableMap.get(newFileStatus));
 
     cleanBackupTable();
   }
