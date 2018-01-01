@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -1678,7 +1677,7 @@ public class TestAccessController extends SecureTestUtil {
       acl.close();
     }
 
-    Collection<String> superUsers = Superusers.getSuperUsers();
+    List<String> superUsers = Superusers.getSuperUsers();
     List<UserPermission> adminPerms = new ArrayList<>(superUsers.size() + 1);
     adminPerms.add(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
       AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW")));
