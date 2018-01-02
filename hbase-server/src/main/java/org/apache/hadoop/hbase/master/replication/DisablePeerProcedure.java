@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -62,7 +61,7 @@ public class DisablePeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void postPeerModification(MasterProcedureEnv env) throws IOException {
-    LOG.info("Successfully disabled peer " + peerId);
+    LOG.info("Successfully disabled peer {}", peerId);
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.postDisableReplicationPeer(peerId);

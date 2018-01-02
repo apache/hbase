@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -70,7 +69,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void postPeerModification(MasterProcedureEnv env) throws IOException {
-    LOG.info("Successfully updated peer config of " + peerId + " to " + peerConfig);
+    LOG.info("Successfully updated peer config of {} to {}", peerId, peerConfig);
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.postUpdateReplicationPeerConfig(peerId, peerConfig);

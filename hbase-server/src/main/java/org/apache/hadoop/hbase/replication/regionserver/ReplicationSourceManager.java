@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -306,9 +305,8 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   @VisibleForTesting
   ReplicationSourceInterface addSource(String id) throws IOException, ReplicationException {
-    ReplicationPeerConfig peerConfig = replicationPeers.getPeerConfig(id);
     ReplicationPeer peer = replicationPeers.getPeer(id);
-    ReplicationSourceInterface src = getReplicationSource(id, peerConfig, peer);
+    ReplicationSourceInterface src = getReplicationSource(id, peer);
     synchronized (this.walsById) {
       this.sources.add(src);
       Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
@@ -499,8 +497,8 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param peerId the id of the peer cluster
    * @return the created source
    */
-  private ReplicationSourceInterface getReplicationSource(String peerId,
-      ReplicationPeerConfig peerConfig, ReplicationPeer replicationPeer) throws IOException {
+  private ReplicationSourceInterface getReplicationSource(String peerId, ReplicationPeer peer)
+      throws IOException {
     RegionServerCoprocessorHost rsServerHost = null;
     TableDescriptors tableDescriptors = null;
     if (server instanceof HRegionServer) {
@@ -512,24 +510,24 @@ public class ReplicationSourceManager implements ReplicationListener {
 
     ReplicationEndpoint replicationEndpoint = null;
     try {
-      String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
+      String replicationEndpointImpl = peer.getPeerConfig().getReplicationEndpointImpl();
       if (replicationEndpointImpl == null) {
         // Default to HBase inter-cluster replication endpoint
         replicationEndpointImpl = HBaseInterClusterReplicationEndpoint.class.getName();
       }
       replicationEndpoint = Class.forName(replicationEndpointImpl)
           .asSubclass(ReplicationEndpoint.class).newInstance();
-      if(rsServerHost != null) {
-        ReplicationEndpoint newReplicationEndPoint = rsServerHost
-            .postCreateReplicationEndPoint(replicationEndpoint);
-        if(newReplicationEndPoint != null) {
+      if (rsServerHost != null) {
+        ReplicationEndpoint newReplicationEndPoint =
+            rsServerHost.postCreateReplicationEndPoint(replicationEndpoint);
+        if (newReplicationEndPoint != null) {
           // Override the newly created endpoint from the hook with configured end point
           replicationEndpoint = newReplicationEndPoint;
         }
       }
     } catch (Exception e) {
-      LOG.warn("Passed replication endpoint implementation throws errors"
-          + " while initializing ReplicationSource for peer: " + peerId, e);
+      LOG.warn("Passed replication endpoint implementation throws errors" +
+        " while initializing ReplicationSource for peer: " + peerId, e);
       throw new IOException(e);
     }
 
@@ -539,8 +537,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       replicationEndpoint, walFileLengthProvider, metrics);
 
     // init replication endpoint
-    replicationEndpoint.init(new ReplicationEndpoint.Context(conf, replicationPeer.getConfiguration(),
-      fs, peerId, clusterId, replicationPeer, metrics, tableDescriptors, server));
+    replicationEndpoint.init(new ReplicationEndpoint.Context(conf, peer.getConfiguration(), fs,
+        peerId, clusterId, peer, metrics, tableDescriptors, server));
 
     return src;
   }
@@ -736,17 +734,6 @@ public class ReplicationSourceManager implements ReplicationListener {
             abortWhenFail(() -> queueStorage.removeQueue(server.getServerName(), peerId));
             continue;
           }
-
-          ReplicationPeerConfig peerConfig = null;
-          try {
-            peerConfig = replicationPeers.getPeerConfig(actualPeerId);
-          } catch (Exception e) {
-            LOG.warn("Skipping failover for peer:" + actualPeerId + " of node " + deadRS
-                + ", failed to read peer config", e);
-            abortWhenFail(() -> queueStorage.removeQueue(server.getServerName(), peerId));
-            continue;
-          }
-
           // track sources in walsByIdRecoveredQueues
           Map<String, SortedSet<String>> walsByGroup = new HashMap<>();
           walsByIdRecoveredQueues.put(peerId, walsByGroup);
@@ -761,7 +748,7 @@ public class ReplicationSourceManager implements ReplicationListener {
           }
 
           // enqueue sources
-          ReplicationSourceInterface src = getReplicationSource(peerId, peerConfig, peer);
+          ReplicationSourceInterface src = getReplicationSource(peerId, peer);
           // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
           // see removePeer
           synchronized (oldsources) {

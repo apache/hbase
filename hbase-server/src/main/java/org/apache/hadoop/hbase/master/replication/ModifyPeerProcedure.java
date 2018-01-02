@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
@@ -84,10 +83,13 @@ public abstract class ModifyPeerProcedure
    * Called before we finish the procedure. The implementation can do some logging work, and also
    * call the coprocessor hook if any.
    * <p>
-   * Notice that, since we have already done the actual work, throwing exception here will not fail
-   * this procedure, we will just ignore it and finish the procedure as suceeded.
+   * Notice that, since we have already done the actual work, throwing {@code IOException} here will
+   * not fail this procedure, we will just ignore it and finish the procedure as suceeded. If
+   * {@code ReplicationException} is thrown we will retry since this usually means we fails to
+   * update the peer storage.
    */
-  protected abstract void postPeerModification(MasterProcedureEnv env) throws IOException;
+  protected abstract void postPeerModification(MasterProcedureEnv env)
+      throws IOException, ReplicationException;
 
   private void releaseLatch() {
     ProcedurePrepareLatch.releaseLatch(latch, this);
@@ -101,16 +103,14 @@ public abstract class ModifyPeerProcedure
         try {
           prePeerModification(env);
         } catch (IOException e) {
-          LOG.warn(
-            getClass().getName() + " failed to call CP hook or the pre check is failed for peer " +
-              peerId + ", mark the procedure as failure and give up",
-            e);
+          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
+            "mark the procedure as failure and give up", getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
           releaseLatch();
           return Flow.NO_MORE_STATE;
         } catch (ReplicationException e) {
-          LOG.warn(getClass().getName() + " failed to call prePeerModification for peer " + peerId +
-            ", retry", e);
+          LOG.warn("{} failed to call prePeerModification for peer {}, retry", getClass().getName(),
+            peerId, e);
           throw new ProcedureYieldException();
         }
         setNextState(PeerModificationState.UPDATE_PEER_STORAGE);
@@ -119,8 +119,8 @@ public abstract class ModifyPeerProcedure
         try {
           updatePeerStorage(env);
         } catch (ReplicationException e) {
-          LOG.warn(
-            getClass().getName() + " update peer storage for peer " + peerId + " failed, retry", e);
+          LOG.warn("{} update peer storage for peer {} failed, retry", getClass().getName(), peerId,
+            e);
           throw new ProcedureYieldException();
         }
         setNextState(PeerModificationState.REFRESH_PEER_ON_RS);
@@ -134,9 +134,13 @@ public abstract class ModifyPeerProcedure
       case POST_PEER_MODIFICATION:
         try {
           postPeerModification(env);
+        } catch (ReplicationException e) {
+          LOG.warn("{} failed to call postPeerModification for peer {}, retry",
+            getClass().getName(), peerId, e);
+          throw new ProcedureYieldException();
         } catch (IOException e) {
-          LOG.warn(getClass().getName() + " failed to call prePeerModification for peer " + peerId +
-            ", ignore since the procedure has already done", e);
+          LOG.warn("{} failed to call post CP hook for peer {}, " +
+            "ignore since the procedure has already done", getClass().getName(), peerId, e);
         }
         releaseLatch();
         return Flow.NO_MORE_STATE;
@@ -175,7 +179,7 @@ public abstract class ModifyPeerProcedure
       throws IOException, InterruptedException {
     if (state == PeerModificationState.PRE_PEER_MODIFICATION) {
       // actually the peer related operations has no rollback, but if we haven't done any
-      // modifications on the peer storage, we can just return.
+      // modifications on the peer storage yet, we can just return.
       return;
     }
     throw new UnsupportedOperationException();

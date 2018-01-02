@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -215,6 +214,36 @@ public class ReplicationPeerManager {
   public Optional<ReplicationPeerConfig> getPeerConfig(String peerId) {
     ReplicationPeerDescription desc = peers.get(peerId);
     return desc != null ? Optional.of(desc.getPeerConfig()) : Optional.empty();
+  }
+
+  private void removeAllQueues0(String peerId) throws ReplicationException {
+    for (ServerName replicator : queueStorage.getListOfReplicators()) {
+      List<String> queueIds = queueStorage.getAllQueues(replicator);
+      for (String queueId : queueIds) {
+        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+        if (queueInfo.getPeerId().equals(peerId)) {
+          queueStorage.removeQueue(replicator, queueId);
+        }
+      }
+      queueStorage.removeReplicatorIfQueueIsEmpty(replicator);
+    }
+  }
+
+  public void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
+    // Here we need two passes to address the problem of claimQueue. Maybe a claimQueue is still
+    // on-going when the refresh peer config procedure is done, if a RS which has already been
+    // scanned claims the queue of a RS which has not been scanned yet, we will miss that queue in
+    // the scan here, and if the RS who has claimed the queue crashed before creating recovered
+    // source, then the queue will leave there until the another RS detects the crash and helps
+    // removing the queue.
+    // A two pass scan can solve the problem. Anyway, the queue will not disappear during the
+    // claiming, it will either under the old RS or under the new RS, and a queue can only be
+    // claimed once after the refresh peer procedure done(as the next claim queue will just delete
+    // it), so we can make sure that a two pass scan will finally find the queue and remove it,
+    // unless it has already been removed by others.
+    removeAllQueues0(peerId);
+    removeAllQueues0(peerId);
+    queueStorage.removePeerFromHFileRefs(peerId);
   }
 
   private void checkPeerConfig(ReplicationPeerConfig peerConfig) throws DoNotRetryIOException {
