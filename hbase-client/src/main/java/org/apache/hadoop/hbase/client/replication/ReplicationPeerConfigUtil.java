@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -164,7 +163,7 @@ public final class ReplicationPeerConfigUtil {
     for (int i = 0, n = tableCFs.length; i < n; i++) {
       ReplicationProtos.TableCF tableCF = tableCFs[i];
       String namespace = tableCF.getTableName().getNamespace().toStringUtf8();
-      if (!Strings.isEmpty(namespace)) {
+      if (StringUtils.isNotEmpty(namespace)) {
         sb.append(namespace).append(".").
             append(tableCF.getTableName().getQualifier().toStringUtf8())
             .append(":");
