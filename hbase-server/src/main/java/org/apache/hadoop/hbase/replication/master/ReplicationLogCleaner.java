@@ -86,8 +86,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         if (LOG.isDebugEnabled()) {
           if (logInReplicationQueue) {
             LOG.debug("Found log in ZK, keeping: " + wal);
-          } else {
-            LOG.debug("Didn't find this log in ZK, deleting: " + wal);
           }
         }
         return !logInReplicationQueue && (file.getModificationTime() < readZKTimestamp);
