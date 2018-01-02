@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -80,7 +79,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // set memstore to do data compaction
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.EAGER));
-
+    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.02);
     this.memstore =
         new MyCompactingMemStore(conf, CellComparatorImpl.COMPARATOR, store,
             regionServicesForStores, MemoryCompactionPolicy.EAGER);
@@ -739,7 +738,6 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
    * testFlatteningToJumboCellChunkMap checks that the process of flattening
    * into CellChunkMap succeeds, even when such big cells are allocated.
    */
-  @Ignore
   @Test
   public void testFlatteningToJumboCellChunkMap() throws IOException {
 
@@ -749,9 +747,10 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     // set memstore to flat into CellChunkMap
     MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-            String.valueOf(compactionType));
+        String.valueOf(compactionType));
     ((MyCompactingMemStore)memstore).initiateType(compactionType, memstore.getConfiguration());
     ((CompactingMemStore)memstore).setIndexType(CompactingMemStore.IndexType.CHUNK_MAP);
+
     int numOfCells = 1;
     char[] chars = new char[MemStoreLAB.CHUNK_SIZE_DEFAULT];
     for (int i = 0; i < chars.length; i++) {
