@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
 public abstract class CleanerChore<T extends FileCleanerDelegate> extends ScheduledChore
     implements ConfigurationObserver {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CleanerChore.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(CleanerChore.class);
   private static final int AVAIL_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
   /**
@@ -110,7 +110,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       chorePoolSize = chorePoolSize == 0 ?
           calculatePoolSize(DEFAULT_CHORE_POOL_SIZE) : chorePoolSize;
       this.chorePool = new ForkJoinPool(chorePoolSize);
-      LOG.info("Cleaner pool size is " + chorePoolSize);
+      LOG.info("Cleaner pool size is {}", chorePoolSize);
     }
   }
 
@@ -125,7 +125,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       // but upmost to the number of available processors.
       int size = Math.min(Integer.valueOf(poolSize), AVAIL_PROCESSORS);
       if (size == AVAIL_PROCESSORS) {
-        LOG.warn("Use full core processors to scan dir, size={}" + size);
+        LOG.warn("Use full core processors to scan dir, size={}", size);
       }
       return size;
     } else if (poolSize.matches("0.[0-9]+|1.0")) {
@@ -157,7 +157,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       for (String className : logCleaners) {
         T logCleaner = newFileCleaner(className, conf);
         if (logCleaner != null) {
-          LOG.debug("Initialize cleaner=" + className);
+          LOG.debug("Initialize cleaner={}", className);
           this.cleanersChain.add(logCleaner);
         }
       }
@@ -216,7 +216,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       if (runCleaner()) {
         LOG.debug("Cleaned old files/dirs under {} successfully",  oldFileDir);
       } else {
-        LOG.warn("Failed to fully clean old files/dirs under " + oldFileDir + ".");
+        LOG.warn("Failed to fully clean old files/dirs under {}", oldFileDir);
       }
       // After each clean chore, checks if receives reconfigure notification while cleaning
       if (reconfig.compareAndSet(true, false)) {
@@ -268,7 +268,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           directorySpaces.put(f, space);
           return space;
         } catch (IOException e) {
-          LOG.trace("Failed to get space consumed by path={}", f.getPath(), e);
+          LOG.trace("Failed to get space consumed by path={}", f, e);
           return -1;
         }
       }
