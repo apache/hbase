@@ -54,6 +54,14 @@ public interface ReplicationPeer {
   PeerState getPeerState();
 
   /**
+   * Test whether the peer is enabled.
+   * @return {@code true} if enabled, otherwise {@code false}.
+   */
+  default boolean isPeerEnabled() {
+    return getPeerState() == PeerState.ENABLED;
+  }
+
+  /**
    * Get the peer config object
    * @return the ReplicationPeerConfig for this peer
    */
