@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * deleted. By default they are allowed to live for {@value #DEFAULT_TTL}
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class TimeToLiveProcedureWALCleaner extends BaseFileCleanerDelegate {
+public class TimeToLiveProcedureWALCleaner extends BaseLogCleanerDelegate {
   private static final Logger LOG =
       LoggerFactory.getLogger(TimeToLiveProcedureWALCleaner.class.getName());
   public static final String TTL_CONF_KEY = "hbase.master.procedurewalcleaner.ttl";
