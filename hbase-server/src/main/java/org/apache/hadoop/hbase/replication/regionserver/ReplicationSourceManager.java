@@ -47,11 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
@@ -491,49 +487,14 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param peerId the id of the peer cluster
    * @return the created source
    */
-  private ReplicationSourceInterface getReplicationSource(String peerId, ReplicationPeer peer)
-      throws IOException {
-    RegionServerCoprocessorHost rsServerHost = null;
-    TableDescriptors tableDescriptors = null;
-    if (server instanceof HRegionServer) {
-      rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
-      tableDescriptors = ((HRegionServer) server).getTableDescriptors();
-    }
-
+  private ReplicationSourceInterface getReplicationSource(String peerId,
+      ReplicationPeer replicationPeer) throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, peerId);
-
-    ReplicationEndpoint replicationEndpoint = null;
-    try {
-      String replicationEndpointImpl = peer.getPeerConfig().getReplicationEndpointImpl();
-      if (replicationEndpointImpl == null) {
-        // Default to HBase inter-cluster replication endpoint
-        replicationEndpointImpl = HBaseInterClusterReplicationEndpoint.class.getName();
-      }
-      replicationEndpoint = Class.forName(replicationEndpointImpl)
-          .asSubclass(ReplicationEndpoint.class).newInstance();
-      if (rsServerHost != null) {
-        ReplicationEndpoint newReplicationEndPoint =
-            rsServerHost.postCreateReplicationEndPoint(replicationEndpoint);
-        if (newReplicationEndPoint != null) {
-          // Override the newly created endpoint from the hook with configured end point
-          replicationEndpoint = newReplicationEndPoint;
-        }
-      }
-    } catch (Exception e) {
-      LOG.warn("Passed replication endpoint implementation throws errors" +
-        " while initializing ReplicationSource for peer: " + peerId, e);
-      throw new IOException(e);
-    }
 
     MetricsSource metrics = new MetricsSource(peerId);
     // init replication source
-    src.init(conf, fs, this, queueStorage, replicationPeers, server, peerId, clusterId,
-      replicationEndpoint, walFileLengthProvider, metrics);
-
-    // init replication endpoint
-    replicationEndpoint.init(new ReplicationEndpoint.Context(conf, peer.getConfiguration(), fs,
-        peerId, clusterId, peer, metrics, tableDescriptors, server));
-
+    src.init(conf, fs, this, queueStorage, replicationPeer, server, peerId, clusterId,
+      walFileLengthProvider, metrics);
     return src;
   }
 

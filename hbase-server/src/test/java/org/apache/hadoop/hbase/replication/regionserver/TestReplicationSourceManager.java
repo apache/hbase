@@ -64,8 +64,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -736,9 +736,9 @@ public abstract class TestReplicationSourceManager {
 
     @Override
     public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-        ReplicationQueueStorage rq, ReplicationPeers rp, Server server, String peerClusterId,
-        UUID clusterId, ReplicationEndpoint replicationEndpoint,
-        WALFileLengthProvider walFileLengthProvider, MetricsSource metrics) throws IOException {
+        ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
+        UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+        throws IOException {
       throw new IOException("Failing deliberately");
     }
   }

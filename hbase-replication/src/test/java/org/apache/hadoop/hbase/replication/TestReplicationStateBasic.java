@@ -225,11 +225,6 @@ public abstract class TestReplicationStateBasic {
       fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
     } catch (ReplicationException e) {
     }
-    try {
-      rp.isPeerEnabled("bogus");
-      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
-    } catch (IllegalArgumentException e) {
-    }
 
     try {
       assertFalse(rp.addPeer("bogus"));
@@ -245,12 +240,6 @@ public abstract class TestReplicationStateBasic {
     rp.getPeerStorage().addPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO), true);
     assertNumberOfPeers(2);
 
-    // Test methods with a peer that is added but not connected
-    try {
-      rp.isPeerEnabled(ID_ONE);
-      fail("There are no connected peers, should have thrown an IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-    }
     assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationPeers
         .getPeerClusterConfiguration(rp.getPeerStorage().getPeerConfig(ID_ONE), rp.getConf())));
     rp.getPeerStorage().removePeer(ID_ONE);
@@ -261,7 +250,7 @@ public abstract class TestReplicationStateBasic {
     rp.getPeerStorage().addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE), true);
     rp.addPeer(ID_ONE);
     assertNumberOfPeers(2);
-    assertTrue(rp.isPeerEnabled(ID_ONE));
+    assertTrue(rp.getPeer(ID_ONE).isPeerEnabled());
     rp.getPeerStorage().setPeerState(ID_ONE, false);
     // now we do not rely on zk watcher to trigger the state change so we need to trigger it
     // manually...
@@ -279,11 +268,6 @@ public abstract class TestReplicationStateBasic {
     // Disconnect peer
     rp.removePeer(ID_ONE);
     assertNumberOfPeers(2);
-    try {
-      rp.isPeerEnabled(ID_ONE);
-      fail("There are no connected peers, should have thrown an IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-    }
   }
 
   protected void assertConnectedPeerStatus(boolean status, String peerId) throws Exception {
@@ -292,7 +276,7 @@ public abstract class TestReplicationStateBasic {
       fail("ConnectedPeerStatus was " + !status + " but expected " + status + " in ZK");
     }
     while (true) {
-      if (status == rp.isPeerEnabled(peerId)) {
+      if (status == rp.getPeer(peerId).isPeerEnabled()) {
         return;
       }
       if (zkTimeoutCount < ZK_MAX_COUNT) {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -86,21 +87,6 @@ public class ReplicationPeers {
   }
 
   /**
-   * Get the peer state for the specified connected remote slave cluster. The value might be read
-   * from cache, so it is recommended to use {@link #peerStorage } to read storage directly if
-   * reading the state after enabling or disabling it.
-   * @param peerId a short that identifies the cluster
-   * @return true if replication is enabled, false otherwise.
-   */
-  public boolean isPeerEnabled(String peerId) {
-    ReplicationPeer replicationPeer = this.peerCache.get(peerId);
-    if (replicationPeer == null) {
-      throw new IllegalArgumentException("Peer with id= " + peerId + " is not cached");
-    }
-    return replicationPeer.getPeerState() == PeerState.ENABLED;
-  }
-
-  /**
    * Returns the ReplicationPeerImpl for the specified cached peer. This ReplicationPeer will
    * continue to track changes to the Peer's state and config. This method returns null if no peer
    * has been cached with the given peerId.
@@ -117,7 +103,7 @@ public class ReplicationPeers {
    * @return a Set of Strings for peerIds
    */
   public Set<String> getAllPeerIds() {
-    return peerCache.keySet();
+    return Collections.unmodifiableSet(peerCache.keySet());
   }
 
   public static Configuration getPeerClusterConfiguration(ReplicationPeerConfig peerConfig,

@@ -80,15 +80,11 @@ public class TestZKReplicationPeerStorage {
 
   private ReplicationPeerConfig getConfig(int seed) {
     Random rand = new Random(seed);
-    ReplicationPeerConfig config = new ReplicationPeerConfig();
-    config.setClusterKey(Long.toHexString(rand.nextLong()));
-    config.setReplicationEndpointImpl(Long.toHexString(rand.nextLong()));
-    config.setNamespaces(randNamespaces(rand));
-    config.setExcludeNamespaces(randNamespaces(rand));
-    config.setTableCFsMap(randTableCFs(rand));
-    config.setReplicateAllUserTables(rand.nextBoolean());
-    config.setBandwidth(rand.nextInt(1000));
-    return config;
+    return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(rand.nextLong()))
+        .setReplicationEndpointImpl(Long.toHexString(rand.nextLong()))
+        .setNamespaces(randNamespaces(rand)).setExcludeNamespaces(randNamespaces(rand))
+        .setTableCFsMap(randTableCFs(rand)).setReplicateAllUserTables(rand.nextBoolean())
+        .setBandwidth(rand.nextInt(1000)).build();
   }
 
   private void assertSetEquals(Set<String> expected, Set<String> actual) {
