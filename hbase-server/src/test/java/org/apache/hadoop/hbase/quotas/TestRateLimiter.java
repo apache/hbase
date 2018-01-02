@@ -23,10 +23,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -122,6 +122,16 @@ public class TestRateLimiter {
     RateLimiter limiter = new FixedIntervalRateLimiter();
     limiter.set(10, TimeUnit.SECONDS);
 
+    // fix the current time in order to get the precise value of interval
+    EnvironmentEdge edge = new EnvironmentEdge() {
+      private final long ts = System.currentTimeMillis();
+
+      @Override
+      public long currentTime() {
+        return ts;
+      }
+    };
+    EnvironmentEdgeManager.injectEdge(edge);
     // 10 resources are available, but we need to consume 20 resources
     // Verify that we have to wait at least 1.1sec to have 1 resource available
     assertTrue(limiter.canExecute());
@@ -130,6 +140,7 @@ public class TestRateLimiter {
     assertEquals(1000, limiter.waitInterval(1));
     // To consume 10 resource wait for 100ms
     assertEquals(1000, limiter.waitInterval(10));
+    EnvironmentEdgeManager.reset();
 
     limiter.setNextRefillTime(limiter.getNextRefillTime() - 900);
     // Verify that after 1sec also no resource should be available
