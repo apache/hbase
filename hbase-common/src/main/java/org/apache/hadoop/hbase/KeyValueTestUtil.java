@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.collections4.IterableUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -152,10 +153,10 @@ public class KeyValueTestUtil {
     int spacesAfterQualifier = maxQualifierLength - getQualifierString(kv).length() + 1;
     int spacesAfterTimestamp = maxTimestampLength
         - Long.valueOf(kv.getTimestamp()).toString().length() + 1;
-    return leadingLengths + getRowString(kv) + Strings.repeat(' ', spacesAfterRow)
-        + familyLength + getFamilyString(kv) + Strings.repeat(' ', spacesAfterFamily)
-        + getQualifierString(kv) + Strings.repeat(' ', spacesAfterQualifier)
-        + getTimestampString(kv) + Strings.repeat(' ', spacesAfterTimestamp)
+    return leadingLengths + getRowString(kv) + StringUtils.repeat(' ', spacesAfterRow)
+        + familyLength + getFamilyString(kv) + StringUtils.repeat(' ', spacesAfterFamily)
+        + getQualifierString(kv) + StringUtils.repeat(' ', spacesAfterQualifier)
+        + getTimestampString(kv) + StringUtils.repeat(' ', spacesAfterTimestamp)
         + getTypeString(kv) + " " + getValueString(kv);
   }
 

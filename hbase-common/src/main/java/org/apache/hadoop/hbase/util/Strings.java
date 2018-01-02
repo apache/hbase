@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -76,15 +77,6 @@ public class Strings {
   }
 
   /**
-   * Null-safe length check.
-   * @param input
-   * @return true if null or length==0
-   */
-  public static boolean isEmpty(String input) {
-    return input == null || input.length() == 0;
-  }
-
-  /**
    * Push the input string to the right by appending a character before it, usually a space.
    * @param input the string to pad
    * @param padding the character to repeat to the left of the input string
@@ -96,19 +88,6 @@ public class Strings {
       throw new IllegalArgumentException("input \"" + input + "\" longer than maxLength=" + length);
     }
     int numPaddingCharacters = length - input.length();
-    return repeat(padding, numPaddingCharacters) + input;
-  }
-
-  /**
-   * @param c repeat this character
-   * @param reapeatFor the length of the output String
-   * @return c, repeated repeatFor times
-   */
-  public static String repeat(char c, int reapeatFor) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < reapeatFor; ++i) {
-      sb.append(c);
-    }
-    return sb.toString();
+    return StringUtils.repeat(padding, numPaddingCharacters) + input;
   }
 }
