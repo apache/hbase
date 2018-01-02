@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
@@ -122,17 +121,15 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
 
   private void complete(MasterProcedureEnv env, Throwable error) {
     if (event == null) {
-      LOG.warn("procedure event for " + getProcId() +
-          " is null, maybe the procedure is created when recovery",
-        new Exception());
+      LOG.warn("procedure event for {} is null, maybe the procedure is created when recovery",
+        getProcId());
       return;
     }
     if (error != null) {
-      LOG.warn("Refresh peer " + peerId + " for " + type + " on " + targetServer + " failed",
-        error);
+      LOG.warn("Refresh peer {} for {} on {} failed", peerId, type, targetServer, error);
       this.succ = false;
     } else {
-      LOG.info("Refresh peer " + peerId + " for " + type + " on " + targetServer + " suceeded");
+      LOG.info("Refresh peer {} for {} on {} suceeded", peerId, type, targetServer);
       this.succ = true;
     }
 
@@ -168,9 +165,9 @@ public class RefreshPeerProcedure extends Procedure<MasterProcedureEnv>
       dispatched = false;
     }
     if (!env.getRemoteDispatcher().addOperationToNode(targetServer, this)) {
-      LOG.info("Can not add remote operation for refreshing peer " + peerId + " for " + type +
-          " to " + targetServer + ", this usually because the server is already dead," +
-          " give up and mark the procedure as complete");
+      LOG.info("Can not add remote operation for refreshing peer {} for {} to {}, " +
+        "this usually because the server is already dead, " +
+        "give up and mark the procedure as complete", peerId, type, targetServer);
       return null;
     }
     dispatched = true;

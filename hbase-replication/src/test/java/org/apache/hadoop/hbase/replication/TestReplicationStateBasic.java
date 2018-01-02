@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -238,12 +237,6 @@ public abstract class TestReplicationStateBasic {
     } catch (ReplicationException e) {
     }
 
-    try {
-      assertNull(rp.getPeerClusterConfiguration("bogus"));
-      fail("Should have thrown an ReplicationException when passed a bogus peerId");
-    } catch (ReplicationException e) {
-    }
-
     assertNumberOfPeers(0);
 
     // Add some peers
@@ -258,7 +251,8 @@ public abstract class TestReplicationStateBasic {
       fail("There are no connected peers, should have thrown an IllegalArgumentException");
     } catch (IllegalArgumentException e) {
     }
-    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(rp.getPeerClusterConfiguration(ID_ONE)));
+    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationPeers
+        .getPeerClusterConfiguration(rp.getPeerStorage().getPeerConfig(ID_ONE), rp.getConf())));
     rp.getPeerStorage().removePeer(ID_ONE);
     rp.removePeer(ID_ONE);
     assertNumberOfPeers(1);
