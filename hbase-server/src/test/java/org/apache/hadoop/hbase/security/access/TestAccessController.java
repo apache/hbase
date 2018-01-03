@@ -3051,7 +3051,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+    verifyAllowed(
+        action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
 }
