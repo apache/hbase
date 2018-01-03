@@ -240,7 +240,7 @@ public abstract class TestReplicationStateBasic {
     rp.getPeerStorage().addPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO), true);
     assertNumberOfPeers(2);
 
-    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationPeers
+    assertEquals(KEY_ONE, ZKConfig.getZooKeeperClusterKey(ReplicationUtils
         .getPeerClusterConfiguration(rp.getPeerStorage().getPeerConfig(ID_ONE), rp.getConf())));
     rp.getPeerStorage().removePeer(ID_ONE);
     rp.removePeer(ID_ONE);
