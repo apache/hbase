@@ -123,7 +123,7 @@ In case the table goes out of date, the unit tests which check for accuracy of p
 |        | getReplicationPeerConfig | superuser\|global(A)
 |        | updateReplicationPeerConfig | superuser\|global(A)
 |        | listReplicationPeers | superuser\|global(A)
-|        | getClusterStatus | superuser\|global(A)
+|        | getClusterStatus | any user
 | Region | openRegion | superuser\|global(A)
 |        | closeRegion | superuser\|global(A)
 |        | flush | superuser\|global(A)\|global\(C)\|TableOwner\|table(A)\|table\(C)
