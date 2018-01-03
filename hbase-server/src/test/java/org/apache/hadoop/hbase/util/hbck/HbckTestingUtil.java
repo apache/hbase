@@ -46,7 +46,7 @@ public class HbckTestingUtil {
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments, boolean fixMeta,
       boolean fixHdfsHoles, boolean fixHdfsOverlaps, boolean fixHdfsOrphans,
       boolean fixTableOrphans, boolean fixVersionFile, boolean fixReferenceFiles, boolean fixHFileLinks,
-      boolean fixEmptyMetaRegionInfo, boolean fixTableLocks, Boolean fixReplication,
+      boolean fixEmptyMetaRegionInfo, boolean fixTableLocks, boolean fixReplication,
       TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
     try {
@@ -78,10 +78,8 @@ public class HbckTestingUtil {
 
   /**
    * Runs hbck with the -sidelineCorruptHFiles option
-   * @param conf
    * @param table table constraint
-   * @return <returncode, hbckInstance>
-   * @throws Exception
+   * @return hbckInstance
    */
   public static HBaseFsck doHFileQuarantine(Configuration conf, TableName table) throws Exception {
     String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table.getNameAsString()};
