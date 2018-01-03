@@ -34,6 +34,13 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestDefaultCompactSelection extends TestCompactionPolicy {
 
+  @Override
+  protected void config() {
+    super.config();
+    // DON'T change this config since all test cases assume HStore.BLOCKING_STOREFILES_KEY is 10.
+    this.conf.setLong(HStore.BLOCKING_STOREFILES_KEY, 10);
+  }
+
   @Test
   public void testCompactionRatio() throws IOException {
     TimeOffsetEnvironmentEdge edge = new TimeOffsetEnvironmentEdge();
