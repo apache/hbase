@@ -545,6 +545,19 @@ public class RegionStates {
   }
 
   /**
+   * Used in some unit tests
+   */
+  @VisibleForTesting
+  synchronized boolean existsInServerHoldings(final ServerName serverName,
+      final HRegionInfo hri) {
+    Set<HRegionInfo> oldRegions = serverHoldings.get(serverName);
+    if (oldRegions != null) {
+      return oldRegions.contains(hri);
+    }
+    return false;
+  }
+
+  /**
    * A dead server's wals have been split so that all the regions
    * used to be open on it can be safely assigned now. Mark them assignable.
    */
@@ -613,8 +626,26 @@ public class RegionStates {
       deleteRegion(hri);
       return;
     }
+
+    /*
+     * One tricky case, if region here is a replica region and its parent is at
+     * SPLIT state, its newState should be same as its parent, not OFFLINE.
+     */
     State newState =
-      expectedState == null ? State.OFFLINE : expectedState;
+        expectedState == null ? State.OFFLINE : expectedState;
+
+    if ((expectedState == null) && !RegionReplicaUtil.isDefaultReplica(hri)) {
+      RegionState primateState = getRegionState(
+          RegionReplicaUtil.getRegionInfoForDefaultReplica(hri));
+      if ((primateState != null) && (primateState.getState() == State.SPLIT)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Update region " + hri + "to SPLIT, from primary region " +
+              RegionReplicaUtil.getRegionInfoForDefaultReplica(hri));
+        }
+        newState = State.SPLIT;
+      }
+    }
+
     updateRegionState(hri, newState);
     String encodedName = hri.getEncodedName();
     synchronized (this) {

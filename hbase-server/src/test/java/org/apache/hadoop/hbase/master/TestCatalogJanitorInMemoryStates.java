@@ -18,21 +18,20 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.AfterClass;
@@ -44,12 +43,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 
 @Category({MasterTests.class, MediumTests.class})
@@ -126,6 +119,57 @@ public class TestCatalogJanitorInMemoryStates {
 
   }
 
+  /**
+   * Test that after replica parent region is split, the parent replica region is removed from
+   * AM's serverHoldings and
+   */
+  @Test(timeout = 180000)
+  public void testInMemoryForReplicaParentCleanup() throws IOException, InterruptedException {
+    final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    final CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().catalogJanitorChore;
+
+    final TableName tableName = TableName.valueOf("testInMemoryForReplicaParentCleanup");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(tableName.getNameAsString());
+    hdt.setRegionReplication(2);
+    TEST_UTIL.createTable(hdt, new byte[][] { FAMILY }, TEST_UTIL.getConfiguration());
+
+    RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
+    List<HRegionLocation> allRegionLocations = locator.getAllRegionLocations();
+
+    // There are two regions, one for primary, one for the replica.
+    assertTrue(allRegionLocations.size() == 2);
+
+    HRegionLocation replicaParentRegion, primaryParentRegion;
+    if (RegionReplicaUtil.isDefaultReplica(
+        allRegionLocations.get(0).getRegionInfo().getReplicaId())) {
+      primaryParentRegion = allRegionLocations.get(0);
+      replicaParentRegion = allRegionLocations.get(1);
+    } else {
+      primaryParentRegion = allRegionLocations.get(1);
+      replicaParentRegion = allRegionLocations.get(0);
+    }
+
+    List<HRegionLocation> primaryDaughters = splitRegion(primaryParentRegion.getRegionInfo(),
+        Bytes.toBytes("a"));
+
+    // Wait until the replica parent region is offline.
+    while (am.getRegionStates().isRegionOnline(replicaParentRegion.getRegionInfo())) {
+      Thread.sleep(100);
+    }
+
+    assertNotNull("Should have found daughter regions for " + primaryDaughters, primaryDaughters);
+
+    // check that primary parent region is not in AM's serverHoldings
+    assertFalse("Primary Parent region should have been removed from RegionState's serverHoldings",
+        am.getRegionStates().existsInServerHoldings(primaryParentRegion.getServerName(),
+            primaryParentRegion.getRegionInfo()));
+
+    // check that primary parent region is not in AM's serverHoldings
+    assertFalse("Primary Parent region should have been removed from RegionState's serverHoldings",
+        am.getRegionStates().existsInServerHoldings(replicaParentRegion.getServerName(),
+            replicaParentRegion.getRegionInfo()));
+  }
+
   /*
  * Splits a region
  * @param t Region to split.
@@ -139,6 +183,31 @@ public class TestCatalogJanitorInMemoryStates {
     Admin admin = TEST_UTIL.getHBaseAdmin();
     Connection connection = TEST_UTIL.getConnection();
     admin.splitRegion(r.getEncodedNameAsBytes());
+    admin.close();
+    PairOfSameType<HRegionInfo> regions = waitOnDaughters(r);
+    if (regions != null) {
+      try (RegionLocator rl = connection.getRegionLocator(r.getTable())) {
+        locations.add(rl.getRegionLocation(regions.getFirst().getEncodedNameAsBytes()));
+        locations.add(rl.getRegionLocation(regions.getSecond().getEncodedNameAsBytes()));
+      }
+      return locations;
+    }
+    return locations;
+  }
+
+  /*
+* Splits a region
+* @param t Region to split.
+* @return List of region locations
+* @throws IOException, InterruptedException
+*/
+  private List<HRegionLocation> splitRegion(final HRegionInfo r, final byte[] splitPoint)
+      throws IOException, InterruptedException {
+    List<HRegionLocation> locations = new ArrayList<>();
+    // Split this table in two.
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Connection connection = TEST_UTIL.getConnection();
+    admin.splitRegion(r.getEncodedNameAsBytes(), splitPoint);
     admin.close();
     PairOfSameType<HRegionInfo> regions = waitOnDaughters(r);
     if (regions != null) {
