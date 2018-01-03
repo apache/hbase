@@ -2741,10 +2741,4 @@ public class AccessController extends BaseMasterAndRegionObserver
       String groupName) throws IOException {
     requirePermission("balanceRSGroup", Action.ADMIN);
   }
-
-  @Override
-  public void preGetClusterStatus(final ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {
-    requirePermission("getClusterStatus", Action.ADMIN);
-  }
 }
