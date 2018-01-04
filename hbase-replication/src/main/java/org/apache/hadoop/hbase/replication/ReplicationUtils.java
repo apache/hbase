@@ -18,12 +18,16 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -74,6 +78,58 @@ public final class ReplicationUtils {
         }
       }
       queueStorage.removeReplicatorIfQueueIsEmpty(replicator);
+    }
+  }
+
+  private static boolean isCollectionEqual(Collection<String> c1, Collection<String> c2) {
+    if (c1 == null) {
+      return c2 == null;
+    }
+    if (c2 == null) {
+      return false;
+    }
+    return c1.size() == c2.size() && c1.containsAll(c2);
+  }
+
+  private static boolean isNamespacesEqual(Set<String> ns1, Set<String> ns2) {
+    return isCollectionEqual(ns1, ns2);
+  }
+
+  private static boolean isTableCFsEqual(Map<TableName, List<String>> tableCFs1,
+      Map<TableName, List<String>> tableCFs2) {
+    if (tableCFs1 == null) {
+      return tableCFs2 == null;
+    }
+    if (tableCFs2 == null) {
+      return false;
+    }
+    if (tableCFs1.size() != tableCFs2.size()) {
+      return false;
+    }
+    for (Map.Entry<TableName, List<String>> entry1 : tableCFs1.entrySet()) {
+      TableName table = entry1.getKey();
+      if (!tableCFs2.containsKey(table)) {
+        return false;
+      }
+      List<String> cfs1 = entry1.getValue();
+      List<String> cfs2 = tableCFs2.get(table);
+      if (!isCollectionEqual(cfs1, cfs2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static boolean isKeyConfigEqual(ReplicationPeerConfig rpc1, ReplicationPeerConfig rpc2) {
+    if (rpc1.replicateAllUserTables() != rpc2.replicateAllUserTables()) {
+      return false;
+    }
+    if (rpc1.replicateAllUserTables()) {
+      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces()) &&
+        isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
+    } else {
+      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces()) &&
+        isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
     }
   }
 }

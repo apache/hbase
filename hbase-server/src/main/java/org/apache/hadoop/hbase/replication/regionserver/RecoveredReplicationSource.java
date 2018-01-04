@@ -81,7 +81,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
     ReplicationSourceWALReader walReader = new RecoveredReplicationSourceWALReader(fs,
         conf, queue, startPosition, walEntryFilter, this);
     Threads.setDaemonThreadRunning(walReader, threadName
-        + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + peerClusterZnode,
+        + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + queueId,
       getUncaughtExceptionHandler());
     return walReader;
   }
@@ -178,8 +178,8 @@ public class RecoveredReplicationSource extends ReplicationSource {
         }
       }
       if (allTasksDone) {
-        manager.closeRecoveredQueue(this);
-        LOG.info("Finished recovering queue " + peerClusterZnode + " with the following stats: "
+        manager.removeRecoveredSource(this);
+        LOG.info("Finished recovering queue " + queueId + " with the following stats: "
             + getStats());
       }
     }

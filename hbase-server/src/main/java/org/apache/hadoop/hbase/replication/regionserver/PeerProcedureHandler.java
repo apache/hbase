@@ -23,6 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * A handler for modifying replication peer in peer procedures.
+ */
 @InterfaceAudience.Private
 public interface PeerProcedureHandler {
 

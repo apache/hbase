@@ -223,15 +223,15 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   protected void updateLogPosition(long lastReadPosition) {
-    source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getPeerClusterZnode(),
-      lastReadPosition, false, false);
+    source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getQueueId(),
+      lastReadPosition, false);
     lastLoggedPosition = lastReadPosition;
   }
 
   public void startup(UncaughtExceptionHandler handler) {
     String name = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this, name + ".replicationSource." + walGroupId + ","
-        + source.getPeerClusterZnode(), handler);
+        + source.getQueueId(), handler);
   }
 
   public PriorityBlockingQueue<Path> getLogQueue() {

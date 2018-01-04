@@ -76,7 +76,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
         shipEdits(entryBatch);
         if (entryBatch.getWalEntries().isEmpty()) {
           LOG.debug("Finished recovering queue for group " + walGroupId + " of peer "
-              + source.getPeerClusterZnode());
+              + source.getQueueId());
           source.getSourceMetrics().incrCompletedRecoveryQueue();
           setWorkerState(WorkerState.FINISHED);
           continue;
@@ -113,7 +113,7 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   // normally has a position (unless the RS failed between 2 logs)
   private long getRecoveredQueueStartPos() {
     long startPosition = 0;
-    String peerClusterZnode = source.getPeerClusterZnode();
+    String peerClusterZnode = source.getQueueId();
     try {
       startPosition = this.replicationQueues.getWALPosition(source.getServerWALsBelongTo(),
         peerClusterZnode, this.queue.peek().getName());
@@ -129,8 +129,8 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
 
   @Override
   protected void updateLogPosition(long lastReadPosition) {
-    source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getPeerClusterZnode(),
-      lastReadPosition, true, false);
+    source.getSourceManager().logPositionAndCleanOldLogs(currentPath, source.getQueueId(),
+      lastReadPosition, true);
     lastLoggedPosition = lastReadPosition;
   }
 
