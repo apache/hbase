@@ -89,7 +89,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public String getPeerClusterZnode() {
+  public String getQueueId() {
     return peerClusterId;
   }
 

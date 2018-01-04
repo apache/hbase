@@ -15,21 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(PeerProcedureHandlerImpl.class);
 
   private final ReplicationSourceManager replicationSourceManager;
   private final KeyLocker<String> peersLock = new KeyLocker<>();
@@ -39,7 +38,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
   }
 
   @Override
-  public void addPeer(String peerId) throws ReplicationException, IOException {
+  public void addPeer(String peerId) throws IOException {
     Lock peerLock = peersLock.acquireLock(peerId);
     try {
       replicationSourceManager.addPeer(peerId);
@@ -49,7 +48,7 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
   }
 
   @Override
-  public void removePeer(String peerId) throws ReplicationException, IOException {
+  public void removePeer(String peerId) throws IOException {
     Lock peerLock = peersLock.acquireLock(peerId);
     try {
       if (replicationSourceManager.getReplicationPeers().getPeer(peerId) != null) {
@@ -60,35 +59,50 @@ public class PeerProcedureHandlerImpl implements PeerProcedureHandler {
     }
   }
 
-  @Override
-  public void disablePeer(String peerId) throws ReplicationException, IOException {
+  private void refreshPeerState(String peerId) throws ReplicationException, IOException {
     PeerState newState;
     Lock peerLock = peersLock.acquireLock(peerId);
     try {
+      ReplicationPeerImpl peer = replicationSourceManager.getReplicationPeers().getPeer(peerId);
+      if (peer == null) {
+        throw new ReplicationException("Peer with id=" + peerId + " is not cached.");
+      }
+      PeerState oldState = peer.getPeerState();
       newState = replicationSourceManager.getReplicationPeers().refreshPeerState(peerId);
+      // RS need to start work with the new replication state change
+      if (oldState.equals(PeerState.ENABLED) && newState.equals(PeerState.DISABLED)) {
+        replicationSourceManager.refreshSources(peerId);
+      }
     } finally {
       peerLock.unlock();
     }
-    LOG.info("disable replication peer, id: {}, new state: {}", peerId, newState);
   }
 
   @Override
   public void enablePeer(String peerId) throws ReplicationException, IOException {
-    PeerState newState;
-    Lock peerLock = peersLock.acquireLock(peerId);
-    try {
-      newState = replicationSourceManager.getReplicationPeers().refreshPeerState(peerId);
-    } finally {
-      peerLock.unlock();
-    }
-    LOG.info("enable replication peer, id: {}, new state: {}", peerId, newState);
+    refreshPeerState(peerId);
+  }
+
+  @Override
+  public void disablePeer(String peerId) throws ReplicationException, IOException {
+    refreshPeerState(peerId);
   }
 
   @Override
   public void updatePeerConfig(String peerId) throws ReplicationException, IOException {
     Lock peerLock = peersLock.acquireLock(peerId);
     try {
-      replicationSourceManager.getReplicationPeers().refreshPeerConfig(peerId);
+      ReplicationPeerImpl peer = replicationSourceManager.getReplicationPeers().getPeer(peerId);
+      if (peer == null) {
+        throw new ReplicationException("Peer with id=" + peerId + " is not cached.");
+      }
+      ReplicationPeerConfig oldConfig = peer.getPeerConfig();
+      ReplicationPeerConfig newConfig =
+          replicationSourceManager.getReplicationPeers().refreshPeerConfig(peerId);
+      // RS need to start work with the new replication config change
+      if (!ReplicationUtils.isKeyConfigEqual(oldConfig, newConfig)) {
+        replicationSourceManager.refreshSources(peerId);
+      }
     } finally {
       peerLock.unlock();
     }
