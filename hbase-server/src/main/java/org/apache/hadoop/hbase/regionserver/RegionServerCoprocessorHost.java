@@ -205,6 +205,24 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
+  public void preExecuteProcedures() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preExecuteProcedures(this);
+      }
+    });
+  }
+
+  public void postExecuteProcedures() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postExecuteProcedures(this);
+      }
+    });
+  }
+
   /**
    * Coprocessor environment extension providing access to region server
    * related services.

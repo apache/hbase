@@ -213,5 +213,12 @@ public class TestJMXConnectorServer {
         throw new AccessDeniedException("Insufficient permissions to shut down cluster.");
       }
     }
+
+    @Override
+    public void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+        throws IOException {
+      // FIXME: ignore the procedure permission check since in our UT framework master is neither
+      // the systemuser nor the superuser so we can not call executeProcedures...
+    }
   }
 }

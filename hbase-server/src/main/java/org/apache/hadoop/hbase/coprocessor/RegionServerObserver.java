@@ -126,4 +126,18 @@ public interface RegionServerObserver {
   default void postClearCompactionQueues(
       final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException {}
+
+  /**
+   * This will be called before executing procedures
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * This will be called after executing procedures
+   * @param ctx the environment to interact with the framework and region server.
+   */
+  default void postExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {}
 }
