@@ -67,7 +67,8 @@ public class TestReplicationStatus extends TestReplicationBase {
         htable1.put(p);
       }
 
-      ClusterStatus status = hbaseAdmin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+      ClusterStatus status = new ClusterStatus(hbaseAdmin.getClusterMetrics(
+        EnumSet.of(Option.LIVE_SERVERS)));
 
       for (JVMClusterUtil.RegionServerThread thread : utility1.getHBaseCluster()
           .getRegionServerThreads()) {
@@ -90,7 +91,7 @@ public class TestReplicationStatus extends TestReplicationBase {
       // Stop rs1, then the queue of rs1 will be transfered to rs0
       utility1.getHBaseCluster().getRegionServer(1).stop("Stop RegionServer");
       Thread.sleep(10000);
-      status = hbaseAdmin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+      status = new ClusterStatus(hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
       ServerName server = utility1.getHBaseCluster().getRegionServer(0).getServerName();
       ServerLoad sl = status.getLoad(server);
       List<ReplicationLoadSource> rLoadSourceList = sl.getReplicationLoadSourceList();

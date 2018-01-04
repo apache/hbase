@@ -118,7 +118,7 @@ public class HBaseFsckRepair {
     while (EnvironmentEdgeManager.currentTime() < expiration) {
       try {
         boolean inTransition = false;
-        for (RegionState rs : admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+        for (RegionState rs : admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
                                    .getRegionStatesInTransition()) {
           if (RegionInfo.COMPARATOR.compare(rs.getRegion(), region) == 0) {
             inTransition = true;

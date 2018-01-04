@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -757,8 +756,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     if (util.isDistributedCluster()) {
       util.getConfiguration().setIfUnset(NUM_MAPS_KEY,
           Integer.toString(util.getAdmin()
-                               .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
-                               .getServersSize() * 10)
+                               .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+                               .getLiveServerMetrics().size() * 10)
       );
       util.getConfiguration().setIfUnset(NUM_IMPORT_ROUNDS_KEY, "5");
     } else {

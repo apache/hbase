@@ -64,7 +64,7 @@ public class StorageClusterVersionResource extends ResourceBase {
     try {
       StorageClusterVersionModel model = new StorageClusterVersionModel();
       model.setVersion(
-        servlet.getAdmin().getClusterStatus(EnumSet.of(Option.HBASE_VERSION))
+        servlet.getAdmin().getClusterMetrics(EnumSet.of(Option.HBASE_VERSION))
             .getHBaseVersion());
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);

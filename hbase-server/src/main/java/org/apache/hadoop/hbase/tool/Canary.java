@@ -51,8 +51,8 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1168,8 +1168,7 @@ public final class Canary implements Tool {
     private void checkWriteTableDistribution() throws IOException {
       if (!admin.tableExists(writeTableName)) {
         int numberOfServers =
-            admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()
-                .size();
+            admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().size();
         if (numberOfServers == 0) {
           throw new IllegalStateException("No live regionservers");
         }
@@ -1180,10 +1179,10 @@ public final class Canary implements Tool {
         admin.enableTable(writeTableName);
       }
 
-      ClusterStatus status =
-          admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS, Option.MASTER));
-      int numberOfServers = status.getServersSize();
-      if (status.getServers().contains(status.getMaster())) {
+      ClusterMetrics status =
+          admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS, Option.MASTER));
+      int numberOfServers = status.getLiveServerMetrics().size();
+      if (status.getLiveServerMetrics().containsKey(status.getMasterName())) {
         numberOfServers -= 1;
       }
 
@@ -1502,8 +1501,8 @@ public final class Canary implements Tool {
         }
 
         // get any live regionservers not serving any regions
-        for (ServerName rs : this.admin
-            .getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
+        for (ServerName rs : this.admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+          .getLiveServerMetrics().keySet()) {
           String rsName = rs.getHostname();
           if (!rsAndRMap.containsKey(rsName)) {
             rsAndRMap.put(rsName, Collections.<RegionInfo> emptyList());

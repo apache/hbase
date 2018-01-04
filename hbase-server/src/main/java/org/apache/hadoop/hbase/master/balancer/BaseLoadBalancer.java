@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -1006,7 +1006,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Logger LOG = LoggerFactory.getLogger(BaseLoadBalancer.class);
   protected MetricsBalancer metricsBalancer = null;
-  protected ClusterStatus clusterStatus = null;
+  protected ClusterMetrics clusterStatus = null;
   protected ServerName masterServerName;
   protected MasterServices services;
   protected boolean tablesOnMaster;
@@ -1128,10 +1128,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public synchronized void setClusterStatus(ClusterStatus st) {
+  public synchronized void setClusterMetrics(ClusterMetrics st) {
     this.clusterStatus = st;
     if (useRegionFinder) {
-      regionFinder.setClusterStatus(st);
+      regionFinder.setClusterMetrics(st);
     }
   }
 

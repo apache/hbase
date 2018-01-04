@@ -19,16 +19,16 @@ package org.apache.hadoop.hbase;
 
 import java.io.Closeable;
 import java.io.IOException;
-
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * This class defines methods that can help with managing HBase clusters
@@ -61,7 +61,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   protected Configuration conf;
 
   /** the status of the cluster before we begin */
-  protected ClusterStatus initialClusterStatus;
+  protected ClusterMetrics initialClusterStatus;
 
   /**
    * Construct an HBaseCluster
@@ -82,16 +82,16 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   }
 
   /**
-   * Returns a ClusterStatus for this HBase cluster.
-   * @see #getInitialClusterStatus()
+   * Returns a ClusterMetrics for this HBase cluster.
+   * @see #getInitialClusterMetrics()
    */
-  public abstract ClusterStatus getClusterStatus() throws IOException;
+  public abstract ClusterMetrics getClusterMetrics() throws IOException;
 
   /**
    * Returns a ClusterStatus for this HBase cluster as observed at the
    * starting of the HBaseCluster
    */
-  public ClusterStatus getInitialClusterStatus() throws IOException {
+  public ClusterMetrics getInitialClusterMetrics() throws IOException {
     return initialClusterStatus;
   }
 
@@ -153,7 +153,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
       throws IOException {
     long start = System.currentTimeMillis();
     while ((System.currentTimeMillis() - start) < timeout) {
-      for (ServerName server : getClusterStatus().getServers()) {
+      for (ServerName server : getClusterMetrics().getLiveServerMetrics().keySet()) {
         if (server.getHostname().equals(hostname) && server.getPort() == port) {
           return;
         }
@@ -317,7 +317,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether restoration is complete
    */
   public boolean restoreInitialStatus() throws IOException {
-    return restoreClusterStatus(getInitialClusterStatus());
+    return restoreClusterMetrics(getInitialClusterMetrics());
   }
 
   /**
@@ -327,7 +327,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * permissions, etc. restoration might be partial.
    * @return whether restoration is complete
    */
-  public boolean restoreClusterStatus(ClusterStatus desiredStatus) throws IOException {
+  public boolean restoreClusterMetrics(ClusterMetrics desiredStatus) throws IOException {
     return true;
   }
 

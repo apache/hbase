@@ -25,19 +25,19 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -1452,22 +1451,45 @@ public interface Admin extends Abortable, Closeable {
    * </pre>
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #getClusterMetrics()}
    */
-  ClusterStatus getClusterStatus() throws IOException;
+  @Deprecated
+  default ClusterStatus getClusterStatus() throws IOException {
+    return new ClusterStatus(getClusterMetrics());
+  }
+
+  /**
+   * Get whole cluster metrics, containing status about:
+   * <pre>
+   * hbase version
+   * cluster id
+   * primary/backup master(s)
+   * master's coprocessors
+   * live/dead regionservers
+   * balancer
+   * regions in transition
+   * </pre>
+   * @return cluster metrics
+   * @throws IOException if a remote or network exception occurs
+   */
+  default ClusterMetrics getClusterMetrics() throws IOException {
+    return getClusterMetrics(EnumSet.allOf(ClusterMetrics.Option.class));
+  }
 
   /**
    * Get cluster status with a set of {@link Option} to get desired status.
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */
-  ClusterStatus getClusterStatus(EnumSet<Option> options) throws IOException;
+  ClusterMetrics getClusterMetrics(EnumSet<Option> options) throws IOException;
 
   /**
    * @return current master server name
    * @throws IOException if a remote or network exception occurs
    */
   default ServerName getMaster() throws IOException {
-    return getClusterStatus(EnumSet.of(Option.MASTER)).getMaster();
+    return getClusterMetrics(EnumSet.of(Option.MASTER)).getMasterName();
   }
 
   /**
@@ -1475,7 +1497,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getBackupMasters() throws IOException {
-    return getClusterStatus(EnumSet.of(Option.BACKUP_MASTERS)).getBackupMasters();
+    return getClusterMetrics(EnumSet.of(Option.BACKUP_MASTERS)).getBackupMasterNames();
   }
 
   /**
@@ -1483,64 +1505,30 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
-    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
+    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
   }
 
   /**
-   * Get {@link RegionLoad} of all regions hosted on a regionserver.
+   * Get {@link RegionMetrics} of all regions hosted on a regionserver.
    *
-   * @param serverName region server from which regionload is required.
-   * @return region load map of all regions hosted on a region server
+   * @param serverName region server from which {@link RegionMetrics} is required.
+   * @return a {@link RegionMetrics} list of all regions hosted on a region server
    * @throws IOException if a remote or network exception occurs
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #getRegionLoads(ServerName)}
    */
-  @Deprecated
-  default Map<byte[], RegionLoad> getRegionLoad(ServerName serverName) throws IOException {
-    return getRegionLoad(serverName, null);
+  default List<RegionMetrics> getRegionMetrics(ServerName serverName) throws IOException {
+    return getRegionMetrics(serverName, null);
   }
 
   /**
-   * Get {@link RegionLoad} of all regions hosted on a regionserver.
+   * Get {@link RegionMetrics} of all regions hosted on a regionserver for a table.
    *
-   * @param serverName region server from which regionload is required.
-   * @return a region load list of all regions hosted on a region server
+   * @param serverName region server from which {@link RegionMetrics} is required.
+   * @param tableName get {@link RegionMetrics} of regions belonging to the table
+   * @return region metrics map of all regions of a table hosted on a region server
    * @throws IOException if a remote or network exception occurs
    */
-  default List<RegionLoad> getRegionLoads(ServerName serverName) throws IOException {
-    return getRegionLoads(serverName, null);
-  }
-
-  /**
-   * Get {@link RegionLoad} of all regions hosted on a regionserver for a table.
-   *
-   * @param serverName region server from which regionload is required.
-   * @param tableName get region load of regions belonging to the table
-   * @return region load map of all regions of a table hosted on a region server
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated since 2.0 version and will be removed in 3.0 version.
-   *             use {@link #getRegionLoads(ServerName, TableName)}
-   */
-  @Deprecated
-  default Map<byte[], RegionLoad> getRegionLoad(ServerName serverName, TableName tableName)
-      throws IOException {
-    List<RegionLoad> regionLoads = getRegionLoads(serverName, tableName);
-    Map<byte[], RegionLoad> resultMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (RegionLoad regionLoad : regionLoads) {
-      resultMap.put(regionLoad.getName(), regionLoad);
-    }
-    return resultMap;
-  }
-
-  /**
-   * Get {@link RegionLoad} of all regions hosted on a regionserver for a table.
-   *
-   * @param serverName region server from which regionload is required.
-   * @param tableName get region load of regions belonging to the table
-   * @return region load map of all regions of a table hosted on a region server
-   * @throws IOException if a remote or network exception occurs
-   */
-  List<RegionLoad> getRegionLoads(ServerName serverName, TableName tableName) throws IOException;
+  List<RegionMetrics> getRegionMetrics(ServerName serverName,
+    TableName tableName) throws IOException;
 
   /**
    * @return Configuration used by the instance.
@@ -1772,11 +1760,26 @@ public interface Admin extends Abortable, Closeable {
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
 
   /**
-   * Helper that delegates to getClusterStatus().getMasterCoprocessors().
+   * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
    * @return an array of master coprocessors
-   * @see org.apache.hadoop.hbase.ClusterStatus#getMasterCoprocessors()
+   * @see org.apache.hadoop.hbase.ClusterMetrics#getMasterCoprocessorNames()
+   * @deprecated since 2.0 version and will be removed in 3.0 version.
+   *             use {@link #getMasterCoprocessorNames()}
    */
-  String[] getMasterCoprocessors() throws IOException;
+  @Deprecated
+  default String[] getMasterCoprocessors() throws IOException {
+    return getMasterCoprocessorNames().stream().toArray(size -> new String[size]);
+  }
+
+  /**
+   * Helper that delegates to getClusterMetrics().getMasterCoprocessorNames().
+   * @return an array of master coprocessors
+   * @see org.apache.hadoop.hbase.ClusterMetrics#getMasterCoprocessorNames()
+   */
+  default List<String> getMasterCoprocessorNames() throws IOException {
+    return getClusterMetrics(EnumSet.of(Option.MASTER_COPROCESSORS))
+      .getMasterCoprocessorNames();
+  }
 
   /**
    * Get the current compaction state of a table. It could be in a major compaction, a minor
@@ -2371,7 +2374,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    */
   default int getMasterInfoPort() throws IOException {
-    return getClusterStatus(EnumSet.of(Option.MASTER_INFO_PORT)).getMasterInfoPort();
+    return getClusterMetrics(EnumSet.of(Option.MASTER_INFO_PORT)).getMasterInfoPort();
   }
 
   /**
@@ -2617,7 +2620,7 @@ public interface Admin extends Abortable, Closeable {
    * @return List of dead region servers.
    */
   default List<ServerName> listDeadServers() throws IOException {
-    return getClusterStatus(EnumSet.of(Option.DEAD_SERVERS)).getDeadServerNames();
+    return getClusterMetrics(EnumSet.of(Option.DEAD_SERVERS)).getDeadServerNames();
   }
 
   /**

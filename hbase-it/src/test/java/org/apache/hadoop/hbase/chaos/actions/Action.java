@@ -23,17 +23,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -79,7 +79,7 @@ public class Action {
 
   protected ActionContext context;
   protected HBaseCluster cluster;
-  protected ClusterStatus initialStatus;
+  protected ClusterMetrics initialStatus;
   protected ServerName[] initialServers;
 
   protected long killMasterTimeout;
@@ -94,8 +94,8 @@ public class Action {
   public void init(ActionContext context) throws IOException {
     this.context = context;
     cluster = context.getHBaseCluster();
-    initialStatus = cluster.getInitialClusterStatus();
-    Collection<ServerName> regionServers = initialStatus.getServers();
+    initialStatus = cluster.getInitialClusterMetrics();
+    Collection<ServerName> regionServers = initialStatus.getLiveServerMetrics().keySet();
     initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
 
     killMasterTimeout = cluster.getConf().getLong(KILL_MASTER_TIMEOUT_KEY,
@@ -118,13 +118,13 @@ public class Action {
 
   /** Returns current region servers - active master */
   protected ServerName[] getCurrentServers() throws IOException {
-    ClusterStatus clusterStatus = cluster.getClusterStatus();
-    Collection<ServerName> regionServers = clusterStatus.getServers();
+    ClusterMetrics clusterStatus = cluster.getClusterMetrics();
+    Collection<ServerName> regionServers = clusterStatus.getLiveServerMetrics().keySet();
     int count = regionServers == null ? 0 : regionServers.size();
     if (count <= 0) {
       return new ServerName [] {};
     }
-    ServerName master = clusterStatus.getMaster();
+    ServerName master = clusterStatus.getMasterName();
     if (master == null || !regionServers.contains(master)) {
       return regionServers.toArray(new ServerName[count]);
     }
@@ -156,7 +156,7 @@ public class Action {
     cluster.killRegionServer(server);
     cluster.waitForRegionServerToStop(server, killRsTimeout);
     LOG.info("Killed region server:" + server + ". Reported num of rs:"
-        + cluster.getClusterStatus().getServersSize());
+        + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startRs(ServerName server) throws IOException {
@@ -164,7 +164,7 @@ public class Action {
     cluster.startRegionServer(server.getHostname(), server.getPort());
     cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     LOG.info("Started region server:" + server + ". Reported num of rs:"
-      + cluster.getClusterStatus().getServersSize());
+      + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void killZKNode(ServerName server) throws IOException {
@@ -172,7 +172,7 @@ public class Action {
     cluster.killZkNode(server);
     cluster.waitForZkNodeToStop(server, killZkNodeTimeout);
     LOG.info("Killed zookeeper node:" + server + ". Reported num of rs:"
-      + cluster.getClusterStatus().getServersSize());
+      + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startZKNode(ServerName server) throws IOException {
@@ -187,7 +187,7 @@ public class Action {
     cluster.killDataNode(server);
     cluster.waitForDataNodeToStop(server, killDataNodeTimeout);
     LOG.info("Killed datanode:" + server + ". Reported num of rs:"
-      + cluster.getClusterStatus().getServersSize());
+      + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startDataNode(ServerName server) throws IOException {
@@ -197,16 +197,18 @@ public class Action {
     LOG.info("Started datanode:" + server);
   }
 
-  protected void unbalanceRegions(ClusterStatus clusterStatus,
+  protected void unbalanceRegions(ClusterMetrics clusterStatus,
       List<ServerName> fromServers, List<ServerName> toServers,
       double fractionOfRegions) throws Exception {
     List<byte[]> victimRegions = new LinkedList<>();
-    for (ServerName server : fromServers) {
-      ServerLoad serverLoad = clusterStatus.getLoad(server);
+    for (Map.Entry<ServerName, ServerMetrics> entry
+      : clusterStatus.getLiveServerMetrics().entrySet()) {
+      ServerName sn = entry.getKey();
+      ServerMetrics serverLoad = entry.getValue();
       // Ugh.
-      List<byte[]> regions = new LinkedList<>(serverLoad.getRegionsLoad().keySet());
+      List<byte[]> regions = new LinkedList<>(serverLoad.getRegionMetrics().keySet());
       int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
-      LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
+      LOG.debug("Removing " + victimRegionCount + " regions from " + sn);
       for (int i = 0; i < victimRegionCount; ++i) {
         int victimIx = RandomUtils.nextInt(0, regions.size());
         String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));

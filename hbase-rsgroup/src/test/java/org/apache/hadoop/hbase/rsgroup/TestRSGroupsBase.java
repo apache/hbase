@@ -32,14 +32,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -163,15 +164,16 @@ public abstract class TestRSGroupsBase {
   public Map<TableName, Map<ServerName, List<String>>> getTableServerRegionMap()
       throws IOException {
     Map<TableName, Map<ServerName, List<String>>> map = Maps.newTreeMap();
-    ClusterStatus status = TEST_UTIL.getHBaseClusterInterface().getClusterStatus();
-    for(ServerName serverName : status.getServers()) {
-      for(RegionLoad rl : status.getLoad(serverName).getRegionsLoad().values()) {
+    ClusterMetrics status = TEST_UTIL.getHBaseClusterInterface().getClusterMetrics();
+    for (Map.Entry<ServerName, ServerMetrics> entry : status.getLiveServerMetrics().entrySet()) {
+      ServerName serverName = entry.getKey();
+      for(RegionMetrics rl : entry.getValue().getRegionMetrics().values()) {
         TableName tableName = null;
         try {
-          tableName = RegionInfo.getTable(rl.getName());
+          tableName = RegionInfo.getTable(rl.getRegionName());
         } catch (IllegalArgumentException e) {
           LOG.warn("Failed parse a table name from regionname=" +
-              Bytes.toStringBinary(rl.getName()));
+            Bytes.toStringBinary(rl.getRegionName()));
           continue;
         }
         if(!map.containsKey(tableName)) {
@@ -267,11 +269,11 @@ public abstract class TestRSGroupsBase {
 
   // return the real number of region servers, excluding the master embedded region server in 2.0+
   public int getNumServers() throws IOException {
-    ClusterStatus status =
-        admin.getClusterStatus(EnumSet.of(Option.MASTER, Option.LIVE_SERVERS));
-    ServerName master = status.getMaster();
+    ClusterMetrics status =
+        admin.getClusterMetrics(EnumSet.of(Option.MASTER, Option.LIVE_SERVERS));
+    ServerName master = status.getMasterName();
     int count = 0;
-    for (ServerName sn : status.getServers()) {
+    for (ServerName sn : status.getLiveServerMetrics().keySet()) {
       if (!sn.equals(master)) {
         count++;
       }
@@ -498,8 +500,8 @@ public abstract class TestRSGroupsBase {
     }
     //get server which is not a member of new group
     ServerName targetServer = null;
-    for (ServerName server : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
-                                  .getServers()) {
+    for (ServerName server : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+                                  .getLiveServerMetrics().keySet()) {
       if (!newGroup.containsServer(server.getAddress())) {
         targetServer = server;
         break;
@@ -528,7 +530,7 @@ public abstract class TestRSGroupsBase {
         return
             getTableRegionMap().get(tableName) != null &&
                 getTableRegionMap().get(tableName).size() == 6 &&
-                admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
                      .getRegionStatesInTransition().size() < 1;
       }
     });
@@ -607,13 +609,13 @@ public abstract class TestRSGroupsBase {
           AdminProtos.StopServerRequest.newBuilder().setReason("Die").build());
     } catch(Exception e) {
     }
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
+    assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer));
 
     //wait for created table to be assigned
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionStatesInTransition().isEmpty();
+        return cluster.getClusterMetrics().getRegionStatesInTransition().isEmpty();
       }
     });
     Set<Address> newServers = Sets.newHashSet();
@@ -630,7 +632,7 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionStatesInTransition().isEmpty();
+        return cluster.getClusterMetrics().getRegionStatesInTransition().isEmpty();
       }
     });
 
@@ -776,7 +778,8 @@ public abstract class TestRSGroupsBase {
 
     //get server which is not a member of new group
     ServerName targetServer = null;
-    for(ServerName server : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers()) {
+    for(ServerName server : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+      .getLiveServerMetrics().keySet()) {
       if(!newGroup.containsServer(server.getAddress()) &&
            !rsGroupAdmin.getRSGroupInfo("master").containsServer(server.getAddress())) {
         targetServer = server;
@@ -839,7 +842,7 @@ public abstract class TestRSGroupsBase {
         return getTableRegionMap().get(tableName) != null &&
                 getTableRegionMap().get(tableName).size() == 5 &&
                 getTableServerRegionMap().get(tableName).size() == 1 &&
-                admin.getClusterStatus(EnumSet.of(Option.REGIONS_IN_TRANSITION))
+                admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
                      .getRegionStatesInTransition().size() < 1;
       }
     });
@@ -902,11 +905,11 @@ public abstract class TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         return !master.getServerManager().areDeadServersInProgress()
-            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
+            && cluster.getClusterMetrics().getDeadServerNames().size() > 0;
       }
     });
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
-    assertTrue(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
+    assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer));
+    assertTrue(cluster.getClusterMetrics().getDeadServerNames().contains(targetServer));
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
     //clear dead servers list
@@ -953,7 +956,7 @@ public abstract class TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         return !master.getServerManager().areDeadServersInProgress()
-            && cluster.getClusterStatus().getDeadServerNames().size() > 0;
+            && cluster.getClusterMetrics().getDeadServerNames().size() > 0;
       }
     });
 
@@ -968,15 +971,15 @@ public abstract class TestRSGroupsBase {
     }
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
-    ServerName sn = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
+    ServerName sn = TEST_UTIL.getHBaseClusterInterface().getClusterMetrics().getMasterName();
     TEST_UTIL.getHBaseClusterInterface().stopMaster(sn);
     TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(sn, 60000);
     TEST_UTIL.getHBaseClusterInterface().startMaster(sn.getHostname(), 0);
     TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster(60000);
 
-    assertEquals(3, cluster.getClusterStatus().getServersSize());
-    assertFalse(cluster.getClusterStatus().getServers().contains(targetServer));
-    assertFalse(cluster.getClusterStatus().getDeadServerNames().contains(targetServer));
+    assertEquals(3, cluster.getClusterMetrics().getLiveServerMetrics().size());
+    assertFalse(cluster.getClusterMetrics().getLiveServerMetrics().containsKey(targetServer));
+    assertFalse(cluster.getClusterMetrics().getDeadServerNames().contains(targetServer));
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
     rsGroupAdmin.removeServers(Sets.newHashSet(targetServer.getAddress()));

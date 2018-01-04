@@ -35,13 +35,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -187,9 +186,9 @@ public class TestMasterReplication {
     Waiter.waitFor(baseConfiguration, 10000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ClusterStatus clusterStatus = utilities[0].getAdmin()
-            .getClusterStatus(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
-        ServerLoad serverLoad = clusterStatus.getLoad(rsName);
+        ClusterMetrics clusterStatus = utilities[0].getAdmin()
+            .getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
+        ServerMetrics serverLoad = clusterStatus.getLiveServerMetrics().get(rsName);
         List<ReplicationLoadSource> replicationLoadSourceList =
             serverLoad.getReplicationLoadSourceList();
         return replicationLoadSourceList.isEmpty();

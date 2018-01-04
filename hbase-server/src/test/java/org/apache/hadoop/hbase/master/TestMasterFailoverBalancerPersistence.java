@@ -18,7 +18,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.ClusterStatus;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.List;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -27,12 +32,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.List;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverBalancerPersistence {
@@ -57,14 +56,14 @@ public class TestMasterFailoverBalancerPersistence {
     assertTrue(cluster.waitForActiveAndReadyMaster());
     HMaster active = cluster.getMaster();
     // check that the balancer is on by default for the active master
-    ClusterStatus clusterStatus = active.getClusterStatus();
-    assertTrue(clusterStatus.isBalancerOn());
+    ClusterMetrics clusterStatus = active.getClusterMetrics();
+    assertTrue(clusterStatus.getBalancerOn());
 
     active = killActiveAndWaitForNewActive(cluster);
 
     // ensure the load balancer is still running on new master
-    clusterStatus = active.getClusterStatus();
-    assertTrue(clusterStatus.isBalancerOn());
+    clusterStatus = active.getClusterMetrics();
+    assertTrue(clusterStatus.getBalancerOn());
 
     // turn off the load balancer
     active.balanceSwitch(false);
@@ -73,8 +72,8 @@ public class TestMasterFailoverBalancerPersistence {
     active = killActiveAndWaitForNewActive(cluster);
 
     // ensure the load balancer is not running on the new master
-    clusterStatus = active.getClusterStatus();
-    assertFalse(clusterStatus.isBalancerOn());
+    clusterStatus = active.getClusterMetrics();
+    assertFalse(clusterStatus.getBalancerOn());
 
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();

@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -905,7 +904,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       response.setClusterStatus(ClusterMetricsBuilder.toClusterStatus(
-        master.getClusterStatus(ClusterMetricsBuilder.toOptions(req.getOptionsList()))));
+        master.getClusterMetrics(ClusterMetricsBuilder.toOptions(req.getOptionsList()))));
     } catch (IOException e) {
       throw new ServiceException(e);
     }

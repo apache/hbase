@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -28,10 +27,10 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
@@ -886,40 +885,42 @@ public interface AsyncAdmin {
   /**
    * @return cluster status wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<ClusterStatus> getClusterStatus();
+  CompletableFuture<ClusterMetrics> getClusterMetrics();
 
   /**
    * @return cluster status wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<ClusterStatus> getClusterStatus(EnumSet<Option> options);
+  CompletableFuture<ClusterMetrics> getClusterMetrics(EnumSet<Option> options);
 
   /**
    * @return current master server name wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<ServerName> getMaster() {
-    return getClusterStatus(EnumSet.of(Option.MASTER)).thenApply(ClusterStatus::getMaster);
+    return getClusterMetrics(EnumSet.of(Option.MASTER)).thenApply(ClusterMetrics::getMasterName);
   }
 
   /**
    * @return current backup master list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getBackupMasters() {
-    return getClusterStatus(EnumSet.of(Option.BACKUP_MASTERS)).thenApply(ClusterStatus::getBackupMasters);
+    return getClusterMetrics(EnumSet.of(Option.BACKUP_MASTERS))
+      .thenApply(ClusterMetrics::getBackupMasterNames);
   }
 
   /**
    * @return current live region servers list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
-    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).thenApply(ClusterStatus::getServers);
+    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+      .thenApply(cm -> cm.getLiveServerMetrics().keySet());
   }
 
   /**
    * @return a list of master coprocessors wrapped by {@link CompletableFuture}
    */
-  default CompletableFuture<List<String>> getMasterCoprocessors() {
-    return getClusterStatus(EnumSet.of(Option.MASTER_COPROCESSORS))
-        .thenApply(ClusterStatus::getMasterCoprocessors).thenApply(Arrays::asList);
+  default CompletableFuture<List<String>> getMasterCoprocessorNames() {
+    return getClusterMetrics(EnumSet.of(Option.MASTER_COPROCESSORS))
+        .thenApply(ClusterMetrics::getMasterCoprocessorNames);
   }
 
   /**
@@ -927,8 +928,8 @@ public interface AsyncAdmin {
    * @return master info port
    */
   default CompletableFuture<Integer> getMasterInfoPort() {
-    return getClusterStatus(EnumSet.of(Option.MASTER_INFO_PORT)).thenApply(
-      ClusterStatus::getMasterInfoPort);
+    return getClusterMetrics(EnumSet.of(Option.MASTER_INFO_PORT)).thenApply(
+      ClusterMetrics::getMasterInfoPort);
   }
 
   /**
@@ -978,19 +979,20 @@ public interface AsyncAdmin {
   CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
 
   /**
-   * Get a list of {@link RegionLoad} of all regions hosted on a region seerver.
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver.
    * @param serverName
-   * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
+   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName);
+  CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName);
 
   /**
-   * Get a list of {@link RegionLoad} of all regions hosted on a region seerver for a table.
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table.
    * @param serverName
    * @param tableName
-   * @return a list of {@link RegionLoad} wrapped by {@link CompletableFuture}
+   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
-  CompletableFuture<List<RegionLoad>> getRegionLoads(ServerName serverName, TableName tableName);
+  CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
+    TableName tableName);
 
   /**
    * Check whether master is in maintenance mode
@@ -1199,8 +1201,8 @@ public interface AsyncAdmin {
    * List all the dead region servers.
    */
   default CompletableFuture<List<ServerName>> listDeadServers() {
-    return this.getClusterStatus(EnumSet.of(Option.DEAD_SERVERS))
-        .thenApply(ClusterStatus::getDeadServerNames);
+    return this.getClusterMetrics(EnumSet.of(Option.DEAD_SERVERS))
+        .thenApply(ClusterMetrics::getDeadServerNames);
   }
 
   /**

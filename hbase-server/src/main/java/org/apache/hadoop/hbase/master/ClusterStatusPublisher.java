@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -65,7 +65,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.InternetProtocolFamil
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioDatagramChannel;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToMessageEncoder;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 
 /**
@@ -159,12 +158,12 @@ public class ClusterStatusPublisher extends ScheduledChore {
     // We're reusing an existing protobuf message, but we don't send everything.
     // This could be extended in the future, for example if we want to send stuff like the
     //  hbase:meta server name.
-    publisher.publish(new ClusterStatus(ClusterMetricsBuilder.newBuilder()
-        .setHBaseVersion(VersionInfo.getVersion())
-        .setClusterId(master.getMasterFileSystem().getClusterId().toString())
-        .setMasterName(master.getServerName())
-        .setDeadServerNames(sns)
-        .build()));
+    publisher.publish(ClusterMetricsBuilder.newBuilder()
+      .setHBaseVersion(VersionInfo.getVersion())
+      .setClusterId(master.getMasterFileSystem().getClusterId().toString())
+      .setMasterName(master.getServerName())
+      .setDeadServerNames(sns)
+      .build());
   }
 
   protected void cleanup() {
@@ -229,7 +228,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
     void connect(Configuration conf) throws IOException;
 
-    void publish(ClusterStatus cs);
+    void publish(ClusterMetrics cs);
 
     @Override
     void close();
@@ -289,7 +288,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
       b.group(group)
         .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
         .option(ChannelOption.SO_REUSEADDR, true)
-        .handler(new ClusterStatusEncoder(isa));
+        .handler(new ClusterMetricsEncoder(isa));
 
       try {
         channel = (DatagramChannel) b.bind(bindAddress, 0).sync().channel();
@@ -328,24 +327,24 @@ public class ClusterStatusPublisher extends ScheduledChore {
       }
     }
 
-    private static final class ClusterStatusEncoder extends MessageToMessageEncoder<ClusterStatus> {
+    private static final class ClusterMetricsEncoder
+        extends MessageToMessageEncoder<ClusterMetrics> {
       final private InetSocketAddress isa;
 
-      private ClusterStatusEncoder(InetSocketAddress isa) {
+      private ClusterMetricsEncoder(InetSocketAddress isa) {
         this.isa = isa;
       }
 
       @Override
       protected void encode(ChannelHandlerContext channelHandlerContext,
-                            ClusterStatus clusterStatus, List<Object> objects) {
-        ClusterStatusProtos.ClusterStatus csp
-          = ClusterMetricsBuilder.toClusterStatus(clusterStatus);
-        objects.add(new DatagramPacket(Unpooled.wrappedBuffer(csp.toByteArray()), isa));
+        ClusterMetrics clusterStatus, List<Object> objects) {
+        objects.add(new DatagramPacket(Unpooled.wrappedBuffer(
+          ClusterMetricsBuilder.toClusterStatus(clusterStatus).toByteArray()), isa));
       }
     }
 
     @Override
-    public void publish(ClusterStatus cs) {
+    public void publish(ClusterMetrics cs) {
       channel.writeAndFlush(cs).syncUninterruptibly();
     }
 

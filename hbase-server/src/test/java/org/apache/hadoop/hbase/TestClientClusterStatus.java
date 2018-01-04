@@ -21,16 +21,12 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.AsyncAdmin;
-import org.apache.hadoop.hbase.client.AsyncConnection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -81,7 +77,8 @@ public class TestClientClusterStatus {
   @Test
   public void testDefaults() throws Exception {
     ClusterStatus origin = ADMIN.getClusterStatus();
-    ClusterStatus defaults = ADMIN.getClusterStatus(EnumSet.allOf(Option.class));
+    ClusterStatus defaults
+        = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
     checkPbObjectNotNull(origin);
     checkPbObjectNotNull(defaults);
     Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
@@ -97,34 +94,13 @@ public class TestClientClusterStatus {
 
   @Test
   public void testNone() throws Exception {
-    ClusterStatus status0 = ADMIN.getClusterStatus(EnumSet.allOf(Option.class));
-    ClusterStatus status1 = ADMIN.getClusterStatus(EnumSet.noneOf(Option.class));
+    ClusterStatus status0
+      = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.allOf(Option.class)));
+    ClusterStatus status1
+      = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.noneOf(Option.class)));
     Assert.assertEquals(status0, status1);
     checkPbObjectNotNull(status0);
     checkPbObjectNotNull(status1);
-  }
-
-  @Test
-  public void testAsyncClient() throws Exception {
-    try (AsyncConnection asyncConnect = ConnectionFactory.createAsyncConnection(
-      UTIL.getConfiguration()).get()) {
-      AsyncAdmin asyncAdmin = asyncConnect.getAdmin();
-      CompletableFuture<ClusterStatus> originFuture =
-        asyncAdmin.getClusterStatus();
-      CompletableFuture<ClusterStatus> defaultsFuture =
-        asyncAdmin.getClusterStatus(EnumSet.allOf(Option.class));
-      ClusterStatus origin = originFuture.get();
-      ClusterStatus defaults = defaultsFuture.get();
-      checkPbObjectNotNull(origin);
-      checkPbObjectNotNull(defaults);
-      Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-      Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-      Assert.assertTrue(origin.getAverageLoad() == defaults.getAverageLoad());
-      Assert.assertTrue(origin.getBackupMastersSize() == defaults.getBackupMastersSize());
-      Assert.assertTrue(origin.getDeadServersSize() == defaults.getDeadServersSize());
-      Assert.assertTrue(origin.getRegionsCount() == defaults.getRegionsCount());
-      Assert.assertTrue(origin.getServersSize() == defaults.getServersSize());
-    }
   }
 
   @Test
@@ -143,14 +119,15 @@ public class TestClientClusterStatus {
     Waiter.waitFor(CLUSTER.getConfiguration(), 10 * 1000, 100, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        ClusterStatus status = ADMIN.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+        ClusterStatus status
+          = new ClusterStatus(ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
         Assert.assertNotNull(status);
         return status.getRegionsCount() > 0;
       }
     });
     // Retrieve live servers and dead servers info.
     EnumSet<Option> options = EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS);
-    ClusterStatus status = ADMIN.getClusterStatus(options);
+    ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     checkPbObjectNotNull(status);
     Assert.assertNotNull(status);
     Assert.assertNotNull(status.getServers());
@@ -188,7 +165,7 @@ public class TestClientClusterStatus {
     Assert.assertEquals(MASTERS, masterThreads.size());
     // Retrieve master and backup masters infos only.
     EnumSet<Option> options = EnumSet.of(Option.MASTER, Option.BACKUP_MASTERS);
-    ClusterStatus status = ADMIN.getClusterStatus(options);
+    ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     Assert.assertTrue(status.getMaster().equals(activeName));
     Assert.assertEquals(MASTERS - 1, status.getBackupMastersSize());
   }
@@ -198,7 +175,7 @@ public class TestClientClusterStatus {
     EnumSet<Option> options =
         EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
                    Option.CLUSTER_ID, Option.BALANCER_ON);
-    ClusterStatus status = ADMIN.getClusterStatus(options);
+    ClusterStatus status = new ClusterStatus(ADMIN.getClusterMetrics(options));
     Assert.assertTrue(status.getMasterCoprocessors().length == 1);
     Assert.assertNotNull(status.getHBaseVersion());
     Assert.assertNotNull(status.getClusterId());
@@ -245,13 +222,13 @@ public class TestClientClusterStatus {
       return Optional.of(this);
     }
 
-    @Override public void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
+    @Override public void preGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx)
         throws IOException {
       PRE_COUNT.incrementAndGet();
     }
 
-    @Override public void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        ClusterStatus status) throws IOException {
+    @Override public void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      ClusterMetrics status) throws IOException {
       POST_COUNT.incrementAndGet();
     }
   }

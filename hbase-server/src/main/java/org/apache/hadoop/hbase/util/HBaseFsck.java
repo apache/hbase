@@ -72,8 +72,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -224,7 +224,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Internal resources
    **********************/
   private static final Logger LOG = LoggerFactory.getLogger(HBaseFsck.class.getName());
-  private ClusterStatus status;
+  private ClusterMetrics status;
   private ClusterConnection connection;
   private Admin admin;
   private Table meta;
@@ -525,7 +525,7 @@ public class HBaseFsck extends Configured implements Closeable {
     connection = (ClusterConnection)ConnectionFactory.createConnection(getConf());
     admin = connection.getAdmin();
     meta = connection.getTable(TableName.META_TABLE_NAME);
-    status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS,
+    status = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS,
       Option.DEAD_SERVERS, Option.MASTER, Option.BACKUP_MASTERS,
       Option.REGIONS_IN_TRANSITION, Option.HBASE_VERSION));
   }
@@ -535,7 +535,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void loadDeployedRegions() throws IOException, InterruptedException {
     // From the master, get a list of all known live region servers
-    Collection<ServerName> regionServers = status.getServers();
+    Collection<ServerName> regionServers = status.getLiveServerMetrics().keySet();
     errors.print("Number of live region servers: " + regionServers.size());
     if (details) {
       for (ServerName rsinfo: regionServers) {
@@ -553,10 +553,10 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     // Print the current master name and state
-    errors.print("Master: " + status.getMaster());
+    errors.print("Master: " + status.getMasterName());
 
     // Print the list of all backup masters
-    Collection<ServerName> backupMasters = status.getBackupMasters();
+    Collection<ServerName> backupMasters = status.getBackupMasterNames();
     errors.print("Number of backup masters: " + backupMasters.size());
     if (details) {
       for (ServerName name: backupMasters) {
@@ -566,7 +566,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     errors.print("Average load: " + status.getAverageLoad());
     errors.print("Number of requests: " + status.getRequestCount());
-    errors.print("Number of regions: " + status.getRegionsCount());
+    errors.print("Number of regions: " + status.getRegionCount());
 
     List<RegionState> rits = status.getRegionStatesInTransition();
     errors.print("Number of regions in transition: " + rits.size());
@@ -2451,7 +2451,8 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
         int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
-            admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers(), numReplicas);
+            admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+              .getLiveServerMetrics().keySet(), numReplicas);
 
         tryAssignmentRepair(hbi, "Trying to reassign region...");
       }
@@ -2478,7 +2479,8 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
         int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
-            admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers(), numReplicas);
+            admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+              .getLiveServerMetrics().keySet(), numReplicas);
         tryAssignmentRepair(hbi, "Trying to fix unassigned region...");
       }
 

@@ -75,7 +75,8 @@ public class TestInterfaceAlign {
   }
 
   private <T> List<String> getMethodNames(Class<T> c) {
-    return Arrays.asList(c.getDeclaredMethods()).stream().filter(m -> !isDeprecated(m))
+    // DON'T use the getDeclaredMethods as we want to check the Public APIs only.
+    return Arrays.asList(c.getMethods()).stream().filter(m -> !isDeprecated(m))
         .map(Method::getName).distinct().collect(Collectors.toList());
   }
 

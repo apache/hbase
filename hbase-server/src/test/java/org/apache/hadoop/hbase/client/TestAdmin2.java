@@ -698,7 +698,8 @@ public class TestAdmin2 {
     TEST_UTIL.createMultiRegionTable(tableName, "f".getBytes(), 6);
 
     ArrayList<ServerName> clusterRegionServers =
-        new ArrayList<>(admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
+        new ArrayList<>(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+          .getLiveServerMetrics().keySet());
 
     assertEquals(clusterRegionServers.size(), 3);
 

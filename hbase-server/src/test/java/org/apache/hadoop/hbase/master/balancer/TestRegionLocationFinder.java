@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -69,7 +68,7 @@ public class TestRegionLocationFinder {
 
     finder.setConf(TEST_UTIL.getConfiguration());
     finder.setServices(cluster.getMaster());
-    finder.setClusterStatus(cluster.getMaster().getClusterStatus());
+    finder.setClusterMetrics(cluster.getMaster().getClusterMetrics());
   }
 
   @AfterClass

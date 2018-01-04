@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -79,11 +78,11 @@ public class TestRegionMetrics {
   public void testRegionMetrics() throws Exception {
 
     // Check if regions match with the RegionMetrics from the server
-    for (ServerName serverName : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+    for (ServerName serverName : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
         .getLiveServerMetrics().keySet()) {
       List<RegionInfo> regions = admin.getRegions(serverName);
       Collection<RegionMetrics> regionMetricsList =
-          admin.getRegionLoads(serverName).stream().collect(Collectors.toList());
+          admin.getRegionMetrics(serverName);
       checkRegionsAndRegionMetrics(regions, regionMetricsList);
     }
 
@@ -92,21 +91,20 @@ public class TestRegionMetrics {
       List<RegionInfo> tableRegions = admin.getRegions(table);
 
       List<RegionMetrics> regionMetrics = new ArrayList<>();
-      for (ServerName serverName : admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
+      for (ServerName serverName : admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
           .getLiveServerMetrics().keySet()) {
-        regionMetrics.addAll(admin.getRegionLoads(serverName, table));
+        regionMetrics.addAll(admin.getRegionMetrics(serverName, table));
       }
       checkRegionsAndRegionMetrics(tableRegions, regionMetrics);
     }
 
     // Check RegionMetrics matches the RegionMetrics from ClusterStatus
-    ClusterMetrics clusterStatus = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
+    ClusterMetrics clusterStatus = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
     for (Map.Entry<ServerName, ServerMetrics> entry : clusterStatus.getLiveServerMetrics()
         .entrySet()) {
       ServerName serverName = entry.getKey();
       ServerMetrics serverMetrics = entry.getValue();
-      List<RegionMetrics> regionMetrics =
-          admin.getRegionLoads(serverName).stream().collect(Collectors.toList());
+      List<RegionMetrics> regionMetrics = admin.getRegionMetrics(serverName);
       assertEquals(serverMetrics.getRegionMetrics().size(), regionMetrics.size());
     }
   }

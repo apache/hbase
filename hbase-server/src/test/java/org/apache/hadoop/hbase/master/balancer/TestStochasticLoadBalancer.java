@@ -25,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -33,13 +32,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.MockNoopMasterServices;
@@ -126,20 +125,25 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     ServerName sn = ServerName.valueOf("test:8080", 100);
     int numClusterStatusToAdd = 20000;
     for (int i = 0; i < numClusterStatusToAdd; i++) {
-      ServerLoad sl = mock(ServerLoad.class);
+      ServerMetrics sl = mock(ServerMetrics.class);
 
-      RegionLoad rl = mock(RegionLoad.class);
-      when(rl.getStorefileSizeMB()).thenReturn(i);
+      RegionMetrics rl = mock(RegionMetrics.class);
+      when(rl.getReadRequestCount()).thenReturn(0L);
+      when(rl.getWriteRequestCount()).thenReturn(0L);
+      when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
+      when(rl.getStoreFileSize()).thenReturn(new Size(i, Size.Unit.MEGABYTE));
 
-      Map<byte[], RegionLoad> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       regionLoadMap.put(Bytes.toBytes(REGION_KEY), rl);
-      when(sl.getRegionsLoad()).thenReturn(regionLoadMap);
+      when(sl.getRegionMetrics()).thenReturn(regionLoadMap);
 
-      ClusterStatus clusterStatus = mock(ClusterStatus.class);
-      when(clusterStatus.getServers()).thenReturn(Arrays.asList(sn));
-      when(clusterStatus.getLoad(sn)).thenReturn(sl);
+      ClusterMetrics clusterStatus = mock(ClusterMetrics.class);
+      Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+      serverMetricsMap.put(sn, sl);
+      when(clusterStatus.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+//      when(clusterStatus.getLoad(sn)).thenReturn(sl);
 
-      loadBalancer.setClusterStatus(clusterStatus);
+      loadBalancer.setClusterMetrics(clusterStatus);
     }
     assertTrue(loadBalancer.loads.get(REGION_KEY) != null);
     assertTrue(loadBalancer.loads.get(REGION_KEY).size() == 15);

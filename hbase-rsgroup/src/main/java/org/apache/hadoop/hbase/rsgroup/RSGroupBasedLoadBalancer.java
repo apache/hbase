@@ -29,9 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -74,7 +73,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupBasedLoadBalancer.class);
 
   private Configuration config;
-  private ClusterStatus clusterStatus;
+  private ClusterMetrics clusterStatus;
   private MasterServices masterServices;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
@@ -96,8 +95,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   }
 
   @Override
-  public void setClusterStatus(ClusterStatus st) {
-    this.clusterStatus = st;
+  public void setClusterMetrics(ClusterMetrics sm) {
+    this.clusterStatus = sm;
   }
 
   @Override
@@ -386,7 +385,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
         StochasticLoadBalancer.class, LoadBalancer.class);
     internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
     internalBalancer.setMasterServices(masterServices);
-    internalBalancer.setClusterStatus(clusterStatus);
+    internalBalancer.setClusterMetrics(clusterStatus);
     internalBalancer.setConf(config);
     internalBalancer.initialize();
   }

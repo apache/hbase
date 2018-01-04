@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClusterMetricsBuilder;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
@@ -126,7 +124,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
@@ -1764,20 +1761,6 @@ public final class ProtobufUtil {
     }
   }
 
-  public static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoad(
-      final RpcController controller, final AdminService.BlockingInterface admin,
-      final TableName tableName) throws IOException {
-    GetRegionLoadRequest request =
-        RequestConverter.buildGetRegionLoadRequest(tableName);
-    GetRegionLoadResponse response;
-    try {
-      response = admin.getRegionLoad(controller, request);
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-    return getRegionLoadInfo(response);
-  }
-
   public static List<org.apache.hadoop.hbase.RegionLoad> getRegionLoadInfo(
       GetRegionLoadResponse regionLoadResponse) {
     List<org.apache.hadoop.hbase.RegionLoad> regionLoadList =
@@ -2967,16 +2950,6 @@ public final class ProtobufUtil {
         snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
         createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
         snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
-  }
-
-  /**
-   * Convert a protobuf ClusterStatus to a ClusterStatus
-   *
-   * @param proto the protobuf ClusterStatus
-   * @return the converted ClusterStatus
-   */
-  public static ClusterStatus toClusterStatus(ClusterStatusProtos.ClusterStatus proto) {
-    return new ClusterStatus(ClusterMetricsBuilder.toClusterMetrics(proto));
   }
 
   public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {

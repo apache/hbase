@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -1263,14 +1262,14 @@ public interface MasterObserver {
   /**
    * Called before get cluster status.
    */
-  default void preGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  default void preGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {}
 
   /**
    * Called after get cluster status.
    */
-  default void postGetClusterStatus(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      ClusterStatus status) throws IOException {}
+  default void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    ClusterMetrics status) throws IOException {}
 
   /**
    * Called before clear dead region servers.
