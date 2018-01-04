@@ -23,11 +23,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,12 +79,13 @@ public class RegionSizeCalculator {
     Set<ServerName> tableServers = getRegionServersOfTable(regionLocator);
 
     for (ServerName tableServerName : tableServers) {
-      Map<byte[], RegionLoad> regionLoads =
-          admin.getRegionLoad(tableServerName, regionLocator.getName());
-      for (RegionLoad regionLoad : regionLoads.values()) {
+      for (RegionMetrics regionLoad : admin.getRegionMetrics(
+        tableServerName,regionLocator.getName())) {
 
-        byte[] regionId = regionLoad.getName();
-        long regionSizeBytes = regionLoad.getStorefileSizeMB() * MEGABYTE;
+        byte[] regionId = regionLoad.getRegionName();
+        long regionSizeBytes
+          = ((long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)) * MEGABYTE;
+
         sizeMap.put(regionId, regionSizeBytes);
 
         if (LOG.isDebugEnabled()) {

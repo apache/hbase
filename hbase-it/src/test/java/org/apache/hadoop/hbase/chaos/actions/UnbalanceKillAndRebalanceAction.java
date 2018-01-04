@@ -23,9 +23,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Assert;
 
@@ -54,8 +53,8 @@ public class UnbalanceKillAndRebalanceAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    ClusterStatus status = this.cluster.getClusterStatus();
-    List<ServerName> victimServers = new LinkedList<>(status.getServers());
+    ClusterMetrics status = this.cluster.getClusterMetrics();
+    List<ServerName> victimServers = new LinkedList<>(status.getLiveServerMetrics().keySet());
     Set<ServerName> killedServers = new HashSet<>();
 
     int liveCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());

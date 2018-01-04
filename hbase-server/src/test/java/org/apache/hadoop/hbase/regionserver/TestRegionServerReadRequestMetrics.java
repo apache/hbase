@@ -106,7 +106,8 @@ public class TestRegionServerReadRequestMetrics {
     TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
-    serverNames = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
+    serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+      .getLiveServerMetrics().keySet();
     table = createTable();
     putData();
     List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
@@ -166,7 +167,8 @@ public class TestRegionServerReadRequestMetrics {
     boolean metricsUpdated = false;
     for (int i = 0; i < MAX_TRY; i++) {
       for (ServerName serverName : serverNames) {
-        serverLoad = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getLoad(serverName);
+        serverLoad = new ServerLoad(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+          .getLiveServerMetrics().get(serverName));
 
         Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
         RegionLoad regionLoad = regionsLoad.get(regionInfo.getRegionName());
@@ -442,8 +444,8 @@ public class TestRegionServerReadRequestMetrics {
 
   private void testReadRequests(byte[] regionName, int expectedReadRequests) throws Exception {
     for (ServerName serverName : serverNames) {
-      ServerLoad serverLoad =
-          admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getLoad(serverName);
+      ServerLoad serverLoad = new ServerLoad(admin.getClusterMetrics(
+        EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName));
       Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
       RegionLoad regionLoad = regionsLoad.get(regionName);
       if (regionLoad != null) {

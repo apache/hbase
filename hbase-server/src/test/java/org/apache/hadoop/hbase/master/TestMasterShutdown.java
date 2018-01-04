@@ -24,9 +24,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -84,9 +83,8 @@ public class TestMasterShutdown {
     }
     assertNotNull(active);
     // make sure the other two are backup masters
-    ClusterStatus status = active.getClusterStatus();
-    assertEquals(2, status.getBackupMastersSize());
-    assertEquals(2, status.getBackupMasters().size());
+    ClusterMetrics status = active.getClusterMetrics();
+    assertEquals(2, status.getBackupMasterNames().size());
 
     // tell the active master to shutdown the cluster
     active.shutdown();

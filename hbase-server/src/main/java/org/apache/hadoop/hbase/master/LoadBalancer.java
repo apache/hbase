@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -71,7 +69,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
    * @param st
    */
-  void setClusterStatus(ClusterStatus st);
+  void setClusterMetrics(ClusterMetrics st);
 
   /**
    * Pass RegionStates and allow balancer to set the current cluster load.

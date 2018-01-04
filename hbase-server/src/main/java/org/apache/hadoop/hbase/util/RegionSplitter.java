@@ -41,8 +41,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -437,8 +437,8 @@ public class RegionSplitter {
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
     try (Admin admin = connection.getAdmin()) {
-      ClusterStatus status = admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS));
-      Collection<ServerName> servers = status.getServers();
+      ClusterMetrics status = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
+      Collection<ServerName> servers = status.getLiveServerMetrics().keySet();
       return servers == null || servers.isEmpty()? 0: servers.size();
     }
   }

@@ -46,8 +46,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -59,8 +60,9 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.RegionMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -2072,29 +2074,31 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public ClusterStatus getClusterStatus() throws IOException {
-    return getClusterStatus(EnumSet.allOf(Option.class));
-  }
-
-  @Override
-  public ClusterStatus getClusterStatus(EnumSet<Option> options) throws IOException {
-    return executeCallable(new MasterCallable<ClusterStatus>(getConnection(),
+  public ClusterMetrics getClusterMetrics(EnumSet<Option> options) throws IOException {
+    return executeCallable(new MasterCallable<ClusterMetrics>(getConnection(),
         this.rpcControllerFactory) {
       @Override
-      protected ClusterStatus rpcCall() throws Exception {
+      protected ClusterMetrics rpcCall() throws Exception {
         GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest(options);
-        return ProtobufUtil.toClusterStatus(
+        return ClusterMetricsBuilder.toClusterMetrics(
           master.getClusterStatus(getRpcController(), req).getClusterStatus());
       }
     });
   }
 
   @Override
-  public List<RegionLoad> getRegionLoads(ServerName serverName, TableName tableName)
+  public List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName)
       throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(serverName);
     HBaseRpcController controller = rpcControllerFactory.newController();
-    return ProtobufUtil.getRegionLoad(controller, admin, tableName);
+    AdminProtos.GetRegionLoadRequest request =
+      RequestConverter.buildGetRegionLoadRequest(tableName);
+    try {
+      return admin.getRegionLoad(controller, request).getRegionLoadsList().stream()
+        .map(RegionMetricsBuilder::toRegionMetrics).collect(Collectors.toList());
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   @Override
@@ -2426,16 +2430,6 @@ public class HBaseAdmin implements Admin {
   public synchronized void rollWALWriter(ServerName serverName)
       throws IOException, FailedLogCloseException {
     rollWALWriterImpl(serverName);
-  }
-
-  @Override
-  public String[] getMasterCoprocessors() {
-    try {
-      return getClusterStatus(EnumSet.of(Option.MASTER_COPROCESSORS)).getMasterCoprocessors();
-    } catch (IOException e) {
-      LOG.error("Could not getClusterStatus()",e);
-      return null;
-    }
   }
 
   @Override
@@ -3148,15 +3142,15 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void updateConfiguration() throws IOException {
-    ClusterStatus status = getClusterStatus(
+    ClusterMetrics status = getClusterMetrics(
       EnumSet.of(Option.LIVE_SERVERS, Option.MASTER, Option.BACKUP_MASTERS));
-    for (ServerName server : status.getServers()) {
+    for (ServerName server : status.getLiveServerMetrics().keySet()) {
       updateConfiguration(server);
     }
 
-    updateConfiguration(status.getMaster());
+    updateConfiguration(status.getMasterName());
 
-    for (ServerName server : status.getBackupMasters()) {
+    for (ServerName server : status.getBackupMasterNames()) {
       updateConfiguration(server);
     }
   }

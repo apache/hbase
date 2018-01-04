@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -160,7 +159,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface().getClusterStatus().getServersSize());
+    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
+      .getClusterMetrics().getLiveServerMetrics().size());
 
     long start = System.currentTimeMillis();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -248,7 +248,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   /** Estimates a data size based on the cluster size */
   protected long getNumKeys(long keysPerServer)
       throws IOException {
-    int numRegionServers = cluster.getClusterStatus().getServersSize();
+    int numRegionServers = cluster.getClusterMetrics().getLiveServerMetrics().size();
     return keysPerServer * numRegionServers;
   }
 

@@ -336,7 +336,7 @@ public class TestMultiParallel {
         public boolean evaluate() throws Exception {
           // Master is also a regionserver, so the count is liveRScount
           return UTIL.getMiniHBaseCluster().getMaster()
-              .getClusterStatus().getServersSize() == liveRScount;
+              .getClusterMetrics().getLiveServerMetrics().size() == liveRScount;
         }
       });
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());

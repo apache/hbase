@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.hbase.master;
 
+import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
-import com.google.protobuf.Service;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -1563,20 +1561,20 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preGetClusterStatus() throws IOException {
+  public void preGetClusterMetrics() throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preGetClusterStatus(this);
+        observer.preGetClusterMetrics(this);
       }
     });
   }
 
-  public void postGetClusterStatus(ClusterStatus status) throws IOException {
+  public void postGetClusterMetrics(ClusterMetrics status) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetClusterStatus(this, status);
+        observer.postGetClusterMetrics(this, status);
       }
     });
   }

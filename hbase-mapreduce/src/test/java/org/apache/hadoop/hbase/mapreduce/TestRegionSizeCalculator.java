@@ -17,30 +17,27 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_REGIONSERVER_PORT;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_REGIONSERVER_PORT;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionMetrics;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestRegionSizeCalculator {
@@ -134,14 +131,15 @@ public class TestRegionSizeCalculator {
   /**
    * Creates mock returning RegionLoad info about given servers.
   */
-  private Admin mockAdmin(RegionLoad... regionLoadArray) throws Exception {
+  private Admin mockAdmin(RegionMetrics... regionLoadArray) throws Exception {
     Admin mockAdmin = Mockito.mock(Admin.class);
-    Map<byte[], RegionLoad> regionLoads = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (RegionLoad regionLoad : regionLoadArray) {
-      regionLoads.put(regionLoad.getName(), regionLoad);
+    List<RegionMetrics> regionLoads = new ArrayList<>();
+    for (RegionMetrics regionLoad : regionLoadArray) {
+      regionLoads.add(regionLoad);
     }
     when(mockAdmin.getConfiguration()).thenReturn(configuration);
-    when(mockAdmin.getRegionLoad(sn, TableName.valueOf("sizeTestTable"))).thenReturn(regionLoads);
+    when(mockAdmin.getRegionMetrics(sn, TableName.valueOf("sizeTestTable")))
+        .thenReturn(regionLoads);
     return mockAdmin;
   }
 
@@ -150,11 +148,11 @@ public class TestRegionSizeCalculator {
    *
    * @param  fileSizeMb number of megabytes occupied by region in file store in megabytes
    * */
-  private RegionLoad mockRegion(String regionName, int fileSizeMb) {
-    RegionLoad region = Mockito.mock(RegionLoad.class);
-    when(region.getName()).thenReturn(regionName.getBytes());
+  private RegionMetrics mockRegion(String regionName, int fileSizeMb) {
+    RegionMetrics region = Mockito.mock(RegionMetrics.class);
+    when(region.getRegionName()).thenReturn(regionName.getBytes());
     when(region.getNameAsString()).thenReturn(regionName);
-    when(region.getStorefileSizeMB()).thenReturn(fileSizeMb);
+    when(region.getStoreFileSize()).thenReturn(new Size(fileSizeMb, Size.Unit.MEGABYTE));
     return region;
   }
 }

@@ -747,7 +747,7 @@ public class RegionMover extends AbstractHBaseTool {
    * @throws IOException
    */
   private void stripMaster(ArrayList<String> regionServers, Admin admin) throws IOException {
-    ServerName master = admin.getClusterStatus(EnumSet.of(Option.MASTER)).getMaster();
+    ServerName master = admin.getClusterMetrics(EnumSet.of(Option.MASTER)).getMasterName();
     String masterHostname = master.getHostname();
     int masterPort = master.getPort();
     try {
@@ -825,7 +825,7 @@ public class RegionMover extends AbstractHBaseTool {
    */
   private ArrayList<String> getServers(Admin admin) throws IOException {
     ArrayList<ServerName> serverInfo = new ArrayList<>(
-        admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers());
+        admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet());
     ArrayList<String> regionServers = new ArrayList<>(serverInfo.size());
     for (ServerName server : serverInfo) {
       regionServers.add(server.getServerName().toLowerCase());

@@ -57,7 +57,7 @@ public class MoveRegionsOfTableAction extends Action {
 
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
     Collection<ServerName> serversList =
-        admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS)).getServers();
+        admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
     ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 
     LOG.info("Performing action: Move regions of table " + tableName);

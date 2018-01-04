@@ -84,8 +84,8 @@ public class TestMasterOperationsForRegionReplicas {
     TEST_UTIL.startMiniCluster(numSlaves);
     CONNECTION = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     ADMIN = CONNECTION.getAdmin();
-    while(ADMIN.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
-               .getServers().size() < numSlaves) {
+    while(ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+               .getLiveServerMetrics().size() < numSlaves) {
       Thread.sleep(100);
     }
   }
@@ -163,7 +163,7 @@ public class TestMasterOperationsForRegionReplicas {
         ADMIN.getConnection());
 
       // Now kill the master, restart it and see if the assignments are kept
-      ServerName master = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
+      ServerName master = TEST_UTIL.getHBaseClusterInterface().getClusterMetrics().getMasterName();
       TEST_UTIL.getHBaseClusterInterface().stopMaster(master);
       TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(master, 30000);
       TEST_UTIL.getHBaseClusterInterface().startMaster(master.getHostname(), master.getPort());

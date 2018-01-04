@@ -27,9 +27,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -64,7 +63,7 @@ class RegionLocationFinder {
   private static final long CACHE_TIME = 240 * 60 * 1000;
   private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION = new HDFSBlocksDistribution();
   private Configuration conf;
-  private volatile ClusterStatus status;
+  private volatile ClusterMetrics status;
   private MasterServices services;
   private final ListeningExecutorService executor;
   // Do not scheduleFullRefresh at master startup
@@ -105,7 +104,6 @@ class RegionLocationFinder {
 
   /**
    * Create a cache for region to list of servers
-   * @param time time to cache the locations
    * @return A new Cache.
    */
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> createCache() {
@@ -126,7 +124,7 @@ class RegionLocationFinder {
     this.services = services;
   }
 
-  public void setClusterStatus(ClusterStatus status) {
+  public void setClusterMetrics(ClusterMetrics status) {
     long currentTime = EnvironmentEdgeManager.currentTime();
     this.status = status;
     if (currentTime > lastFullRefresh + (CACHE_TIME / 2)) {
@@ -244,7 +242,7 @@ class RegionLocationFinder {
     }
 
     List<ServerName> topServerNames = new ArrayList<>();
-    Collection<ServerName> regionServers = status.getServers();
+    Collection<ServerName> regionServers = status.getLiveServerMetrics().keySet();
 
     // create a mapping from hostname to ServerName for fast lookup
     HashMap<String, List<ServerName>> hostToServerName = new HashMap<>();

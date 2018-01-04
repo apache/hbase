@@ -31,7 +31,7 @@ public class RestartActiveMasterAction extends RestartActionBaseAction {
   public void perform() throws Exception {
     LOG.info("Performing action: Restart active master");
 
-    ServerName master = cluster.getClusterStatus().getMaster();
+    ServerName master = cluster.getClusterMetrics().getMasterName();
     restartMaster(master, sleepTime);
   }
 }

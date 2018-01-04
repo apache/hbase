@@ -56,9 +56,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -834,7 +834,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     //initialize load balancer
     this.balancer.setMasterServices(this);
-    this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
+    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
 
     // Check if master is shutting down because of some issue
@@ -878,7 +878,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager.joinCluster();
 
     // set cluster status again after user regions are assigned
-    this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
+    this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
     // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
@@ -1404,7 +1404,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       List<RegionPlan> plans = new ArrayList<>();
 
       //Give the balancer the current cluster state.
-      this.balancer.setClusterStatus(getClusterStatusWithoutCoprocessor());
+      this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
       this.balancer.setClusterLoad(assignmentsByTable);
 
       for (Map<ServerName, List<RegionInfo>> serverMap : assignmentsByTable.values()) {
@@ -2404,11 +2404,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  public ClusterStatus getClusterStatusWithoutCoprocessor() throws InterruptedIOException {
-    return getClusterStatusWithoutCoprocessor(EnumSet.allOf(Option.class));
+  public ClusterMetrics getClusterMetricsWithoutCoprocessor() throws InterruptedIOException {
+    return getClusterMetricsWithoutCoprocessor(EnumSet.allOf(Option.class));
   }
 
-  public ClusterStatus getClusterStatusWithoutCoprocessor(EnumSet<Option> options)
+  public ClusterMetrics getClusterMetricsWithoutCoprocessor(EnumSet<Option> options)
       throws InterruptedIOException {
     ClusterMetricsBuilder builder = ClusterMetricsBuilder.newBuilder();
     // given that hbase1 can't submit the request with Option,
@@ -2464,23 +2464,23 @@ public class HMaster extends HRegionServer implements MasterServices {
         }
       }
     }
-    return new ClusterStatus(builder.build());
+    return builder.build();
   }
 
   /**
    * @return cluster status
    */
-  public ClusterStatus getClusterStatus() throws IOException {
-    return getClusterStatus(EnumSet.allOf(Option.class));
+  public ClusterMetrics getClusterMetrics() throws IOException {
+    return getClusterMetrics(EnumSet.allOf(Option.class));
   }
 
-  public ClusterStatus getClusterStatus(EnumSet<Option> options) throws IOException {
+  public ClusterMetrics getClusterMetrics(EnumSet<Option> options) throws IOException {
     if (cpHost != null) {
-      cpHost.preGetClusterStatus();
+      cpHost.preGetClusterMetrics();
     }
-    ClusterStatus status = getClusterStatusWithoutCoprocessor(options);
+    ClusterMetrics status = getClusterMetricsWithoutCoprocessor(options);
     if (cpHost != null) {
-      cpHost.postGetClusterStatus(status);
+      cpHost.postGetClusterMetrics(status);
     }
     return status;
   }
@@ -3173,14 +3173,14 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
-    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
-        .getLastMajorCompactionTsForTable(table);
+    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+        .getLastMajorCompactionTimestamp(table);
   }
 
   @Override
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
-    return getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
-        .getLastMajorCompactionTsForRegion(regionName);
+    return getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+        .getLastMajorCompactionTimestamp(regionName);
   }
 
   /**

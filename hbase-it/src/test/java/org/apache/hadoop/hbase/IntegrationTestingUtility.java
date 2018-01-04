@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -61,9 +60,9 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
 
   /** Config for pluggable hbase cluster manager */
   private static final String HBASE_CLUSTER_MANAGER_CLASS = "hbase.it.clustermanager.class";
-  private static final Class<? extends ClusterManager> DEFAULT_HBASE_CLUSTER_MANAGER_CLASS = 
+  private static final Class<? extends ClusterManager> DEFAULT_HBASE_CLUSTER_MANAGER_CLASS =
     HBaseClusterManager.class;
-  
+
   /**
    * Initializes the state of the cluster. It starts a new in-process mini cluster, OR
    * if we are given an already deployed distributed cluster it initializes the state.
@@ -85,7 +84,7 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
    */
   public void checkNodeCount(int numSlaves) throws Exception {
     HBaseCluster cluster = getHBaseClusterInterface();
-    if (cluster.getClusterStatus().getServers().size() < numSlaves) {
+    if (cluster.getClusterMetrics().getLiveServerMetrics().size() < numSlaves) {
       throw new Exception("Cluster does not have enough nodes:" + numSlaves);
     }
   }

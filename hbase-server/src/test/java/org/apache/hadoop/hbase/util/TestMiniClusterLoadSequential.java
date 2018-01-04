@@ -153,8 +153,8 @@ public class TestMiniClusterLoadSequential {
         ", isMultiPut=" + isMultiPut);
     numKeys = numKeys();
     Admin admin = TEST_UTIL.getAdmin();
-    while (admin.getClusterStatus(EnumSet.of(Option.LIVE_SERVERS))
-                .getServers().size() < NUM_RS) {
+    while (admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
+                .getLiveServerMetrics().size() < NUM_RS) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
       Threads.sleepWithoutInterrupt(1000);
     }
