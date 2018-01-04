@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -142,6 +141,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
@@ -3454,36 +3454,40 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
       ExecuteProceduresRequest request) throws ServiceException {
-    if (request.getOpenRegionCount() > 0) {
-      for (OpenRegionRequest req : request.getOpenRegionList()) {
-        openRegion(controller, req);
-      }
-    }
-    if (request.getCloseRegionCount() > 0) {
-      for (CloseRegionRequest req : request.getCloseRegionList()) {
-        closeRegion(controller, req);
-      }
-    }
-    if (request.getProcCount() > 0) {
-      for (RemoteProcedureRequest req : request.getProcList()) {
-        RSProcedureCallable callable;
-        try {
-          callable =
-            Class.forName(req.getProcClass()).asSubclass(RSProcedureCallable.class).newInstance();
-        } catch (Exception e) {
-          // here we just ignore the error as this should not happen and we do not provide a general
-          // way to report errors for all types of remote procedure. The procedure will hang at
-          // master side but after you solve the problem and restart master it will be executed
-          // again and pass.
-          LOG.warn("create procedure of type " + req.getProcClass() + " failed, give up", e);
-          continue;
+    try {
+      checkOpen();
+      regionServer.getRegionServerCoprocessorHost().preExecuteProcedures();
+      if (request.getOpenRegionCount() > 0) {
+        for (OpenRegionRequest req : request.getOpenRegionList()) {
+          openRegion(controller, req);
         }
-        callable.init(req.getProcData().toByteArray(), regionServer);
-        regionServer.executeProcedure(req.getProcId(), callable);
       }
+      if (request.getCloseRegionCount() > 0) {
+        for (CloseRegionRequest req : request.getCloseRegionList()) {
+          closeRegion(controller, req);
+        }
+      }
+      if (request.getProcCount() > 0) {
+        for (RemoteProcedureRequest req : request.getProcList()) {
+          RSProcedureCallable callable;
+          try {
+            callable =
+              Class.forName(req.getProcClass()).asSubclass(RSProcedureCallable.class).newInstance();
+          } catch (Exception e) {
+            regionServer.remoteProcedureComplete(req.getProcId(), e);
+            continue;
+          }
+          callable.init(req.getProcData().toByteArray(), regionServer);
+          regionServer.executeProcedure(req.getProcId(), callable);
+        }
+      }
+      regionServer.getRegionServerCoprocessorHost().postExecuteProcedures();
+      return ExecuteProceduresResponse.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
     }
-    return ExecuteProceduresResponse.getDefaultInstance();
   }
 }

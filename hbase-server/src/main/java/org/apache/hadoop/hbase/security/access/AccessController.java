@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -117,13 +117,6 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -135,6 +128,14 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -2455,7 +2456,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       throws IOException {
     requirePermission(ctx, "replicateLogEntries", Action.WRITE);
   }
-
+  
   @Override
   public void  preClearCompactionQueues(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
           throws IOException {
@@ -2507,8 +2508,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
-      TableName tableName, RegionInfo[] regionInfos, String description)
-  throws IOException {
+      TableName tableName, RegionInfo[] regionInfos, String description) throws IOException {
     // There are operations in the CREATE and ADMIN domain which may require lock, READ
     // or WRITE. So for any lock request, we check for these two perms irrespective of lock type.
     String reason = String.format("Description=%s", description);
@@ -2521,12 +2521,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     checkLockPermissions(ctx, null, tableName, null, description);
   }
 
+  @Override
+  public void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {
+    checkSystemOrSuperUser(getActiveUser(ctx));
+  }
+
   /**
    * Returns the active user to which authorization checks should be applied.
    * If we are in the context of an RPC call, the remote user is used,
    * otherwise the currently logged in user is used.
    */
-  public User getActiveUser(ObserverContext<?> ctx) throws IOException {
+  private User getActiveUser(ObserverContext<?> ctx) throws IOException {
     // for non-rpc handling, fallback to system user
     Optional<User> optionalUser = ctx.getCaller();
     if (optionalUser.isPresent()) {
