@@ -119,7 +119,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param poolSize size from configuration
    * @return size of pool after calculation
    */
-  private int calculatePoolSize(String poolSize) {
+  int calculatePoolSize(String poolSize) {
     if (poolSize.matches("[1-9][0-9]*")) {
       // If poolSize is an integer, return it directly,
       // but upmost to the number of available processors.
@@ -130,7 +130,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       return size;
     } else if (poolSize.matches("0.[0-9]+|1.0")) {
       // if poolSize is a double, return poolSize * availableProcessors;
-      return (int) (AVAIL_PROCESSORS * Double.valueOf(poolSize));
+      // Ensure that we always return at least one.
+      int computedThreads = (int) (AVAIL_PROCESSORS * Double.valueOf(poolSize));
+      if (computedThreads < 1) {
+        LOG.debug("Computed {} threads for CleanerChore, using 1 instead", computedThreads);
+        return 1;
+      }
+      return computedThreads;
     } else {
       LOG.error("Unrecognized value: " + poolSize + " for " + CHORE_POOL_SIZE +
           ", use default config: " + DEFAULT_CHORE_POOL_SIZE + " instead.");
