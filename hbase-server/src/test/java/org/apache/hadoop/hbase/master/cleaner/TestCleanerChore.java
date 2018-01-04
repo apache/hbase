@@ -388,6 +388,25 @@ public class TestCleanerChore {
     t.join();
   }
 
+  @Test
+  public void testMinimumNumberOfThreads() throws Exception {
+    Stoppable stop = new StoppableImplementation();
+    Configuration conf = UTIL.getConfiguration();
+    Path testDir = UTIL.getDataTestDir();
+    FileSystem fs = UTIL.getTestFileSystem();
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, AlwaysDelete.class.getName());
+    conf.set(CleanerChore.CHORE_POOL_SIZE, "2");
+    AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
+    int numProcs = Runtime.getRuntime().availableProcessors();
+    // Sanity
+    assertEquals(numProcs, chore.calculatePoolSize(Integer.toString(numProcs)));
+    // The implementation does not allow us to set more threads than we have processors
+    assertEquals(numProcs, chore.calculatePoolSize(Integer.toString(numProcs + 2)));
+    // Force us into the branch that is multiplying 0.0 against the number of processors
+    assertEquals(1, chore.calculatePoolSize("0.0"));
+  }
+
   private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
     Random random = new Random();
     for (int i = 0; i < numOfFiles; i++) {
