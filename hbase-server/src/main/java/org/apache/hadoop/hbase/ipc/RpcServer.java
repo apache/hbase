@@ -209,6 +209,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
   protected final InetSocketAddress bindAddress;
   protected int port;                             // port we listen on
+  protected InetSocketAddress address;            // inet address we listen on
   private int readThreads;                        // number of read threads
   protected int maxIdleTime;                      // the maximum idle time after
                                                   // which a client may be
@@ -584,6 +585,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       // Bind the server socket to the binding addrees (can be different from the default interface)
       bind(acceptChannel.socket(), bindAddress, backlogLength);
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
+      address = (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
+
       // create a selector;
       selector= Selector.open();
 
@@ -813,7 +816,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     InetSocketAddress getAddress() {
-      return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
+      return address;
     }
 
     void doAccept(SelectionKey key) throws IOException, OutOfMemoryError {
@@ -2050,7 +2053,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.server.tcpkeepalive", true);
 
     this.ipcUtil = new IPCUtil(conf);
-
 
     // Create the responder here
     responder = new Responder();
