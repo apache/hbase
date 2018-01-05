@@ -351,11 +351,7 @@ public class ProtobufLogReader extends ReaderBase {
                 "inputStream.available()= " + this.inputStream.available() + ", " +
                 "entry size= " + size + " at offset = " + this.inputStream.getPos());
           }
-<<<<<<< HEAD
-          ProtobufUtil.mergeFrom(builder, new BoundedInputStream(this.inputStream, size),
-=======
           ProtobufUtil.mergeFrom(builder, ByteStreams.limit(this.inputStream, size),
->>>>>>> a30d9fe8d9... HBASE-19651 Remove LimitInputStream
             (int)size);
         } catch (InvalidProtocolBufferException ipbe) {
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
