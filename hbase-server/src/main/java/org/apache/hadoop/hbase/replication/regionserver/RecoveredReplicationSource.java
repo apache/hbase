@@ -68,7 +68,7 @@ public class RecoveredReplicationSource extends ReplicationSource {
       LOG.debug("Someone has beat us to start a worker thread for wal group " + walGroupId);
     } else {
       LOG.debug("Starting up worker for wal group " + walGroupId);
-      worker.startup(getUncaughtExceptionHandler());
+      worker.startup(this::uncaughtException);
       worker.setWALReader(
         startNewWALReader(worker.getName(), walGroupId, queue, worker.getStartPosition()));
       workerThreads.put(walGroupId, worker);
@@ -76,13 +76,13 @@ public class RecoveredReplicationSource extends ReplicationSource {
   }
 
   @Override
-  protected ReplicationSourceWALReader startNewWALReader(String threadName,
-      String walGroupId, PriorityBlockingQueue<Path> queue, long startPosition) {
-    ReplicationSourceWALReader walReader = new RecoveredReplicationSourceWALReader(fs,
-        conf, queue, startPosition, walEntryFilter, this);
-    Threads.setDaemonThreadRunning(walReader, threadName
-        + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + queueId,
-      getUncaughtExceptionHandler());
+  protected ReplicationSourceWALReader startNewWALReader(String threadName, String walGroupId,
+      PriorityBlockingQueue<Path> queue, long startPosition) {
+    ReplicationSourceWALReader walReader =
+      new RecoveredReplicationSourceWALReader(fs, conf, queue, startPosition, walEntryFilter, this);
+    Threads.setDaemonThreadRunning(walReader,
+      threadName + ".replicationSource.replicationWALReaderThread." + walGroupId + "," + queueId,
+      this::uncaughtException);
     return walReader;
   }
 
