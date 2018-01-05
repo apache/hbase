@@ -727,8 +727,8 @@ module Hbase
       if format == 'detailed'
         puts(format('version %s', status.getHBaseVersion))
         # Put regions in transition first because usually empty
-        puts(format('%d regionsInTransition', status.getRegionsInTransition.size))
-        for v in status.getRegionsInTransition
+        puts(format('%d regionsInTransition', status.getRegionStatesInTransition.size))
+        for v in status.getRegionStatesInTransition
           puts(format('    %s', v))
         end
         master = status.getMaster
