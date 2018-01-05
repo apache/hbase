@@ -27,6 +27,7 @@
   import="java.util.LinkedHashMap"
   import="java.util.List"
   import="java.util.Map"
+  import="java.util.HashMap"
   import="java.util.TreeMap"
   import="org.apache.commons.lang3.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
@@ -46,6 +47,8 @@
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.client.Table"
   import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.master.assignment.RegionStates"
+  import="org.apache.hadoop.hbase.master.RegionState"
   import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
   import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot"
   import="org.apache.hadoop.hbase.util.Bytes"
@@ -247,6 +250,14 @@ if ( fqtn != null ) {
 </table>
 <%} else {
   Admin admin = master.getConnection().getAdmin();
+  RegionStates states = master.getAssignmentManager().getRegionStates();
+  Map<RegionState.State, List<RegionInfo>> regionStates = states.getRegionByStateOfTable(table.getName());
+  Map<String, RegionState.State> stateMap = new HashMap<>();
+  for (RegionState.State regionState : regionStates.keySet()) {
+    for (RegionInfo regionInfo : regionStates.get(regionState)) {
+        stateMap.put(regionInfo.getEncodedName(), regionState);
+    }
+  }
   RegionLocator r = master.getClusterConnection().getRegionLocator(table.getName());
   try { %>
 <h2>Table Attributes</h2>
@@ -452,6 +463,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 <th>Locality</th>
 <th>Start Key</th>
 <th>End Key</th>
+<th>Region State</th>
 <%
   if (withReplica) {
 %>
@@ -630,6 +642,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
     String fileCount = "N/A";
     String memSize = "N/A";
     float locality = 0.0f;
+    String state = "N/A";
     if(load != null) {
       readReq = String.format("%,1d", load.getReadRequestsCount());
       writeReq = String.format("%,1d", load.getWriteRequestsCount());
@@ -637,6 +650,10 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
       fileCount = String.format("%,1d", load.getStorefiles());
       memSize = StringUtils.byteDesc(load.getMemStoreSizeMB()*1024l*1024);
       locality = load.getDataLocality();
+    }
+
+    if (stateMap.containsKey(regionInfo.getEncodedName())) {
+     state = stateMap.get(regionInfo.getEncodedName()).toString();
     }
 
     if (addr != null) {
@@ -681,6 +698,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   <td><%= locality%></td>
   <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getStartKey()):"-")%></td>
   <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getEndKey()):"-")%></td>
+  <td><%= state%></td>
   <%
   if (withReplica) {
   %>
