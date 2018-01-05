@@ -106,7 +106,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -2610,7 +2609,7 @@ public final class ProtobufUtil {
     final int firstByte = in.read();
     if (firstByte != -1) {
       final int size = CodedInputStream.readRawVarint32(firstByte, in);
-      final InputStream limitedInput = ByteStreams.limit(in, size);
+      final InputStream limitedInput = new BoundedInputStream(in, size);
       final CodedInputStream codedInput = CodedInputStream.newInstance(limitedInput);
       codedInput.setSizeLimit(size);
       builder.mergeFrom(codedInput);
