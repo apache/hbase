@@ -57,15 +57,12 @@ public class TestReversedScannerCallable {
     Configuration conf = Mockito.mock(Configuration.class);
     HRegionLocation regionLocation = Mockito.mock(HRegionLocation.class);
     ServerName serverName = Mockito.mock(ServerName.class);
-    HRegionInfo regionInfo = Mockito.mock(HRegionInfo.class);
 
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
     Mockito.when(regionLocations.size()).thenReturn(1);
     Mockito.when(regionLocations.getRegionLocation(0)).thenReturn(regionLocation);
     Mockito.when(regionLocation.getHostname()).thenReturn("localhost");
-    Mockito.when(regionLocation.getRegionInfo()).thenReturn(regionInfo);
     Mockito.when(regionLocation.getServerName()).thenReturn(serverName);
-    Mockito.when(regionInfo.containsRow(ROW_BEFORE)).thenReturn(true);
     Mockito.when(scan.includeStartRow()).thenReturn(true);
     Mockito.when(scan.getStartRow()).thenReturn(ROW);
   }
