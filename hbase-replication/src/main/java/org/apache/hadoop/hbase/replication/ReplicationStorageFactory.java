@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * For now we only have zk based implementation.
  */
 @InterfaceAudience.Private
-public class ReplicationStorageFactory {
+public final class ReplicationStorageFactory {
 
   private ReplicationStorageFactory() {
   }
