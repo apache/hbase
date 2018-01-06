@@ -19,11 +19,11 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.BufferedMutatorImpl.MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1133,6 +1132,119 @@ public class TestAsyncProcess {
   }
 
   @Test
+  public void testSettingWriteBufferPeriodicFlushParameters() throws Exception {
+    ClusterConnection conn = createHConnection();
+    MyAsyncProcess ap = new MyAsyncProcess(conn, conf, true);
+
+    checkPeriodicFlushParameters(conn, ap,
+            1234, 1234,
+            1234, 1234);
+    checkPeriodicFlushParameters(conn, ap,
+            0,    0,
+            0,    MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+    checkPeriodicFlushParameters(conn, ap,
+            -1234,    0,
+            -1234,    MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+    checkPeriodicFlushParameters(conn, ap,
+            1,    1,
+            1,    MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+  }
+
+  private void checkPeriodicFlushParameters(ClusterConnection conn,
+                                            MyAsyncProcess ap,
+                                            long setTO, long expectTO,
+                                            long setTT, long expectTT
+  ) {
+    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
+
+    // The BufferedMutatorParams does nothing with the value
+    bufferParam.setWriteBufferPeriodicFlushTimeoutMs(setTO);
+    bufferParam.setWriteBufferPeriodicFlushTimerTickMs(setTT);
+    Assert.assertEquals(setTO, bufferParam.getWriteBufferPeriodicFlushTimeoutMs());
+    Assert.assertEquals(setTT, bufferParam.getWriteBufferPeriodicFlushTimerTickMs());
+
+    // The BufferedMutatorImpl corrects illegal values (indirect via BufferedMutatorParams)
+    BufferedMutatorImpl ht1 = new BufferedMutatorImpl(conn, null, null, bufferParam);
+    Assert.assertEquals(expectTO, ht1.getWriteBufferPeriodicFlushTimeoutMs());
+    Assert.assertEquals(expectTT, ht1.getWriteBufferPeriodicFlushTimerTickMs());
+
+    // The BufferedMutatorImpl corrects illegal values (direct via setter)
+    BufferedMutatorImpl ht2 =
+            new BufferedMutatorImpl(conn, null, null, createBufferedMutatorParams(ap, DUMMY_TABLE));
+    ht2.setWriteBufferPeriodicFlush(setTO, setTT);
+    Assert.assertEquals(expectTO, ht2.getWriteBufferPeriodicFlushTimeoutMs());
+    Assert.assertEquals(expectTT, ht2.getWriteBufferPeriodicFlushTimerTickMs());
+
+  }
+
+  @Test
+  public void testWriteBufferPeriodicFlushTimeoutMs() throws Exception {
+    ClusterConnection conn = createHConnection();
+    MyAsyncProcess ap = new MyAsyncProcess(conn, conf, true);
+    BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
+
+    bufferParam.setWriteBufferPeriodicFlushTimeoutMs(1);     // Flush ASAP
+    bufferParam.setWriteBufferPeriodicFlushTimerTickMs(1); // Check every 100ms
+    bufferParam.writeBufferSize(10000);  // Write buffer set to much larger than the single record
+
+    BufferedMutatorImpl ht = new BufferedMutatorImpl(conn, null, null, bufferParam);
+    ht.ap = ap;
+
+    // Verify if BufferedMutator has the right settings.
+    Assert.assertEquals(10000, ht.getWriteBufferSize());
+    Assert.assertEquals(1, ht.getWriteBufferPeriodicFlushTimeoutMs());
+    Assert.assertEquals(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS,
+            ht.getWriteBufferPeriodicFlushTimerTickMs());
+
+    Put put = createPut(1, true);
+
+    Assert.assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // ----- Insert, flush immediately, MUST NOT flush automatically
+    ht.mutate(put);
+    ht.flush();
+
+    Thread.sleep(1000);
+    Assert.assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // ----- Insert, NO flush, MUST flush automatically
+    ht.mutate(put);
+    Assert.assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+
+    // The timerTick should fire every 100ms, so after twice that we must have
+    // seen at least 1 tick and we should see an automatic flush
+    Thread.sleep(200);
+    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // Ensure it does not flush twice
+    Thread.sleep(200);
+    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+
+    // ----- DISABLE AUTO FLUSH, Insert, NO flush, MUST NOT flush automatically
+    ht.disableWriteBufferPeriodicFlush();
+    ht.mutate(put);
+    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+
+    // Wait for at least 1 timerTick, we should see NO flushes.
+    Thread.sleep(200);
+    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+
+    // Reenable periodic flushing, a flush seems to take about 1 second
+    // so we wait for 2 seconds and it should have finished the flush.
+    ht.setWriteBufferPeriodicFlush(1, 100);
+    Thread.sleep(2000);
+    Assert.assertEquals(2, ht.getExecutedWriteBufferPeriodicFlushes());
+    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+  }
+
+  @Test
   public void testTaskCheckerHost() throws IOException {
     final int maxTotalConcurrentTasks = 100;
     final int maxConcurrentTasksPerServer = 2;
@@ -1602,6 +1714,12 @@ public class TestAsyncProcess {
     MyAsyncProcessWithReplicas ap = new MyAsyncProcessWithReplicas(conn, conf);
     ap.setCallDelays(primaryMs, replicaMs);
     return ap;
+  }
+
+  private static BufferedMutatorParams createBufferedMutatorParams(MyAsyncProcess ap,
+                                                                   TableName name) {
+    return new BufferedMutatorParams(name)
+            .pool(ap.pool);
   }
 
   private static List<Get> makeTimelineGets(byte[]... rows) {

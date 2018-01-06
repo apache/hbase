@@ -15,7 +15,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.BufferedMutatorParams.UNSET;
 import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -24,18 +38,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p>
@@ -75,8 +77,19 @@ public class BufferedMutatorImpl implements BufferedMutator {
    * The {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
    */
   @VisibleForTesting
-  AtomicInteger undealtMutationCount = new AtomicInteger(0);
+  final AtomicInteger undealtMutationCount = new AtomicInteger(0);
   private long writeBufferSize;
+  /**
+   * Having the timer tick run more often that once every 100ms is needless and will
+   * probably cause too many timer events firing having a negative impact on performance.
+   */
+  public static final long MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS = 100;
+
+  private final AtomicLong writeBufferPeriodicFlushTimeoutMs = new AtomicLong(0);
+  private final AtomicLong writeBufferPeriodicFlushTimerTickMs =
+          new AtomicLong(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+  private Timer writeBufferPeriodicFlushTimer = null;
+
   private final int maxKeyValueSize;
   private boolean closed = false;
   private final ExecutorService pool;
@@ -101,6 +114,20 @@ public class BufferedMutatorImpl implements BufferedMutator {
     ConnectionConfiguration tableConf = new ConnectionConfiguration(conf);
     this.writeBufferSize = params.getWriteBufferSize() != BufferedMutatorParams.UNSET ?
         params.getWriteBufferSize() : tableConf.getWriteBufferSize();
+
+    // Set via the setter because it does value validation and starts/stops the TimerTask
+    long newWriteBufferPeriodicFlushTimeoutMs =
+            params.getWriteBufferPeriodicFlushTimeoutMs() != UNSET
+                    ? params.getWriteBufferPeriodicFlushTimeoutMs()
+                    : tableConf.getWriteBufferPeriodicFlushTimeoutMs();
+    long newWriteBufferPeriodicFlushTimerTickMs =
+            params.getWriteBufferPeriodicFlushTimerTickMs() != UNSET
+                    ? params.getWriteBufferPeriodicFlushTimerTickMs()
+                    : tableConf.getWriteBufferPeriodicFlushTimerTickMs();
+    this.setWriteBufferPeriodicFlush(
+            newWriteBufferPeriodicFlushTimeoutMs,
+            newWriteBufferPeriodicFlushTimerTickMs);
+
     this.maxKeyValueSize = params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET ?
         params.getMaxKeyValueSize() : tableConf.getMaxKeyValueSize();
 
@@ -148,6 +175,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
       ++toAddCount;
     }
 
+    if (currentWriteBufferSize.get() == 0) {
+      firstRecordInBufferTimestamp.set(System.currentTimeMillis());
+    }
+
     // This behavior is highly non-intuitive... it does not protect us against
     // 94-incompatible behavior, which is a timing issue because hasError, the below code
     // and setter of hasError are not synchronized. Perhaps it should be removed.
@@ -169,6 +200,31 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
   }
 
+  @VisibleForTesting
+  protected long getExecutedWriteBufferPeriodicFlushes() {
+    return executedWriteBufferPeriodicFlushes.get();
+  }
+
+  private final AtomicLong firstRecordInBufferTimestamp = new AtomicLong(0);
+  private final AtomicLong executedWriteBufferPeriodicFlushes = new AtomicLong(0);
+
+  private void timerCallbackForWriteBufferPeriodicFlush() {
+    if (currentWriteBufferSize.get() == 0) {
+      return; // Nothing to flush
+    }
+    long now = System.currentTimeMillis();
+    if (firstRecordInBufferTimestamp.get() + writeBufferPeriodicFlushTimeoutMs.get() > now) {
+      return; // No need to flush yet
+    }
+    // The first record in the writebuffer has been in there too long --> flush
+    try {
+      executedWriteBufferPeriodicFlushes.incrementAndGet();
+      flush();
+    } catch (InterruptedIOException | RetriesExhaustedWithDetailsException e) {
+      LOG.error("Exception during timerCallbackForWriteBufferPeriodicFlush --> " + e.getMessage());
+    }
+  }
+
   // validate for well-formedness
   public void validatePut(final Put put) throws IllegalArgumentException {
     HTable.validatePut(put, maxKeyValueSize);
@@ -180,6 +236,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
       if (this.closed) {
         return;
       }
+
+      // Stop any running Periodic Flush timer.
+      disableWriteBufferPeriodicFlush();
+
       // As we can have an operation in progress even if the buffer is empty, we call
       // backgroundFlushCommits at least one time.
       backgroundFlushCommits(true);
@@ -284,6 +344,81 @@ public class BufferedMutatorImpl implements BufferedMutator {
     return this.writeBufferSize;
   }
 
+  /**
+   * Sets the maximum time before the buffer is automatically flushed.
+   * @param timeoutMs    The maximum number of milliseconds how long records may be buffered
+   *                     before they are flushed. Set to 0 to disable.
+   * @param timerTickMs  The number of milliseconds between each check if the
+   *                     timeout has been exceeded. Must be 100ms (as defined in
+   *                     {@link #MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS})
+   *                     or larger to avoid performance problems.
+   */
+  public synchronized void setWriteBufferPeriodicFlush(long timeoutMs, long timerTickMs) {
+    long originalTimeoutMs   = this.writeBufferPeriodicFlushTimeoutMs.get();
+    long originalTimerTickMs = this.writeBufferPeriodicFlushTimerTickMs.get();
+
+    // Both parameters have minimal values.
+    writeBufferPeriodicFlushTimeoutMs.set(Math.max(0, timeoutMs));
+    writeBufferPeriodicFlushTimerTickMs.set(
+            Math.max(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS, timerTickMs));
+
+    // If something changed we stop the old Timer.
+    if (writeBufferPeriodicFlushTimeoutMs.get() != originalTimeoutMs ||
+        writeBufferPeriodicFlushTimerTickMs.get() != originalTimerTickMs) {
+      if (writeBufferPeriodicFlushTimer != null) {
+        writeBufferPeriodicFlushTimer.cancel();
+        writeBufferPeriodicFlushTimer = null;
+      }
+    }
+
+    // If we have the need for a timer and there is none we start it
+    if (writeBufferPeriodicFlushTimer == null &&
+        writeBufferPeriodicFlushTimeoutMs.get() > 0) {
+      writeBufferPeriodicFlushTimer = new Timer(true); // Create Timer running as Daemon.
+      writeBufferPeriodicFlushTimer.schedule(new TimerTask() {
+        @Override
+        public void run() {
+          BufferedMutatorImpl.this.timerCallbackForWriteBufferPeriodicFlush();
+        }
+      }, writeBufferPeriodicFlushTimerTickMs.get(),
+         writeBufferPeriodicFlushTimerTickMs.get());
+    }
+  }
+
+  /**
+   * Disable periodic flushing of the write buffer.
+   */
+  public void disableWriteBufferPeriodicFlush() {
+    setWriteBufferPeriodicFlush(0, MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+  }
+
+  /**
+   * Sets the maximum time before the buffer is automatically flushed checking once per second.
+   * @param timeoutMs    The maximum number of milliseconds how long records may be buffered
+   *                     before they are flushed. Set to 0 to disable.
+   */
+  public void setWriteBufferPeriodicFlush(long timeoutMs) {
+    setWriteBufferPeriodicFlush(timeoutMs, 1000L);
+  }
+
+  /**
+   * Returns the current periodic flush timeout value in milliseconds.
+   * @return The maximum number of milliseconds how long records may be buffered before they
+   *   are flushed. The value 0 means this is disabled.
+   */
+  public long getWriteBufferPeriodicFlushTimeoutMs() {
+    return writeBufferPeriodicFlushTimeoutMs.get();
+  }
+
+  /**
+   * Returns the current periodic flush timertick interval in milliseconds.
+   * @return The number of milliseconds between each check if the timeout has been exceeded.
+   *   This value only has a real meaning if the timeout has been set to > 0
+   */
+  public long getWriteBufferPeriodicFlushTimerTickMs() {
+    return writeBufferPeriodicFlushTimerTickMs.get();
+  }
+
   public void setRpcTimeout(int writeRpcTimeout) {
     this.writeRpcTimeout = writeRpcTimeout;
     this.ap.setRpcTimeout(writeRpcTimeout);
@@ -292,6 +427,11 @@ public class BufferedMutatorImpl implements BufferedMutator {
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
     this.ap.setOperationTimeout(operationTimeout);
+  }
+
+  @VisibleForTesting
+  long getCurrentWriteBufferSize() {
+    return currentWriteBufferSize.get();
   }
 
   /**
