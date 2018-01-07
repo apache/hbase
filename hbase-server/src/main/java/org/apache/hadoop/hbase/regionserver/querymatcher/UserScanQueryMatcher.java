@@ -212,6 +212,9 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       case INCLUDE_AND_NEXT_COL:
         if (matchCode == MatchCode.INCLUDE) {
           matchCode = MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
+        // Update column tracker to next column, As we use the column hint from the tracker to seek
+        // to next cell
+          columns.doneWithColumn(cell);
         }
         break;
       case INCLUDE_AND_SEEK_NEXT_ROW:

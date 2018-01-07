@@ -207,12 +207,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
     return timestamp < oldestStamp;
   }
 
-  /**
-   * This method is used to inform the column tracker that we are done with this column. We may get
-   * this information from external filters or timestamp range and we then need to indicate this
-   * information to tracker. It is required only in case of ExplicitColumnTracker.
-   * @param cell
-   */
+  @Override
   public void doneWithColumn(Cell cell) {
     while (this.column != null) {
       int compare = CellUtil.compareQualifiers(cell, column.getBuffer(), column.getOffset(),
