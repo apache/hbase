@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,14 +30,14 @@ import org.junit.experimental.categories.Category;
 
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsZooKeeperSourceImpl {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsZooKeeperSourceImpl.class);
 
   @Test
-  public void testGetInstance() throws Exception {
-    MetricsZooKeeperSource zkSource = CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
+  public void testGetInstance() {
+    MetricsZooKeeperSource zkSource =
+            CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
     assertTrue(zkSource instanceof MetricsZooKeeperSourceImpl);
     assertSame(zkSource, CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class));
   }

@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Hadoop2 implementation of MetricsMasterSource.
@@ -61,9 +61,9 @@ public class MetricsMasterSourceImpl
   @Override
   public void init() {
     super.init();
-    clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
+    clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0L);
 
-    /**
+    /*
      * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
      * moving away from using Hadoop's metric2 to having independent HBase specific Metrics. Use
      * {@link BaseSourceImpl#registry} to register the new metrics.
@@ -92,8 +92,9 @@ public class MetricsMasterSourceImpl
               MASTER_ACTIVE_TIME_DESC), masterWrapper.getActiveTime())
           .addGauge(Interns.info(MASTER_START_TIME_NAME,
               MASTER_START_TIME_DESC), masterWrapper.getStartTime())
-          .addGauge(Interns.info(MASTER_FINISHED_INITIALIZATION_TIME_NAME, MASTER_FINISHED_INITIALIZATION_TIME_DESC),
-              masterWrapper.getMasterInitializationTime())
+          .addGauge(Interns.info(MASTER_FINISHED_INITIALIZATION_TIME_NAME,
+                  MASTER_FINISHED_INITIALIZATION_TIME_DESC),
+                  masterWrapper.getMasterInitializationTime())
           .addGauge(Interns.info(AVERAGE_LOAD_NAME, AVERAGE_LOAD_DESC),
               masterWrapper.getAverageLoad())
           .tag(Interns.info(LIVE_REGION_SERVERS_NAME, LIVE_REGION_SERVERS_DESC),
