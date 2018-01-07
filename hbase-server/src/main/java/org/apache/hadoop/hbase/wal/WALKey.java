@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.UUID;
 
 
@@ -57,7 +56,7 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
   /**
    * @return table name
    */
-  TableName getTablename();
+  TableName getTableName();
 
   /**
    * @return the write time
@@ -96,7 +95,7 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
    */
   default Map<String, Object> toStringMap() {
     Map<String, Object> stringMap = new HashMap<>();
-    stringMap.put("table", getTablename());
+    stringMap.put("table", getTableName());
     stringMap.put("region", Bytes.toStringBinary(getEncodedRegionName()));
     stringMap.put("sequence", getSequenceId());
     return stringMap;

@@ -100,7 +100,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
     try {
       hasEntry = readNext(e);
     } catch (IllegalArgumentException iae) {
-      TableName tableName = e.getKey().getTablename();
+      TableName tableName = e.getKey().getTableName();
       if (tableName != null && tableName.equals(TableName.OLD_ROOT_TABLE_NAME)) {
         // It is old ROOT table edit, ignore it
         LOG.info("Got an old ROOT edit, ignoring ");

@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
 
 @InterfaceAudience.Private
 public class ReplicationProtbufUtil {
@@ -116,7 +115,7 @@ public class ReplicationProtbufUtil {
           UnsafeByteOperations.unsafeWrap(encodedRegionName == null
             ? key.getEncodedRegionName()
             : encodedRegionName));
-      keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(key.getTablename().getName()));
+      keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(key.getTableName().getName()));
       long sequenceId = key.getSequenceId();
       keyBuilder.setLogSequenceNumber(sequenceId);
       keyBuilder.setWriteTime(key.getWriteTime());

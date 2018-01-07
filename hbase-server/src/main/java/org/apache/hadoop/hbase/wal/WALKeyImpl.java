@@ -352,7 +352,7 @@ public class WALKeyImpl implements WALKey {
 
   /** @return table name */
   @Override
-  public TableName getTablename() {
+  public TableName getTableName() {
     return tablename;
   }
 

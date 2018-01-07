@@ -600,7 +600,7 @@ public class SimpleRegionObserver implements RegionCoprocessor, RegionObserver {
   @Override
   public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
       RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
-    String tableName = logKey.getTablename().getNameAsString();
+    String tableName = logKey.getTableName().getNameAsString();
     if (tableName.equals(TABLE_SKIPPED)) {
       // skip recovery of TABLE_SKIPPED for testing purpose
       env.bypass();

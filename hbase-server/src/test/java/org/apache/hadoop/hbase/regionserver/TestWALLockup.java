@@ -590,14 +590,14 @@ public class TestWALLockup {
     @Override
     public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)
         throws IOException {
-      if (logKey.getTablename().getNameAsString().equalsIgnoreCase("sleep")) {
+      if (logKey.getTableName().getNameAsString().equalsIgnoreCase("sleep")) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
       }
-      if (logKey.getTablename().getNameAsString()
+      if (logKey.getTableName().getNameAsString()
           .equalsIgnoreCase("DamagedWALException")) {
         throw new DamagedWALException("Failed appending");
       }
