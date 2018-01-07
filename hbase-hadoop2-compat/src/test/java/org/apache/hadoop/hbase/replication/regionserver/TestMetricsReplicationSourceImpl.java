@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSource;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceImpl;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
@@ -30,9 +28,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MetricsTests.class, SmallTests.class})
-/** Test for MetricsReplicationSourceImpl */
 public class TestMetricsReplicationSourceImpl {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsReplicationSourceImpl.class);

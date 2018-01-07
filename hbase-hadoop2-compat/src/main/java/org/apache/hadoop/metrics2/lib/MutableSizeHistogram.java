@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Extended histogram implementation with counters for metric size ranges.

@@ -19,7 +19,6 @@
 package org.apache.hadoop.metrics2.lib;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.hbase.metrics.Snapshot;
@@ -27,6 +26,7 @@ import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A histogram implementation that runs in constant space, and exports to hadoop2's metrics2 system.

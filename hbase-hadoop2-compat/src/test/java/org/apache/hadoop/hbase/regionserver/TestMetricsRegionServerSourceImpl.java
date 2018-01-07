@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,18 +28,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- *  Test for MetricsRegionServerSourceImpl
- */
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRegionServerSourceImpl {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsRegionServerSourceImpl.class);
 
   @Test
-  public void testGetInstance() throws Exception {
+  public void testGetInstance() {
     MetricsRegionServerSourceFactory metricsRegionServerSourceFactory =
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
     MetricsRegionServerSource serverSource =
@@ -51,7 +47,7 @@ public class TestMetricsRegionServerSourceImpl {
 
 
   @Test(expected = RuntimeException.class)
-  public void testNoGetRegionServerMetricsSourceImpl() throws Exception {
+  public void testNoGetRegionServerMetricsSourceImpl() {
     // This should throw an exception because MetricsRegionServerSourceImpl should only
     // be created by a factory.
     CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceImpl.class);

@@ -19,20 +19,17 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
     implements MetricsHBaseServerSource {
-
-
   private final MetricsHBaseServerWrapper wrapper;
   private final MutableFastCounter authorizationSuccesses;
   private final MutableFastCounter authorizationFailures;
@@ -119,10 +116,14 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   }
 
   @Override
-  public void sentResponse(long count) { this.responseSize.add(count); }
+  public void sentResponse(long count) {
+    this.responseSize.add(count);
+  }
 
   @Override
-  public void receivedRequest(long count) { this.requestSize.add(count); }
+  public void receivedRequest(long count) {
+    this.requestSize.add(count);
+  }
 
   @Override
   public void dequeuedCall(int qTime) {

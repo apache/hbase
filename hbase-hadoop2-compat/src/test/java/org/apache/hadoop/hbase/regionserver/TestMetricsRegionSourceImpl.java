@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -31,15 +30,15 @@ import org.junit.experimental.categories.Category;
 
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRegionSourceImpl {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsRegionSourceImpl.class);
 
   @SuppressWarnings("SelfComparison")
   @Test
-  public void testCompareToHashCodeEquals() throws Exception {
-    MetricsRegionServerSourceFactory fact = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
+  public void testCompareToHashCodeEquals() {
+    MetricsRegionServerSourceFactory fact = CompatibilitySingletonFactory.getInstance(
+            MetricsRegionServerSourceFactory.class);
 
     MetricsRegionSource one = fact.createRegion(new RegionWrapperStub("TEST"));
     MetricsRegionSource oneClone = fact.createRegion(new RegionWrapperStub("TEST"));
@@ -49,15 +48,14 @@ public class TestMetricsRegionSourceImpl {
     assertEquals(one.hashCode(), oneClone.hashCode());
     assertNotEquals(one, two);
 
-    assertTrue( one.compareTo(two) != 0);
-    assertTrue( two.compareTo(one) != 0);
-    assertTrue( two.compareTo(one) != one.compareTo(two));
-    assertTrue( two.compareTo(two) == 0);
+    assertNotEquals(0, one.compareTo(two));
+    assertNotEquals(0, two.compareTo(one));
+    assertNotEquals(one.compareTo(two), two.compareTo(one));
+    assertEquals(0, two.compareTo(two));
   }
 
-
   @Test(expected = RuntimeException.class)
-  public void testNoGetRegionServerMetricsSourceImpl() throws Exception {
+  public void testNoGetRegionServerMetricsSourceImpl() {
     // This should throw an exception because MetricsRegionSourceImpl should only
     // be created by a factory.
     CompatibilitySingletonFactory.getInstance(MetricsRegionSource.class);
@@ -67,7 +65,7 @@ public class TestMetricsRegionSourceImpl {
 
     private String regionName;
 
-    public RegionWrapperStub(String regionName) {
+    RegionWrapperStub(String regionName) {
       this.regionName = regionName;
     }
 
