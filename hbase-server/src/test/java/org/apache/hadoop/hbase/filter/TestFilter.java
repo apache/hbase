@@ -142,7 +142,8 @@ public class TestFilter {
   @Before
   public void setUp() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
-    htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
+    HColumnDescriptor family0 = new HColumnDescriptor(FAMILIES[0]).setVersions(100, 100);
+    htd.addFamily(family0);
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[0]));
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
@@ -1858,6 +1859,65 @@ public class TestFilter {
     s.addFamily(FAMILIES[1]);
     s.setFilter(new ColumnPaginationFilter(2, QUALIFIERS_TWO[2]));
     this.verifyScanFull(s, expectedKVs3);
+  }
+
+  @Test
+  public void testLatestVersionFilterWithExplicitColumn() throws Exception {
+    // Add multiple versions
+    Put p = new Put(ROWS_ONE[0]);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]);
+    this.region.put(p);
+    p = new Put(ROWS_ONE[0]);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[1]);
+    this.region.put(p);
+    this.region.flush(true);
+    Scan s = new Scan();
+    s.setFilter(new FilterBase() {
+      @Override
+      public ReturnCode filterCell(Cell c) throws IOException {
+        return ReturnCode.INCLUDE_AND_NEXT_COL;
+      }
+    });
+    s.readVersions(100);
+    s.addColumn(FAMILIES[0], QUALIFIERS_ONE[0]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_ONE[1]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_ONE[2]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_ONE[3]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_TWO[0]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_TWO[1]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_TWO[2]);
+    s.addColumn(FAMILIES[0], QUALIFIERS_TWO[3]);
+    KeyValue[] kvs = {
+      // testRowOne-0
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[1]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+
+      // testRowOne-2
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+
+      // testRowOne-3
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+      // testRowTwo-0
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-2
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-3
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]), };
+    verifyScanFull(s, kvs);
+
   }
 
   @Test

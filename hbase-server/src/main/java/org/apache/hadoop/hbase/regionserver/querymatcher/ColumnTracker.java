@@ -126,4 +126,13 @@ public interface ColumnTracker extends ShipperListener {
    * @return <code>true</code> to early out based on timestamp.
    */
   boolean isDone(long timestamp);
+
+  /**
+   * This method is used to inform the column tracker that we are done with this column. We may get
+   * this information from external filters or timestamp range and we then need to indicate this
+   * information to tracker. It is currently implemented for ExplicitColumnTracker.
+   * @param cell
+   */
+  default void doneWithColumn(Cell cell) {
+  }
 }
