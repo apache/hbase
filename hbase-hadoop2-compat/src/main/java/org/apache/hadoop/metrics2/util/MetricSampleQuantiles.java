@@ -69,7 +69,7 @@ public class MetricSampleQuantiles {
   /**
    * Array of Quantiles that we care about, along with desired error.
    */
-  private final MetricQuantile quantiles[];
+  private final MetricQuantile[] quantiles;
 
   public MetricSampleQuantiles(MetricQuantile[] quantiles) {
     this.quantiles = Arrays.copyOf(quantiles, quantiles.length);
@@ -107,7 +107,7 @@ public class MetricSampleQuantiles {
   /**
    * Add a new value from the stream.
    * 
-   * @param v
+   * @param v the value to insert
    */
   synchronized public void insert(long v) {
     buffer[bufferCount] = v;
@@ -280,7 +280,7 @@ public class MetricSampleQuantiles {
     /**
      * Value of the sampled item (e.g. a measured latency value)
      */
-    public final long value;
+    private final long value;
     
     /**
      * Difference between the lowest possible rank of the previous item, and 
@@ -288,13 +288,13 @@ public class MetricSampleQuantiles {
      * 
      * The sum of the g of all previous items yields this item's lower bound. 
      */
-    public int g;
+    private int g;
     
     /**
      * Difference between the item's greatest possible rank and lowest possible
      * rank.
      */
-    public final int delta;
+    private final int delta;
 
     public SampleItem(long value, int lowerDelta, int delta) {
       this.value = value;

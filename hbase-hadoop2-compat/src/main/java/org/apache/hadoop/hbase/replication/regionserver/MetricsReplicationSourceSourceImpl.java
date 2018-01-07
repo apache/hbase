@@ -35,6 +35,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String shippedOpsKey;
   private String keyPrefix;
 
+  /**
+   * @deprecated since 1.3.0. Use {@link #shippedBytesKey} instead.
+   */
   @Deprecated
   private final String shippedKBsKey;
   private final String shippedBytesKey;

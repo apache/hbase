@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,18 +33,17 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsMasterSourceImpl {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestMetricsMasterSourceImpl.class);
 
   @Test
-  public void testGetInstance() throws Exception {
+  public void testGetInstance() {
     MetricsMasterSourceFactory metricsMasterSourceFactory = CompatibilitySingletonFactory
         .getInstance(MetricsMasterSourceFactory.class);
     MetricsMasterSource masterSource = metricsMasterSourceFactory.create(null);
     assertTrue(masterSource instanceof MetricsMasterSourceImpl);
-    assertSame(metricsMasterSourceFactory, CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class));
+    assertSame(metricsMasterSourceFactory, CompatibilitySingletonFactory.getInstance(
+            MetricsMasterSourceFactory.class));
   }
-
 }

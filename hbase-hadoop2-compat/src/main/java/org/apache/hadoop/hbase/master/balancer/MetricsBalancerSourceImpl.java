@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsBalancerSourceImpl extends BaseSourceImpl implements MetricsBalancerSource{
-
+public class MetricsBalancerSourceImpl extends BaseSourceImpl implements MetricsBalancerSource {
   private MetricHistogram blanceClusterHisto;
   private MutableFastCounter miscCount;
 
@@ -39,12 +38,10 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
-
   @Override
   public void init() {
     blanceClusterHisto = metricsRegistry.newTimeHistogram(BALANCE_CLUSTER);
     miscCount = metricsRegistry.newCounter(MISC_INVOATION_COUNT, "", 0L);
-
   }
 
   @Override
@@ -54,6 +51,6 @@ public class MetricsBalancerSourceImpl extends BaseSourceImpl implements Metrics
 
   @Override
   public void incrMiscInvocations() {
-     miscCount.incr();
+    miscCount.incr();
   }
 }

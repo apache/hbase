@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsAssignmentManagerSourceImpl
@@ -53,12 +53,12 @@ public class MetricsAssignmentManagerSourceImpl
   }
 
   public void init() {
-    ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, RIT_COUNT_DESC, 0l);
+    ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, RIT_COUNT_DESC, 0L);
     ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME,
-        RIT_COUNT_OVER_THRESHOLD_DESC,0l);
-    ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, RIT_OLDEST_AGE_DESC, 0l);
+        RIT_COUNT_OVER_THRESHOLD_DESC,0L);
+    ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, RIT_OLDEST_AGE_DESC, 0L);
     ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME, RIT_DURATION_DESC);
-    operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0l);
+    operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0L);
 
     /**
      * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is

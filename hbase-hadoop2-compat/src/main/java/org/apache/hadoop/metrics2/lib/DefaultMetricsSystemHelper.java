@@ -92,8 +92,8 @@ public class DefaultMetricsSystemHelper {
       }
     } catch (Exception ex) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Received exception while trying to access Hadoop Metrics classes via reflection.",
-            ex);
+        LOG.trace("Received exception while trying to access Hadoop Metrics classes via " +
+                        "reflection.", ex);
       }
     }
   }

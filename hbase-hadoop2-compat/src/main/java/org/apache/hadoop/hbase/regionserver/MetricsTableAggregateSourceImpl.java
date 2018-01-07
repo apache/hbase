@@ -20,17 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
-implements MetricsTableAggregateSource {
+        implements MetricsTableAggregateSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsTableAggregateSourceImpl.class);
   private ConcurrentHashMap<String, MetricsTableSource> tableSources = new ConcurrentHashMap<>();
