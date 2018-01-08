@@ -42,6 +42,8 @@ import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.CacheEvictionStats;
+import org.apache.hadoop.hbase.CacheEvictionStatsAggregator;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -97,6 +99,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearCompactionQueuesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearRegionBlockCacheResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -3386,5 +3390,52 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<CacheEvictionStats> clearBlockCache(TableName tableName) {
+    CompletableFuture<CacheEvictionStats> future = new CompletableFuture<>();
+    getTableHRegionLocations(tableName).whenComplete((locations, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      Map<ServerName, List<RegionInfo>> regionInfoByServerName =
+          locations.stream().filter(l -> l.getRegion() != null)
+              .filter(l -> !l.getRegion().isOffline()).filter(l -> l.getServerName() != null)
+              .collect(Collectors.groupingBy(l -> l.getServerName(),
+                Collectors.mapping(l -> l.getRegion(), Collectors.toList())));
+      List<CompletableFuture<CacheEvictionStats>> futures = new ArrayList<>();
+      CacheEvictionStatsAggregator aggregator = new CacheEvictionStatsAggregator();
+      for (Map.Entry<ServerName, List<RegionInfo>> entry : regionInfoByServerName.entrySet()) {
+        futures
+            .add(clearBlockCache(entry.getKey(), entry.getValue()).whenComplete((stats, err2) -> {
+              if (err2 != null) {
+                future.completeExceptionally(err2);
+              } else {
+                aggregator.append(stats);
+              }
+            }));
+      }
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+          .whenComplete((ret, err3) -> {
+            if (err3 != null) {
+              future.completeExceptionally(err3);
+            } else {
+              future.complete(aggregator.sum());
+            }
+          });
+    });
+    return future;
+  }
+
+  private CompletableFuture<CacheEvictionStats> clearBlockCache(ServerName serverName,
+      List<RegionInfo> hris) {
+    return this.<CacheEvictionStats> newAdminCaller().action((controller, stub) -> this
+      .<ClearRegionBlockCacheRequest, ClearRegionBlockCacheResponse, CacheEvictionStats> adminCall(
+        controller, stub, RequestConverter.buildClearRegionBlockCacheRequest(hris),
+        (s, c, req, done) -> s.clearRegionBlockCache(controller, req, done),
+        resp -> ProtobufUtil.toCacheEvictionStats(resp.getStats())))
+      .serverName(serverName).call();
   }
 }
