@@ -24,8 +24,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -47,6 +45,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.SnapshotQuotaObserverChore.SnapshotWithSize;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.NoFilesToDischarge;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -57,6 +56,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
@@ -239,13 +239,14 @@ public class TestSnapshotQuotaObserverChore {
     helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE);
     admin.flush(tn1);
 
-    final AtomicReference<Long> lastSeenSize = new AtomicReference<>();
+    final long snapshotSize = TEST_UTIL.getMiniHBaseCluster().getRegions(tn1).stream()
+        .flatMap(r -> r.getStores().stream()).mapToLong(HStore::getHFilesSize).sum();
+
     // Wait for the Master chore to run to see the usage (with a fudge factor)
     TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
       @Override
       boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        lastSeenSize.set(snapshot.getUsage());
-        return snapshot.getUsage() > 230L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
+        return snapshot.getUsage() == snapshotSize;
       }
     });
 
@@ -274,11 +275,15 @@ public class TestSnapshotQuotaObserverChore {
 
     // Test table should reflect it's original size since ingest was deterministic
     TEST_UTIL.waitFor(30_000, new SpaceQuotaSnapshotPredicate(conn, tn1) {
+      private final long regionSize = TEST_UTIL.getMiniHBaseCluster().getRegions(tn1).stream()
+          .flatMap(r -> r.getStores().stream()).mapToLong(HStore::getHFilesSize).sum();
+
       @Override
       boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        LOG.debug("Current usage=" + snapshot.getUsage() + " lastSeenSize=" + lastSeenSize.get());
-        return closeInSize(
-            snapshot.getUsage(), lastSeenSize.get(), SpaceQuotaHelperForTests.ONE_KILOBYTE);
+        LOG.debug("Current usage=" + snapshot.getUsage() + " snapshotSize=" + snapshotSize);
+        // The usage of table space consists of region size and snapshot size
+        return closeInSize(snapshot.getUsage(), snapshotSize + regionSize,
+            SpaceQuotaHelperForTests.ONE_KILOBYTE);
       }
     });
 
@@ -295,7 +300,7 @@ public class TestSnapshotQuotaObserverChore {
     sws = Iterables.getOnlyElement(snapshotsWithSize.get(tn1));
     assertEquals(snapshotName, sws.getName());
     // The snapshot should take up the size the table originally took up
-    assertEquals(lastSeenSize.get().longValue(), sws.getSize());
+    assertEquals(snapshotSize, sws.getSize());
   }
 
   @Test
