@@ -156,11 +156,13 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       filter.filterCell(cell));
   }
 
-  /*
-   * Call this when scan has filter. Decide the desired behavior by checkVersions's MatchCode
-   * and filterCell's ReturnCode. Cell may be skipped by filter, so the column versions
-   * in result may be less than user need. It will check versions again after filter.
+  /**
+   * Call this when scan has filter. Decide the desired behavior by checkVersions's MatchCode and
+   * filterCell's ReturnCode. Cell may be skipped by filter, so the column versions in result may be
+   * less than user need. It need to check versions again when filter and columnTracker both include
+   * the cell. <br/>
    *
+   * <pre>
    * ColumnChecker                FilterResponse               Desired behavior
    * INCLUDE                      SKIP                         SKIP
    * INCLUDE                      NEXT_COL                     SEEK_NEXT_COL or SEEK_NEXT_ROW
@@ -183,6 +185,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
    * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE                      INCLUDE_AND_SEEK_NEXT_ROW
    * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_NEXT_COL         INCLUDE_AND_SEEK_NEXT_ROW
    * INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW    INCLUDE_AND_SEEK_NEXT_ROW
+   * </pre>
    */
   private final MatchCode mergeFilterResponse(Cell cell, MatchCode matchCode,
       ReturnCode filterResponse) {
@@ -212,12 +215,10 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       case INCLUDE_AND_NEXT_COL:
         if (matchCode == MatchCode.INCLUDE) {
           matchCode = MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
-        // Update column tracker to next column, As we use the column hint from the tracker to seek
-        // to next cell
-          columns.doneWithColumn(cell);
         }
         break;
       case INCLUDE_AND_SEEK_NEXT_ROW:
+        matchCode = MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
         break;
       default:
         throw new RuntimeException("UNEXPECTED");
@@ -227,18 +228,24 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     assert matchCode == MatchCode.INCLUDE || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL
         || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
 
-    if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL
-        || matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
-      return matchCode;
-    }
-
-    // Now we will check versions again.
+    // We need to make sure that the number of cells returned will not exceed max version in scan
+    // when the match code is INCLUDE* case.
     if (curColCell == null || !CellUtil.matchingRowColumn(cell, curColCell)) {
       count = 0;
       curColCell = cell;
     }
     count += 1;
-    return count > versionsAfterFilter ? MatchCode.SEEK_NEXT_COL : MatchCode.INCLUDE;
+
+    if (count > versionsAfterFilter) {
+      return MatchCode.SEEK_NEXT_COL;
+    } else {
+      if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+        // Update column tracker to next column, As we use the column hint from the tracker to seek
+        // to next cell
+        columns.doneWithColumn(cell);
+      }
+      return matchCode;
+    }
   }
 
   protected abstract boolean isGet();
