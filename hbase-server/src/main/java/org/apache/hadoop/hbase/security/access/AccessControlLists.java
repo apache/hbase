@@ -490,7 +490,7 @@ public class AccessControlLists {
     return getPermissions(conf, tableName != null ? tableName.getName() : null, null);
   }
 
-  static ListMultimap<String, TablePermission> getNamespacePermissions(Configuration conf,
+  public static ListMultimap<String, TablePermission> getNamespacePermissions(Configuration conf,
       String namespace) throws IOException {
     return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null);
   }

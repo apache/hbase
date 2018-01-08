@@ -1,0 +1,378 @@
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.hadoop.hbase.rsgroup;
+
+import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.security.access.SecureTestUtil.AccessTestAction;
+import org.apache.hadoop.hbase.security.access.TableAuthManager;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@Category({SecurityTests.class})
+public class TestRSGroupsWithACL {
+  private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsWithACL.class);
+  private static TableName TEST_TABLE = TableName.valueOf("testtable1");
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static Configuration conf;
+
+  private static Connection systemUserConnection;
+  // user with all permissions
+  private static User SUPERUSER;
+  // user granted with all global permission
+  private static User USER_ADMIN;
+  // user with rw permissions on column family.
+  private static User USER_RW;
+  // user with read-only permissions
+  private static User USER_RO;
+  // user is table owner. will have all permissions on table
+  private static User USER_OWNER;
+  // user with create table permissions alone
+  private static User USER_CREATE;
+  // user with no permissions
+  private static User USER_NONE;
+  // user with admin rights on the column family
+  private static User USER_ADMIN_CF;
+
+  private static final String GROUP_ADMIN = "group_admin";
+  private static final String GROUP_CREATE = "group_create";
+  private static final String GROUP_READ = "group_read";
+  private static final String GROUP_WRITE = "group_write";
+
+  private static User USER_GROUP_ADMIN;
+  private static User USER_GROUP_CREATE;
+  private static User USER_GROUP_READ;
+  private static User USER_GROUP_WRITE;
+
+  private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
+
+  private static RSGroupAdminEndpoint rsGroupAdminEndpoint;
+
+  @Rule
+  public TestName name = new TestName();
+
+  @BeforeClass
+  public static void setupBeforeClass() throws Exception {
+    // setup configuration
+    conf = TEST_UTIL.getConfiguration();
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        RSGroupBasedLoadBalancer.class.getName());
+    // Enable security
+    SecureTestUtil.enableSecurity(conf);
+    // Verify enableSecurity sets up what we require
+    SecureTestUtil.verifyConfiguration(conf);
+
+    configureRSGroupAdminEndpoint(conf);
+
+    TEST_UTIL.startMiniCluster();
+    MasterCoprocessorHost cpHost =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
+    rsGroupAdminEndpoint = (RSGroupAdminEndpoint)
+        cpHost.findCoprocessor(RSGroupAdminEndpoint.class.getName());
+
+
+    // Wait for the ACL table to become available
+    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+
+    // create a set of test users
+    SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
+    USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
+    USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
+    USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
+    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
+    USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
+    USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
+    USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
+
+    USER_GROUP_ADMIN =
+        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+    USER_GROUP_CREATE =
+        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+    USER_GROUP_READ =
+        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+    USER_GROUP_WRITE =
+        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+
+    systemUserConnection = TEST_UTIL.getConnection();
+    setUpTableAndUserPermissions();
+  }
+
+  private static void setUpTableAndUserPermissions() throws Exception {
+    TableDescriptorBuilder tableBuilder = TableDescriptorBuilder.newBuilder(TEST_TABLE);
+    ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY);
+    cfd.setMaxVersions(100);
+    tableBuilder.addColumnFamily(cfd.build());
+    tableBuilder.setValue(TableDescriptorBuilder.OWNER, USER_OWNER.getShortName());
+    SecureTestUtil.createTable(TEST_UTIL, tableBuilder.build(),
+        new byte[][] { Bytes.toBytes("s") });
+
+    // Set up initial grants
+    SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
+        Permission.Action.ADMIN,
+        Permission.Action.CREATE,
+        Permission.Action.READ,
+        Permission.Action.WRITE);
+
+    SecureTestUtil.grantOnTable(TEST_UTIL, USER_RW.getShortName(),
+        TEST_TABLE, TEST_FAMILY, null,
+        Permission.Action.READ,
+        Permission.Action.WRITE);
+
+    // USER_CREATE is USER_RW plus CREATE permissions
+    SecureTestUtil.grantOnTable(TEST_UTIL, USER_CREATE.getShortName(),
+        TEST_TABLE, null, null,
+        Permission.Action.CREATE,
+        Permission.Action.READ,
+        Permission.Action.WRITE);
+
+    SecureTestUtil.grantOnTable(TEST_UTIL, USER_RO.getShortName(),
+        TEST_TABLE, TEST_FAMILY, null,
+        Permission.Action.READ);
+
+    SecureTestUtil.grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(),
+        TEST_TABLE, TEST_FAMILY,
+        null, Permission.Action.ADMIN, Permission.Action.CREATE);
+
+    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
+    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_CREATE), Permission.Action.CREATE);
+    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
+    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
+
+    assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
+    try {
+      assertEquals(5, AccessControlClient.getUserPermissions(systemUserConnection,
+          TEST_TABLE.toString()).size());
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
+    }
+  }
+
+  private static void cleanUp() throws Exception {
+    // Clean the _acl_ table
+    try {
+      SecureTestUtil.deleteTable(TEST_UTIL, TEST_TABLE);
+    } catch (TableNotFoundException ex) {
+      // Test deleted the table, no problem
+      LOG.info("Test deleted table " + TEST_TABLE);
+    }
+    // Verify all table/namespace permissions are erased
+    assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(
+        0,
+        AccessControlLists.getNamespacePermissions(conf,
+            TEST_TABLE.getNamespaceAsString()).size());
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    cleanUp();
+    TEST_UTIL.shutdownMiniCluster();
+    int total = TableAuthManager.getTotalRefCount();
+    assertTrue("Unexpected reference count: " + total, total == 0);
+  }
+
+  private static void configureRSGroupAdminEndpoint(Configuration conf) throws IOException {
+    String currentCoprocessors = conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    String coprocessors = RSGroupAdminEndpoint.class.getName();
+    if (currentCoprocessors != null) {
+      coprocessors += "," + currentCoprocessors;
+    }
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, coprocessors);
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        RSGroupBasedLoadBalancer.class.getName());
+  }
+
+  @Test
+  public void testGetRSGroupInfo() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("getRSGroupInfo");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testGetRSGroupInfoOfTable() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("getRSGroupInfoOfTable");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testMoveServers() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("moveServers");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testMoveTables() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("moveTables");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testAddRSGroup() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("addRSGroup");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testRemoveRSGroup() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("removeRSGroup");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testBalanceRSGroup() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("balanceRSGroup");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testListRSGroup() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("listRSGroup");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testGetRSGroupInfoOfServer() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("getRSGroupInfoOfServer");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+
+  @Test
+  public void testMoveServersAndTables() throws Exception {
+    AccessTestAction action = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        rsGroupAdminEndpoint.checkPermission("moveServersAndTables");
+        return null;
+      }
+    };
+
+    SecureTestUtil.verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    SecureTestUtil.verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
+}

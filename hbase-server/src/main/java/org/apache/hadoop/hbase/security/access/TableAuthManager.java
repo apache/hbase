@@ -754,7 +754,7 @@ public class TableAuthManager implements Closeable {
   }
 
   @VisibleForTesting
-  static int getTotalRefCount() {
+  public static int getTotalRefCount() {
     int total = 0;
     for (int count : refCount.values()) {
       total += count;

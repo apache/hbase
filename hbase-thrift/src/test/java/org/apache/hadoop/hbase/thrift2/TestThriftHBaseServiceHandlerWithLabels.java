@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -131,11 +131,7 @@ public class TestThriftHBaseServiceHandlerWithLabels {
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS,
         SimpleScanLabelGenerator.class, ScanLabelGenerator.class);
     conf.set("hbase.superuser", SUPERUSER.getShortName());
-    conf.set("hbase.coprocessor.master.classes",
-        VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes",
-        VisibilityController.class.getName());
-    conf.setInt("hfile.format.version", 3);
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     UTIL.startMiniCluster(1);
     // Wait for the labels table to become available
     UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);

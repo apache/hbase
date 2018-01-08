@@ -807,6 +807,10 @@ For an example of using both together, see <<security.example.config>>.
 [source,xml]
 ----
 <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
 </property>
@@ -1187,6 +1191,10 @@ NOTE: Visibility labels are not currently applied for superusers.
 [source,xml]
 ----
 <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
 </property>
@@ -1454,6 +1462,10 @@ As mentioned in the above sections, the interface `VisibilityLabelService` could
 [source,xml]
 ----
 <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.coprocessor.regionserver.classes</name>
   <value>org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication</value>
 </property>
@@ -1672,6 +1684,10 @@ To enable secure bulk load, add the following properties to _hbase-site.xml_.
 [source,xml]
 ----
 <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
   <name>hbase.bulkload.staging.dir</name>
   <value>/tmp/hbase-staging</value>
 </property>
@@ -1679,6 +1695,22 @@ To enable secure bulk load, add the following properties to _hbase-site.xml_.
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.token.TokenProvider,
   org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+</property>
+----
+
+[[hbase.secure.enable]]
+=== Secure Enable
+After hbase-2.x, the default 'hbase.security.authorization' changed.
+Before hbase-2.x, it defaulted to true, in later HBase versions, the
+default became false.
+So to enable hbase authorization, the following propertie must be configured in _hbase-site.xml_.
+See link:https://issues.apache.org/jira/browse/HBASE-19483[HBASE-19483];
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
 </property>
 ----
 
@@ -1703,6 +1735,10 @@ All options have been discussed separately in the sections above.
   <value>hbase, admin</value>
 </property>
 <!-- Coprocessors for ACLs and Visibility Tags -->
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController,
