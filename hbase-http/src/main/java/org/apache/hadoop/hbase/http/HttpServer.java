@@ -591,6 +591,9 @@ public class HttpServer implements FilterContainer {
     ctx.setContextPath("/");
     ctx.setWar(appDir + "/" + name);
     ctx.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+    // for org.apache.hadoop.metrics.MetricsServlet
+    ctx.getServletContext().setAttribute(
+      org.apache.hadoop.http.HttpServer2.CONF_CONTEXT_ATTRIBUTE, conf);
     ctx.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
     addNoCacheFilter(ctx);
     return ctx;
