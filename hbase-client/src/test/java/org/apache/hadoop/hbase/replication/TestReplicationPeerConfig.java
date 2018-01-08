@@ -43,5 +43,4 @@ public class TestReplicationPeerConfig {
 
     BuilderStyleTest.assertClassesAreBuilderStyle(ReplicationPeerConfig.class);
   }
-
 }

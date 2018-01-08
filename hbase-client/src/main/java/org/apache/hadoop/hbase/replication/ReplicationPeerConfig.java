@@ -315,6 +315,8 @@ public class ReplicationPeerConfig {
 
     @Override
     public ReplicationPeerConfig build() {
+      // It would be nice to validate the configuration, but we have to work with "old" data
+      // from ZK which makes it much more difficult.
       return new ReplicationPeerConfig(this);
     }
   }
