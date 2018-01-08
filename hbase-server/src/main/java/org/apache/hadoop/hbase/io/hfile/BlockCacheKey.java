@@ -68,7 +68,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   @Override
   public String toString() {
-    return String.format("%s_%d", hfileName, offset);
+    return this.hfileName + '_' + this.offset;
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
