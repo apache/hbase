@@ -47,13 +47,12 @@ public class RSGroupInfo {
 
   RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
     this.name = name;
-    this.servers = servers == null? new TreeSet<>(): servers;
-    this.servers.addAll(servers);
-    this.tables = new TreeSet<>(tables);
+    this.servers = (servers == null) ? new TreeSet<>() : new TreeSet<>(servers);
+    this.tables  = (tables  == null) ? new TreeSet<>() : new TreeSet<>(tables);
   }
 
   public RSGroupInfo(RSGroupInfo src) {
-    this(src.getName(), src.servers, src.tables);
+    this(src.name, src.servers, src.tables);
   }
 
   /**
