@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -206,15 +208,17 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
   public void testMatch_ExpiredWildcard() throws IOException {
 
     long testTTL = 1000;
-    MatchCode[] expected = new MatchCode[] { ScanQueryMatcher.MatchCode.INCLUDE,
-        ScanQueryMatcher.MatchCode.INCLUDE, ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
-        ScanQueryMatcher.MatchCode.INCLUDE, ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
-        ScanQueryMatcher.MatchCode.DONE };
+    MatchCode[] expected =
+        new MatchCode[] { ScanQueryMatcher.MatchCode.INCLUDE, ScanQueryMatcher.MatchCode.INCLUDE,
+          ScanQueryMatcher.MatchCode.SEEK_NEXT_COL, ScanQueryMatcher.MatchCode.INCLUDE,
+          ScanQueryMatcher.MatchCode.SEEK_NEXT_COL, ScanQueryMatcher.MatchCode.DONE };
 
     long now = EnvironmentEdgeManager.currentTime();
-    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam2, 0, 1,
-        testTTL, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
-      null, now - testTTL, now, null);
+    UserScanQueryMatcher qm =
+        UserScanQueryMatcher.create(scan,
+          new ScanInfo(this.conf, fam2, 0, 1, testTTL, KeepDeletedCells.FALSE,
+              HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+          null, now - testTTL, now, null);
 
     KeyValue[] kvs = new KeyValue[] { new KeyValue(row1, fam2, col1, now - 100, data),
         new KeyValue(row1, fam2, col2, now - 50, data),
@@ -234,6 +238,51 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     for (int i = 0; i < expected.length; i++) {
       LOG.debug("expected " + expected[i] + ", actual " + actual.get(i));
       assertEquals(expected[i], actual.get(i));
+    }
+  }
+
+  class TestFilter extends FilterBase {
+
+    @Override
+    public ReturnCode filterKeyValue(final Cell c) throws IOException {
+      return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
+    }
+  }
+
+  @Test
+  public void testMatchWhenFilterReturnsIncludeAndSeekNextRow() throws IOException {
+    List<MatchCode> expected = new ArrayList<>();
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
+
+    Scan scanWithFilter = new Scan(scan).setFilter(new TestFilter());
+
+    long now = EnvironmentEdgeManager.currentTime();
+
+    // scan with column 2,4,5
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(
+      scanWithFilter, new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE,
+          HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+      get.getFamilyMap().get(fam2), now - ttl, now, null);
+
+    List<KeyValue> memstore = new ArrayList<>();
+    // ColumnTracker will return INCLUDE_AND_SEEK_NEXT_COL , and filter will return
+    // INCLUDE_AND_SEEK_NEXT_ROW, so final match code will be INCLUDE_AND_SEEK_NEXT_ROW.
+    memstore.add(new KeyValue(row1, fam2, col2, 1, data));
+    memstore.add(new KeyValue(row2, fam1, col1, data));
+
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<>(memstore.size());
+    KeyValue k = memstore.get(0);
+    qm.setToNewRow(k);
+
+    for (KeyValue kv : memstore) {
+      actual.add(qm.match(kv));
+    }
+
+    assertEquals(expected.size(), actual.size());
+    for (int i = 0; i < expected.size(); i++) {
+      LOG.debug("expected " + expected.get(i) + ", actual " + actual.get(i));
+      assertEquals(expected.get(i), actual.get(i));
     }
   }
 }

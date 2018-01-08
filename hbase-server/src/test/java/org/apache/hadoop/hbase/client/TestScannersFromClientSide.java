@@ -31,6 +31,7 @@ import java.util.stream.IntStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,8 +41,10 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -813,6 +816,28 @@ public class TestScannersFromClientSide {
       try (ResultScanner scanner = table.getScanner(new Scan().setRaw(true))) {
         assertArrayEquals(value, scanner.next().getValue(FAMILY, QUALIFIER));
         assertNull(scanner.next());
+      }
+    }
+  }
+
+  @Test
+  public void testScanWithColumnsAndFilterAndVersion() throws IOException {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    try (Table table = TEST_UTIL.createTable(tableName, FAMILY, 4)) {
+      for (int i = 0; i < 4; i++) {
+        Put put = new Put(ROW);
+        put.addColumn(FAMILY, QUALIFIER, VALUE);
+        table.put(put);
+      }
+
+      Scan scan = new Scan();
+      scan.addColumn(FAMILY, QUALIFIER);
+      scan.setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIER)));
+      scan.readVersions(3);
+
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result result = scanner.next();
+        assertEquals(3, result.size());
       }
     }
   }
