@@ -698,8 +698,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
       try {
         TableName tableName = selected.getTableName();
         // possible DataBlockEncoding ids
-        int[] possibleIds = {0, 2, 3, 4, 7};
-        short id = (short) possibleIds[RandomUtils.nextInt(0, possibleIds.length)];
+        DataBlockEncoding[] possibleIds = {DataBlockEncoding.NONE, DataBlockEncoding.PREFIX,
+                DataBlockEncoding.DIFF, DataBlockEncoding.FAST_DIFF, DataBlockEncoding.ROW_INDEX_V1};
+        short id = possibleIds[RandomUtils.nextInt(0, possibleIds.length)].getId();
         LOG.info("Altering encoding of column family: " + columnDesc + " to: " + id +
             " in table: " + tableName);
 
