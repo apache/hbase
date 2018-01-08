@@ -55,8 +55,6 @@ public class TestInterfaceAlign {
     adminMethodNames.remove("getConfiguration");
     adminMethodNames.removeAll(getMethodNames(Abortable.class));
     adminMethodNames.removeAll(getMethodNames(Closeable.class));
-    // TODO: Remove this after HBASE-19139
-    adminMethodNames.remove("clearBlockCache");
 
     adminMethodNames.forEach(method -> {
       boolean contains = asyncAdminMethodNames.contains(method);

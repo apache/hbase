@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.RpcChannel;
+
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
@@ -27,6 +28,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+
+import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -1211,4 +1214,14 @@ public interface AsyncAdmin {
    * @return - returns a list of servers that not cleared wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<ServerName>> clearDeadServers(final List<ServerName> servers);
+
+  /**
+   * Clear all the blocks corresponding to this table from BlockCache. For expert-admins. Calling
+   * this API will drop all the cached blocks specific to a table from BlockCache. This can
+   * significantly impact the query performance as the subsequent queries will have to retrieve the
+   * blocks from underlying filesystem.
+   * @param tableName table to clear block cache
+   * @return CacheEvictionStats related to the eviction wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<CacheEvictionStats> clearBlockCache(final TableName tableName);
 }
