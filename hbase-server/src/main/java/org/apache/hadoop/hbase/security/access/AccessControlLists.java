@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -490,7 +491,8 @@ public class AccessControlLists {
     return getPermissions(conf, tableName != null ? tableName.getName() : null, null);
   }
 
-  static ListMultimap<String, TablePermission> getNamespacePermissions(Configuration conf,
+  @VisibleForTesting
+  public static ListMultimap<String, TablePermission> getNamespacePermissions(Configuration conf,
       String namespace) throws IOException {
     return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null);
   }

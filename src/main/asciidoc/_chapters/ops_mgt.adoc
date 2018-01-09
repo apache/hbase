@@ -2703,5 +2703,15 @@ Viewing the Master log will give you insight on rsgroup operation.
 
 If it appears stuck, restart the Master process.
 
+=== ACL
+To enable ACL, add the following to your hbase-site.xml and restart your Master:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+<property>
+----
 
 
