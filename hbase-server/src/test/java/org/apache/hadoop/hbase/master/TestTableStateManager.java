@@ -58,7 +58,7 @@ public class TestTableStateManager {
   @Test(timeout = 60000)
   public void testUpgradeFromZk() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.startMiniCluster(2, 1);
+    TEST_UTIL.startMiniCluster(1, 1);
     TEST_UTIL.shutdownMiniHBaseCluster();
     ZKWatcher watcher = TEST_UTIL.getZooKeeperWatcher();
     setTableStateInZK(watcher, tableName, ZooKeeperProtos.DeprecatedTableState.State.DISABLED);

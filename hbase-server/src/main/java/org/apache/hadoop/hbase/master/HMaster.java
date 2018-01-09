@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -524,12 +523,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       if (!conf.getBoolean("hbase.testing.nocluster", false)) {
-        setInitLatch(new CountDownLatch(1));
-        activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
-        int infoPort = putUpJettyServer();
-        startActiveMasterManager(infoPort);
+        this.activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
       } else {
-        activeMasterManager = null;
+        this.activeMasterManager = null;
       }
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
@@ -539,10 +535,27 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  // Main run loop. Calls through to the regionserver run loop.
+  // Main run loop. Calls through to the regionserver run loop AFTER becoming active Master; will
+  // block in here until then.
   @Override
   public void run() {
     try {
+      if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+        try {
+          int infoPort = putUpJettyServer();
+          startActiveMasterManager(infoPort);
+        } catch (Throwable t) {
+          // Make sure we log the exception.
+          String error = "Failed to become Active Master";
+          LOG.error(error, t);
+          // Abort should have been called already.
+          if (!isAborted()) {
+            abort(error, t);
+          }
+        }
+      }
+      // Fall in here even if we have been aborted. Need to run the shutdown services and
+      // the super run call will do this for us.
       super.run();
     } finally {
       if (this.clusterSchemaService != null) {
@@ -757,9 +770,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
-    activeMaster = true;
     Thread zombieDetector = new Thread(new InitializationMonitor(this),
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
+    zombieDetector.setDaemon(true);
     zombieDetector.start();
 
     /*
@@ -783,10 +796,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.tableDescriptors.getAll();
     }
 
-    // publish cluster ID
+    // Publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
-    this.initLatch.countDown();
 
     this.serverManager = createServerManager(this);
 
@@ -794,6 +806,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
+
+    // Set Master as active now after we've setup zk with stuff like whether cluster is up or not.
+    // RegionServers won't come up if the cluster status is not up.
+    this.activeMaster = true;
 
     // This is for backwards compatibility
     // See HBASE-11393
@@ -818,7 +834,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Wake up this server to check in
     sleeper.skipSleepCycle();
 
-    // Wait for region servers to report in
+    // Wait for region servers to report in.
+    // With this as part of master initialization, it precludes our being able to start a single
+    // server that is both Master and RegionServer. Needs more thought. TODO.
     String statusStr = "Wait for region servers to report in";
     status.setStatus(statusStr);
     LOG.info(Objects.toString(status));
@@ -1985,57 +2003,43 @@ public class HMaster extends HRegionServer implements MasterServices {
     * this node for us since it is ephemeral.
     */
     LOG.info("Adding backup master ZNode " + backupZNode);
-    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode,
-        serverName, infoPort)) {
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName, infoPort)) {
       LOG.warn("Failed create of " + backupZNode + " by " + serverName);
     }
-
-    activeMasterManager.setInfoPort(infoPort);
-    // Start a thread to try to become the active master, so we won't block here
-    Threads.setDaemonThreadRunning(new Thread(new Runnable() {
-      @Override
-      public void run() {
-        int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
-          HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
-        // If we're a backup master, stall until a primary to writes his address
-        if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
-          HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
-          LOG.debug("HMaster started in backup mode. "
-            + "Stalling until master znode is written.");
-          // This will only be a minute or so while the cluster starts up,
-          // so don't worry about setting watches on the parent znode
-          while (!activeMasterManager.hasActiveMaster()) {
-            LOG.debug("Waiting for master address ZNode to be written "
-              + "(Also watching cluster state node)");
-            Threads.sleep(timeout);
-          }
-        }
-        MonitoredTask status = TaskMonitor.get().createStatus("Master startup");
-        status.setDescription("Master startup");
-        try {
-          if (activeMasterManager.blockUntilBecomingActiveMaster(timeout, status)) {
-            finishActiveMasterInitialization(status);
-          }
-        } catch (Throwable t) {
-          status.setStatus("Failed to become active: " + t.getMessage());
-          LOG.error(HBaseMarkers.FATAL, "Failed to become active master", t);
-          // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
-          if (t instanceof NoClassDefFoundError &&
-            t.getMessage()
-              .contains("org/apache/hadoop/hdfs/protocol/HdfsConstants$SafeModeAction")) {
-            // improved error message for this special case
-            abort("HBase is having a problem with its Hadoop jars.  You may need to "
-              + "recompile HBase against Hadoop version "
-              + org.apache.hadoop.util.VersionInfo.getVersion()
-              + " or change your hadoop jars to start properly", t);
-          } else {
-            abort("Unhandled exception. Starting shutdown.", t);
-          }
-        } finally {
-          status.cleanup();
-        }
+    this.activeMasterManager.setInfoPort(infoPort);
+    int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT, HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
+    // If we're a backup master, stall until a primary to write this address
+    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP, HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+      LOG.debug("HMaster started in backup mode. Stalling until master znode is written.");
+      // This will only be a minute or so while the cluster starts up,
+      // so don't worry about setting watches on the parent znode
+      while (!activeMasterManager.hasActiveMaster()) {
+        LOG.debug("Waiting for master address and cluster state znode to be written.");
+        Threads.sleep(timeout);
       }
-    }, getServerName().toShortString() + ".masterManager"));
+    }
+    MonitoredTask status = TaskMonitor.get().createStatus("Master startup");
+    status.setDescription("Master startup");
+    try {
+      if (activeMasterManager.blockUntilBecomingActiveMaster(timeout, status)) {
+        finishActiveMasterInitialization(status);
+      }
+    } catch (Throwable t) {
+      status.setStatus("Failed to become active: " + t.getMessage());
+      LOG.error(HBaseMarkers.FATAL, "Failed to become active master", t);
+      // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
+      if (t instanceof NoClassDefFoundError && t.getMessage().
+          contains("org/apache/hadoop/hdfs/protocol/HdfsConstants$SafeModeAction")) {
+        // improved error message for this special case
+        abort("HBase is having a problem with its Hadoop jars.  You may need to recompile " +
+          "HBase against Hadoop version " + org.apache.hadoop.util.VersionInfo.getVersion() +
+          " or change your hadoop jars to start properly", t);
+      } else {
+        abort("Unhandled exception. Starting shutdown.", t);
+      }
+    } finally {
+      status.cleanup();
+    }
   }
 
   private void checkCompression(final TableDescriptor htd)

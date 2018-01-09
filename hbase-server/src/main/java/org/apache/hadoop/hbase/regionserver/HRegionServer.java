@@ -243,7 +243,6 @@ public class HRegionServer extends HasThread implements
   protected MemStoreFlusher cacheFlusher;
 
   protected HeapMemoryManager hMemManager;
-  protected CountDownLatch initLatch = null;
 
   /**
    * Cluster connection to be shared by services.
@@ -696,10 +695,6 @@ public class HRegionServer extends HasThread implements
     return null;
   }
 
-  protected void setInitLatch(CountDownLatch latch) {
-    this.initLatch = latch;
-  }
-
   /*
    * Returns true if configured hostname should be used
    */
@@ -853,8 +848,6 @@ public class HRegionServer extends HasThread implements
     // Wait on cluster being up.  Master will set this flag up in zookeeper
     // when ready.
     blockAndCheckIfStopped(this.clusterStatusTracker);
-
-    doLatch(this.initLatch);
 
     // Retrieve clusterId
     // Since cluster status is now up
