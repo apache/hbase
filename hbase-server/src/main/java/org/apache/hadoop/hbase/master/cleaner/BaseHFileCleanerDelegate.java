@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Base class for the hfile cleaning function inside the master. By default, only the
  * {@link TimeToLiveHFileCleaner} is called.
  * <p>
- * If other effects are needed, implement your own LogCleanerDelegate and add it to the
+ * If other effects are needed, implement your own HFileCleanerDelegate and add it to the
  * configuration "hbase.master.hfilecleaner.plugins", which is a comma-separated list of fully
  * qualified class names. The <code>HFileCleaner</code> will build the cleaner chain in
  * order the order specified by the configuration.

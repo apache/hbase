@@ -41,7 +41,7 @@ public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
   private boolean stopped = false;
 
   @Override
-  public boolean isLogDeletable(FileStatus fStat) {
+  public boolean isFileDeletable(FileStatus fStat) {
     // Files are validated for the second time here,
     // if it causes a bottleneck this logic needs refactored
     if (!AbstractFSWALProvider.validateWALFilename(fStat.getPath().getName())) {
