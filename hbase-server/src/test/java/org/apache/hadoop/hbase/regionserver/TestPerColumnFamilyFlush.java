@@ -236,7 +236,6 @@ public class TestPerColumnFamilyFlush {
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSize, oldCF3MemstoreSize);
     assertEquals(totalMemstoreSize, cf3MemstoreSize.getDataSize());
-    assertEquals(smallestSeqInRegionCurrentMemstore, smallestSeqCF3);
 
     // What happens when we hit the memstore limit, but we are not able to find
     // any Column Family above the threshold?
