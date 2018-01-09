@@ -37,9 +37,12 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+
+@Ignore // See HBASE-19742 for issue on reenabling.
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMemstoreLABWithoutPool {
   private final static Configuration conf = new Configuration();
