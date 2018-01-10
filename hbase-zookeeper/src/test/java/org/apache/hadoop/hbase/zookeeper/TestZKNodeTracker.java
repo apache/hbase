@@ -129,9 +129,9 @@ public class TestZKNodeTracker {
 
     // Create a completely separate zk connection for test triggers and avoid
     // any weird watcher interactions from the test
-    final ZooKeeper zkconn =
-        new ZooKeeper(ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()), 60000, e -> {
-        });
+    final ZooKeeper zkconn = ZooKeeperHelper.
+        getConnectedZooKeeper(ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()),
+            60000);
 
     // Add the node with data one
     zkconn.create(node, dataOne, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);

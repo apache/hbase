@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -28,7 +27,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeperMain;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 
 /**
  * Tool for running ZookeeperMain from HBase by  reading a ZooKeeper server
@@ -52,15 +50,9 @@ public class ZKMainServer {
       super(args);
       // Make sure we are connected before we proceed. Can take a while on some systems. If we
       // run the command without being connected, we get ConnectionLoss KeeperErrorConnection...
-      Stopwatch stopWatch = Stopwatch.createStarted();
-      while (!this.zk.getState().isConnected()) {
-        Thread.sleep(1);
-        if (stopWatch.elapsed(TimeUnit.SECONDS) > 10) {
-          throw new InterruptedException("Failed connect after waiting " +
-              stopWatch.elapsed(TimeUnit.SECONDS) + "seconds; state=" + this.zk.getState() +
-              "; " + this.zk);
-        }
-      }
+      // Make it 30seconds. We dont' have a config in this context and zk doesn't have
+      // a timeout until after connection. 30000ms is default for zk.
+      ZooKeeperHelper.ensureConnectedZooKeeper(this.zk, 30000);
     }
 
     /**

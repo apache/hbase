@@ -96,6 +96,9 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <additionalClasspathElements>
+            <additionalClasspathElement>src/test/resources</additionalClasspathElement>
+          </additionalClasspathElements>
           <properties>
             <property>
               <name>listener</name>
