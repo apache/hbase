@@ -237,15 +237,21 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     count += 1;
 
     if (count > versionsAfterFilter) {
-      return MatchCode.SEEK_NEXT_COL;
-    } else {
-      if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-        // Update column tracker to next column, As we use the column hint from the tracker to seek
-        // to next cell
-        columns.doneWithColumn(cell);
+      // when the number of cells exceed max version in scan, we should return SEEK_NEXT_COL match
+      // code, but if current code is INCLUDE_AND_SEEK_NEXT_ROW, we can optimize to choose the max
+      // step between SEEK_NEXT_COL and INCLUDE_AND_SEEK_NEXT_ROW, which is SEEK_NEXT_ROW.
+      if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+        matchCode = MatchCode.SEEK_NEXT_ROW;
+      } else {
+        matchCode = MatchCode.SEEK_NEXT_COL;
       }
-      return matchCode;
     }
+    if (matchCode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL || matchCode == MatchCode.SEEK_NEXT_COL) {
+      // Update column tracker to next column, As we use the column hint from the tracker to seek
+      // to next cell (HBASE-19749)
+      columns.doneWithColumn(cell);
+    }
+    return matchCode;
   }
 
   protected abstract boolean isGet();

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -241,7 +242,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     }
   }
 
-  class TestFilter extends FilterBase {
+  private class AlwaysIncludeAndSeekNextRowFilter extends FilterBase {
 
     @Override
     public ReturnCode filterKeyValue(final Cell c) throws IOException {
@@ -255,7 +256,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
-    Scan scanWithFilter = new Scan(scan).setFilter(new TestFilter());
+    Scan scanWithFilter = new Scan(scan).setFilter(new AlwaysIncludeAndSeekNextRowFilter());
 
     long now = EnvironmentEdgeManager.currentTime();
 
@@ -284,5 +285,115 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
       LOG.debug("expected " + expected.get(i) + ", actual " + actual.get(i));
       assertEquals(expected.get(i), actual.get(i));
     }
+  }
+
+  private class AlwaysIncludeFilter extends FilterBase {
+    @Override
+    public ReturnCode filterKeyValue(final Cell c) throws IOException {
+      return ReturnCode.INCLUDE;
+    }
+  }
+
+  /**
+   * Here is the unit test for UserScanQueryMatcher#mergeFilterResponse, when the number of cells
+   * exceed the versions requested in scan, we should return SEEK_NEXT_COL, but if current match
+   * code is INCLUDE_AND_SEEK_NEXT_ROW, we can optimize to choose the max step between SEEK_NEXT_COL
+   * and INCLUDE_AND_SEEK_NEXT_ROW, which is SEEK_NEXT_ROW. <br/>
+   */
+  @Test
+  public void testMergeFilterResponseCase1() throws IOException {
+    List<MatchCode> expected = new ArrayList<>();
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.INCLUDE);
+    expected.add(MatchCode.SEEK_NEXT_ROW);
+
+    Scan scanWithFilter = new Scan(scan).setFilter(new AlwaysIncludeFilter()).readVersions(2);
+
+    long now = EnvironmentEdgeManager.currentTime();
+    // scan with column 2,4,5, the family with maxVersion = 3
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(
+      scanWithFilter, new ScanInfo(this.conf, fam2, 0, 3, ttl, KeepDeletedCells.FALSE,
+          HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+      get.getFamilyMap().get(fam2), now - ttl, now, null);
+
+    List<KeyValue> memstore = new ArrayList<>();
+    memstore.add(new KeyValue(row1, fam1, col5, 1, data)); // match code will be INCLUDE
+    memstore.add(new KeyValue(row1, fam1, col5, 2, data)); // match code will be INCLUDE
+
+    // match code will be SEEK_NEXT_ROW , which is max(INCLUDE_AND_SEEK_NEXT_ROW, SEEK_NEXT_COL).
+    memstore.add(new KeyValue(row1, fam1, col5, 3, data));
+
+    KeyValue k = memstore.get(0);
+    qm.setToNewRow(k);
+
+    for (int i = 0; i < memstore.size(); i++) {
+      assertEquals(expected.get(i), qm.match(memstore.get(i)));
+    }
+
+    scanWithFilter = new Scan(scan).setFilter(new AlwaysIncludeFilter()).readVersions(1);
+    qm = UserScanQueryMatcher.create(
+      scanWithFilter, new ScanInfo(this.conf, fam2, 0, 2, ttl, KeepDeletedCells.FALSE,
+          HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+      get.getFamilyMap().get(fam2), now - ttl, now, null);
+
+    List<KeyValue> memstore2 = new ArrayList<>();
+    memstore2.add(new KeyValue(row2, fam1, col2, 1, data)); // match code will be INCLUDE
+    // match code will be SEEK_NEXT_COL, which is max(INCLUDE_AND_SEEK_NEXT_COL, SEEK_NEXT_COL).
+    memstore2.add(new KeyValue(row2, fam1, col2, 2, data));
+
+    k = memstore2.get(0);
+    qm.setToNewRow(k);
+
+    assertEquals(MatchCode.INCLUDE, qm.match(memstore2.get(0)));
+    assertEquals(MatchCode.SEEK_NEXT_COL, qm.match(memstore2.get(1)));
+  }
+
+  /**
+   * Here is the unit test for UserScanQueryMatcher#mergeFilterResponse: the match code may be
+   * changed to SEEK_NEXT_COL or INCLUDE_AND_SEEK_NEXT_COL after merging with filterResponse, even
+   * if the passed match code is neither SEEK_NEXT_COL nor INCLUDE_AND_SEEK_NEXT_COL. In that case,
+   * we need to make sure that the ColumnTracker has been switched to the next column. <br/>
+   * An effective test way is: we only need to check the cell from getKeyForNextColumn(). because
+   * that as long as the UserScanQueryMatcher returns SEEK_NEXT_COL or INCLUDE_AND_SEEK_NEXT_COL,
+   * UserScanQueryMatcher#getKeyForNextColumn should return an cell whose column is larger than the
+   * current cell's.
+   */
+  @Test
+  public void testMergeFilterResponseCase2() throws Exception {
+    List<MatchCode> expected = new ArrayList<>();
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+
+    Scan scanWithFilter = new Scan(scan).setFilter(new AlwaysIncludeFilter()).readVersions(3);
+
+    long now = EnvironmentEdgeManager.currentTime();
+
+    // scan with column 2,4,5, the family with maxVersion = 5
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(
+      scanWithFilter, new ScanInfo(this.conf, fam2, 0, 5, ttl, KeepDeletedCells.FALSE,
+          HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+      get.getFamilyMap().get(fam2), now - ttl, now, null);
+
+    List<KeyValue> memstore = new ArrayList<>();
+
+    memstore.add(new KeyValue(row1, fam1, col2, 1, data)); // match code will be INCLUDE
+    memstore.add(new KeyValue(row1, fam1, col2, 2, data)); // match code will be INCLUDE
+    memstore.add(new KeyValue(row1, fam1, col2, 3, data)); // match code will be INCLUDE
+    memstore.add(new KeyValue(row1, fam1, col2, 4, data)); // match code will be SEEK_NEXT_COL
+
+    KeyValue k = memstore.get(0);
+    qm.setToNewRow(k);
+
+    for (int i = 0; i < memstore.size(); i++) {
+      assertEquals(expected.get(i), qm.match(memstore.get(i)));
+    }
+
+    // For last cell, the query matcher will return SEEK_NEXT_COL, and the
+    // ColumnTracker will skip to the next column, which is col4.
+    Cell lastCell = memstore.get(memstore.size() - 1);
+    Cell nextCell = qm.getKeyForNextColumn(lastCell);
+    assertArrayEquals(nextCell.getQualifierArray(), col4);
   }
 }
