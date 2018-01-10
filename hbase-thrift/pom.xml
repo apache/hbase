@@ -43,6 +43,12 @@
           <include>hbase-webapps/**</include>
         </includes>
       </resource>
+      <resource>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>**/*.thrift</include>
+        </includes>
+      </resource>
     </resources>
     <testResources>
       <testResource>
