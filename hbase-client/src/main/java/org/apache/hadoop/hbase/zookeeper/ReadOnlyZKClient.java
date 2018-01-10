@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -249,8 +250,8 @@ public final class ReadOnlyZKClient implements Closeable {
 
       @Override
       public void exec(ZooKeeper zk) {
-        zk.getData(path, false, (rc, path, ctx, data, stat) -> onComplete(zk, rc, data, true),
-          null);
+        zk.getData(path, false,
+            (rc, path, ctx, data, stat) -> onComplete(zk, rc, data, true), null);
       }
     });
     return future;
@@ -284,8 +285,17 @@ public final class ReadOnlyZKClient implements Closeable {
   private ZooKeeper getZk() throws IOException {
     // may be closed when session expired
     if (zookeeper == null || !zookeeper.getState().isAlive()) {
-      zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {
-      });
+      zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {});
+      int timeout = 10000;
+      try {
+        // Before returning, try and ensure we are connected. Don't wait long in case
+        // we are trying to connect to a cluster that is down. If we fail to connect,
+        // just catch the exception and carry-on. The first usage will fail and we'll
+        // cleanup.
+        zookeeper = ZooKeeperHelper.ensureConnectedZooKeeper(zookeeper, timeout);
+      } catch (ZooKeeperConnectionException e) {
+        LOG.warn("Failed connecting after waiting " + timeout + "ms; " + zookeeper);
+      }
     }
     return zookeeper;
   }

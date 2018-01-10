@@ -70,7 +70,8 @@ public class TestZKMainServer {
   public void testCommandLineWorks() throws Exception {
     System.setSecurityManager(new NoExitSecurityManager());
     HBaseZKTestingUtility htu = new HBaseZKTestingUtility();
-    htu.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
+    // Make it long so for sure succeeds.
+    htu.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 30000);
     htu.startMiniZKCluster();
     try {
       ZKWatcher zkw = htu.getZooKeeperWatcher();

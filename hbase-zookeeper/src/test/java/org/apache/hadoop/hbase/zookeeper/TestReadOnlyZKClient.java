@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,8 +67,8 @@ public class TestReadOnlyZKClient {
   public static void setUp() throws Exception {
     PORT = UTIL.startMiniZKCluster().getClientPort();
 
-    ZooKeeper zk = new ZooKeeper("localhost:" + PORT, 10000, e -> {
-    });
+    ZooKeeper zk = ZooKeeperHelper.
+        getConnectedZooKeeper("localhost:" + PORT, 10000);
     DATA = new byte[10];
     ThreadLocalRandom.current().nextBytes(DATA);
     zk.create(PATH, DATA, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -137,8 +137,8 @@ public class TestReadOnlyZKClient {
     UTIL.getZkCluster().getZooKeeperServers().get(0).closeSession(sessionId);
     // should not reach keep alive so still the same instance
     assertSame(zk, RO_ZK.getZooKeeper());
-
-    assertArrayEquals(DATA, RO_ZK.get(PATH).get());
+    byte [] got = RO_ZK.get(PATH).get();
+    assertArrayEquals(DATA, got);
     assertNotNull(RO_ZK.getZooKeeper());
     assertNotSame(zk, RO_ZK.getZooKeeper());
     assertNotEquals(sessionId, RO_ZK.getZooKeeper().getSessionId());
