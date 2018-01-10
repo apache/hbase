@@ -181,13 +181,14 @@ public class ProcedureExecutor<TEnvironment> {
           if (isDebugEnabled) {
             LOG.debug("Evict completed procedure: " + procInfo);
           }
-          store.delete(entry.getKey());
-          it.remove();
-
           NonceKey nonceKey = procInfo.getNonceKey();
-          if (nonceKey != null) {
+          // Nonce procedures aren't persisted in WAL.
+          if (nonceKey == null) {
+            store.delete(entry.getKey());
+          } else {
             nonceKeysToProcIdsMap.remove(nonceKey);
           }
+          it.remove();
         }
       }
     }
