@@ -190,6 +190,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -1669,7 +1670,7 @@ public class MasterRpcServices extends RSRpcServices
       // The AccessController can provide AUTHORIZATION and CELL_AUTHORIZATION
       if (master.cpHost != null &&
             master.cpHost.findCoprocessor(AccessController.class.getName()) != null) {
-        if (AccessController.isAuthorizationSupported(master.getConfiguration())) {
+        if (AccessChecker.isAuthorizationSupported(master.getConfiguration())) {
           capabilities.add(Capability.AUTHORIZATION);
         }
         if (AccessController.isCellAuthorizationSupported(master.getConfiguration())) {
