@@ -104,6 +104,7 @@ public class SecureTestUtil {
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     // Need HFile V3 for tags for security features
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     configureSuperuser(conf);
   }
 
@@ -126,6 +127,11 @@ public class SecureTestUtil {
     }
     if (conf.getInt(HFile.FORMAT_VERSION_KEY, 2) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
       throw new RuntimeException("Post 0.96 security features require HFile version >= 3");
+    }
+
+    if (!conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, false)) {
+      throw new RuntimeException("Post 1.5.0 security features require set "
+          + User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY + " to true");
     }
   }
 

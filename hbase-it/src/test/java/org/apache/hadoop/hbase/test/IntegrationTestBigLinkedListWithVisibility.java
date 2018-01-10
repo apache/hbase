@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
@@ -369,9 +370,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
     Configuration conf = util.getConfiguration();
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.set("hbase.superuser", User.getCurrent().getName());
     conf.setBoolean("dfs.permissions", false);
     USER = User.createUserForTesting(conf, userName, new String[] {});

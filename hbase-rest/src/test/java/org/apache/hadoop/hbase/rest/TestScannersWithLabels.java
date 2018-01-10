@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -130,10 +131,8 @@ public class TestScannersWithLabels {
     conf = TEST_UTIL.getConfiguration();
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS,
         SimpleScanLabelGenerator.class, ScanLabelGenerator.class);
-    conf.setInt("hfile.format.version", 3);
     conf.set("hbase.superuser", SUPERUSER.getShortName());
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     TEST_UTIL.startMiniCluster(1);
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);

@@ -782,6 +782,10 @@ For an example of using both together, see <<security.example.config>>.
 +
 [source,xml]
 ----
+ <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
@@ -1177,6 +1181,10 @@ NOTE: Visibility labels are not currently applied for superusers.
 <property>
   <name>hbase.coprocessor.master.classes</name>
   <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+</property>
+ <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
 </property>
 ----
 +
@@ -1651,6 +1659,10 @@ To enable secure bulk load, add the following properties to _hbase-site.xml_.
   <value>org.apache.hadoop.hbase.security.token.TokenProvider,
   org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
 </property>
+ <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
 ----
 
 [[security.example.config]]
@@ -1745,6 +1757,10 @@ All options have been discussed separately in the sections above.
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.token.TokenProvider,
   org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+</property>
+ <property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
 </property>
 ----
 ====

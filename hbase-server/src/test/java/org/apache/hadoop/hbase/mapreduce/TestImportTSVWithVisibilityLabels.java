@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,9 +118,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     conf = util.getConfiguration();
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     conf.set("hbase.superuser", "admin,"+User.getCurrent().getName());
-    conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
     util.setJobWithoutMRCluster();
