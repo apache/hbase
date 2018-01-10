@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class TestZKLeaderManager {
   }
 
   private static class MockLeader extends Thread implements Stoppable {
-    private boolean stopped;
+    private volatile boolean stopped;
     private ZKWatcher watcher;
     private ZKLeaderManager zkLeader;
     private AtomicBoolean master = new AtomicBoolean(false);
@@ -116,6 +117,7 @@ public class TestZKLeaderManager {
     public void stop(String why) {
       stopped = true;
       abdicate();
+      Threads.sleep(100);
       watcher.close();
     }
 
@@ -136,8 +138,9 @@ public class TestZKLeaderManager {
 
     // use an abortable to fail the test in the case of any KeeperExceptions
     MockAbortable abortable = new MockAbortable();
-    CANDIDATES = new MockLeader[3];
-    for (int i = 0; i < 3; i++) {
+    int count = 5;
+    CANDIDATES = new MockLeader[count];
+    for (int i = 0; i < count; i++) {
       ZKWatcher watcher = newZK(conf, "server"+i, abortable);
       CANDIDATES[i] = new MockLeader(watcher, i);
       CANDIDATES[i].start();
@@ -166,7 +169,6 @@ public class TestZKLeaderManager {
 
     // force a leader transition
     currentLeader.abdicate();
-    assertFalse(currentLeader.isMaster());
 
     // check for new leader
     currentLeader = getCurrentLeader();
@@ -184,7 +186,6 @@ public class TestZKLeaderManager {
 
     // force another transition by stopping the current
     currentLeader.stop("Stopping for test");
-    assertFalse(currentLeader.isMaster());
 
     // check for new leader
     currentLeader = getCurrentLeader();
@@ -202,7 +203,6 @@ public class TestZKLeaderManager {
 
     // with a second stop we can guarantee that a previous leader has resumed leading
     currentLeader.stop("Stopping for test");
-    assertFalse(currentLeader.isMaster());
 
     // check for new
     currentLeader = getCurrentLeader();
@@ -226,7 +226,7 @@ public class TestZKLeaderManager {
       if (currentLeader != null) {
         break outer;
       }
-      Thread.sleep(10);
+      Threads.sleep(100);
     }
     return currentLeader;
   }
