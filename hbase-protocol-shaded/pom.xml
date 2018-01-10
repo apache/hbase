@@ -38,6 +38,14 @@
     <internal.protobuf.version>3.3.0</internal.protobuf.version>
   </properties>
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/</directory>
+        <includes>
+          <include>**/*.proto</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
