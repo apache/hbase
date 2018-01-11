@@ -215,6 +215,10 @@ public class AccessController extends BaseMasterAndRegionObserver
   /** if the ACL table is available, only relevant in the master */
   private volatile boolean aclTabAvailable = false;
 
+  public static boolean isAuthorizationSupported(Configuration conf) {
+    return AccessChecker.isAuthorizationSupported(conf);
+  }
+
   public static boolean isCellAuthorizationSupported(Configuration conf) {
     return AccessChecker.isAuthorizationSupported(conf) &&
         (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS);
@@ -405,6 +409,106 @@ public class AccessController extends BaseMasterAndRegionObserver
       user = userProvider.getCurrent();
     }
     return user;
+  }
+
+  /**
+   * Authorizes that the current user has any of the given permissions for the
+   * given table, column family and column qualifier.
+   * @param tableName Table requested
+   * @param family Column family requested
+   * @param qualifier Column qualifier requested
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  public void requirePermission(String request, TableName tableName, byte[] family,
+      byte[] qualifier, Action... permissions) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), request,
+        tableName, family, qualifier, permissions);
+  }
+
+  /**
+   * Authorizes that the current user has any of the given permissions for the
+   * given table, column family and column qualifier.
+   * @param tableName Table requested
+   * @param family Column family param
+   * @param qualifier Column qualifier param
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  public void requireTablePermission(String request, TableName tableName, byte[] family,
+      byte[] qualifier, Action... permissions) throws IOException {
+    accessChecker.requireTablePermission(getActiveUser(), request,
+        tableName, family, qualifier, permissions);
+  }
+
+  /**
+   * Authorizes that the current user has any of the given permissions to access the table.
+   *
+   * @param tableName Table requested
+   * @param permissions Actions being requested
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  public void requireAccess(String request, TableName tableName,
+      Action... permissions) throws IOException {
+    accessChecker.requireAccess(getActiveUser(), request, tableName, permissions);
+  }
+
+  /**
+   * Authorizes that the current user has global privileges for the given action.
+   * @param perm The action being requested
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if authorization is denied
+   */
+  public void requirePermission(String request, Action perm) throws IOException {
+    accessChecker.requirePermission(getActiveUser(), request, perm);
+  }
+
+  /**
+   * Checks that the user has the given global permission. The generated
+   * audit log message will contain context information for the operation
+   * being authorized, based on the given parameters.
+   * @param perm Action being requested
+   * @param tableName Affected table name.
+   * @param familyMap Affected column families.
+   */
+  public void requireGlobalPermission(String request, Action perm, TableName tableName,
+      Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
+    accessChecker.requireGlobalPermission(getActiveUser(), request, perm, tableName, familyMap);
+  }
+
+  /**
+   * Checks that the user has the given global permission. The generated
+   * audit log message will contain context information for the operation
+   * being authorized, based on the given parameters.
+   * @param perm Action being requested
+   * @param namespace  The given namespace
+   */
+  public void requireGlobalPermission(String request, Action perm,
+      String namespace) throws IOException {
+    accessChecker.requireGlobalPermission(getActiveUser(), request, perm, namespace);
+  }
+
+  /**
+   * Checks that the user has the given global or namespace permission.
+   * @param namespace  The given namespace
+   * @param permissions Actions being requested
+   */
+  public void requireNamespacePermission(String request, String namespace,
+      Action... permissions) throws IOException {
+    accessChecker.requireNamespacePermission(getActiveUser(), request, namespace, permissions);
+  }
+
+  /**
+   * Checks that the user has the given global or namespace permission.
+   * @param namespace   The given namespace
+   * @param permissions Actions being requested
+   */
+  public void requireNamespacePermission(String request, String namespace, TableName tableName,
+      Map<byte[], ? extends Collection<byte[]>> familyMap, Action... permissions)
+      throws IOException {
+    accessChecker.requireNamespacePermission(getActiveUser(), request, namespace,
+        tableName, familyMap, permissions);
   }
 
   /**
@@ -708,7 +812,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     CompoundConfiguration conf = new CompoundConfiguration();
     conf.add(env.getConfiguration());
 
-    authorizationEnabled = AccessChecker.isAuthorizationSupported(conf);
+    authorizationEnabled = isAuthorizationSupported(conf);
     if (!authorizationEnabled) {
       LOG.warn("The AccessController has been loaded with authorization checks disabled.");
     }
@@ -761,7 +865,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
-    accessChecker.requireNamespacePermission(getActiveUser(),"createTable", desc.getTableName().getNamespaceAsString(),
+    requireNamespacePermission("createTable", desc.getTableName().getNamespaceAsString(),
         desc.getTableName(), familyMap, Action.CREATE);
   }
 
@@ -813,7 +917,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"deleteTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("deleteTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
@@ -834,7 +938,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       final TableName tableName) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
 
     final Configuration conf = c.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
@@ -872,7 +976,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HTableDescriptor htd) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"modifyTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("modifyTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
@@ -897,21 +1001,21 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor column) throws IOException {
-    accessChecker.requireTablePermission(getActiveUser(),"addColumn", tableName, column.getName(), null, Action.ADMIN,
+    requireTablePermission("addColumn", tableName, column.getName(), null, Action.ADMIN,
         Action.CREATE);
   }
 
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor descriptor) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"modifyColumn", tableName, descriptor.getName(), null, Action.ADMIN,
+    requirePermission("modifyColumn", tableName, descriptor.getName(), null, Action.ADMIN,
         Action.CREATE);
   }
 
   @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       byte[] col) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"deleteColumn", tableName, col, null, Action.ADMIN, Action.CREATE);
+    requirePermission("deleteColumn", tableName, col, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
@@ -931,7 +1035,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"enableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("enableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
@@ -945,7 +1049,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       throw new AccessDeniedException("Not allowed to disable "
           + AccessControlLists.ACL_TABLE_NAME + " table with AccessController installed");
     }
-    accessChecker.requirePermission(getActiveUser(),"disableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("disableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
@@ -956,7 +1060,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!procEnv.isProcedureOwner(procId, getActiveUser())) {
       // If the user is not the procedure owner, then we should further probe whether
       // he can abort the procedure.
-      accessChecker.requirePermission(getActiveUser(),"abortProcedure", Action.ADMIN);
+      requirePermission("abortProcedure", Action.ADMIN);
     }
   }
 
@@ -991,7 +1095,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         if (!ProcedureInfo.isProcedureOwner(procInfo, user)) {
           // If the user is not the procedure owner, then we should further probe whether
           // he can see the procedure.
-          accessChecker.requirePermission(getActiveUser(),"listProcedures", Action.ADMIN);
+          requirePermission("listProcedures", Action.ADMIN);
         }
       } catch (AccessDeniedException e) {
         itr.remove();
@@ -1002,31 +1106,31 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preMove(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo region,
       ServerName srcServer, ServerName destServer) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"move", region.getTable(), null, null, Action.ADMIN);
+    requirePermission("move", region.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"assign", regionInfo.getTable(), null, null, Action.ADMIN);
+    requirePermission("assign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
   public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo,
       boolean force) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"unassign", regionInfo.getTable(), null, null, Action.ADMIN);
+    requirePermission("unassign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
   public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
       HRegionInfo regionInfo) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"regionOffline", regionInfo.getTable(), null, null, Action.ADMIN);
+    requirePermission("regionOffline", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
   public boolean preSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final boolean newValue, final Admin.MasterSwitchType switchType) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"setSplitOrMergeEnabled", Action.ADMIN);
+    requirePermission("setSplitOrMergeEnabled", Action.ADMIN);
     return false;
   }
 
@@ -1038,26 +1142,26 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preBalance(ObserverContext<MasterCoprocessorEnvironment> c)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"balance", Action.ADMIN);
+    requirePermission("balance", Action.ADMIN);
   }
 
   @Override
   public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> c,
       boolean newValue) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"balanceSwitch", Action.ADMIN);
+    requirePermission("balanceSwitch", Action.ADMIN);
     return newValue;
   }
 
   @Override
   public void preShutdown(ObserverContext<MasterCoprocessorEnvironment> c)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"shutdown", Action.ADMIN);
+    requirePermission("shutdown", Action.ADMIN);
   }
 
   @Override
   public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> c)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"stopMaster", Action.ADMIN);
+    requirePermission("stopMaster", Action.ADMIN);
   }
 
   @Override
@@ -1076,7 +1180,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"snapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
+    requirePermission("snapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
       Permission.Action.ADMIN);
   }
 
@@ -1090,7 +1194,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           "Snapshot owner check allowed", user, null, null, null);
       accessChecker.logResult(result);
     } else {
-      accessChecker.requirePermission(getActiveUser(),"listSnapshot " + snapshot.getName(), Action.ADMIN);
+      requirePermission("listSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
@@ -1106,7 +1210,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         "Snapshot owner check allowed", user, null, hTableDescriptor.getTableName(), null);
       accessChecker.logResult(result);
     } else {
-      accessChecker.requirePermission(getActiveUser(),"cloneSnapshot " + snapshot.getName(), Action.ADMIN);
+      requirePermission("cloneSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
@@ -1115,10 +1219,10 @@ public class AccessController extends BaseMasterAndRegionObserver
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, getActiveUser())) {
-      accessChecker.requirePermission(getActiveUser(),"restoreSnapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
+      requirePermission("restoreSnapshot " + snapshot.getName(), hTableDescriptor.getTableName(), null, null,
         Permission.Action.ADMIN);
     } else {
-      accessChecker.requirePermission(getActiveUser(),"restoreSnapshot " + snapshot.getName(), Action.ADMIN);
+      requirePermission("restoreSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
@@ -1132,20 +1236,20 @@ public class AccessController extends BaseMasterAndRegionObserver
           "Snapshot owner check allowed", user, null, null, null);
       accessChecker.logResult(result);
     } else {
-      accessChecker.requirePermission(getActiveUser(),"deleteSnapshot " + snapshot.getName(), Action.ADMIN);
+      requirePermission("deleteSnapshot " + snapshot.getName(), Action.ADMIN);
     }
   }
 
   @Override
   public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
-    accessChecker.requireGlobalPermission(getActiveUser(),"createNamespace", Action.ADMIN, ns.getName());
+    requireGlobalPermission("createNamespace", Action.ADMIN, ns.getName());
   }
 
   @Override
   public void preDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace)
       throws IOException {
-    accessChecker.requireGlobalPermission(getActiveUser(),"deleteNamespace", Action.ADMIN, namespace);
+    requireGlobalPermission("deleteNamespace", Action.ADMIN, namespace);
   }
 
   @Override
@@ -1169,13 +1273,13 @@ public class AccessController extends BaseMasterAndRegionObserver
       NamespaceDescriptor ns) throws IOException {
     // We require only global permission so that
     // a user with NS admin cannot altering namespace configurations. i.e. namespace quota
-    accessChecker.requireGlobalPermission(getActiveUser(),"modifyNamespace", Action.ADMIN, ns.getName());
+    requireGlobalPermission("modifyNamespace", Action.ADMIN, ns.getName());
   }
 
   @Override
   public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace)
       throws IOException {
-    accessChecker.requireNamespacePermission(getActiveUser(),"getNamespaceDescriptor", namespace, Action.ADMIN);
+    requireNamespacePermission("getNamespaceDescriptor", namespace, Action.ADMIN);
   }
 
   @Override
@@ -1187,7 +1291,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     while (itr.hasNext()) {
       NamespaceDescriptor desc = itr.next();
       try {
-        accessChecker.requireNamespacePermission(getActiveUser(),"listNamespaces", desc.getName(), Action.ADMIN);
+        requireNamespacePermission("listNamespaces", desc.getName(), Action.ADMIN);
       } catch (AccessDeniedException e) {
         itr.remove();
       }
@@ -1197,7 +1301,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"flushTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("flushTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 
   /* ---- RegionObserver implementation ---- */
@@ -1214,7 +1318,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       if (regionInfo.getTable().isSystemTable()) {
         checkSystemOrSuperUser();
       } else {
-        accessChecker.requirePermission(getActiveUser(),"preOpen", Action.ADMIN);
+        requirePermission("preOpen", Action.ADMIN);
       }
     }
   }
@@ -1259,26 +1363,26 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"flush", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
+    requirePermission("flush", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
         Action.CREATE);
   }
 
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"split", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
+    requirePermission("split", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
 
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e,
       byte[] splitRow) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"split", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
+    requirePermission("split", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
       final Store store, final InternalScanner scanner, final ScanType scanType)
           throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
+    requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
         Action.CREATE);
     return scanner;
   }
@@ -1932,7 +2036,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
       List<Pair<byte[], String>> familyPaths) throws IOException {
     for(Pair<byte[],String> el : familyPaths) {
-      accessChecker.requirePermission(getActiveUser(),"preBulkLoadHFile",
+      requirePermission("preBulkLoadHFile",
           ctx.getEnvironment().getRegion().getTableDesc().getTableName(),
           el.getFirst(),
           null,
@@ -1950,7 +2054,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
                                  PrepareBulkLoadRequest request) throws IOException {
-    accessChecker.requireAccess(getActiveUser(),"prePareBulkLoad",
+    requireAccess("prePareBulkLoad",
         ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
   }
 
@@ -1964,7 +2068,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
                                  CleanupBulkLoadRequest request) throws IOException {
-    accessChecker.requireAccess(getActiveUser(),"preCleanupBulkLoad",
+    requireAccess("preCleanupBulkLoad",
         ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
   }
 
@@ -1976,7 +2080,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     // Don't intercept calls to our own AccessControlService, we check for
     // appropriate permissions in the service handlers
     if (shouldCheckExecPermission && !(service instanceof AccessControlService)) {
-      accessChecker.requirePermission(getActiveUser(),"invoke(" + service.getDescriptorForType().getName() + "." +
+      requirePermission("invoke(" + service.getDescriptorForType().getName() + "." +
         methodName + ")",
         getTableName(ctx.getEnvironment()), null, null,
         Action.EXEC);
@@ -2010,11 +2114,11 @@ public class AccessController extends BaseMasterAndRegionObserver
         switch(request.getUserPermission().getPermission().getType()) {
           case Global :
           case Table :
-            accessChecker.requirePermission(getActiveUser(),"grant", perm.getTableName(), perm.getFamily(),
+            requirePermission("grant", perm.getTableName(), perm.getFamily(),
               perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
-            accessChecker.requireNamespacePermission(getActiveUser(),"grant", perm.getNamespace(), Action.ADMIN);
+            requireNamespacePermission("grant", perm.getNamespace(), Action.ADMIN);
            break;
         }
 
@@ -2063,11 +2167,11 @@ public class AccessController extends BaseMasterAndRegionObserver
         switch(request.getUserPermission().getPermission().getType()) {
           case Global :
           case Table :
-            accessChecker.requirePermission(getActiveUser(),"revoke", perm.getTableName(), perm.getFamily(),
+            requirePermission("revoke", perm.getTableName(), perm.getFamily(),
               perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
-            accessChecker.requireNamespacePermission(getActiveUser(),"revoke", perm.getNamespace(), Action.ADMIN);
+            requireNamespacePermission("revoke", perm.getNamespace(), Action.ADMIN);
             break;
         }
 
@@ -2110,7 +2214,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         if (request.getType() == AccessControlProtos.Permission.Type.Table) {
           final TableName table = request.hasTableName() ?
             ProtobufUtil.toTableName(request.getTableName()) : null;
-          accessChecker.requirePermission(getActiveUser(),"userPermissions", table, null, null, Action.ADMIN);
+          requirePermission("userPermissions", table, null, null, Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
@@ -2119,7 +2223,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           });
         } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
           final String namespace = request.getNamespaceName().toStringUtf8();
-          accessChecker.requireNamespacePermission(getActiveUser(),"userPermissions", namespace, Action.ADMIN);
+          requireNamespacePermission("userPermissions", namespace, Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
@@ -2128,7 +2232,7 @@ public class AccessController extends BaseMasterAndRegionObserver
             }
           });
         } else {
-          accessChecker.requirePermission(getActiveUser(),"userPermissions", Action.ADMIN);
+          requirePermission("userPermissions", Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
@@ -2261,7 +2365,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preClose(ObserverContext<RegionCoprocessorEnvironment> e, boolean abortRequested)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"preClose", Action.ADMIN);
+    requirePermission("preClose", Action.ADMIN);
   }
 
   private void checkSystemOrSuperUser() throws IOException {
@@ -2280,7 +2384,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preStopRegionServer(
       ObserverContext<RegionServerCoprocessorEnvironment> env)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"preStopRegionServer", Action.ADMIN);
+    requirePermission("preStopRegionServer", Action.ADMIN);
   }
 
   private Map<byte[], ? extends Collection<byte[]>> makeFamilyMap(byte[] family,
@@ -2309,7 +2413,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         if (masterServices.getTableDescriptors().get(tableName) == null) {
           continue;
         }
-        accessChecker.requirePermission(getActiveUser(),"getTableDescriptors", tableName, null, null,
+        requirePermission("getTableDescriptors", tableName, null, null,
             Action.ADMIN, Action.CREATE);
       }
     }
@@ -2330,7 +2434,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     while (itr.hasNext()) {
       HTableDescriptor htd = itr.next();
       try {
-        accessChecker.requirePermission(getActiveUser(),"getTableDescriptors", htd.getTableName(), null, null,
+        requirePermission("getTableDescriptors", htd.getTableName(), null, null,
             Action.ADMIN, Action.CREATE);
       } catch (AccessDeniedException e) {
         itr.remove();
@@ -2346,7 +2450,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     while (itr.hasNext()) {
       HTableDescriptor htd = itr.next();
       try {
-        accessChecker.requireAccess(getActiveUser(),"getTableNames", htd.getTableName(), Action.values());
+        requireAccess("getTableNames", htd.getTableName(), Action.values());
       } catch (AccessDeniedException e) {
         itr.remove();
       }
@@ -2356,14 +2460,14 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionA, HRegionInfo regionB) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"mergeRegions", regionA.getTable(), null, null,
+    requirePermission("mergeRegions", regionA.getTable(), null, null,
       Action.ADMIN);
   }
 
   @Override
   public void preClearDeadServers(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"clearDeadServers", Action.ADMIN);
+    requirePermission("clearDeadServers", Action.ADMIN);
   }
 
   @Override
@@ -2373,7 +2477,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
       Region regionB) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"mergeRegions", regionA.getTableDesc().getTableName(), null, null,
+    requirePermission("mergeRegions", regionA.getTableDesc().getTableName(), null, null,
       Action.ADMIN);
   }
 
@@ -2400,7 +2504,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"preRollLogWriterRequest", Permission.Action.ADMIN);
+    requirePermission("preRollLogWriterRequest", Permission.Action.ADMIN);
   }
 
   @Override
@@ -2416,7 +2520,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       List<WALEntry> entries, CellScanner cells) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"replicateLogEntries", Action.WRITE);
+    requirePermission("replicateLogEntries", Action.WRITE);
   }
 
   @Override
@@ -2427,31 +2531,31 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String userName, final Quotas quotas) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"setUserQuota", Action.ADMIN);
+    requirePermission("setUserQuota", Action.ADMIN);
   }
 
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String userName, final TableName tableName, final Quotas quotas) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"setUserTableQuota", tableName, null, null, Action.ADMIN);
+    requirePermission("setUserTableQuota", tableName, null, null, Action.ADMIN);
   }
 
   @Override
   public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String userName, final String namespace, final Quotas quotas) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"setUserNamespaceQuota", Action.ADMIN);
+    requirePermission("setUserNamespaceQuota", Action.ADMIN);
   }
 
   @Override
   public void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName, final Quotas quotas) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"setTableQuota", tableName, null, null, Action.ADMIN);
+    requirePermission("setTableQuota", tableName, null, null, Action.ADMIN);
   }
 
   @Override
   public void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String namespace, final Quotas quotas) throws IOException {
-    accessChecker.requirePermission(getActiveUser(),"setNamespaceQuota", Action.ADMIN);
+    requirePermission("setNamespaceQuota", Action.ADMIN);
   }
 
   @Override
