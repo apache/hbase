@@ -23,6 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Allows creating a cell with {@link Tag}
+ * An instance of this type can be acquired using RegionCoprocessorEnvironment#getCellBuilder.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface RawCellBuilder extends CellBuilder {
