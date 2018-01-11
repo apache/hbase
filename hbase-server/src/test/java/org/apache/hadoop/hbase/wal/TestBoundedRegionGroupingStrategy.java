@@ -20,23 +20,24 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS;
 import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.NUM_REGION_GROUPS;
-import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.*;
+import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.DELEGATE_PROVIDER;
+import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.REGION_GROUPING_STRATEGY;
 import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.After;
@@ -179,12 +180,13 @@ public class TestBoundedRegionGroupingStrategy {
       FSUtils.setRootDir(CONF, TEST_UTIL.getDataTestDirOnTestFS());
 
       wals = new WALFactory(CONF, null, "setMembershipDedups");
-      final Set<WAL> seen = new HashSet<>(temp * 4);
-      final Random random = new Random();
+      Set<WAL> seen = new HashSet<>(temp * 4);
       int count = 0;
       // we know that this should see one of the wals more than once
       for (int i = 0; i < temp * 8; i++) {
-        final WAL maybeNewWAL = wals.getWAL(Bytes.toBytes(random.nextInt()), null);
+        WAL maybeNewWAL = wals.getWAL(RegionInfoBuilder
+            .newBuilder(TableName.valueOf("Table-" + ThreadLocalRandom.current().nextInt()))
+            .build());
         LOG.info("Iteration " + i + ", checking wal " + maybeNewWAL);
         if (seen.add(maybeNewWAL)) {
           count++;

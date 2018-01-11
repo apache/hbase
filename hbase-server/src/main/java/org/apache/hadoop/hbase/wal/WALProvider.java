@@ -22,11 +22,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-// imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The Write Ahead Log (WAL) stores all durable edits to the HRegion.
@@ -48,17 +47,17 @@ public interface WALProvider {
    * @param listeners may be null
    * @param providerId differentiate between providers from one factory. may be null
    */
-  void init(final WALFactory factory, final Configuration conf,
-      final List<WALActionsListener> listeners, final String providerId) throws IOException;
+  void init(WALFactory factory, Configuration conf, List<WALActionsListener> listeners,
+      String providerId) throws IOException;
 
   /**
-   * @param identifier may not be null. contents will not be altered.
-   * @param namespace could be null, and will use default namespace if null
+   * @param region the region which we want to get a WAL for it. Could be null.
    * @return a WAL for writing entries for the given region.
    */
-  WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException;
+  WAL getWAL(RegionInfo region) throws IOException;
 
-  /** @return the List of WALs that are used by this server
+  /**
+   * @return the List of WALs that are used by this server
    */
   List<WAL> getWALs();
 

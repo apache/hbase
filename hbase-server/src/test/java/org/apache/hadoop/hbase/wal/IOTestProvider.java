@@ -26,47 +26,45 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A WAL Provider that returns a single thread safe WAL that optionally can skip parts of our
- * normal interactions with HDFS.
- *
- * This implementation picks a directory in HDFS based on the same mechanisms as the 
- * {@link FSHLogProvider}. Users can configure how much interaction
- * we have with HDFS with the configuration property "hbase.wal.iotestprovider.operations".
- * The value should be a comma separated list of allowed operations:
+ * A WAL Provider that returns a single thread safe WAL that optionally can skip parts of our normal
+ * interactions with HDFS.
+ * <p>
+ * This implementation picks a directory in HDFS based on the same mechanisms as the
+ * {@link FSHLogProvider}. Users can configure how much interaction we have with HDFS with the
+ * configuration property "hbase.wal.iotestprovider.operations". The value should be a comma
+ * separated list of allowed operations:
  * <ul>
- *   <li><em>append</em>   : edits will be written to the underlying filesystem
- *   <li><em>sync</em>     : wal syncs will result in hflush calls
- *   <li><em>fileroll</em> : roll requests will result in creating a new file on the underlying
- *                           filesystem.
+ * <li><em>append</em> : edits will be written to the underlying filesystem</li>
+ * <li><em>sync</em> : wal syncs will result in hflush calls</li>
+ * <li><em>fileroll</em> : roll requests will result in creating a new file on the underlying
+ * filesystem.</li>
  * </ul>
- * Additionally, the special cases "all" and "none" are recognized.
- * If ommited, the value defaults to "all."
- * Behavior is undefined if "all" or "none" are paired with additional values. Behavior is also
- * undefined if values not listed above are included.
- *
- * Only those operations listed will occur between the returned WAL and HDFS. All others
- * will be no-ops.
- *
+ * Additionally, the special cases "all" and "none" are recognized. If ommited, the value defaults
+ * to "all." Behavior is undefined if "all" or "none" are paired with additional values. Behavior is
+ * also undefined if values not listed above are included.
+ * <p>
+ * Only those operations listed will occur between the returned WAL and HDFS. All others will be
+ * no-ops.
+ * <p>
  * Note that in the case of allowing "append" operations but not allowing "fileroll", the returned
  * WAL will just keep writing to the same file. This won't avoid all costs associated with file
  * management over time, becaue the data set size may result in additional HDFS block allocations.
- *
  */
 @InterfaceAudience.Private
 public class IOTestProvider implements WALProvider {
@@ -114,7 +112,7 @@ public class IOTestProvider implements WALProvider {
   }
 
   @Override
-  public WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException {
+  public WAL getWAL(RegionInfo region) throws IOException {
    return log;
   }
 

@@ -26,31 +26,33 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,20 +75,20 @@ public class TestStoreFileRefresherChore {
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
   }
 
-  private HTableDescriptor getTableDesc(TableName tableName, byte[]... families) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      // Set default to be three versions.
-      hcd.setMaxVersions(Integer.MAX_VALUE);
-      htd.addFamily(hcd);
-    }
-    return htd;
+  private TableDescriptor getTableDesc(TableName tableName, int regionReplication,
+      byte[]... families) {
+    TableDescriptorBuilder builder =
+        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
+    Arrays.stream(families).map(family -> ColumnFamilyDescriptorBuilder.newBuilder(family)
+        .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::addColumnFamily);
+    return builder.build();
   }
 
   static class FailingHRegionFileSystem extends HRegionFileSystem {
     boolean fail = false;
-    FailingHRegionFileSystem(Configuration conf, FileSystem fs, Path tableDir, HRegionInfo regionInfo) {
+
+    FailingHRegionFileSystem(Configuration conf, FileSystem fs, Path tableDir,
+        RegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
     }
 
@@ -99,21 +101,21 @@ public class TestStoreFileRefresherChore {
     }
   }
 
-  private HRegion initHRegion(HTableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
+  private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
       throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
 
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false, 0, replicaId);
-
-    HRegionFileSystem fs = new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir,
-      info);
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
+        .setEndKey(stopKey).setRegionId(0L).setReplicaId(replicaId).build();
+    HRegionFileSystem fs =
+        new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, null, "log_" + replicaId);
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegion region =
-        new HRegion(fs, wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()),
+        new HRegion(fs, wals.getWAL(info),
             conf, htd, null);
 
     region.initialize();
@@ -188,8 +190,7 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
-    HTableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), families);
-    htd.setRegionReplication(2);
+    TableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, families);
     HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);

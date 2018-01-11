@@ -2310,9 +2310,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     Configuration confForWAL = new Configuration(conf);
     confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
     return (new WALFactory(confForWAL,
-        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-        "hregion-" + RandomStringUtils.randomNumeric(8))).
-        getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
+        Collections.<WALActionsListener> singletonList(new MetricsWAL()),
+        "hregion-" + RandomStringUtils.randomNumeric(8))).getWAL(hri);
   }
 
   /**
