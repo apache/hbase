@@ -24,17 +24,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -100,23 +98,20 @@ public class TestWALActionsListener {
     list.add(observer);
     final WALFactory wals = new WALFactory(conf, list, "testActionListener");
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
-             SOME_BYTES, SOME_BYTES, false);
-    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(SOME_BYTES))
+        .setStartKey(SOME_BYTES).setEndKey(SOME_BYTES).build();
+    final WAL wal = wals.getWAL(hri);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     for (int i = 0; i < 20; i++) {
       byte[] b = Bytes.toBytes(i + "");
-      KeyValue kv = new KeyValue(b,b,b);
+      KeyValue kv = new KeyValue(b, b, b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(SOME_BYTES));
-      htd.addFamily(new HColumnDescriptor(b));
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(byte[] fam : htd.getFamiliesKeys()) {
-        scopes.put(fam, 0);
-      }
-      final long txid = wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
-          TableName.valueOf(b), 0, mvcc, scopes), edit, true);
+      scopes.put(b, 0);
+      long txid = wal.append(hri,
+        new WALKeyImpl(hri.getEncodedNameAsBytes(), TableName.valueOf(b), 0, mvcc, scopes), edit,
+        true);
       wal.sync(txid);
       if (i == 10) {
         wal.registerWALActionsListener(laterobserver);

@@ -20,6 +20,11 @@ package org.apache.hadoop.hbase.wal;
 
 import static com.codahale.metrics.MetricRegistry.name;
 
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.MetricRegistry;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,7 +35,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-
+import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -39,14 +44,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
@@ -70,12 +76,6 @@ import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.codahale.metrics.ConsoleReporter;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
 
 // imports for things that haven't moved from regionserver.wal yet.
 
@@ -131,11 +131,10 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     private final boolean noSync;
     private final HRegion region;
     private final int syncInterval;
-    private final HTableDescriptor htd;
     private final Sampler loopSampler;
     private final NavigableMap<byte[], Integer> scopes;
 
-    WALPutBenchmark(final HRegion region, final HTableDescriptor htd,
+    WALPutBenchmark(final HRegion region, final TableDescriptor htd,
         final long numIterations, final boolean noSync, final int syncInterval,
         final double traceFreq) {
       this.numIterations = numIterations;
@@ -143,9 +142,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       this.syncInterval = syncInterval;
       this.numFamilies = htd.getColumnFamilyCount();
       this.region = region;
-      this.htd = htd;
       scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(byte[] fam : htd.getFamiliesKeys()) {
+      for(byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
       }
       String spanReceivers = getConf().get("hbase.trace.spanreceiver.classes");
@@ -320,7 +318,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       if (rootRegionDir == null) {
         rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("WALPerformanceEvaluation");
       }
-      rootRegionDir = rootRegionDir.makeQualified(fs);
+      rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       cleanRegionRootDir(fs, rootRegionDir);
       FSUtils.setRootDir(getConf(), rootRegionDir);
       final WALFactory wals = new WALFactory(getConf(), null, "wals");
@@ -334,7 +332,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         for(int i = 0; i < numRegions; i++) {
           // Initialize Table Descriptor
           // a table per desired region means we can avoid carving up the key space
-          final HTableDescriptor htd = createHTableDescriptor(i, numFamilies);
+          final TableDescriptor htd = createHTableDescriptor(i, numFamilies);
           regions[i] = openRegion(fs, rootRegionDir, htd, wals, roll, roller);
           benchmarks[i] = TraceUtil.wrap(new WALPutBenchmark(regions[i], htd, numIterations, noSync,
               syncInterval, traceFreq), "");
@@ -401,14 +399,14 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     return(0);
   }
 
-  private static HTableDescriptor createHTableDescriptor(final int regionNum,
+  private static TableDescriptor createHTableDescriptor(final int regionNum,
       final int numFamilies) {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE_NAME + ":" + regionNum));
-    for (int i = 0; i < numFamilies; ++i) {
-      HColumnDescriptor colDef = new HColumnDescriptor(FAMILY_PREFIX + i);
-      htd.addFamily(colDef);
-    }
-    return htd;
+    TableDescriptorBuilder builder =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME + ":" + regionNum));
+    IntStream.range(0, numFamilies)
+        .mapToObj(i -> ColumnFamilyDescriptorBuilder.of(FAMILY_PREFIX + i))
+        .forEachOrdered(builder::addColumnFamily);
+    return builder.build();
   }
 
   /**
@@ -495,13 +493,12 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   private final Set<WAL> walsListenedTo = new HashSet<>();
 
-  private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd,
+  private HRegion openRegion(final FileSystem fs, final Path dir, final TableDescriptor htd,
       final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {
     // Initialize HRegion
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     // Initialize WAL
-    final WAL wal =
-        wals.getWAL(regionInfo.getEncodedNameAsBytes(), regionInfo.getTable().getNamespace());
+    final WAL wal = wals.getWAL(regionInfo);
     // If we haven't already, attach a listener to this wal to handle rolls and metrics.
     if (walsListenedTo.add(wal)) {
       roller.addWAL(wal);

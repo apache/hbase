@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -39,18 +38,19 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -68,6 +68,7 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -451,22 +452,16 @@ public class TestDefaultMemStore {
 
     final MultiVersionConcurrencyControl mvcc;
     final MemStore memstore;
-    final AtomicLong startSeqNum;
 
     AtomicReference<Throwable> caughtException;
 
 
-    public ReadOwnWritesTester(int id,
-                               MemStore memstore,
-                               MultiVersionConcurrencyControl mvcc,
-                               AtomicReference<Throwable> caughtException,
-                               AtomicLong startSeqNum)
-    {
+    public ReadOwnWritesTester(int id, MemStore memstore, MultiVersionConcurrencyControl mvcc,
+        AtomicReference<Throwable> caughtException) {
       this.mvcc = mvcc;
       this.memstore = memstore;
       this.caughtException = caughtException;
       row = Bytes.toBytes(id);
-      this.startSeqNum = startSeqNum;
     }
 
     @Override
@@ -505,14 +500,13 @@ public class TestDefaultMemStore {
 
   @Test
   public void testReadOwnWritesUnderConcurrency() throws Throwable {
-
     int NUM_THREADS = 8;
 
     ReadOwnWritesTester threads[] = new ReadOwnWritesTester[NUM_THREADS];
     AtomicReference<Throwable> caught = new AtomicReference<>();
 
     for (int i = 0; i < NUM_THREADS; i++) {
-      threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught, this.startSeqNum);
+      threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught);
       threads[i].start();
     }
 
@@ -921,7 +915,8 @@ public class TestDefaultMemStore {
       EnvironmentEdgeManager.injectEdge(edge);
       HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
       String cf = "foo";
-      HRegion region = hbaseUtility.createTestRegion("foobar", new HColumnDescriptor(cf));
+      HRegion region =
+          hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
 
       edge.setCurrentTimeMillis(1234);
       Put p = new Put(Bytes.toBytes("r"));
@@ -950,20 +945,16 @@ public class TestDefaultMemStore {
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, null, "1234");
-    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
+    HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
         conf, FSTableDescriptors.createMetaTableDescriptor(conf),
-        wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
-            getEncodedNameAsBytes()));
+        wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
     // parameterized tests add [#] suffix get rid of [ and ].
-    HRegionInfo hri =
-        new HRegionInfo(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")),
-        Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(
-        name.getMethodName().replaceAll("[\\[\\]]", "_")));
-    desc.addFamily(new HColumnDescriptor("foo".getBytes()));
-    HRegion r =
-        HRegion.createHRegion(hri, testDir, conf, desc,
-            wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
+    TableDescriptor desc = TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(name.getMethodName().replaceAll("[\\[\\]]", "_")))
+        .addColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName())
+        .setStartKey(Bytes.toBytes("row_0200")).setEndKey(Bytes.toBytes("row_0300")).build();
+    HRegion r = HRegion.createHRegion(hri, testDir, conf, desc, wFactory.getWAL(hri));
     addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
     StringBuilder sb = new StringBuilder();

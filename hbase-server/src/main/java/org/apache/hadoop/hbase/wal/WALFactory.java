@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.wal;
-
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -28,13 +23,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
@@ -45,6 +37,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Entry point for users of the Write Ahead Log.
@@ -91,11 +88,11 @@ public class WALFactory implements WALFileLengthProvider {
   static final String DEFAULT_META_WAL_PROVIDER = Providers.defaultProvider.name();
 
   final String factoryId;
-  final WALProvider provider;
+  private final WALProvider provider;
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
   // lazily intialized; most RegionServers don't deal with META
-  final AtomicReference<WALProvider> metaProvider = new AtomicReference<>();
+  private final AtomicReference<WALProvider> metaProvider = new AtomicReference<>();
 
   /**
    * Configuration-specified WAL Reader used when a custom reader is requested
@@ -236,32 +233,35 @@ public class WALFactory implements WALFileLengthProvider {
     return provider.getWALs();
   }
 
-  /**
-   * @param identifier may not be null, contents will not be altered
-   * @param namespace could be null, and will use default namespace if null
-   */
-  public WAL getWAL(final byte[] identifier, final byte[] namespace) throws IOException {
-    return provider.getWAL(identifier, namespace);
+  private WALProvider getMetaProvider() throws IOException {
+    for (;;) {
+      WALProvider provider = this.metaProvider.get();
+      if (provider != null) {
+        return provider;
+      }
+      provider = getProvider(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER,
+        Collections.<WALActionsListener> singletonList(new MetricsWAL()),
+        AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+      if (metaProvider.compareAndSet(null, provider)) {
+        return provider;
+      } else {
+        // someone is ahead of us, close and try again.
+        provider.close();
+      }
+    }
   }
 
   /**
-   * @param identifier may not be null, contents will not be altered
+   * @param region the region which we want to get a WAL for it. Could be null.
    */
-  public WAL getMetaWAL(final byte[] identifier) throws IOException {
-    WALProvider metaProvider = this.metaProvider.get();
-    if (null == metaProvider) {
-      final WALProvider temp = getProvider(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER,
-          Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-          AbstractFSWALProvider.META_WAL_PROVIDER_ID);
-      if (this.metaProvider.compareAndSet(null, temp)) {
-        metaProvider = temp;
-      } else {
-        // reference must now be to a provider created in another thread.
-        temp.close();
-        metaProvider = this.metaProvider.get();
-      }
+  public WAL getWAL(RegionInfo region) throws IOException {
+    // use different WAL for hbase:meta
+    if (region != null && region.isMetaRegion() &&
+      region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+      return getMetaProvider().getWAL(region);
+    } else {
+      return provider.getWAL(region);
     }
-    return metaProvider.getWAL(identifier, null);
   }
 
   public Reader createReader(final FileSystem fs, final Path path) throws IOException {

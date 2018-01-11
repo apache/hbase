@@ -18,20 +18,21 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertFalse;
+
 import java.io.IOException;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -89,8 +90,8 @@ public class TestLogRollingNoCluster {
     FSUtils.setRootDir(conf, dir);
     conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
     final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
-    final WAL wal = wals.getWAL(new byte[]{}, null);
-    
+    final WAL wal = wals.getWAL(null);
+
     Appender [] appenders = null;
 
     final int numThreads = NUM_THREADS;
@@ -157,10 +158,10 @@ public class TestLogRollingNoCluster {
           WALEdit edit = new WALEdit();
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
-          final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
-          final HTableDescriptor htd = TEST_UTIL.getMetaTableDescriptor();
+          RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
+          TableDescriptor htd = TEST_UTIL.getMetaTableDescriptorBuilder().build();
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-          for(byte[] fam : htd.getFamiliesKeys()) {
+          for(byte[] fam : htd.getColumnFamilyNames()) {
             scopes.put(fam, 0);
           }
           final long txid = wal.append(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),

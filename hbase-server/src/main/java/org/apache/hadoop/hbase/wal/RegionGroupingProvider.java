@@ -27,15 +27,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
+import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.RegionInfo;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.hbase.util.KeyLocker;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A WAL Provider that returns a WAL per group of regions.
@@ -131,7 +133,7 @@ public class RegionGroupingProvider implements WALProvider {
   /** A group-provider mapping, make sure one-one rather than many-one mapping */
   private final ConcurrentMap<String, WALProvider> cached = new ConcurrentHashMap<>();
 
-  private final IdLock createLock = new IdLock();
+  private final KeyLocker<String> createLock = new KeyLocker<>();
 
   private RegionGroupingStrategy strategy = null;
   private WALFactory factory = null;
@@ -177,33 +179,39 @@ public class RegionGroupingProvider implements WALProvider {
     return wals;
   }
 
-  private WAL getWAL(final String group) throws IOException {
+  private WAL getWAL(String group) throws IOException {
     WALProvider provider = cached.get(group);
     if (provider == null) {
-      IdLock.Entry lockEntry = null;
+      Lock lock = createLock.acquireLock(group);
       try {
-        lockEntry = createLock.getLockEntry(group.hashCode());
         provider = cached.get(group);
         if (provider == null) {
           provider = createProvider(group);
           cached.put(group, provider);
         }
       } finally {
-        if (lockEntry != null) {
-          createLock.releaseLockEntry(lockEntry);
-        }
+        lock.unlock();
       }
     }
-    return provider.getWAL(null, null);
+    return provider.getWAL(null);
   }
 
   @Override
-  public WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException {
-    final String group;
+  public WAL getWAL(RegionInfo region) throws IOException {
+    String group;
     if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
       group = META_WAL_GROUP_NAME;
     } else {
-      group = strategy.group(identifier, namespace);
+      byte[] id;
+      byte[] namespace;
+      if (region != null) {
+        id = region.getEncodedNameAsBytes();
+        namespace = region.getTable().getNamespace();
+      } else {
+        id = HConstants.EMPTY_BYTE_ARRAY;
+        namespace = null;
+      }
+      group = strategy.group(id, namespace);
     }
     return getWAL(group);
   }

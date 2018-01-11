@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,22 +25,20 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 // imports for things that haven't moved from regionserver.wal yet.
@@ -85,7 +83,6 @@ public class TestWALReaderOnSecureWAL {
     FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
-  @SuppressWarnings("deprecation")
   private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap) throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
@@ -93,22 +90,16 @@ public class TestWALReaderOnSecureWAL {
       WALCellCodec.class);
     try {
       TableName tableName = TableName.valueOf(tblName);
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor(tableName.getName()));
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(byte[] fam : htd.getFamiliesKeys()) {
-        scopes.put(fam, 0);
-      }
-      HRegionInfo regioninfo = new HRegionInfo(tableName,
-        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
+      scopes.put(tableName.getName(), 0);
+      RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
       final int total = 10;
       final byte[] row = Bytes.toBytes("row");
       final byte[] family = Bytes.toBytes("family");
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
 
       // Write the WAL
-      WAL wal =
-          wals.getWAL(regioninfo.getEncodedNameAsBytes(), regioninfo.getTable().getNamespace());
+      WAL wal = wals.getWAL(regionInfo);
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         KeyValue kv = new KeyValue(row, family, Bytes.toBytes(i), value);
@@ -120,7 +111,7 @@ public class TestWALReaderOnSecureWAL {
         } else {
           kvs.add(kv);
         }
-        wal.append(regioninfo, new WALKeyImpl(regioninfo.getEncodedNameAsBytes(), tableName,
+        wal.append(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), mvcc, scopes), kvs, true);
       }
       wal.sync();

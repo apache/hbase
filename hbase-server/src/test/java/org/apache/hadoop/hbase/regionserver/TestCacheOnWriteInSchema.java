@@ -26,16 +26,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -106,18 +108,19 @@ public class TestCacheOnWriteInSchema {
       return blockType == blockType1 || blockType == blockType2;
     }
 
-    public void modifyFamilySchema(HColumnDescriptor family) {
+    public ColumnFamilyDescriptorBuilder modifyFamilySchema(ColumnFamilyDescriptorBuilder builder) {
       switch (this) {
-      case DATA_BLOCKS:
-        family.setCacheDataOnWrite(true);
-        break;
-      case BLOOM_BLOCKS:
-        family.setCacheBloomsOnWrite(true);
-        break;
-      case INDEX_BLOCKS:
-        family.setCacheIndexesOnWrite(true);
-        break;
+        case DATA_BLOCKS:
+          builder.setCacheDataOnWrite(true);
+          break;
+        case BLOOM_BLOCKS:
+          builder.setCacheBloomsOnWrite(true);
+          break;
+        case INDEX_BLOCKS:
+          builder.setCacheIndexesOnWrite(true);
+          break;
       }
+      return builder;
     }
   }
 
@@ -158,23 +161,22 @@ public class TestCacheOnWriteInSchema {
     fs = HFileSystem.get(conf);
 
     // Create the schema
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setBloomFilterType(BloomType.ROWCOL);
-    cowType.modifyFamilySchema(hcd);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    htd.addFamily(hcd);
+    ColumnFamilyDescriptor hcd = cowType
+        .modifyFamilySchema(
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(BloomType.ROWCOL))
+        .build();
+    TableDescriptor htd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).addColumnFamily(hcd).build();
 
     // Create a store based on the schema
-    final String id = TestCacheOnWriteInSchema.class.getName();
-    final Path logdir = new Path(FSUtils.getRootDir(conf),
-      AbstractFSWALProvider.getWALDirectoryName(id));
+    String id = TestCacheOnWriteInSchema.class.getName();
+    Path logdir = new Path(FSUtils.getRootDir(conf), AbstractFSWALProvider.getWALDirectoryName(id));
     fs.delete(logdir, true);
 
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+    RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     walFactory = new WALFactory(conf, null, id);
 
-    region = TEST_UTIL.createLocalHRegion(info, htd,
-        walFactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()));
+    region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
     store = new HStore(region, hcd, conf);
   }
 

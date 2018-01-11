@@ -23,10 +23,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -45,7 +41,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -58,18 +53,16 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -97,6 +90,14 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
  * Testing {@link WAL} splitting code.
@@ -373,10 +374,10 @@ public class TestWALSplit {
    */
   @Test (timeout=300000)
   public void testRecoveredEditsPathForMeta() throws IOException {
-    byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    byte[] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
-        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     Entry entry =
@@ -386,7 +387,7 @@ public class TestWALSplit {
     Path p = WALSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR,
         FILENAME_BEING_SPLIT);
     String parentOfParent = p.getParent().getParent().getName();
-    assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
   }
 
   /**
@@ -395,10 +396,10 @@ public class TestWALSplit {
    */
   @Test (timeout=300000)
   public void testOldRecoveredEditsFileSidelined() throws IOException {
-    byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    byte [] encoded = RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
-        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+      RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     Entry entry =
@@ -412,7 +413,7 @@ public class TestWALSplit {
     Path p = WALSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR,
         FILENAME_BEING_SPLIT);
     String parentOfParent = p.getParent().getParent().getName();
-    assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    assertEquals(parentOfParent, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedName());
     WALFactory.createRecoveredEditsWriter(fs, p, conf).close();
   }
 
@@ -459,7 +460,7 @@ public class TestWALSplit {
 
   @Test (timeout=300000)
   public void testSplitLeavesCompactionEventsEdits() throws IOException{
-    HRegionInfo hri = new HRegionInfo(TABLE_NAME);
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
     REGIONS.clear();
     REGIONS.add(hri.getEncodedName());
     Path regionDir = new Path(FSUtils.getTableDir(HBASEDIR, TABLE_NAME), hri.getEncodedName());
@@ -1132,7 +1133,7 @@ public class TestWALSplit {
     REGIONS.add(regionName);
     generateWALs(-1);
 
-    wals.getWAL(Bytes.toBytes(regionName), null);
+    wals.getWAL(null);
     FileStatus[] logfiles = fs.listStatus(WALDIR);
     assertTrue("There should be some log file",
         logfiles != null && logfiles.length > 0);
@@ -1337,7 +1338,7 @@ public class TestWALSplit {
     return count;
   }
 
-  private static void appendCompactionEvent(Writer w, HRegionInfo hri, String[] inputs,
+  private static void appendCompactionEvent(Writer w, RegionInfo hri, String[] inputs,
       String output) throws IOException {
     WALProtos.CompactionDescriptor.Builder desc = WALProtos.CompactionDescriptor.newBuilder();
     desc.setTableName(ByteString.copyFrom(hri.getTable().toBytes()))

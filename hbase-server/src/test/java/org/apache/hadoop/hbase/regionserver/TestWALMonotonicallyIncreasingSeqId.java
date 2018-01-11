@@ -119,7 +119,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
     wals = new WALFactory(walConf, null, "log_" + replicaId);
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDefaultRootDirPath(), conf, htd,
-      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()));
+      wals.getWAL(info));
     return region;
   }
 
