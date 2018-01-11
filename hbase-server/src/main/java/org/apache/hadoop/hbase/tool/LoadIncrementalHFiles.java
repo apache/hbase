@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import static java.lang.String.format;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -48,7 +46,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
+import static java.lang.String.format;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -60,9 +58,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -94,14 +89,20 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
@@ -181,10 +182,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private void usage() {
-    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename" + "\n -D" +
-        CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n" +
-        "  Note: if you set this to 'no', then the target table must already exist in HBase\n -D" +
-        IGNORE_UNMATCHED_CF_CONF_KEY + "=yes - can be used to ignore unmatched column families\n" +
+    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename -loadTable"
+        + "\n -D" + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by "
+        + "this tool\n  Note: if you set this to 'no', then the target table must already exist "
+        + "in HBase\n -loadTable implies your baseDirectory to store file has a depth of 3 ,you"
+        + " must have an existing table\n-D" + IGNORE_UNMATCHED_CF_CONF_KEY + "=yes - can be used "
+        + "to ignore unmatched column families\n" +
         "\n");
   }
 
@@ -1150,7 +1153,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
       try (Table table = connection.getTable(tableName);
           RegionLocator locator = connection.getRegionLocator(tableName)) {
-        return doBulkLoad(new Path(hfofDir), admin, table, locator, isSilence(), isAlwaysCopyFiles());
+        return doBulkLoad(new Path(hfofDir), admin, table, locator, isSilence(),
+            isAlwaysCopyFiles());
       }
     }
   }
@@ -1178,13 +1182,33 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    if (args.length < 2) {
+    if (args.length != 2 && args.length != 3) {
       usage();
       return -1;
     }
     String dirPath = args[0];
     TableName tableName = TableName.valueOf(args[1]);
-    return !run(dirPath, tableName).isEmpty() ? 0 : -1;
+
+
+    if (args.length == 2) {
+      return !run(dirPath, tableName).isEmpty() ? 0 : -1;
+    } else {
+      Map<byte[], List<Path>> family2Files = Maps.newHashMap();
+      FileSystem fs = FileSystem.get(getConf());
+      for (FileStatus regionDir : fs.listStatus(new Path(dirPath))) {
+        FSVisitor.visitRegionStoreFiles(fs, regionDir.getPath(), (region, family, hfileName) -> {
+          Path path = new Path(regionDir.getPath(), new Path(family, hfileName));
+          byte[] familyName = Bytes.toBytes(family);
+          if (family2Files.containsKey(familyName)) {
+            family2Files.get(familyName).add(path);
+          } else {
+            family2Files.put(familyName, Lists.newArrayList(path));
+          }
+        });
+      }
+      return !run(family2Files, tableName).isEmpty() ? 0 : -1;
+    }
+
   }
 
   public static void main(String[] args) throws Exception {
