@@ -31,7 +31,7 @@ public class NamespaceExistException extends DoNotRetryIOException {
   public NamespaceExistException() {
   }
 
-  public NamespaceExistException(String namespace) {
-    super("Namespace " + namespace + " already exists");
+  public NamespaceExistException(String msg) {
+    super(msg);
   }
 }

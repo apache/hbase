@@ -192,7 +192,7 @@ public class CreateNamespaceProcedure
    */
   private void prepareCreate(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(nsDescriptor.getName())) {
-      throw new NamespaceExistException(nsDescriptor.getName());
+      throw new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists");
     }
     getTableNamespaceManager(env).validateTableAndRegionCount(nsDescriptor);
   }
