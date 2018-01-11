@@ -201,10 +201,19 @@ public interface Cell {
   int getTagsLength();
 
   /**
-   * Returns the type of cell in a human readable format using {@link Type}
+   * Returns the type of cell in a human readable format using {@link Type}.
+   * Note : This does not expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
+   * {@link KeyValue.Type#Minimum}
    * @return The data type this cell: one of Put, Delete, etc
    */
-  Type getType();
+  default Type getType() {
+    byte byteType = getTypeByte();
+    Type t = Type.CODE_ARRAY[byteType & 0xff];
+    if (t != null) {
+      return t;
+    }
+    throw new UnsupportedOperationException("Invalid type of cell " + byteType);
+  }
 
   /**
    * The valid types for user to build the cell. Currently, This is subset of {@link KeyValue.Type}.
@@ -228,6 +237,14 @@ public interface Cell {
 
     public byte getCode() {
       return this.code;
+    }
+
+    private static final Type[] CODE_ARRAY = new Type[256];
+
+    static {
+      for (Type t : Type.values()) {
+        CODE_ARRAY[t.code & 0xff] = t;
+      }
     }
   }
 }

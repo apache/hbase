@@ -152,10 +152,6 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
     return ByteBufferUtils.toByte(this.buf, this.offset + this.length - 1);
   }
 
-  public Type getType() {
-    return PrivateCellUtil.toType(getTypeByte());
-  }
-
   @Override
   public void setSequenceId(long seqId) throws IOException {
     throw new IllegalArgumentException("This is a key only Cell");
