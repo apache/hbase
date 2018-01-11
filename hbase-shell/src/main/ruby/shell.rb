@@ -71,14 +71,19 @@ module Shell
   class Shell
     attr_accessor :hbase
     attr_accessor :interactive
+    attr_accessor :return_values
     alias interactive? interactive
+    alias return_values? return_values
 
     @debug = false
     attr_accessor :debug
 
-    def initialize(hbase, interactive = true)
+    def initialize(hbase, interactive = true, return_values = !interactive)
       self.hbase = hbase
       self.interactive = interactive
+      self.return_values = return_values
+      # If we're in non-interactive mode, force return_values
+      self.return_values = true if not self.interactive
     end
 
     # Returns Admin class from admin.rb
@@ -135,16 +140,11 @@ module Shell
     end
 
     # call the method 'command' on the specified command
-    # If interactive is enabled, then we suppress the return value. The command should have
-    # printed relevant output.
-    # Return value is only useful in non-interactive mode, for e.g. tests.
+    # If return_values is false, then we suppress the return value. The command
+    # should have printed relevant output.
     def command(command, *args)
       ret = internal_command(command, :command, *args)
-      if interactive
-        return nil
-      else
-        return ret
-      end
+      ret if return_values
     end
 
     # call a specific internal method in the command instance
