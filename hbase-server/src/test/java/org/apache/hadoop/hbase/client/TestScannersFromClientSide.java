@@ -16,19 +16,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.stream.IntStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -41,6 +28,7 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
@@ -60,6 +48,21 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.stream.IntStream;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 
 /**
  * A client-side test, mostly testing scanners with various parameters.
@@ -234,6 +237,27 @@ public class TestScannersFromClientSide {
     // in the cache it means that more than the expected max result size was fetched.
     assertTrue("The cache contains: " + clientScanner.getCacheSize() + " results",
       clientScanner.getCacheSize() <= 1);
+  }
+
+  /**
+   * Scan on not existing table should throw the exception with correct message
+   */
+  @Test
+  public void testScannerForNotExistingTable() {
+    String[] tableNames = {"A", "Z", "A:A", "Z:Z"};
+    for(String tableName : tableNames) {
+      try {
+        Table table = TEST_UTIL.getConnection().getTable(TableName.valueOf(tableName));
+        testSmallScan(table, true, 1, 5);
+        fail("TableNotFoundException was not thrown");
+      } catch (TableNotFoundException e) {
+        // We expect that the message for TableNotFoundException would have only the table name only
+        // Otherwise that would mean that localeRegionInMeta doesn't work properly
+        assertEquals(e.getMessage(), tableName);
+      } catch (Exception e) {
+        fail("Unexpected exception " + e.getMessage());
+      }
+    }
   }
 
   @Test
