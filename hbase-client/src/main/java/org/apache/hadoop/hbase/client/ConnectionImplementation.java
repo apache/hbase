@@ -786,11 +786,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     // build the key of the meta region we should be looking for.
     // the extra 9's on the end are necessary to allow "exact" matches
     // without knowing the precise region names.
-    byte[] metaKey = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+    byte[] metaStartKey = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+    byte[] metaStopKey =
+      RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
 
     Scan s = new Scan();
     s.setReversed(true);
-    s.withStartRow(metaKey);
+    s.withStartRow(metaStartKey);
+    s.withStopRow(metaStopKey, true);
     s.addFamily(HConstants.CATALOG_FAMILY);
 
     if (this.useMetaReplicas) {
@@ -840,12 +843,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // convert the row result into the HRegionLocation we need!
         RegionLocations locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
         if (locations == null || locations.getRegionLocation(replicaId) == null) {
-          throw new IOException("HRegionInfo was null in " +
-            tableName + ", row=" + regionInfoRow);
+          throw new IOException("RegionInfo null in " + tableName + ", row=" + regionInfoRow);
         }
         RegionInfo regionInfo = locations.getRegionLocation(replicaId).getRegion();
         if (regionInfo == null) {
-          throw new IOException("HRegionInfo was null or empty in " +
+          throw new IOException("RegionInfo null or empty in " +
             TableName.META_TABLE_NAME + ", row=" + regionInfoRow);
         }
 
@@ -857,13 +859,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
             "hbase:meta might be damaged.");
         }
         if (regionInfo.isSplit()) {
-          throw new RegionOfflineException(
-              "the only available region for the required row is a split parent,"
-                  + " the daughters should be online soon: " + regionInfo.getRegionNameAsString());
+          throw new RegionOfflineException ("Region for row is a split parent, daughters not online: " +
+              regionInfo.getRegionNameAsString());
         }
         if (regionInfo.isOffline()) {
-          throw new RegionOfflineException("the region is offline, could"
-              + " be caused by a disable table call: " + regionInfo.getRegionNameAsString());
+          throw new RegionOfflineException("Region offline; disable table call? " +
+              regionInfo.getRegionNameAsString());
         }
 
         ServerName serverName = locations.getRegionLocation(replicaId).getServerName();
@@ -908,7 +909,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         // Only relocate the parent region if necessary
         if(!(e instanceof RegionOfflineException ||
             e instanceof NoServerForRegionException)) {
-          relocateRegion(TableName.META_TABLE_NAME, metaKey, replicaId);
+          relocateRegion(TableName.META_TABLE_NAME, metaStartKey, replicaId);
         }
       } finally {
         userRegionLock.unlock();
