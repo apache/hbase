@@ -142,7 +142,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
 
   /** if we are active, usually false, only true if "hbase.security.authorization"
     has been set to true in site configuration */
-  boolean authorizationEnabled;
+  private boolean authorizationEnabled;
 
   // Add to this list if there are any reserved tag types
   private static ArrayList<Byte> RESERVED_VIS_TAG_TYPES = new ArrayList<Byte>();
@@ -150,6 +150,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     RESERVED_VIS_TAG_TYPES.add(TagType.VISIBILITY_TAG_TYPE);
     RESERVED_VIS_TAG_TYPES.add(TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE);
     RESERVED_VIS_TAG_TYPES.add(TagType.STRING_VIS_TAG_TYPE);
+  }
+
+  public static boolean isAuthorizationSupported(Configuration conf) {
+    return AccessChecker.isAuthorizationSupported(conf);
   }
 
   public static boolean isCellAuthorizationSupported(Configuration conf) {
@@ -160,7 +164,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   public void start(CoprocessorEnvironment env) throws IOException {
     this.conf = env.getConfiguration();
 
-    authorizationEnabled = AccessChecker.isAuthorizationSupported(conf);
+    authorizationEnabled = isAuthorizationSupported(conf);
     if (!authorizationEnabled) {
       LOG.warn("The VisibilityController has been loaded with authorization checks disabled.");
     }
