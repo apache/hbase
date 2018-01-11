@@ -737,10 +737,5 @@ public class TestKeyValue extends TestCase {
     public byte[] getTagsArray() {
       return this.kv.getTagsArray();
     }
-
-    @Override
-    public Type getType() {
-      return PrivateCellUtil.toType(getTypeByte());
-    }
   }
 }

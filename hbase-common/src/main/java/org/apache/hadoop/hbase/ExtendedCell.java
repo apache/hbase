@@ -163,17 +163,6 @@ public interface ExtendedCell extends RawCell, HeapSize, Cloneable {
   int getTagsLength();
 
   /**
-   * {@inheritDoc}
-   * <p>
-   * Note : This does not expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
-   * {@link KeyValue.Type#Minimum}
-   */
-  @Override
-  default Type getType() {
-    return PrivateCellUtil.toType(getTypeByte());
-  }
-
-  /**
    * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
    */
   byte getTypeByte();
