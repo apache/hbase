@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
+import org.apache.hadoop.hbase.backup.BackupObserver;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.backup.regionserver.LogRollRegionServerProcedureManager;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.procedure.ProcedureManagerHost;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -140,10 +142,14 @@ public class BackupManager implements Closeable {
       conf.set(ProcedureManagerHost.REGIONSERVER_PROCEDURE_CONF_KEY, classes + ","
           + regionProcedureClass);
     }
+    String coproc = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    String regionObserverClass = BackupObserver.class.getName();
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, (coproc == null ? "" : coproc + ",") +
+        regionObserverClass);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added region procedure manager: " + regionProcedureClass);
+      LOG.debug("Added region procedure manager: " + regionProcedureClass +
+        ". Added region observer: " + regionObserverClass);
     }
-
   }
 
   public static boolean isBackupEnabled(Configuration conf) {
@@ -415,13 +421,8 @@ public class BackupManager implements Closeable {
     return systemTable.readBulkloadRows(tableList);
   }
 
-  public void removeBulkLoadedRows(List<TableName> lst, List<byte[]> rows) throws IOException {
-    systemTable.removeBulkLoadedRows(lst, rows);
-  }
-
-  public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps)
-      throws IOException {
-    systemTable.writeBulkLoadedFiles(sTableList, maps, backupInfo.getBackupId());
+  public void deleteBulkLoadedRows(List<byte[]> rows) throws IOException {
+    systemTable.deleteBulkLoadedRows(rows);
   }
 
   /**

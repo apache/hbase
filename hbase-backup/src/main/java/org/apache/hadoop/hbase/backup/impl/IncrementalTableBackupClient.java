@@ -72,7 +72,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   protected List<String> filterMissingFiles(List<String> incrBackupFileList) throws IOException {
-    FileSystem fs = FileSystem.get(conf);
     List<String> list = new ArrayList<String>();
     for (String file : incrBackupFileList) {
       Path p = new Path(file);
@@ -110,6 +109,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * @param sTableList list of tables to be backed up
    * @return map of table to List of files
    */
+  @SuppressWarnings("unchecked")
   protected Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList) throws IOException {
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList.size()];
     List<String> activeFiles = new ArrayList<String>();
@@ -117,7 +117,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair =
     backupManager.readBulkloadRows(sTableList);
     Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> map = pair.getFirst();
-    FileSystem fs = FileSystem.get(conf);
     FileSystem tgtFs;
     try {
       tgtFs = FileSystem.get(new URI(backupInfo.getBackupRootDir()), conf);
@@ -126,6 +125,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
     Path rootdir = FSUtils.getRootDir(conf);
     Path tgtRoot = new Path(new Path(backupInfo.getBackupRootDir()), backupId);
+
     for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry :
       map.entrySet()) {
       TableName srcTable = tblEntry.getKey();
@@ -192,26 +192,47 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
 
     copyBulkLoadedFiles(activeFiles, archiveFiles);
-
-    backupManager.writeBulkLoadedFiles(sTableList, mapForSrc);
-    backupManager.removeBulkLoadedRows(sTableList, pair.getSecond());
+    backupManager.deleteBulkLoadedRows(pair.getSecond());
     return mapForSrc;
   }
 
   private void copyBulkLoadedFiles(List<String> activeFiles, List<String> archiveFiles)
-    throws IOException
-  {
+      throws IOException {
 
     try {
       // Enable special mode of BackupDistCp
       conf.setInt(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 5);
       // Copy active files
       String tgtDest = backupInfo.getBackupRootDir() + Path.SEPARATOR + backupInfo.getBackupId();
-      if (activeFiles.size() > 0) {
+      int attempt = 1;
+      while (activeFiles.size() > 0) {
+        LOG.info("Copy "+ activeFiles.size() +
+          " active bulk loaded files. Attempt ="+ (attempt++));
         String[] toCopy = new String[activeFiles.size()];
         activeFiles.toArray(toCopy);
-        incrementalCopyHFiles(toCopy, tgtDest);
+        // Active file can be archived during copy operation,
+        // we need to handle this properly
+        try {
+          incrementalCopyHFiles(toCopy, tgtDest);
+          break;
+        } catch (IOException e) {
+          // Check if some files got archived
+          // Update active and archived lists
+          // When file is being moved from active to archive
+          // directory, the number of active files decreases
+
+          int numOfActive = activeFiles.size();
+          updateFileLists(activeFiles, archiveFiles);
+          if (activeFiles.size() < numOfActive) {
+            continue;
+          }
+          // if not - throw exception
+          throw e;
+        }
       }
+      // If incremental copy will fail for archived files
+      // we will have partially loaded files in backup destination (only files from active data
+      // directory). It is OK, because the backup will marked as FAILED and data will be cleaned up
       if (archiveFiles.size() > 0) {
         String[] toCopy = new String[archiveFiles.size()];
         archiveFiles.toArray(toCopy);
@@ -221,6 +242,25 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       // Disable special mode of BackupDistCp
       conf.unset(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY);
     }
+
+  }
+
+  private void updateFileLists(List<String> activeFiles, List<String> archiveFiles)
+      throws IOException {
+    List<String> newlyArchived = new ArrayList<String>();
+
+    for (String spath : activeFiles) {
+      if (!fs.exists(new Path(spath))) {
+        newlyArchived.add(spath);
+      }
+    }
+
+    if (newlyArchived.size() > 0) {
+      activeFiles.removeAll(newlyArchived);
+      archiveFiles.addAll(newlyArchived);
+    }
+
+    LOG.debug(newlyArchived.size() + " files have been archived.");
 
   }
 
@@ -322,7 +362,6 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   protected void deleteBulkLoadDirectory() throws IOException {
     // delete original bulk load directory on method exit
     Path path = getBulkOutputDir();
-    FileSystem fs = FileSystem.get(conf);
     boolean result = fs.delete(path, true);
     if (!result) {
       LOG.warn("Could not delete " + path);

@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -297,9 +296,6 @@ public class TestBackupBase {
       // setup configuration
       SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
     }
-    String coproc = conf1.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
-    conf1.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, (coproc == null ? "" : coproc + ",") +
-        BackupObserver.class.getName());
     conf1.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
     BackupManager.decorateMasterConfiguration(conf1);
     BackupManager.decorateRegionServerConfiguration(conf1);

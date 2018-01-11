@@ -42,8 +42,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -53,6 +51,8 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -122,7 +124,21 @@ public final class BackupSystemTable implements Closeable {
 
   }
 
+  /**
+   * Backup system table (main) name
+   */
   private TableName tableName;
+
+  /**
+   * Backup System table name for bulk loaded files.
+   * We keep all bulk loaded file references in a separate table
+   * because we have to isolate general backup operations: create, merge etc
+   * from activity of RegionObserver, which controls process of a bulk loading
+   * {@link org.apache.hadoop.hbase.backup.BackupObserver}
+   */
+
+  private TableName bulkLoadTableName;
+
   /**
    * Stores backup sessions (contexts)
    */
@@ -174,20 +190,29 @@ public final class BackupSystemTable implements Closeable {
 
   public BackupSystemTable(Connection conn) throws IOException {
     this.connection = conn;
-    tableName = BackupSystemTable.getTableName(conn.getConfiguration());
+    Configuration conf = this.connection.getConfiguration();
+    tableName = BackupSystemTable.getTableName(conf);
+    bulkLoadTableName = BackupSystemTable.getTableNameForBulkLoadedData(conf);
     checkSystemTable();
   }
 
   private void checkSystemTable() throws IOException {
     try (Admin admin = connection.getAdmin()) {
       verifyNamespaceExists(admin);
-
+      Configuration conf = connection.getConfiguration();
       if (!admin.tableExists(tableName)) {
-        HTableDescriptor backupHTD =
-            BackupSystemTable.getSystemTableDescriptor(connection.getConfiguration());
+        TableDescriptor backupHTD =
+            BackupSystemTable.getSystemTableDescriptor(conf);
         admin.createTable(backupHTD);
       }
-      waitForSystemTable(admin);
+      if (!admin.tableExists(bulkLoadTableName)) {
+        TableDescriptor blHTD =
+            BackupSystemTable.getSystemTableForBulkLoadedDataDescriptor(conf);
+        admin.createTable(blHTD);
+      }
+      waitForSystemTable(admin, tableName);
+      waitForSystemTable(admin, bulkLoadTableName);
+
     }
   }
 
@@ -207,7 +232,7 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
-  private void waitForSystemTable(Admin admin) throws IOException {
+  private void waitForSystemTable(Admin admin, TableName tableName) throws IOException {
     long TIMEOUT = 60000;
     long startTime = EnvironmentEdgeManager.currentTime();
     while (!admin.tableExists(tableName) || !admin.isTableAvailable(tableName)) {
@@ -216,10 +241,11 @@ public final class BackupSystemTable implements Closeable {
       } catch (InterruptedException e) {
       }
       if (EnvironmentEdgeManager.currentTime() - startTime > TIMEOUT) {
-        throw new IOException("Failed to create backup system table after " + TIMEOUT + "ms");
+        throw new IOException("Failed to create backup system table "+
+      tableName +" after " + TIMEOUT + "ms");
       }
     }
-    LOG.debug("Backup table exists and available");
+    LOG.debug("Backup table "+tableName+" exists and available");
 
   }
 
@@ -251,7 +277,7 @@ public final class BackupSystemTable implements Closeable {
    */
   Map<byte[], String> readBulkLoadedFiles(String backupId) throws IOException {
     Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
-    try (Table table = connection.getTable(tableName);
+    try (Table table = connection.getTable(bulkLoadTableName);
         ResultScanner scanner = table.getScanner(scan)) {
       Result res = null;
       Map<byte[], String> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -279,7 +305,7 @@ public final class BackupSystemTable implements Closeable {
       throws IOException {
     Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList == null ? 1 : sTableList.size()];
-    try (Table table = connection.getTable(tableName);
+    try (Table table = connection.getTable(bulkLoadTableName);
         ResultScanner scanner = table.getScanner(scan)) {
       Result res = null;
       while ((res = scanner.next()) != null) {
@@ -324,18 +350,6 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
-  /*
-   * @param map Map of row keys to path of bulk loaded hfile
-   */
-  void deleteBulkLoadedFiles(Map<byte[], String> map) throws IOException {
-    try (Table table = connection.getTable(tableName)) {
-      List<Delete> dels = new ArrayList<>();
-      for (byte[] row : map.keySet()) {
-        dels.add(new Delete(row).addFamily(BackupSystemTable.META_FAMILY));
-      }
-      table.delete(dels);
-    }
-  }
 
   /**
    * Deletes backup status from backup system table table
@@ -366,7 +380,7 @@ public final class BackupSystemTable implements Closeable {
       LOG.debug("write bulk load descriptor to backup " + tabName + " with " + finalPaths.size()
           + " entries");
     }
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = connection.getTable(bulkLoadTableName)) {
       List<Put> puts = BackupSystemTable.createPutForCommittedBulkload(tabName, region, finalPaths);
       table.put(puts);
       LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
@@ -386,7 +400,7 @@ public final class BackupSystemTable implements Closeable {
       LOG.debug("write bulk load descriptor to backup " + tabName + " with " + pairs.size()
           + " entries");
     }
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = connection.getTable(bulkLoadTableName)) {
       List<Put> puts =
           BackupSystemTable.createPutForPreparedBulkload(tabName, region, family, pairs);
       table.put(puts);
@@ -399,8 +413,8 @@ public final class BackupSystemTable implements Closeable {
    * @param lst list of table names
    * @param rows the rows to be deleted
    */
-  public void removeBulkLoadedRows(List<TableName> lst, List<byte[]> rows) throws IOException {
-    try (Table table = connection.getTable(tableName)) {
+  public void deleteBulkLoadedRows(List<byte[]> rows) throws IOException {
+    try (Table table = connection.getTable(bulkLoadTableName)) {
       List<Delete> lstDels = new ArrayList<>();
       for (byte[] row : rows) {
         Delete del = new Delete(row);
@@ -408,7 +422,7 @@ public final class BackupSystemTable implements Closeable {
         LOG.debug("orig deleting the row: " + Bytes.toString(row));
       }
       table.delete(lstDels);
-      LOG.debug("deleted " + rows.size() + " original bulkload rows for " + lst.size() + " tables");
+      LOG.debug("deleted " + rows.size() + " original bulkload rows");
     }
   }
 
@@ -425,7 +439,7 @@ public final class BackupSystemTable implements Closeable {
     for (TableName tTable : tableList) {
       Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(tTable);
       Map<String, Map<String, List<Pair<String, Boolean>>>> tblMap = map.get(tTable);
-      try (Table table = connection.getTable(tableName);
+      try (Table table = connection.getTable(bulkLoadTableName);
           ResultScanner scanner = table.getScanner(scan)) {
         Result res = null;
         while ((res = scanner.next()) != null) {
@@ -480,7 +494,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps,
       String backupId) throws IOException {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = connection.getTable(bulkLoadTableName)) {
       long ts = EnvironmentEdgeManager.currentTime();
       int cnt = 0;
       List<Put> puts = new ArrayList<>();
@@ -1311,21 +1325,28 @@ public final class BackupSystemTable implements Closeable {
    * Get backup system table descriptor
    * @return table's descriptor
    */
-  public static HTableDescriptor getSystemTableDescriptor(Configuration conf) {
+  public static TableDescriptor getSystemTableDescriptor(Configuration conf) {
 
-    HTableDescriptor tableDesc = new HTableDescriptor(getTableName(conf));
-    HColumnDescriptor colSessionsDesc = new HColumnDescriptor(SESSIONS_FAMILY);
-    colSessionsDesc.setMaxVersions(1);
-    // Time to keep backup sessions (secs)
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(conf));
+
+    ColumnFamilyDescriptorBuilder colBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(SESSIONS_FAMILY);
+
+    colBuilder.setMaxVersions(1);
     Configuration config = HBaseConfiguration.create();
     int ttl =
         config.getInt(BackupRestoreConstants.BACKUP_SYSTEM_TTL_KEY,
           BackupRestoreConstants.BACKUP_SYSTEM_TTL_DEFAULT);
-    colSessionsDesc.setTimeToLive(ttl);
-    tableDesc.addFamily(colSessionsDesc);
-    HColumnDescriptor colMetaDesc = new HColumnDescriptor(META_FAMILY);
-    tableDesc.addFamily(colMetaDesc);
-    return tableDesc;
+    colBuilder.setTimeToLive(ttl);
+
+    ColumnFamilyDescriptor colSessionsDesc = colBuilder.build();
+    builder.addColumnFamily(colSessionsDesc);
+
+    colBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(META_FAMILY);
+    colBuilder.setTimeToLive(ttl);
+    builder.addColumnFamily(colBuilder.build());
+    return builder.build();
   }
 
   public static TableName getTableName(Configuration conf) {
@@ -1343,6 +1364,38 @@ public final class BackupSystemTable implements Closeable {
     return "snapshot_" + getTableNameAsString(conf).replace(":", "_");
   }
 
+  /**
+   * Get backup system table descriptor
+   * @return table's descriptor
+   */
+  public static TableDescriptor getSystemTableForBulkLoadedDataDescriptor(Configuration conf) {
+
+    TableDescriptorBuilder builder =
+        TableDescriptorBuilder.newBuilder(getTableNameForBulkLoadedData(conf));
+
+    ColumnFamilyDescriptorBuilder colBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(SESSIONS_FAMILY);
+    colBuilder.setMaxVersions(1);
+    Configuration config = HBaseConfiguration.create();
+    int ttl =
+        config.getInt(BackupRestoreConstants.BACKUP_SYSTEM_TTL_KEY,
+          BackupRestoreConstants.BACKUP_SYSTEM_TTL_DEFAULT);
+    colBuilder.setTimeToLive(ttl);
+    ColumnFamilyDescriptor colSessionsDesc = colBuilder.build();
+    builder.addColumnFamily(colSessionsDesc);
+    colBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(META_FAMILY);
+    colBuilder.setTimeToLive(ttl);
+    builder.addColumnFamily(colBuilder.build());
+    return builder.build();
+  }
+
+  public static TableName getTableNameForBulkLoadedData(Configuration conf) {
+    String name =
+        conf.get(BackupRestoreConstants.BACKUP_SYSTEM_TABLE_NAME_KEY,
+          BackupRestoreConstants.BACKUP_SYSTEM_TABLE_NAME_DEFAULT) + "_bulk";
+    return TableName.valueOf(name);
+  }
   /**
    * Creates Put operation for a given backup info object
    * @param context backup info

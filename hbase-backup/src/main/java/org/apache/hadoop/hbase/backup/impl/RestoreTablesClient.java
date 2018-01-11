@@ -21,33 +21,31 @@ package org.apache.hadoop.hbase.backup.impl;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.backup.util.RestoreTool;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles.LoadQueueItem;
 
 /**
  * Restore table implementation
@@ -171,8 +169,10 @@ public class RestoreTablesClient {
     for (int i = 1; i < images.length; i++) {
       BackupImage im = images[i];
       String fileBackupDir =
-          HBackupFileSystem.getTableBackupDataDir(im.getRootDir(), im.getBackupId(), sTable);
-      dirList.add(new Path(fileBackupDir));
+         HBackupFileSystem.getTableBackupDir(im.getRootDir(), im.getBackupId(), sTable);
+      List<Path> list = getFilesRecursively(fileBackupDir);
+      dirList.addAll(list);
+
     }
 
     String dirs = StringUtils.join(dirList, ",");
@@ -183,6 +183,20 @@ public class RestoreTablesClient {
     restoreTool.incrementalRestoreTable(conn, tableBackupPath, paths, new TableName[] { sTable },
       new TableName[] { tTable }, lastIncrBackupId);
     LOG.info(sTable + " has been successfully restored to " + tTable);
+  }
+
+  private List<Path> getFilesRecursively(String fileBackupDir)
+      throws IllegalArgumentException, IOException {
+    FileSystem fs = FileSystem.get((new Path(fileBackupDir)).toUri(), new Configuration());
+    List<Path> list = new ArrayList<Path>();
+    RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(fileBackupDir), true);
+    while (it.hasNext()) {
+      Path p = it.next().getPath();
+      if (HFile.isHFileFormat(fs, p)) {
+        list.add(p);
+      }
+    }
+    return list;
   }
 
   /**
@@ -222,27 +236,6 @@ public class RestoreTablesClient {
           if (image.getType() == BackupType.INCREMENTAL) {
             backupIdSet.add(image.getBackupId());
             LOG.debug("adding " + image.getBackupId() + " for bulk load");
-          }
-        }
-      }
-    }
-    try (BackupSystemTable table = new BackupSystemTable(conn)) {
-      List<TableName> sTableList = Arrays.asList(sTableArray);
-      for (String id : backupIdSet) {
-        LOG.debug("restoring bulk load for " + id);
-        Map<byte[], List<Path>>[] mapForSrc = table.readBulkLoadedFiles(id, sTableList);
-        Map<LoadQueueItem, ByteBuffer> loaderResult;
-        conf.setBoolean(LoadIncrementalHFiles.ALWAYS_COPY_FILES, true);
-        LoadIncrementalHFiles loader = BackupUtils.createLoader(conf);
-        for (int i = 0; i < sTableList.size(); i++) {
-          if (mapForSrc[i] != null && !mapForSrc[i].isEmpty()) {
-            loaderResult = loader.run(mapForSrc[i], tTableArray[i]);
-            LOG.debug("bulk loading " + sTableList.get(i) + " to " + tTableArray[i]);
-            if (loaderResult.isEmpty()) {
-              String msg = "Couldn't bulk load for " + sTableList.get(i) + " to " + tTableArray[i];
-              LOG.error(msg);
-              throw new IOException(msg);
-            }
           }
         }
       }

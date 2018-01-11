@@ -113,18 +113,32 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
     String backupIdIncMultiple = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple));
+    // #4 bulk load again
+    LOG.debug("bulk loading into " + testName);
+    int actual1 = TestLoadIncrementalHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
+      qualName, false, null,
+      new byte[][][] { new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("qqq") },
+          new byte[][] { Bytes.toBytes("rrr"), Bytes.toBytes("sss") }, },
+      true, false, true, NB_ROWS_IN_BATCH * 2 + actual, NB_ROWS2);
 
+    // #5 - incremental backup for table1
+    tables = Lists.newArrayList(table1);
+    request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
+    String backupIdIncMultiple1 = client.backupTables(request);
+    assertTrue(checkSucceeded(backupIdIncMultiple1));
+    // Delete all data in table1
+    TEST_UTIL.deleteTableData(table1);
     // #5.1 - check tables for full restore */
     HBaseAdmin hAdmin = TEST_UTIL.getHBaseAdmin();
 
     // #6 - restore incremental backup for table1
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1 };
-    TableName[] tablesMapIncMultiple = new TableName[] { table1_restore };
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple,
-      false, tablesRestoreIncMultiple, tablesMapIncMultiple, true));
+    //TableName[] tablesMapIncMultiple = new TableName[] { table1_restore };
+    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple1,
+      false, tablesRestoreIncMultiple, tablesRestoreIncMultiple, true));
 
-    HTable hTable = (HTable) conn.getTable(table1_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2+actual);
+    HTable hTable = (HTable) conn.getTable(table1);
+    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2 + actual + actual1);
     request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
 
     backupIdFull = client.backupTables(request);

@@ -69,6 +69,7 @@ public abstract class TableBackupClient {
 
   protected BackupManager backupManager;
   protected BackupInfo backupInfo;
+  protected FileSystem fs;
 
   public TableBackupClient() {
   }
@@ -90,6 +91,7 @@ public abstract class TableBackupClient {
     this.tableList = request.getTableList();
     this.conn = conn;
     this.conf = conn.getConfiguration();
+    this.fs = FSUtils.getCurrentFileSystem(conf);
     backupInfo =
         backupManager.createBackupInfo(backupId, request.getBackupType(), tableList,
           request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth());
@@ -258,22 +260,21 @@ public abstract class TableBackupClient {
     }
   }
 
-  public static void cleanupAndRestoreBackupSystem (Connection conn, BackupInfo backupInfo,
-      Configuration conf) throws IOException
-  {
+  public static void cleanupAndRestoreBackupSystem(Connection conn, BackupInfo backupInfo,
+      Configuration conf) throws IOException {
     BackupType type = backupInfo.getType();
-     // if full backup, then delete HBase snapshots if there already are snapshots taken
-     // and also clean up export snapshot log files if exist
-     if (type == BackupType.FULL) {
-       deleteSnapshots(conn, backupInfo, conf);
-       cleanupExportSnapshotLog(conf);
-     }
-     BackupSystemTable.restoreFromSnapshot(conn);
-     BackupSystemTable.deleteSnapshot(conn);
-     // clean up the uncompleted data at target directory if the ongoing backup has already entered
-     // the copy phase
-     // For incremental backup, DistCp logs will be cleaned with the targetDir.
-     cleanupTargetDir(backupInfo, conf);
+    // if full backup, then delete HBase snapshots if there already are snapshots taken
+    // and also clean up export snapshot log files if exist
+    if (type == BackupType.FULL) {
+      deleteSnapshots(conn, backupInfo, conf);
+      cleanupExportSnapshotLog(conf);
+    }
+    BackupSystemTable.restoreFromSnapshot(conn);
+    BackupSystemTable.deleteSnapshot(conn);
+    // clean up the uncompleted data at target directory if the ongoing backup has already entered
+    // the copy phase
+    // For incremental backup, DistCp logs will be cleaned with the targetDir.
+    cleanupTargetDir(backupInfo, conf);
   }
 
 
@@ -355,7 +356,6 @@ public abstract class TableBackupClient {
    */
   protected void cleanupDistCpLog(BackupInfo backupInfo, Configuration conf) throws IOException {
     Path rootPath = new Path(backupInfo.getHLogTargetDir()).getParent();
-    FileSystem fs = FileSystem.get(rootPath.toUri(), conf);
     FileStatus[] files = FSUtils.listStatus(fs, rootPath);
     if (files == null) {
       return;

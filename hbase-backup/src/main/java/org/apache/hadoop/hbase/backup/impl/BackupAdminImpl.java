@@ -271,7 +271,7 @@ public class BackupAdminImpl implements BackupAdmin {
         LOG.debug(numDeleted + " bulk loaded files out of " + map.size() + " were deleted");
       }
       if (success) {
-        sysTable.deleteBulkLoadedFiles(map);
+        sysTable.deleteBulkLoadedRows(new ArrayList<byte[]>(map.keySet()));
       }
 
       sysTable.deleteBackupInfo(backupInfo.getBackupId());
