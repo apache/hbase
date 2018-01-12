@@ -58,7 +58,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-		  </plugin> 
+		  </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
@@ -108,30 +108,30 @@
            we run mvn install. There is probably a better way of avoiding the
            double interpolation but this is it for now.
         -->
-      <plugin> 
-        <groupId>com.google.code.maven-replacer-plugin</groupId> 
-        <artifactId>replacer</artifactId> 
-        <version>1.5.3</version> 
-        <executions> 
-          <execution> 
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
             <phase>generate-sources</phase>
-            <goals> 
+            <goals>
               <goal>replace</goal>
-            </goals> 
-          </execution> 
-        </executions> 
-        <configuration> 
-          <basedir>${basedir}/target/generated-sources/</basedir>  
-            <includes>  
-                <include>**/*.java</include>  
-            </includes>  
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${basedir}/target/generated-sources/</basedir>
+            <includes>
+                <include>**/*.java</include>
+            </includes>
             <replacements>
               <replacement>
-                <token>([^\.])com.google.protobuf</token> 
+                <token>([^\.])com.google.protobuf</token>
                 <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
               </replacement>
             </replacements>
-        </configuration> 
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -181,18 +181,9 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>checkstyle</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <configuration>
-              <failOnViolation>true</failOnViolation>
-            </configuration>
-          </execution>
-        </executions>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
       </plugin>
     </plugins>
     <pluginManagement>
