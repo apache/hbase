@@ -132,20 +132,19 @@ public class ReplicationPeerManager {
     checkPeerConfig(peerConfig);
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     ReplicationPeerConfig oldPeerConfig = desc.getPeerConfig();
-    if (!StringUtils.isBlank(peerConfig.getClusterKey()) &&
-      !peerConfig.getClusterKey().equals(oldPeerConfig.getClusterKey())) {
+    if (!isStringEquals(peerConfig.getClusterKey(), oldPeerConfig.getClusterKey())) {
       throw new DoNotRetryIOException(
           "Changing the cluster key on an existing peer is not allowed. Existing key '" +
-            oldPeerConfig.getClusterKey() + "' for peer " + peerId + " does not match new key '" +
-            peerConfig.getClusterKey() + "'");
+              oldPeerConfig.getClusterKey() + "' for peer " + peerId + " does not match new key '" +
+              peerConfig.getClusterKey() + "'");
     }
 
-    if (!StringUtils.isBlank(peerConfig.getReplicationEndpointImpl()) &&
-      !peerConfig.getReplicationEndpointImpl().equals(oldPeerConfig.getReplicationEndpointImpl())) {
+    if (!isStringEquals(peerConfig.getReplicationEndpointImpl(),
+      oldPeerConfig.getReplicationEndpointImpl())) {
       throw new DoNotRetryIOException("Changing the replication endpoint implementation class " +
-        "on an existing peer is not allowed. Existing class '" +
-        oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId +
-        " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
+          "on an existing peer is not allowed. Existing class '" +
+          oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId +
+          " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
     }
   }
 
@@ -340,5 +339,16 @@ public class ReplicationPeerManager {
     }
     return new ReplicationPeerManager(peerStorage,
         ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers);
+  }
+
+  /**
+   * For replication peer cluster key or endpoint class, null and empty string is same. So here
+   * don't use {@link StringUtils#equals(CharSequence, CharSequence)} directly.
+   */
+  private boolean isStringEquals(String s1, String s2) {
+    if (StringUtils.isBlank(s1)) {
+      return StringUtils.isBlank(s2);
+    }
+    return s1.equals(s2);
   }
 }
