@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -311,6 +312,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     return finalList;
   }
 
+  @VisibleForTesting
   private Set<HRegionInfo> getMisplacedRegions(
       Map<HRegionInfo, ServerName> regions) throws IOException {
     Set<HRegionInfo> misplacedRegions = new HashSet<HRegionInfo>();
@@ -319,12 +321,15 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
       ServerName assignedServer = region.getValue();
       RSGroupInfo info =
           infoManager.getRSGroup(infoManager.getRSGroupOfTable(regionInfo.getTable()));
-      if (assignedServer != null &&
-          (info == null || !info.containsServer(assignedServer.getAddress()))) {
+      RSGroupInfo otherInfo = infoManager.getRSGroupOfServer(assignedServer.getAddress());
+      if (info == null && otherInfo == null) {
+        LOG.warn("Couldn't obtain rs group information for " + region + " on " + assignedServer);
+        continue;
+      }
+      if ((info == null || !info.containsServer(assignedServer.getAddress()))) {
         LOG.debug("Found misplaced region: " + regionInfo.getRegionNameAsString() +
             " on server: " + assignedServer +
-            " found in group: " +
-            infoManager.getRSGroupOfServer(assignedServer.getAddress()) +
+            " found in group: " +  otherInfo +
             " outside of group: " + (info == null ? "UNKNOWN" : info.getName()));
         misplacedRegions.add(regionInfo);
       }
