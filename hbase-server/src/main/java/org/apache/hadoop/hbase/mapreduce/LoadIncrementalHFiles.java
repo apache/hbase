@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import com.google.common.annotations.VisibleForTesting;
 import static java.lang.String.format;
 
 import java.io.FileNotFoundException;
@@ -96,6 +97,7 @@ import org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -135,12 +137,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private String bulkToken;
   private UserProvider userProvider;
   private int nrThreads;
+  private int depth = 2;
 
   private LoadIncrementalHFiles() {}
 
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
     initialize();
+  }
+
+  public void setDepth(int depth) {
+    this.depth = depth;
   }
 
   private void initialize() throws Exception {
@@ -161,9 +168,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private void usage() {
-    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename" + "\n -D"
-        + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n"
-        + "  Note: if you set this to 'no', then the target table must already exist in HBase\n"
+    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename -loadTable"
+        + "\n -D" + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by "
+        + "this tool\n  Note: if you set this to 'no', then the target table must already exist "
+        + "in HBase\n -loadTable implies your baseDirectory to store file has a depth of 3 ,you"
+        + " must have an existing table"
         + "\n");
   }
 
@@ -287,22 +296,32 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private void discoverLoadQueue(final Deque<LoadQueueItem> ret, final Path hfofDir,
     final boolean validateHFile) throws IOException {
     fs = hfofDir.getFileSystem(getConf());
-    visitBulkHFiles(fs, hfofDir, new BulkHFileVisitor<byte[]>() {
-      @Override
-      public byte[] bulkFamily(final byte[] familyName) {
+    BulkHFileVisitor<byte[]> visitor = new BulkHFileVisitor<byte[]>() {
+      @Override public byte[] bulkFamily(final byte[] familyName) {
         return familyName;
       }
-      @Override
-      public void bulkHFile(final byte[] family, final FileStatus hfile) throws IOException {
+
+      @Override public void bulkHFile(final byte[] family, final FileStatus hfile)
+          throws IOException {
         long length = hfile.getLen();
-        if (length > getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
-            HConstants.DEFAULT_MAX_FILE_SIZE)) {
-          LOG.warn("Trying to bulk load hfile " + hfile.getPath() + " with size: " +
-              length + " bytes can be problematic as it may lead to oversplitting.");
+        if (length > getConf()
+            .getLong(HConstants.HREGION_MAX_FILESIZE, HConstants.DEFAULT_MAX_FILE_SIZE)) {
+          LOG.warn("Trying to bulk load hfile " + hfile.getPath() + " with size: " + length
+              + " bytes can be problematic as it may lead to oversplitting.");
         }
         ret.add(new LoadQueueItem(family, hfile.getPath()));
       }
-    }, validateHFile);
+    };
+    if (depth == 2) {
+      visitBulkHFiles(fs, hfofDir, visitor, validateHFile);
+    } else if (depth == 3) {
+      for (FileStatus fileStatus : FSUtils.listStatus(fs, hfofDir)) {
+        visitBulkHFiles(fs, fileStatus.getPath(), visitor, validateHFile);
+      }
+    } else {
+      throw new IllegalArgumentException("Depth of HFiles from directory must be 2 or 3");
+    }
+
   }
 
   /**
@@ -1096,7 +1115,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    if (args.length != 2) {
+    if (args.length != 2 && args.length != 3) {
       usage();
       return -1;
     }
@@ -1105,6 +1124,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     String dirPath = args[0];
     TableName tableName = TableName.valueOf(args[1]);
+    if (args.length == 3) {
+      this.setDepth(3);
+    }
 
     boolean tableExists = this.doesTableExist(tableName);
     if (!tableExists) {
