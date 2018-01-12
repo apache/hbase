@@ -1033,7 +1033,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     t.close();
 
     getAdmin(); // create immediately the hbaseAdmin
-    LOG.info("Minicluster is up");
+    LOG.info("Minicluster is up; activeMaster=" + this.getHBaseCluster().getMaster());
 
     return (MiniHBaseCluster)this.hbaseCluster;
   }

@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
+@Ignore // Temporarily disabled. Fails 40% of the time.
 @Category({ MasterTests.class, LargeTests.class })
 public class TestDLSAsyncFSWAL extends AbstractTestDLS {
 

@@ -55,6 +55,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -796,9 +797,13 @@ public class HMaster extends HRegionServer implements MasterServices {
       this.tableDescriptors.getAll();
     }
 
-    // Publish cluster ID
-    status.setStatus("Publishing Cluster ID in ZooKeeper");
+    // Publish cluster ID; set it in Master too. The superclass RegionServer does this later but
+    // only after it has checked in with the Master. At least a few tests ask Master for clusterId
+    // before it has called its run method and before RegionServer has done the reportForDuty.
+    ClusterId clusterId = fileSystemManager.getClusterId();
+    status.setStatus("Publishing Cluster ID " + clusterId + " in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
+    this.clusterId = ZKClusterId.readClusterIdZNode(this.zooKeeper);
 
     this.serverManager = createServerManager(this);
 
@@ -844,10 +849,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     if (this.balancer instanceof FavoredNodesPromoter) {
       favoredNodesManager = new FavoredNodesManager(this);
-    }
-    // Wait for regionserver to finish initialization.
-    if (LoadBalancer.isTablesOnMaster(conf)) {
-      waitForServerOnline();
     }
 
     //initialize load balancer
@@ -2690,6 +2691,14 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.preStopMaster();
     }
     stop("Stopped by " + Thread.currentThread().getName());
+  }
+
+  @Override
+  public void stop(String msg) {
+    super.stop(msg);
+    if (this.activeMasterManager != null) {
+      this.activeMasterManager.stop();
+    }
   }
 
   void checkServiceStarted() throws ServerNotRunningYetException {

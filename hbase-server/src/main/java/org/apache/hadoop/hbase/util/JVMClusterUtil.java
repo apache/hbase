@@ -258,7 +258,6 @@ public class JVMClusterUtil {
           LOG.error("Exception occurred in HMaster.shutdown()", e);
         }
       }
-
     }
     boolean wasInterrupted = false;
     final long maxTime = System.currentTimeMillis() + 30 * 1000;

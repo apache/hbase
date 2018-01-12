@@ -68,6 +68,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
+@Ignore // Disabled
 @Category(MediumTests.class)
 public class TestFavoredStochasticLoadBalancer extends BalancerTestBase {
 

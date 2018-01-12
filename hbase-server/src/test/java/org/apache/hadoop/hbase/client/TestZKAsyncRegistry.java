@@ -30,6 +30,7 @@ import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -43,10 +44,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestZKAsyncRegistry {
-
+  private static final Logger LOG = LoggerFactory.getLogger(TestZKAsyncRegistry.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static ZKAsyncRegistry REGISTRY;
@@ -96,8 +99,11 @@ public class TestZKAsyncRegistry {
 
   @Test
   public void test() throws InterruptedException, ExecutionException, IOException {
-    assertEquals(TEST_UTIL.getHBaseCluster().getClusterStatus().getClusterId(),
-      REGISTRY.getClusterId().get());
+    LOG.info("STARTED TEST");
+    String clusterId = REGISTRY.getClusterId().get();
+    String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
+    assertEquals("Expected " + expectedClusterId + ", found=" + clusterId,
+        expectedClusterId, clusterId);
     assertEquals(TEST_UTIL.getHBaseCluster().getClusterStatus().getServersSize(),
       REGISTRY.getCurrentNrHRS().get().intValue());
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
