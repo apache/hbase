@@ -217,19 +217,21 @@ public class ProcedureExecutor<TEnvironment> {
 
         // TODO: Select TTL based on Procedure type
         if (retainer.isExpired(now, evictTtl, evictAckTtl)) {
-          if (debugEnabled) {
-            LOG.debug("Evict completed " + proc);
+          // Failed procedures aren't persisted in WAL.
+          if (!(proc instanceof FailedProcedure)) {
+            batchIds[batchCount++] = entry.getKey();
+            if (batchCount == batchIds.length) {
+              store.delete(batchIds, 0, batchCount);
+              batchCount = 0;
+            }
           }
-          batchIds[batchCount++] = entry.getKey();
-          if (batchCount == batchIds.length) {
-            store.delete(batchIds, 0, batchCount);
-            batchCount = 0;
-          }
-          it.remove();
-
           final NonceKey nonceKey = proc.getNonceKey();
           if (nonceKey != null) {
             nonceKeysToProcIdsMap.remove(nonceKey);
+          }
+          it.remove();
+          if (debugEnabled) {
+            LOG.debug("Evict completed " + proc);
           }
         }
       }
