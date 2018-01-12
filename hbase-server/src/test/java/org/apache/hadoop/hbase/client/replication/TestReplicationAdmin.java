@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
+import org.apache.hadoop.hbase.replication.TestReplicationEndpoint.InterClusterReplicationEndpointForTest;
+import org.apache.hadoop.hbase.replication.regionserver.TestReplicator.ReplicationEndpointForTest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
@@ -845,5 +847,57 @@ public class TestReplicationAdmin {
 
     assertEquals(2097152, admin.getPeerConfig(ID_ONE).getBandwidth());
     admin.removePeer(ID_ONE);
+  }
+
+  @Test
+  public void testPeerClusterKey() throws Exception {
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder();
+    builder.setClusterKey(KEY_ONE);
+    hbaseAdmin.addReplicationPeer(ID_ONE, builder.build());
+
+    try {
+      builder.setClusterKey(KEY_SECOND);
+      hbaseAdmin.updateReplicationPeerConfig(ID_ONE, builder.build());
+      fail("Change cluster key on an existing peer is not allowed");
+    } catch (Exception e) {
+      // OK
+    }
+  }
+
+  @Test
+  public void testPeerReplicationEndpointImpl() throws Exception {
+    ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder();
+    builder.setClusterKey(KEY_ONE);
+    builder.setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName());
+    hbaseAdmin.addReplicationPeer(ID_ONE, builder.build());
+
+    try {
+      builder.setReplicationEndpointImpl(InterClusterReplicationEndpointForTest.class.getName());
+      hbaseAdmin.updateReplicationPeerConfig(ID_ONE, builder.build());
+      fail("Change replication endpoint implementation class on an existing peer is not allowed");
+    } catch (Exception e) {
+      // OK
+    }
+
+    try {
+      builder = ReplicationPeerConfig.newBuilder();
+      builder.setClusterKey(KEY_ONE);
+      hbaseAdmin.updateReplicationPeerConfig(ID_ONE, builder.build());
+      fail("Change replication endpoint implementation class on an existing peer is not allowed");
+    } catch (Exception e) {
+      // OK
+    }
+
+    builder = ReplicationPeerConfig.newBuilder();
+    builder.setClusterKey(KEY_SECOND);
+    hbaseAdmin.addReplicationPeer(ID_SECOND, builder.build());
+
+    try {
+      builder.setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName());
+      hbaseAdmin.updateReplicationPeerConfig(ID_SECOND, builder.build());
+      fail("Change replication endpoint implementation class on an existing peer is not allowed");
+    } catch (Exception e) {
+      // OK
+    }
   }
 }
