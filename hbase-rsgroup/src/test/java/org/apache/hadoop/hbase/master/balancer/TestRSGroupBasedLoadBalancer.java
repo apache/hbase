@@ -78,6 +78,7 @@ public class TestRSGroupBasedLoadBalancer {
 
   static String[]  groups = new String[] { RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3",
       "dg4" };
+  static TableName table0 = TableName.valueOf("dt0");
   static TableName[] tables =
       new TableName[] { TableName.valueOf("dt1"),
           TableName.valueOf("dt2"),
@@ -222,6 +223,16 @@ public class TestRSGroupBasedLoadBalancer {
     assertRetainedAssignment(inputForTest, servers, newAssignment);
   }
 
+  @Test
+  public void testGetMisplacedRegions() throws Exception {
+    // Test case where region is not considered misplaced if RSGroupInfo cannot be determined
+    Map<HRegionInfo, ServerName> inputForTest = new HashMap<>();
+    HRegionInfo ri = new HRegionInfo(
+        table0, new byte[16], new byte[16], false, regionId++);
+    inputForTest.put(ri, servers.iterator().next());
+    Set<HRegionInfo> misplacedRegions = loadBalancer.getMisplacedRegions(inputForTest);
+    assertFalse(misplacedRegions.contains(ri));
+  }
   /**
    * Test BOGUS_SERVER_NAME among groups do not overwrite each other
    * @throws Exception
@@ -520,6 +531,8 @@ public class TestRSGroupBasedLoadBalancer {
       tableMap.put(tables[i], groupName);
       tds.add(htd);
     }
+    tableMap.put(table0, "");
+    tds.add(new HTableDescriptor(table0));
     return tds;
   }
 
