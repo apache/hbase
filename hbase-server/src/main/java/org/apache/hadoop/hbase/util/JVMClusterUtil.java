@@ -187,7 +187,9 @@ public class JVMClusterUtil {
       int startTimeout = configuration != null ? Integer.parseInt(
         configuration.get("hbase.master.start.timeout.localHBaseCluster", "30000")) : 30000;
       if (System.currentTimeMillis() > startTime + startTimeout) {
-        throw new RuntimeException(String.format("Master not active after %s seconds", startTimeout));
+        String msg = "Master not active after " + startTimeout + "ms";
+        Threads.printThreadInfo(System.out, "Thread dump because: " + msg);
+        throw new RuntimeException(msg);
       }
     }
 
@@ -216,8 +218,7 @@ public class JVMClusterUtil {
       }
       if (System.currentTimeMillis() > startTime + maxwait) {
         String msg = "Master not initialized after " + maxwait + "ms seconds";
-        Threads.printThreadInfo(System.out,
-          "Thread dump because: " + msg);
+        Threads.printThreadInfo(System.out, "Thread dump because: " + msg);
         throw new RuntimeException(msg);
       }
       try {
