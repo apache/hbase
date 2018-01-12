@@ -300,7 +300,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     return finalList;
   }
 
-  private Set<RegionInfo> getMisplacedRegions(
+  @VisibleForTesting
+  public Set<RegionInfo> getMisplacedRegions(
       Map<RegionInfo, ServerName> regions) throws IOException {
     Set<RegionInfo> misplacedRegions = new HashSet<>();
     for(Map.Entry<RegionInfo, ServerName> region : regions.entrySet()) {
@@ -308,10 +309,16 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
       ServerName assignedServer = region.getValue();
       RSGroupInfo info = rsGroupInfoManager.getRSGroup(rsGroupInfoManager.
               getRSGroupOfTable(regionInfo.getTable()));
-      if (assignedServer != null &&
-          (info == null || !info.containsServer(assignedServer.getAddress()))) {
-        RSGroupInfo otherInfo = null;
-        otherInfo = rsGroupInfoManager.getRSGroupOfServer(assignedServer.getAddress());
+      if (assignedServer == null) {
+        LOG.debug("There is no assigned server for {}", region);
+        continue;
+      }
+      RSGroupInfo otherInfo = rsGroupInfoManager.getRSGroupOfServer(assignedServer.getAddress());
+      if (info == null && otherInfo == null) {
+        LOG.warn("Couldn't obtain rs group information for {} on {}", region, assignedServer);
+        continue;
+      }
+      if ((info == null || !info.containsServer(assignedServer.getAddress()))) {
         LOG.debug("Found misplaced region: " + regionInfo.getRegionNameAsString() +
             " on server: " + assignedServer +
             " found in group: " +  otherInfo +

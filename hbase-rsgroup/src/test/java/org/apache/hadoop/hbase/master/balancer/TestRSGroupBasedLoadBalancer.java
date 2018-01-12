@@ -76,6 +76,7 @@ public class TestRSGroupBasedLoadBalancer {
 
   static String[]  groups = new String[] { RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3",
       "dg4" };
+  static TableName table0 = TableName.valueOf("dt0");
   static TableName[] tables =
       new TableName[] { TableName.valueOf("dt1"),
           TableName.valueOf("dt2"),
@@ -225,6 +226,20 @@ public class TestRSGroupBasedLoadBalancer {
     assertClusterAsBalanced(loadMap);
   }
 
+  @Test
+  public void testGetMisplacedRegions() throws Exception {
+    // Test case where region is not considered misplaced if RSGroupInfo cannot be determined
+    Map<RegionInfo, ServerName> inputForTest = new HashMap<>();
+    RegionInfo ri = RegionInfoBuilder.newBuilder(table0)
+        .setStartKey(new byte[16])
+        .setEndKey(new byte[16])
+        .setSplit(false)
+        .setRegionId(regionId++)
+        .build();
+    inputForTest.put(ri, servers.iterator().next());
+    Set<RegionInfo> misplacedRegions = loadBalancer.getMisplacedRegions(inputForTest);
+    assertFalse(misplacedRegions.contains(ri));
+  }
   /**
    * Test the cluster startup bulk assignment which attempts to retain
    * assignment info.
@@ -552,6 +567,8 @@ public class TestRSGroupBasedLoadBalancer {
       tableMap.put(tables[i], groupName);
       tds.add(htd);
     }
+    tableMap.put(table0, "");
+    tds.add(new HTableDescriptor(table0));
     return tds;
   }
 
