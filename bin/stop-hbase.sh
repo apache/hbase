@@ -44,17 +44,20 @@ logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out
 loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=${HBASE_PID_DIR:-/tmp}/hbase-$HBASE_IDENT_STRING-master.pid
 
-echo -n stopping hbase
-echo "`date` Stopping hbase (via master)" >> $loglog
+if [[ -e $pid ]]; then
+  echo -n stopping hbase
+  echo "`date` Stopping hbase (via master)" >> $loglog
 
-nohup nice -n ${HBASE_NICENESS:-0} "$HBASE_HOME"/bin/hbase \
-   --config "${HBASE_CONF_DIR}" \
-   master stop "$@" > "$logout" 2>&1 < /dev/null &
+  nohup nice -n ${HBASE_NICENESS:-0} "$HBASE_HOME"/bin/hbase \
+     --config "${HBASE_CONF_DIR}" \
+     master stop "$@" > "$logout" 2>&1 < /dev/null &
 
-waitForProcessEnd `cat $pid` 'stop-master-command'
+  waitForProcessEnd `cat $pid` 'stop-master-command'
 
-rm -f $pid
-
+  rm -f $pid
+else
+  echo no hbase master found
+fi
 
 # distributed == false means that the HMaster will kill ZK when it exits
 # HBASE-6504 - only take the first line of the output in case verbose gc is on
