@@ -28,6 +28,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -345,22 +346,20 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       throw new ReplicationException("Could not find peer Id " + id + " in connected peers");
     }
     ReplicationPeerConfig existingConfig = peer.getPeerConfig();
-    if (newConfig.getClusterKey() != null && !newConfig.getClusterKey().isEmpty() &&
-        !newConfig.getClusterKey().equals(existingConfig.getClusterKey())){
-      throw new ReplicationException("Changing the cluster key on an existing peer is not allowed."
-          + " Existing key '" + existingConfig.getClusterKey() + "' does not match new key '"
-          + newConfig.getClusterKey() +
-      "'");
+    if (!isStringEquals(newConfig.getClusterKey(), existingConfig.getClusterKey())) {
+      throw new ReplicationException(
+          "Changing the cluster key on an existing peer is not allowed." + " Existing key '" +
+              existingConfig.getClusterKey() + "' does not match new key '" +
+              newConfig.getClusterKey() + "'");
     }
-    String existingEndpointImpl = existingConfig.getReplicationEndpointImpl();
-    if (newConfig.getReplicationEndpointImpl() != null &&
-        !newConfig.getReplicationEndpointImpl().isEmpty() &&
-        !newConfig.getReplicationEndpointImpl().equals(existingEndpointImpl)){
+    if (!isStringEquals(newConfig.getReplicationEndpointImpl(),
+      existingConfig.getReplicationEndpointImpl())) {
       throw new ReplicationException("Changing the replication endpoint implementation class " +
-          "on an existing peer is not allowed. Existing class '"
-          + existingConfig.getReplicationEndpointImpl()
-          + "' does not match new class '" + newConfig.getReplicationEndpointImpl() + "'");
+          "on an existing peer is not allowed. Existing class '" +
+          existingConfig.getReplicationEndpointImpl() + "' does not match new class '" +
+          newConfig.getReplicationEndpointImpl() + "'");
     }
+
     // Update existingConfig's peer config and peer data with the new values, but don't touch config
     // or data that weren't explicitly changed
     ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder(existingConfig);
@@ -545,5 +544,16 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     } catch (KeeperException e) {
       throw new ReplicationException("Could not check queues deleted with id=" + peerId, e);
     }
+  }
+
+  /**
+   * For replication peer cluster key or endpoint class, null and empty string is same. So here
+   * don't use {@link StringUtils#equals(CharSequence, CharSequence)} directly.
+   */
+  private boolean isStringEquals(String s1, String s2) {
+    if (StringUtils.isBlank(s1)) {
+      return StringUtils.isBlank(s2);
+    }
+    return s1.equals(s2);
   }
 }
