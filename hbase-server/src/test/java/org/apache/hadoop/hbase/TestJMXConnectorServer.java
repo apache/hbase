@@ -1,4 +1,4 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -31,9 +31,11 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -181,6 +183,12 @@ public class TestJMXConnectorServer {
    * stopMaster/preStopRegionServer/preShutdown explicitly.
    */
   public static class MyAccessController extends AccessController {
+    @Override
+    public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+      // Do nothing. In particular, stop the creation of the hbase:acl table. It makes the
+      // shutdown take time.
+    }
+
     @Override
     public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> c) throws IOException {
       if (!hasAccess) {

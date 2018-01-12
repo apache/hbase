@@ -75,9 +75,12 @@ function build_src {
 
 # Build bin tgz
 function build_bin {
-  MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests -Papache-release -Prelease \
+  MAVEN_OPTS="${mvnopts}" ${mvn} clean install -DskipTests \
+    -Papache-release -Prelease \
     -Dmaven.repo.local=${output_dir}/repository
-  MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests site assembly:single -Papache-release -Prelease \
+  MAVEN_OPTS="${mvnopts}" ${mvn} install -DskipTests \
+    -Dcheckstyle.skip=true site assembly:single \
+    -Papache-release -Prelease \
     -Dmaven.repo.local=${output_dir}/repository
   mv ./hbase-assembly/target/hbase-*.tar.gz "${output_dir}"
 }
