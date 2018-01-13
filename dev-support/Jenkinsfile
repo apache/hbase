@@ -46,8 +46,9 @@ pipeline {
     BRANCH_SPECIFIC_DOCKERFILE = "${env.BASEDIR}/dev-support/docker/Dockerfile"
     // Flaky urls for different branches. Replace '-' and '.' in branch name by '_' because those
     // characters are not allowed in bash variable name.
-    EXCLUDE_TESTS_URL_master = 'https://builds.apache.org/job/HBase-Find-Flaky-Tests/lastSuccessfulBuild/artifact/excludes/'
-    EXCLUDE_TESTS_URL_branch_2 = 'https://builds.apache.org/job/HBase-Find-Flaky-Tests-branch2.0/lastSuccessfulBuild/artifact/excludes/'
+    // Not excluding flakies from the nightly build for now.
+    // EXCLUDE_TESTS_URL_master = 'https://builds.apache.org/job/HBase-Find-Flaky-Tests/lastSuccessfulBuild/artifact/excludes/'
+    // EXCLUDE_TESTS_URL_branch_2 = 'https://builds.apache.org/job/HBase-Find-Flaky-Tests-branch2.0/lastSuccessfulBuild/artifact/excludes/'
   }
   parameters {
     booleanParam(name: 'USE_YETUS_PRERELEASE', defaultValue: false, description: '''Check to use the current HEAD of apache/yetus rather than our configured release.
