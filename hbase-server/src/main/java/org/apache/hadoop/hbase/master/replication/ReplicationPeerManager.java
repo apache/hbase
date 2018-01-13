@@ -149,6 +149,21 @@ public class ReplicationPeerManager {
         oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId +
         " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
     }
+
+    if (!isStringEquals(peerConfig.getRemoteWALDir(), oldPeerConfig.getRemoteWALDir())) {
+      throw new DoNotRetryIOException(
+          "Changing the remote wal dir on an existing peer is not allowed. Existing remote wal " +
+              "dir '" + oldPeerConfig.getRemoteWALDir() + "' for peer " + peerId +
+              " does not match new remote wal dir '" + peerConfig.getRemoteWALDir() + "'");
+    }
+
+    if (oldPeerConfig.getRemoteWALDir() != null) {
+      if (!ReplicationUtils.isNamespacesAndTableCFsEqual(oldPeerConfig, peerConfig)) {
+        throw new DoNotRetryIOException(
+          "Changing the replicated namespace/table config on a synchronous replication " +
+            "peer(peerId: " + peerId + ") is not allowed.");
+      }
+    }
     return desc;
   }
 

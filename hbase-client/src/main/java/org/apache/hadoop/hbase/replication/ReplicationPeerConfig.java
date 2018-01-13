@@ -47,6 +47,8 @@ public class ReplicationPeerConfig {
   private Set<String> excludeNamespaces = null;
   private long bandwidth = 0;
   private final boolean serial;
+  // Used by synchronous replication
+  private String remoteWALDir;
 
   private ReplicationPeerConfig(ReplicationPeerConfigBuilderImpl builder) {
     this.clusterKey = builder.clusterKey;
@@ -66,6 +68,7 @@ public class ReplicationPeerConfig {
             : null;
     this.bandwidth = builder.bandwidth;
     this.serial = builder.serial;
+    this.remoteWALDir = builder.remoteWALDir;
   }
 
   private Map<TableName, List<String>>
@@ -213,6 +216,10 @@ public class ReplicationPeerConfig {
     return this;
   }
 
+  public String getRemoteWALDir() {
+    return this.remoteWALDir;
+  }
+
   public static ReplicationPeerConfigBuilder newBuilder() {
     return new ReplicationPeerConfigBuilderImpl();
   }
@@ -230,7 +237,8 @@ public class ReplicationPeerConfig {
       .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
       .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
       .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
-      .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial());
+      .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
+      .setRemoteWALDir(peerConfig.getRemoteWALDir());
     return builder;
   }
 
@@ -258,6 +266,8 @@ public class ReplicationPeerConfig {
     private long bandwidth = 0;
 
     private boolean serial = false;
+
+    private String remoteWALDir = null;
 
     @Override
     public ReplicationPeerConfigBuilder setClusterKey(String clusterKey) {
@@ -327,6 +337,11 @@ public class ReplicationPeerConfig {
       return this;
     }
 
+    public ReplicationPeerConfigBuilder setRemoteWALDir(String dir) {
+      this.remoteWALDir = dir;
+      return this;
+    }
+
     @Override
     public ReplicationPeerConfig build() {
       // It would be nice to validate the configuration, but we have to work with "old" data
@@ -357,6 +372,9 @@ public class ReplicationPeerConfig {
     }
     builder.append("bandwidth=").append(bandwidth).append(",");
     builder.append("serial=").append(serial);
+    if (this.remoteWALDir != null) {
+      builder.append(",remoteWALDir=").append(remoteWALDir);
+    }
     return builder.toString();
   }
 
