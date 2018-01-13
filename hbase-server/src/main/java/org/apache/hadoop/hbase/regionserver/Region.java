@@ -251,13 +251,6 @@ public interface Region extends ConfigurationObserver {
    */
   void closeRegionOperation() throws IOException;
 
-  /**
-   * Closes the region operation lock. This needs to be called in the finally block corresponding
-   * to the try block of {@link #startRegionOperation(Operation)}
-   * @throws IOException
-   */
-  void closeRegionOperation(Operation op) throws IOException;
-
   // Row write locks
 
   /**

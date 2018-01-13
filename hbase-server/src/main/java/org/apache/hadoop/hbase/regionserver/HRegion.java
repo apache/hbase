@@ -8439,7 +8439,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     closeRegionOperation(Operation.ANY);
   }
 
-  @Override
   public void closeRegionOperation(Operation operation) throws IOException {
     if (operation == Operation.SNAPSHOT) {
       for (Store store: stores.values()) {

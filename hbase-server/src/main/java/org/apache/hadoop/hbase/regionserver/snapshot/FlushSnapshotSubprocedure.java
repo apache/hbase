@@ -143,7 +143,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
         }
       } finally {
         LOG.debug("Closing snapshot operation on " + region);
-        region.closeRegionOperation(Operation.SNAPSHOT);
+        ((HRegion)region).closeRegionOperation(Operation.SNAPSHOT);
       }
       return null;
     }
