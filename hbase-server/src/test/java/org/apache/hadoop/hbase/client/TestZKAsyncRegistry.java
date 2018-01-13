@@ -47,6 +47,9 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Test the ZooKeeper Async Registry.
+ */
 @Category({ MediumTests.class, ClientTests.class })
 public class TestZKAsyncRegistry {
   private static final Logger LOG = LoggerFactory.getLogger(TestZKAsyncRegistry.class);
