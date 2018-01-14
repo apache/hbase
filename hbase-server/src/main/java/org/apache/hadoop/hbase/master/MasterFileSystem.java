@@ -98,11 +98,8 @@ public class MasterFileSystem {
 
   private boolean isSecurityEnabled;
 
-  private final MasterServices services;
-
-  public MasterFileSystem(MasterServices services) throws IOException {
-    this.conf = services.getConfiguration();
-    this.services = services;
+  public MasterFileSystem(Configuration conf) throws IOException {
+    this.conf = conf;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
