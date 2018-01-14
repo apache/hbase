@@ -21,23 +21,23 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
-import static org.apache.hbase.thirdparty.io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
-import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_CREATE;
+import static org.apache.hbase.thirdparty.io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
+import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 
 import com.google.protobuf.CodedOutputStream;
-
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.Encryptor;
@@ -85,6 +85,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
@@ -121,6 +122,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   private FanOutOneBlockAsyncDFSOutputHelper() {
   }
 
+  public static final String ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES = "hbase.fs.async.create.retries";
+
+  public static final int DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES = 10;
   // use pooled allocator for performance.
   private static final ByteBufAllocator ALLOC = PooledByteBufAllocator.DEFAULT;
 
@@ -129,8 +133,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   // Timeouts for communicating with DataNode for streaming writes/reads
   public static final int READ_TIMEOUT = 60 * 1000;
-  public static final int READ_TIMEOUT_EXTENSION = 5 * 1000;
-  public static final int WRITE_TIMEOUT = 8 * 60 * 1000;
+
+  private static final DatanodeInfo[] EMPTY_DN_ARRAY = new DatanodeInfo[0];
 
   // helper class for getting Status from PipelineAckProto. In hadoop 2.6 or before, there is a
   // getStatus method, and for hadoop 2.7 or after, the status is retrieved from flag. The flag may
@@ -744,58 +748,90 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     DFSClient client = dfs.getClient();
     String clientName = client.getClientName();
     ClientProtocol namenode = client.getNamenode();
-    HdfsFileStatus stat;
-    try {
-      stat = FILE_CREATOR.create(namenode, src,
-        FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
-        new EnumSetWritable<>(overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
-        createParent, replication, blockSize, CryptoProtocolVersion.supported());
-    } catch (Exception e) {
-      if (e instanceof RemoteException) {
-        throw (RemoteException) e;
-      } else {
-        throw new NameNodeException(e);
+    int createMaxRetries = conf.getInt(ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES,
+      DEFAULT_ASYNC_DFS_OUTPUT_CREATE_MAX_RETRIES);
+    DatanodeInfo[] excludesNodes = EMPTY_DN_ARRAY;
+    for (int retry = 0;; retry++) {
+      HdfsFileStatus stat;
+      try {
+        stat = FILE_CREATOR.create(namenode, src,
+          FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
+          new EnumSetWritable<>(overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
+          createParent, replication, blockSize, CryptoProtocolVersion.supported());
+      } catch (Exception e) {
+        if (e instanceof RemoteException) {
+          throw (RemoteException) e;
+        } else {
+          throw new NameNodeException(e);
+        }
       }
-    }
-    beginFileLease(client, stat.getFileId());
-    boolean succ = false;
-    LocatedBlock locatedBlock = null;
-    List<Future<Channel>> futureList = null;
-    try {
-      DataChecksum summer = createChecksum(client);
-      locatedBlock = BLOCK_ADDER.addBlock(namenode, src, client.getClientName(), null, null,
-        stat.getFileId(), null);
-      List<Channel> datanodeList = new ArrayList<>();
-      futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
-        PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
-      for (Future<Channel> future : futureList) {
-        // fail the creation if there are connection failures since we are fail-fast. The upper
-        // layer should retry itself if needed.
-        datanodeList.add(future.syncUninterruptibly().getNow());
-      }
-      Encryptor encryptor = createEncryptor(conf, stat, client);
-      FanOutOneBlockAsyncDFSOutput output =
-          new FanOutOneBlockAsyncDFSOutput(conf, fsUtils, dfs, client, namenode, clientName, src,
-              stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
-      succ = true;
-      return output;
-    } finally {
-      if (!succ) {
-        if (futureList != null) {
-          for (Future<Channel> f : futureList) {
-            f.addListener(new FutureListener<Channel>() {
-
-              @Override
-              public void operationComplete(Future<Channel> future) throws Exception {
-                if (future.isSuccess()) {
-                  future.getNow().close();
-                }
-              }
-            });
+      beginFileLease(client, stat.getFileId());
+      boolean succ = false;
+      LocatedBlock locatedBlock = null;
+      List<Future<Channel>> futureList = null;
+      try {
+        DataChecksum summer = createChecksum(client);
+        locatedBlock = BLOCK_ADDER.addBlock(namenode, src, client.getClientName(), null,
+          excludesNodes, stat.getFileId(), null);
+        List<Channel> datanodeList = new ArrayList<>();
+        futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
+          PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
+        for (int i = 0, n = futureList.size(); i < n; i++) {
+          try {
+            datanodeList.add(futureList.get(i).syncUninterruptibly().getNow());
+          } catch (Exception e) {
+            // exclude the broken DN next time
+            excludesNodes = ArrayUtils.add(excludesNodes, locatedBlock.getLocations()[i]);
+            throw e;
           }
         }
-        endFileLease(client, stat.getFileId());
-        fsUtils.recoverFileLease(dfs, new Path(src), conf, new CancelOnClose(client));
+        Encryptor encryptor = createEncryptor(conf, stat, client);
+        FanOutOneBlockAsyncDFSOutput output =
+          new FanOutOneBlockAsyncDFSOutput(conf, fsUtils, dfs, client, namenode, clientName, src,
+              stat.getFileId(), locatedBlock, encryptor, datanodeList, summer, ALLOC);
+        succ = true;
+        return output;
+      } catch (RemoteException e) {
+        LOG.warn("create fan-out dfs output {} failed, retry = {}", src, retry, e);
+        if (shouldRetryCreate(e)) {
+          if (retry >= createMaxRetries) {
+            throw e.unwrapRemoteException();
+          }
+        } else {
+          throw e.unwrapRemoteException();
+        }
+      } catch (NameNodeException e) {
+        throw e;
+      } catch (IOException e) {
+        LOG.warn("create fan-out dfs output {} failed, retry = {}", src, retry, e);
+        if (retry >= createMaxRetries) {
+          throw e;
+        }
+        // overwrite the old broken file.
+        overwrite = true;
+        try {
+          Thread.sleep(ConnectionUtils.getPauseTime(100, retry));
+        } catch (InterruptedException ie) {
+          throw new InterruptedIOException();
+        }
+      } finally {
+        if (!succ) {
+          if (futureList != null) {
+            for (Future<Channel> f : futureList) {
+              f.addListener(new FutureListener<Channel>() {
+
+                @Override
+                public void operationComplete(Future<Channel> future) throws Exception {
+                  if (future.isSuccess()) {
+                    future.getNow().close();
+                  }
+                }
+              });
+            }
+          }
+          endFileLease(client, stat.getFileId());
+          fsUtils.recoverFileLease(dfs, new Path(src), conf, new CancelOnClose(client));
+        }
       }
     }
   }
