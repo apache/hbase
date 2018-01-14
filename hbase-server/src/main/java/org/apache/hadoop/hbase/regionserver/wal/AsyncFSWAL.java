@@ -17,14 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.shouldRetryCreate;
-
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
-
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.Comparator;
@@ -44,26 +40,23 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
-import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.NameNodeException;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
@@ -140,9 +133,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   public static final String WAL_BATCH_SIZE = "hbase.wal.batch.size";
   public static final long DEFAULT_WAL_BATCH_SIZE = 64L * 1024;
 
-  public static final String ASYNC_WAL_CREATE_MAX_RETRIES = "hbase.wal.async.create.retries";
-  public static final int DEFAULT_ASYNC_WAL_CREATE_MAX_RETRIES = 10;
-
   public static final String ASYNC_WAL_USE_SHARED_EVENT_LOOP =
     "hbase.wal.async.use-shared-event-loop";
   public static final boolean DEFAULT_ASYNC_WAL_USE_SHARED_EVENT_LOOP = false;
@@ -188,8 +178,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private final AtomicBoolean consumerScheduled = new AtomicBoolean(false);
 
   private final long batchSize;
-
-  private final int createMaxRetries;
 
   private final ExecutorService closeExecutor = Executors.newCachedThreadPool(
     new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Close-WAL-Writer-%d").build());
@@ -257,8 +245,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     waitingConsumePayloadsGatingSequence.set(waitingConsumePayloads.getCursor());
 
     batchSize = conf.getLong(WAL_BATCH_SIZE, DEFAULT_WAL_BATCH_SIZE);
-    createMaxRetries =
-      conf.getInt(ASYNC_WAL_CREATE_MAX_RETRIES, DEFAULT_ASYNC_WAL_CREATE_MAX_RETRIES);
     waitOnShutdownInSeconds = conf.getInt(ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS,
       DEFAULT_ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS);
     rollWriter();
@@ -622,46 +608,19 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   protected AsyncWriter createWriterInstance(Path path) throws IOException {
-    boolean overwrite = false;
-    for (int retry = 0;; retry++) {
-      try {
-        return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, overwrite, eventLoopGroup,
-          channelClass);
-      } catch (RemoteException e) {
-        LOG.warn("create wal log writer " + path + " failed, retry = " + retry, e);
-        if (shouldRetryCreate(e)) {
-          if (retry >= createMaxRetries) {
-            break;
-          }
-        } else {
-          IOException ioe = e.unwrapRemoteException();
-          // this usually means master already think we are dead so let's fail all the pending
-          // syncs. The shutdown process of RS will wait for all regions to be closed before calling
-          // WAL.close so if we do not wake up the thread blocked by sync here it will cause dead
-          // lock.
-          if (e.getMessage().contains("Parent directory doesn't exist:")) {
-            syncFutures.forEach(f -> f.done(f.getTxid(), ioe));
-          }
-          throw ioe;
-        }
-      } catch (NameNodeException e) {
-        throw e;
-      } catch (IOException e) {
-        LOG.warn("create wal log writer " + path + " failed, retry = " + retry, e);
-        if (retry >= createMaxRetries) {
-          break;
-        }
-        // overwrite the old broken file.
-        overwrite = true;
-        try {
-          Thread.sleep(ConnectionUtils.getPauseTime(100, retry));
-        } catch (InterruptedException ie) {
-          throw new InterruptedIOException();
-        }
+    try {
+      return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, eventLoopGroup,
+        channelClass);
+    } catch (IOException e) {
+      // this usually means master already think we are dead so let's fail all the pending
+      // syncs. The shutdown process of RS will wait for all regions to be closed before calling
+      // WAL.close so if we do not wake up the thread blocked by sync here it will cause dead
+      // lock.
+      if (e.getMessage().contains("Parent directory doesn't exist:")) {
+        syncFutures.forEach(f -> f.done(f.getTxid(), e));
       }
+      throw e;
     }
-    throw new IOException("Failed to create wal log writer " + path + " after retrying " +
-      createMaxRetries + " time(s)");
   }
 
   private void waitForSafePoint() {
