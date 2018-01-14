@@ -25,6 +25,7 @@ import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,8 +43,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
@@ -51,6 +50,7 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -169,7 +169,6 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -179,6 +178,7 @@ import sun.misc.SignalHandler;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -385,13 +385,13 @@ public class HRegionServer extends HasThread implements
   final AtomicBoolean online = new AtomicBoolean(false);
 
   // zookeeper connection and watcher
-  protected ZKWatcher zooKeeper;
+  protected final ZKWatcher zooKeeper;
 
   // master address tracker
-  private MasterAddressTracker masterAddressTracker;
+  private final MasterAddressTracker masterAddressTracker;
 
   // Cluster Status Tracker
-  protected ClusterStatusTracker clusterStatusTracker;
+  protected final ClusterStatusTracker clusterStatusTracker;
 
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
@@ -524,7 +524,6 @@ public class HRegionServer extends HasThread implements
   private final boolean masterless;
   static final String MASTERLESS_CONFIG_NAME = "hbase.masterless";
 
-
   /**
    * Starts a HRegionServer at the default location
    */
@@ -571,23 +570,10 @@ public class HRegionServer extends HasThread implements
       this.stopped = false;
 
       rpcServices = createRpcServices();
-      if (this instanceof HMaster) {
-        useThisHostnameInstead = conf.get(MASTER_HOSTNAME_KEY);
-      } else {
-        useThisHostnameInstead = conf.get(RS_HOSTNAME_KEY);
-        if (conf.getBoolean(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false)) {
-          if (shouldUseThisHostnameInstead()) {
-            String msg = RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + RS_HOSTNAME_KEY +
-                " are mutually exclusive. Do not set " + RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY +
-                " to true while " + RS_HOSTNAME_KEY + " is used";
-            throw new IOException(msg);
-          } else {
-            useThisHostnameInstead = rpcServices.isa.getHostName();
-          }
-        }
-      }
-      String hostName = shouldUseThisHostnameInstead() ?
-          this.useThisHostnameInstead : this.rpcServices.isa.getHostName();
+      useThisHostnameInstead = getUseThisHostnameInstead(conf);
+      String hostName =
+          StringUtils.isBlank(useThisHostnameInstead) ? this.rpcServices.isa.getHostName()
+              : this.useThisHostnameInstead;
       serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
 
       rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
@@ -623,7 +609,6 @@ public class HRegionServer extends HasThread implements
         // Open connection to zookeeper and set primary watcher
         zooKeeper = new ZKWatcher(conf, getProcessName() + ":" +
           rpcServices.isa.getPort(), this, canCreateBaseZNode());
-
         // If no master in cluster, skip trying to track one or look for a cluster status.
         if (!this.masterless) {
           this.csm = new ZkCoordinatedStateManager(this);
@@ -633,7 +618,14 @@ public class HRegionServer extends HasThread implements
 
           clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
           clusterStatusTracker.start();
+        } else {
+          masterAddressTracker = null;
+          clusterStatusTracker = null;
         }
+      } else {
+        zooKeeper = null;
+        masterAddressTracker = null;
+        clusterStatusTracker = null;
       }
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
@@ -649,6 +641,23 @@ public class HRegionServer extends HasThread implements
       // cause of failed startup is lost.
       LOG.error("Failed construction RegionServer", t);
       throw t;
+    }
+  }
+
+  // HMaster should override this method to load the specific config for master
+  protected String getUseThisHostnameInstead(Configuration conf) throws IOException {
+    String hostname = conf.get(RS_HOSTNAME_KEY);
+    if (conf.getBoolean(RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false)) {
+      if (!StringUtils.isBlank(hostname)) {
+        String msg = RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " + RS_HOSTNAME_KEY +
+          " are mutually exclusive. Do not set " + RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY +
+          " to true while " + RS_HOSTNAME_KEY + " is used";
+        throw new IOException(msg);
+      } else {
+        return rpcServices.isa.getHostName();
+      }
+    } else {
+      return hostname;
     }
   }
 
@@ -699,13 +708,6 @@ public class HRegionServer extends HasThread implements
 
   protected Function<TableDescriptorBuilder, TableDescriptorBuilder> getMetaTableObserver() {
     return null;
-  }
-
-  /*
-   * Returns true if configured hostname should be used
-   */
-  protected boolean shouldUseThisHostnameInstead() {
-    return useThisHostnameInstead != null && !useThisHostnameInstead.isEmpty();
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -810,17 +812,14 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * All initialization needed before we go register with Master.
-   * Do bare minimum. Do bulk of initializations AFTER we've connected to the Master.
+   * All initialization needed before we go register with Master.<br>
+   * Do bare minimum. Do bulk of initializations AFTER we've connected to the Master.<br>
    * In here we just put up the RpcServer, setup Connection, and ZooKeeper.
-   *
-   * @throws IOException
-   * @throws InterruptedException
    */
   private void preRegistrationInitialization() {
     try {
-      setupClusterConnection();
       initializeZooKeeper();
+      setupClusterConnection();
       // Setup RPC client for master communication
       this.rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
           this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
@@ -833,18 +832,18 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Bring up connection to zk ensemble and then wait until a master for this
-   * cluster and then after that, wait until cluster 'up' flag has been set.
-   * This is the order in which master does things.
+   * Bring up connection to zk ensemble and then wait until a master for this cluster and then after
+   * that, wait until cluster 'up' flag has been set. This is the order in which master does things.
+   * <p>
    * Finally open long-living server short-circuit connection.
-   * @throws IOException
-   * @throws InterruptedException
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
     justification="cluster Id znode read would give us correct response")
   private void initializeZooKeeper() throws IOException, InterruptedException {
     // Nothing to do in here if no Master in the mix.
-    if (this.masterless) return;
+    if (this.masterless) {
+      return;
+    }
 
     // Create the master address tracker, register with zk, and start it.  Then
     // block until a master is available.  No point in starting up if no master
@@ -855,17 +854,20 @@ public class HRegionServer extends HasThread implements
     // when ready.
     blockAndCheckIfStopped(this.clusterStatusTracker);
 
-    // Retrieve clusterId
-    // Since cluster status is now up
-    // ID should have already been set by HMaster
-    try {
-      clusterId = ZKClusterId.readClusterIdZNode(this.zooKeeper);
-      if (clusterId == null) {
-        this.abort("Cluster ID has not been set");
+    // If we are HMaster then the cluster id should have already been set.
+    if (clusterId == null) {
+      // Retrieve clusterId
+      // Since cluster status is now up
+      // ID should have already been set by HMaster
+      try {
+        clusterId = ZKClusterId.readClusterIdZNode(this.zooKeeper);
+        if (clusterId == null) {
+          this.abort("Cluster ID has not been set");
+        }
+        LOG.info("ClusterId : " + clusterId);
+      } catch (KeeperException e) {
+        this.abort("Failed to retrieve Cluster ID", e);
       }
-      LOG.info("ClusterId : "+clusterId);
-    } catch (KeeperException e) {
-      this.abort("Failed to retrieve Cluster ID",e);
     }
 
     // In case colocated master, wait here till it's active.
@@ -884,16 +886,6 @@ public class HRegionServer extends HasThread implements
       rspmHost.initialize(this);
     } catch (KeeperException e) {
       this.abort("Failed to reach coordination cluster when creating procedure handler.", e);
-    }
-  }
-
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RV_RETURN_VALUE_IGNORED",
-    justification="We don't care about the return")
-  private void doLatch(final CountDownLatch latch) throws InterruptedException {
-    if (latch != null) {
-      // Result is ignored intentionally but if I remove the below, findbugs complains (the
-      // above justification on this method doesn't seem to suppress it).
-      boolean result = latch.await(20, TimeUnit.SECONDS);
     }
   }
 
@@ -1467,14 +1459,14 @@ public class HRegionServer extends HasThread implements
           String hostnameFromMasterPOV = e.getValue();
           this.serverName = ServerName.valueOf(hostnameFromMasterPOV, rpcServices.isa.getPort(),
               this.startcode);
-          if (shouldUseThisHostnameInstead() &&
+          if (!StringUtils.isBlank(useThisHostnameInstead) &&
               !hostnameFromMasterPOV.equals(useThisHostnameInstead)) {
             String msg = "Master passed us a different hostname to use; was=" +
                 this.useThisHostnameInstead + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
             throw new IOException(msg);
           }
-          if (!shouldUseThisHostnameInstead() &&
+          if (StringUtils.isBlank(useThisHostnameInstead) &&
               !hostnameFromMasterPOV.equals(rpcServices.isa.getHostName())) {
             String msg = "Master passed us a different hostname to use; was=" +
                 rpcServices.isa.getHostName() + ", but now=" + hostnameFromMasterPOV;
@@ -1691,7 +1683,7 @@ public class HRegionServer extends HasThread implements
     CompactionChecker(final HRegionServer h, final int sleepTime, final Stoppable stopper) {
       super("CompactionChecker", stopper, sleepTime);
       this.instance = h;
-      LOG.info(this.getName() + " runs every " + StringUtils.formatTime(sleepTime));
+      LOG.info(this.getName() + " runs every " + Duration.ofMillis(sleepTime));
 
       /* MajorCompactPriority is configurable.
        * If not set, the compaction will use default priority.
@@ -2386,7 +2378,7 @@ public class HRegionServer extends HasThread implements
     // Do our best to report our abort to the master, but this may not work
     try {
       if (cause != null) {
-        msg += "\nCause:\n" + StringUtils.stringifyException(cause);
+        msg += "\nCause:\n" + Throwables.getStackTraceAsString(cause);
       }
       // Report to the master but only if we have already registered with the master.
       if (rssStub != null && this.serverName != null) {
@@ -2614,7 +2606,7 @@ public class HRegionServer extends HasThread implements
       long now = EnvironmentEdgeManager.currentTime();
       int port = rpcServices.isa.getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
-      if (shouldUseThisHostnameInstead()) {
+      if (!StringUtils.isBlank(useThisHostnameInstead)) {
         request.setUseThisHostnameInstead(useThisHostnameInstead);
       }
       request.setPort(port);

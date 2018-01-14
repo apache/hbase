@@ -103,7 +103,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     super(conf);
     this.regionsToRegionServers = regionsToRegionServers;
     Superusers.initialize(conf);
-    this.fileSystemManager = new MasterFileSystem(this);
+    this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
     // Mock an AM.
     this.assignmentManager = new AssignmentManager(this, new MockRegionStateStore(this)) {
