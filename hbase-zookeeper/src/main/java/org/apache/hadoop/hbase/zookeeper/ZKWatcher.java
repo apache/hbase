@@ -159,23 +159,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     }
   }
 
-  /** Returns whether the znode is supposed to be readable by the client
-   * and DOES NOT contain sensitive information (world readable).*/
-  public boolean isClientReadable(String node) {
-    // Developer notice: These znodes are world readable. DO NOT add more znodes here UNLESS
-    // all clients need to access this data to work. Using zk for sharing data to clients (other
-    // than service lookup case is not a recommended design pattern.
-    return
-        node.equals(znodePaths.baseZNode) ||
-        znodePaths.isAnyMetaReplicaZNode(node) ||
-        node.equals(znodePaths.masterAddressZNode) ||
-        node.equals(znodePaths.clusterIdZNode)||
-        node.equals(znodePaths.rsZNode) ||
-        // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
-        node.equals(znodePaths.tableZNode) ||
-        node.startsWith(znodePaths.tableZNode + "/");
-  }
-
   /**
    * On master start, we check the znode ACLs under the root directory and set the ACLs properly
    * if needed. If the cluster goes from an unsecure setup to a secure setup, this step is needed
