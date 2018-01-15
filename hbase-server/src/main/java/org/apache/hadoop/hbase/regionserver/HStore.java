@@ -2283,6 +2283,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       long snapshotId = -1; // -1 means do not drop
       if (dropMemstoreSnapshot && snapshot != null) {
         snapshotId = snapshot.getId();
+        snapshot.close();
       }
       HStore.this.updateStorefiles(storeFiles, snapshotId);
     }
