@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
+import java.io.Closeable;
 import java.util.List;
 /**
  * Holds details of the snapshot taken on a MemStore. Details include the snapshot's identifier,
@@ -26,7 +27,7 @@ import java.util.List;
  * all the cells and a scanner to read all cells in it.
  */
 @InterfaceAudience.Private
-public class MemStoreSnapshot {
+public class MemStoreSnapshot implements Closeable {
   private final long id;
   private final int cellsCount;
   private final long dataSize;
@@ -89,5 +90,14 @@ public class MemStoreSnapshot {
    */
   public boolean isTagsPresent() {
     return this.tagsPresent;
+  }
+
+  @Override
+  public void close() {
+    if (this.scanners != null) {
+      for (KeyValueScanner scanner : scanners) {
+        scanner.close();
+      }
+    }
   }
 }
