@@ -26,7 +26,6 @@ import static org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
 
 import java.util.Optional;
 import java.util.stream.IntStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -184,11 +183,23 @@ public class ZNodePaths {
   }
 
   /**
-   * Join the prefix znode name with the suffix znode name to generate a proper
-   * full znode name.
-   *
+   * Returns whether the znode is supposed to be readable by the client and DOES NOT contain
+   * sensitive information (world readable).
+   */
+  public boolean isClientReadable(String node) {
+    // Developer notice: These znodes are world readable. DO NOT add more znodes here UNLESS
+    // all clients need to access this data to work. Using zk for sharing data to clients (other
+    // than service lookup case is not a recommended design pattern.
+    return node.equals(baseZNode) || isAnyMetaReplicaZNode(node) ||
+      node.equals(masterAddressZNode) || node.equals(clusterIdZNode) || node.equals(rsZNode) ||
+      // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
+      node.equals(tableZNode) || node.startsWith(tableZNode + "/");
+  }
+
+  /**
+   * Join the prefix znode name with the suffix znode name to generate a proper full znode name.
+   * <p>
    * Assumes prefix does not end with slash and suffix does not begin with it.
-   *
    * @param prefix beginning of znode name
    * @param suffix ending of znode name
    * @return result of properly joining prefix with suffix

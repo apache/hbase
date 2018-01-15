@@ -159,7 +159,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
   private void checkZnodePermsRecursive(ZKWatcher watcher,
       RecoverableZooKeeper zk, String znode) throws KeeperException, InterruptedException {
 
-    boolean expectedWorldReadable = watcher.isClientReadable(znode);
+    boolean expectedWorldReadable = watcher.znodePaths.isClientReadable(znode);
 
     assertZnodePerms(zk, znode, expectedWorldReadable);
 
