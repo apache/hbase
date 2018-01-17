@@ -1710,7 +1710,6 @@ public class ProcedureExecutor<TEnvironment> {
 
     public WorkerThread(final ThreadGroup group) {
       super(group, "ProcExecWrkr-" + workerId.incrementAndGet());
-      setDaemon(true);
     }
 
     @Override
@@ -1785,7 +1784,6 @@ public class ProcedureExecutor<TEnvironment> {
 
     public TimeoutExecutorThread(final ThreadGroup group) {
       super(group, "ProcExecTimeout");
-      setDaemon(true);
     }
 
     @Override
