@@ -160,7 +160,7 @@ public class TestProcedureEvents {
     }
 
     @Override
-    protected boolean setTimeoutFailure(final TestProcEnv env) {
+    protected synchronized boolean setTimeoutFailure(final TestProcEnv env) {
       int n = ntimeouts.incrementAndGet();
       LOG.info("HANDLE TIMEOUT " + this + " ntimeouts=" + n);
       setState(ProcedureState.RUNNABLE);
