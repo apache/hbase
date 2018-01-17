@@ -331,10 +331,12 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       super(key, 0);
     }
 
+    @Override
     public TRemote getKey() {
       return getObject();
     }
 
+    @Override
     public synchronized void add(final RemoteProcedure operation) {
       if (this.operations == null) {
         this.operations = new HashSet<>();
@@ -348,6 +350,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       }
     }
 
+    @Override
     public synchronized void dispatch() {
       if (operations != null) {
         remoteDispatch(getKey(), operations);

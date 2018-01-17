@@ -186,7 +186,7 @@ public class TestYieldProcedures {
       extends StateMachineProcedure<TestProcEnv, TestStateMachineProcedure.State> {
     enum State { STATE_1, STATE_2, STATE_3 }
 
-    public class ExecutionInfo {
+    public static class ExecutionInfo {
       private final boolean rollback;
       private final long timestamp;
       private final State step;

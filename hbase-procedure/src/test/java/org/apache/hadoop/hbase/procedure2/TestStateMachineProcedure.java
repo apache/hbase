@@ -152,6 +152,7 @@ public class TestStateMachineProcedure {
   public enum TestSMProcedureState { STEP_1, STEP_2 };
   public static class TestSMProcedure
       extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
+    @Override
     protected Flow executeFromState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("EXEC " + state + " " + this);
       env.execCount.incrementAndGet();
@@ -168,25 +169,30 @@ public class TestStateMachineProcedure {
       return Flow.HAS_MORE_STATE;
     }
 
+    @Override
     protected void rollbackState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("ROLLBACK " + state + " " + this);
       env.rollbackCount.incrementAndGet();
     }
 
+    @Override
     protected TestSMProcedureState getState(int stateId) {
       return TestSMProcedureState.values()[stateId];
     }
 
+    @Override
     protected int getStateId(TestSMProcedureState state) {
       return state.ordinal();
     }
 
+    @Override
     protected TestSMProcedureState getInitialState() {
       return TestSMProcedureState.STEP_1;
     }
   }
 
   public static class SimpleChildProcedure extends NoopProcedure<TestProcEnv> {
+    @Override
     protected Procedure[] execute(TestProcEnv env) {
       LOG.info("EXEC " + this);
       env.execCount.incrementAndGet();
@@ -203,7 +209,7 @@ public class TestStateMachineProcedure {
     }
   }
 
-  public class TestProcEnv {
+  public static class TestProcEnv {
     AtomicInteger execCount = new AtomicInteger(0);
     AtomicInteger rollbackCount = new AtomicInteger(0);
     boolean triggerChildRollback = false;

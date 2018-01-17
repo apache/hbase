@@ -186,5 +186,5 @@ public class TestProcedureExecutor {
     }
   }
 
-  private class TestProcEnv { }
+  private static class TestProcEnv { }
 }
