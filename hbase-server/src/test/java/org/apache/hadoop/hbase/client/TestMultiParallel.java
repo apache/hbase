@@ -58,13 +58,11 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore // Depends on Master being able to host regions. Needs fixing.
 @Category({MediumTests.class, FlakeyTests.class})
 public class TestMultiParallel {
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiParallel.class);
@@ -90,7 +88,9 @@ public class TestMultiParallel {
     UTIL.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
         KeyValueCodec.class.getCanonicalName());
     UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
-    UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
+    // We used to ask for system tables on Master exclusively but not needed by test and doesn't
+    // work anyways -- so commented out.
+    // UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     UTIL.getConfiguration()
         .set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyMasterObserver.class.getName());
     UTIL.startMiniCluster(slaves);

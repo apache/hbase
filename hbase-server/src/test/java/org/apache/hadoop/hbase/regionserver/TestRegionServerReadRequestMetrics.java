@@ -105,7 +105,7 @@ public class TestRegionServerReadRequestMetrics {
   public static void setUpOnce() throws Exception {
     // Default starts one regionserver only.
     TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
-    TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
+    // TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
     serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
@@ -326,6 +326,7 @@ public class TestRegionServerReadRequestMetrics {
     testReadRequests(resultCount, 1, 0);
   }
 
+  @Ignore // HBASE-19785
   @Test
   public void testReadRequestsCountWithFilter() throws Exception {
     int resultCount;
@@ -372,6 +373,7 @@ public class TestRegionServerReadRequestMetrics {
 //    testReadRequests(resultCount, 0, 1);
   }
 
+  @Ignore // HBASE-19785
   @Test
   public void testReadRequestsCountWithDeletedRow() throws Exception {
     try {
@@ -409,6 +411,7 @@ public class TestRegionServerReadRequestMetrics {
     }
   }
 
+  @Ignore // See HBASE-19785
   @Test
   public void testReadRequestsWithCoprocessor() throws Exception {
     TableName tableName = TableName.valueOf("testReadRequestsWithCoprocessor");
