@@ -51,22 +51,27 @@ public class MetricRegistriesImpl extends MetricRegistries {
     return registries.put(info, () -> factory.create(info));
   }
 
+  @Override
   public boolean remove(MetricRegistryInfo key) {
     return registries.remove(key) == null;
   }
 
+  @Override
   public Optional<MetricRegistry> get(MetricRegistryInfo info) {
     return Optional.ofNullable(registries.get(info));
   }
 
+  @Override
   public Collection<MetricRegistry> getMetricRegistries() {
     return Collections.unmodifiableCollection(registries.values());
   }
 
+  @Override
   public void clear() {
     registries.clear();
   }
 
+  @Override
   public Set<MetricRegistryInfo> getMetricRegistryInfos() {
     return Collections.unmodifiableSet(registries.keySet());
   }
