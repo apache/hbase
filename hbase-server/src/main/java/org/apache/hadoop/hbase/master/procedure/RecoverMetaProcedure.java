@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
@@ -58,7 +58,7 @@ public class RecoverMetaProcedure
   private int replicaId;
 
   private final ProcedurePrepareLatch syncLatch;
-  private HMaster master;
+  private MasterServices master;
 
   /**
    * Call this constructor to queue up a {@link RecoverMetaProcedure} in response to meta
@@ -250,7 +250,7 @@ public class RecoverMetaProcedure
    */
   private void prepare(MasterProcedureEnv env) {
     if (master == null) {
-      master = (HMaster) env.getMasterServices();
+      master = env.getMasterServices();
       Preconditions.checkArgument(master != null);
     }
   }
