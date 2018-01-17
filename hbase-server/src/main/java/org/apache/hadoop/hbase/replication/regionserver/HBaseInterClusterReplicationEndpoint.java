@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -327,7 +328,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
               "call to the remote cluster timed out, which is usually " +
               "caused by a machine failure or a massive slowdown",
               this.socketTimeoutMultiplier);
-          } else if (ioe instanceof ConnectException) {
+          } else if (ioe instanceof ConnectException || ioe instanceof UnknownHostException) {
             LOG.warn("Peer is unavailable, rechecking all sinks: ", ioe);
             replicationSinkMgr.chooseSinks();
           } else {
