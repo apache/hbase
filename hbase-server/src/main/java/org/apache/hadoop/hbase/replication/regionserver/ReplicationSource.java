@@ -864,8 +864,13 @@ public class ReplicationSource extends Thread
                   // We found the right new location
                   LOG.info("Log " + this.currentPath + " still exists at " +
                       possibleLogLocation);
-                  // Breaking here will make us sleep since reader is null
-                  // TODO why don't we need to set currentPath and call openReader here?
+                  // When running ReplicationSyncUp tool, we should replicate the data from WAL
+                  // which is moved to WAL splitting directory also.
+                  if (stopper instanceof ReplicationSyncUp.DummyServer) {
+                    // Open the log at the this location
+                    this.currentPath = possibleLogLocation;
+                    this.openReader(sleepMultiplier);
+                  }
                   return true;
                 }
               }
