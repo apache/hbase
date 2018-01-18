@@ -356,13 +356,22 @@ public class TestCleanerChore {
 
   @Test
   public void testOnConfigurationChange() throws Exception {
+    int availableProcessorNum = Runtime.getRuntime().availableProcessors();
+    if (availableProcessorNum == 1) { // no need to run this test
+      return;
+    }
+
+    // have at least 2 available processors/cores
+    int    initPoolSize = availableProcessorNum / 2;
+    int changedPoolSize = availableProcessorNum;
+
     Stoppable stop = new StoppableImplementation();
     Configuration conf = UTIL.getConfiguration();
     Path testDir = UTIL.getDataTestDir();
     FileSystem fs = UTIL.getTestFileSystem();
     String confKey = "hbase.test.cleaner.delegates";
     conf.set(confKey, AlwaysDelete.class.getName());
-    conf.set(CleanerChore.CHORE_POOL_SIZE, "2");
+    conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(initPoolSize));
     AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey);
     chore.setEnabled(true);
     // Create subdirs under testDir
@@ -381,9 +390,9 @@ public class TestCleanerChore {
     t.setDaemon(true);
     t.start();
     // Change size of chore's pool
-    conf.set(CleanerChore.CHORE_POOL_SIZE, "4");
+    conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(changedPoolSize));
     chore.onConfigurationChange(conf);
-    assertEquals(4, chore.getChorePoolSize());
+    assertEquals(changedPoolSize, chore.getChorePoolSize());
     // Stop chore
     t.join();
   }
