@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
@@ -386,7 +387,6 @@ public class MiniHBaseCluster extends HBaseCluster {
    * within the timeout.
    *
    * @return New RegionServerThread
-   * @throws IOException
    */
   public JVMClusterUtil.RegionServerThread startRegionServerAndWait(long timeout)
       throws IOException {
@@ -463,7 +463,6 @@ public class MiniHBaseCluster extends HBaseCluster {
   /**
    * Starts a master thread running
    *
-   * @throws IOException
    * @return New RegionServerThread
    */
   public JVMClusterUtil.MasterThread startMaster() throws IOException {
@@ -615,9 +614,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Shut down the mini HBase cluster
-   * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   public void shutdown() throws IOException {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
@@ -644,29 +641,36 @@ public class MiniHBaseCluster extends HBaseCluster {
     return master == null ? null : master.getClusterMetrics();
   }
 
+  private void executeFlush(HRegion region) throws IOException {
+    // retry 5 times if we can not flush
+    for (int i = 0; i < 5; i++) {
+      FlushResult result = region.flush(true);
+      if (result.getResult() != FlushResult.Result.CANNOT_FLUSH) {
+        return;
+      }
+      Threads.sleep(1000);
+    }
+  }
+
   /**
    * Call flushCache on all regions on all participating regionservers.
-   * @throws IOException
    */
   public void flushcache() throws IOException {
-    for (JVMClusterUtil.RegionServerThread t:
-        this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        r.flush(true);
+    for (JVMClusterUtil.RegionServerThread t : this.hbaseCluster.getRegionServers()) {
+      for (HRegion r : t.getRegionServer().getOnlineRegionsLocalContext()) {
+        executeFlush(r);
       }
     }
   }
 
   /**
    * Call flushCache on all regions of the specified table.
-   * @throws IOException
    */
   public void flushcache(TableName tableName) throws IOException {
-    for (JVMClusterUtil.RegionServerThread t:
-        this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        if(r.getTableDescriptor().getTableName().equals(tableName)) {
-          r.flush(true);
+    for (JVMClusterUtil.RegionServerThread t : this.hbaseCluster.getRegionServers()) {
+      for (HRegion r : t.getRegionServer().getOnlineRegionsLocalContext()) {
+        if (r.getTableDescriptor().getTableName().equals(tableName)) {
+          executeFlush(r);
         }
       }
     }
