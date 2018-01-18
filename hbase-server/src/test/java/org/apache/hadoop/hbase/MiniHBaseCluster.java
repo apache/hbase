@@ -78,7 +78,20 @@ public class MiniHBaseCluster extends HBaseCluster {
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers)
       throws IOException, InterruptedException {
-    this(conf, numMasters, numRegionServers, null, null, null);
+    this(conf, numMasters, numRegionServers, null, null);
+  }
+
+  /**
+   * Start a MiniHBaseCluster.
+   * @param conf Configuration to be used for cluster
+   * @param numMasters initial number of masters to start.
+   * @param numRegionServers initial number of region servers to start.
+   */
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
+         Class<? extends HMaster> masterClass,
+         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
+    this(conf, numMasters, numRegionServers, null, masterClass, regionserverClass);
   }
 
   /**
