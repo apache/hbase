@@ -231,7 +231,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
         try {
           task = queue.take();
         } catch (InterruptedException e) {
-          LOG.debug("Interrupted while trying to take a task from queue", e);
+          LOG.trace("Interrupted while trying to take a task from queue", e);
           break;
         }
         if (task != null) {
@@ -444,5 +444,13 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
       updated = true;
     }
     return updated;
+  }
+
+  @Override
+  public synchronized void cancel(boolean mayInterruptIfRunning) {
+    super.cancel(mayInterruptIfRunning);
+    for (Thread t: this.threads) {
+      t.interrupt();
+    }
   }
 }
