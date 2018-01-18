@@ -184,7 +184,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             or re-run HBCK in repair mode.
           </div>
         </%if>
-
+        <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null %>
+          <section>
+            <h2>RSGroup</h2>
+            <& RSGroupListTmpl; master= master; serverManager= serverManager&>
+          </section>
+        </%if>
         <section>
             <h2>Region Servers</h2>
             <& RegionServerListTmpl; master= master; servers = servers &>
