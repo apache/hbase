@@ -144,12 +144,6 @@ public class TestScannerHeartbeatMessages {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows
-   * @param families
-   * @param qualifiers
-   * @param value
-   * @return
-   * @throws IOException
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
       byte[] value) throws IOException {
@@ -189,8 +183,6 @@ public class TestScannerHeartbeatMessages {
    * Run the test callable when heartbeats are enabled/disabled. We expect all tests to only pass
    * when heartbeat messages are enabled (otherwise the test is pointless). When heartbeats are
    * disabled, the test should throw an exception.
-   * @param testCallable
-   * @throws InterruptedException
    */
   private void testImportanceOfHeartbeats(Callable<Void> testCallable) throws InterruptedException {
     HeartbeatRPCServices.heartbeatsEnabled = true;
@@ -217,7 +209,6 @@ public class TestScannerHeartbeatMessages {
   /**
    * Test the case that the time limit for the scan is reached after each full row of cells is
    * fetched.
-   * @throws Exception
    */
   @Test
   public void testHeartbeatBetweenRows() throws Exception {
@@ -239,7 +230,6 @@ public class TestScannerHeartbeatMessages {
 
   /**
    * Test the case that the time limit for scans is reached in between column families
-   * @throws Exception
    */
   @Test
   public void testHeartbeatBetweenColumnFamilies() throws Exception {
@@ -263,7 +253,7 @@ public class TestScannerHeartbeatMessages {
     });
   }
 
-  public static class SparseFilter extends FilterBase {
+  public static class SparseCellFilter extends FilterBase {
 
     @Override
     public ReturnCode filterCell(final Cell v) throws IOException {
@@ -277,23 +267,39 @@ public class TestScannerHeartbeatMessages {
     }
 
     public static Filter parseFrom(final byte[] pbBytes) {
-      return new SparseFilter();
+      return new SparseCellFilter();
+    }
+  }
+
+  public static class SparseRowFilter extends FilterBase {
+
+    @Override
+    public boolean filterRowKey(Cell cell) throws IOException {
+      try {
+        Thread.sleep(CLIENT_TIMEOUT / 2 - 100);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      return !Bytes.equals(CellUtil.cloneRow(cell), ROWS[NUM_ROWS - 1]);
+    }
+
+    public static Filter parseFrom(final byte[] pbBytes) {
+      return new SparseRowFilter();
     }
   }
 
   /**
    * Test the case that there is a filter which filters most of cells
-   * @throws Exception
    */
   @Test
-  public void testHeartbeatWithSparseFilter() throws Exception {
+  public void testHeartbeatWithSparseCellFilter() throws Exception {
     testImportanceOfHeartbeats(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         Scan scan = new Scan();
         scan.setMaxResultSize(Long.MAX_VALUE);
         scan.setCaching(Integer.MAX_VALUE);
-        scan.setFilter(new SparseFilter());
+        scan.setFilter(new SparseCellFilter());
         ResultScanner scanner = TABLE.getScanner(scan);
         int num = 0;
         while (scanner.next() != null) {
@@ -305,7 +311,7 @@ public class TestScannerHeartbeatMessages {
         scan = new Scan();
         scan.setMaxResultSize(Long.MAX_VALUE);
         scan.setCaching(Integer.MAX_VALUE);
-        scan.setFilter(new SparseFilter());
+        scan.setFilter(new SparseCellFilter());
         scan.setAllowPartialResults(true);
         scanner = TABLE.getScanner(scan);
         num = 0;
@@ -321,6 +327,31 @@ public class TestScannerHeartbeatMessages {
   }
 
   /**
+   * Test the case that there is a filter which filters most of rows
+   */
+  @Test
+  public void testHeartbeatWithSparseRowFilter() throws Exception {
+    testImportanceOfHeartbeats(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        Scan scan = new Scan();
+        scan.setMaxResultSize(Long.MAX_VALUE);
+        scan.setCaching(Integer.MAX_VALUE);
+        scan.setFilter(new SparseRowFilter());
+        ResultScanner scanner = TABLE.getScanner(scan);
+        int num = 0;
+        while (scanner.next() != null) {
+          num++;
+        }
+        assertEquals(1, num);
+        scanner.close();
+
+        return null;
+      }
+    });
+  }
+
+  /**
    * Test the equivalence of a scan versus the same scan executed when heartbeat messages are
    * necessary
    * @param scan The scan configuration being tested
@@ -328,7 +359,6 @@ public class TestScannerHeartbeatMessages {
    * @param cfSleepTime The time to sleep between fetches of column family cells
    * @param sleepBeforeCf set to true when column family sleeps should occur before the cells for
    *          that column family are fetched
-   * @throws Exception
    */
   private void testEquivalenceOfScanWithHeartbeats(final Scan scan, int rowSleepTime,
       int cfSleepTime, boolean sleepBeforeCf) throws Exception {
@@ -361,8 +391,6 @@ public class TestScannerHeartbeatMessages {
   /**
    * Helper method for setting the time to sleep between rows and column families. If a sleep time
    * is negative then that sleep will be disabled
-   * @param rowSleepTime
-   * @param cfSleepTime
    */
   private static void configureSleepTime(int rowSleepTime, int cfSleepTime, boolean sleepBeforeCf) {
     HeartbeatHRegion.sleepBetweenRows = rowSleepTime > 0;

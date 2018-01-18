@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -79,12 +80,9 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
             assertEquals(1, results.length);
             assertEquals(NUM_ROWS - 1, count / NUM_FAMILIES / NUM_QUALIFIERS);
             // we will always provide a scan cursor if time limit is reached.
-            if (count == NUM_ROWS * NUM_FAMILIES * NUM_QUALIFIERS - 1) {
-              assertFalse(controller.cursor().isPresent());
-            } else {
-              assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1],
-                controller.cursor().get().getRow());
-            }
+            assertTrue(controller.cursor().isPresent());
+            assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1],
+              controller.cursor().get().getRow());
             assertArrayEquals(ROWS[reversed ? 0 : NUM_ROWS - 1], results[0].getRow());
             count++;
           } catch (Throwable e) {
