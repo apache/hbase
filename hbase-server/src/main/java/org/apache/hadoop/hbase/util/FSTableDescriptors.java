@@ -190,8 +190,8 @@ public class FSTableDescriptors implements TableDescriptors {
                     .setBloomFilterType(BloomType.NONE)
                     .build())
             .addColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.TABLE_FAMILY)
-                    // Ten is arbitrary number.  Keep versions to help debugging.
-                    .setMaxVersions(10)
+                    .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+                        HConstants.DEFAULT_HBASE_META_VERSIONS))
                     .setInMemory(true)
                     .setBlocksize(8 * 1024)
                     .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
