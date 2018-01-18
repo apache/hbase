@@ -36,6 +36,7 @@ public final class HBaseInterfaceAudience {
   public static final String REPLICATION = "Replication";
   public static final String PHOENIX = "Phoenix";
   public static final String SPARK = "Spark";
+  public static final String UNITTEST = "Unittest";
 
   /**
    * Denotes class names that appear in user facing configuration files.
