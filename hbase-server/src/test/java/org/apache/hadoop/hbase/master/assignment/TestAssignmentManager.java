@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.NavigableMap;
 import java.util.Random;
@@ -206,7 +207,7 @@ public class TestAssignmentManager {
     rsDispatcher.setMockRsExecutor(new RandRsExecutor());
     // Loop a bunch of times so we hit various combos of exceptions.
     for (int i = 0; i < 10; i++) {
-      LOG.info("" + i);
+      LOG.info("ROUND=" + i);
       AssignProcedure proc = am.createAssignProcedure(hri);
       waitOnFuture(submitProcedure(proc));
     }
@@ -445,6 +446,12 @@ public class TestAssignmentManager {
       return future.get(5, TimeUnit.SECONDS);
     } catch (ExecutionException e) {
       LOG.info("ExecutionException", e);
+      Exception ee = (Exception)e.getCause();
+      if (ee instanceof InterruptedIOException) {
+        for (Procedure p: this.master.getMasterProcedureExecutor().getProcedures()) {
+          LOG.info(p.toStringDetails());
+        }
+      }
       throw (Exception)e.getCause();
     }
   }
