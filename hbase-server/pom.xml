@@ -759,6 +759,10 @@
               <groupId>com.google.guava</groupId>
               <artifactId>guava</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>org.apache.zookeeper</groupId>
+              <artifactId>zookeeper</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
         <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
