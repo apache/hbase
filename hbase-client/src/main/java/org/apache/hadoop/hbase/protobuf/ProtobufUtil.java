@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
@@ -91,7 +92,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.protobuf.generated.TableProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -255,10 +258,11 @@ public final class ProtobufUtil {
    * Return the Exception thrown by the remote server wrapped in
    * ServiceException as cause. RemoteException are left untouched.
    *
-   * @param se ServiceException that wraps IO exception thrown by the server
+   * @param e ServiceException that wraps IO exception thrown by the server
    * @return Exception wrapped in ServiceException.
    */
-  public static IOException getServiceException(org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
+  public static IOException getServiceException(
+      org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
     Throwable t = e.getCause();
     if (ExceptionUtil.isInterrupt(t)) {
       return ExceptionUtil.asInterrupt(t);
@@ -1816,5 +1820,16 @@ public final class ProtobufUtil {
     String hostname = Addressing.parseHostname(str);
     int port = Addressing.parsePort(str);
     return ServerName.valueOf(hostname, port, -1L);
+  }
+
+  public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
+    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
+    for(HBaseProtos.ServerName el: proto.getServersList()) {
+      RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
+    }
+    for(TableProtos.TableName pTableName: proto.getTablesList()) {
+      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
+    }
+    return RSGroupInfo;
   }
 }
