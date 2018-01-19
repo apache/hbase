@@ -400,14 +400,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       orphanTables.add(TableName.valueOf(entry));
     }
 
-    final List<TableName> specialTables;
-    if(!masterServices.isInitialized()) {
-      specialTables = Arrays.asList(AccessControlLists.ACL_TABLE_NAME, TableName.META_TABLE_NAME,
-          TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME);
-    } else {
-      specialTables =
-          masterServices.listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
-    }
+    final List<TableName> specialTables = Arrays.asList(AccessControlLists.ACL_TABLE_NAME,
+        TableName.META_TABLE_NAME, TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME);
 
     for (TableName table : specialTables) {
       orphanTables.add(table);
