@@ -177,6 +177,14 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
     }
   }
 
+  @Override
+  public synchronized void cancel(boolean mayInterruptIfRunning) {
+    super.cancel(mayInterruptIfRunning);
+    for (Thread t : oldWALsCleaner) {
+      t.interrupt();
+    }
+  }
+
   private static final class CleanerContext {
     // At most waits 60 seconds
     static final long MAX_WAIT = 60 * 1000;
