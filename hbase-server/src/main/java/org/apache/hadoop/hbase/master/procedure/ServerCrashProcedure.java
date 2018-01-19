@@ -195,9 +195,9 @@ implements ServerProcedureInterface {
     // Assign meta if still carrying it. Check again: region may be assigned because of RIT timeout
     final AssignmentManager am = env.getMasterServices().getAssignmentManager();
     for (RegionInfo hri: am.getRegionStates().getServerRegionInfoSet(serverName)) {
-      if (!isDefaultMetaRegion(hri)) {
-        continue;
-      }
+      if (!isDefaultMetaRegion(hri)) continue;
+
+      am.offlineRegion(hri);
       addChildProcedure(new RecoverMetaProcedure(serverName, this.shouldSplitWal));
     }
   }
