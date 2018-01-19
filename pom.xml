@@ -2889,10 +2889,6 @@
                <artifactId>htrace-core</artifactId>
              </exclusion>
              <exclusion>
-               <groupId>commons-beanutils</groupId>
-               <artifactId>commons-beanutils</artifactId>
-             </exclusion>
-             <exclusion>
                <groupId>javax.servlet.jsp</groupId>
                <artifactId>jsp-api</artifactId>
              </exclusion>
