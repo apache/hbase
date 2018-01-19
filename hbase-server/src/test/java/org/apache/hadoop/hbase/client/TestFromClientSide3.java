@@ -413,6 +413,33 @@ public class TestFromClientSide3 {
     }
   }
 
+  // Test Table.batch with large amount of mutations against the same key.
+  // It used to trigger read lock's "Maximum lock count exceeded" Error.
+  @Test
+  public void testHTableWithLargeBatch() throws Exception {
+    Table table = TEST_UTIL.createTable(TableName.valueOf("testHTableWithLargeBatch"),
+        new byte[][] { FAMILY });
+    int sixtyFourK = 64 * 1024;
+    try {
+      List actions = new ArrayList();
+      Object[] results = new Object[(sixtyFourK + 1) * 2];
+
+      for (int i = 0; i < sixtyFourK + 1; i ++) {
+        Put put1 = new Put(ROW);
+        put1.addColumn(FAMILY, QUALIFIER, VALUE);
+        actions.add(put1);
+
+        Put put2 = new Put(ANOTHERROW);
+        put2.addColumn(FAMILY, QUALIFIER, VALUE);
+        actions.add(put2);
+      }
+
+      table.batch(actions, results);
+    } finally {
+      table.close();
+    }
+  }
+
   @Test
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
 
