@@ -69,6 +69,10 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
   protected void doStop() {
     // This is no stop for the table manager.
     notifyStopped();
+    TableNamespaceManager tnsm = getTableNamespaceManager();
+    if (tnsm != null) {
+      tnsm.stop("Stopping");
+    }
   }
 
   @Override

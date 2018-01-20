@@ -837,11 +837,21 @@ public class MiniHBaseCluster extends HBaseCluster {
    * impossible to bring the mini-cluster back for clean shutdown.
    */
   public void killAll() {
+    // Do backups first.
+    MasterThread activeMaster = null;
+    for (MasterThread masterThread : getMasterThreads()) {
+      if (!masterThread.getMaster().isActiveMaster()) {
+        masterThread.getMaster().abort("killAll");
+      } else {
+        activeMaster = masterThread;
+      }
+    }
+    // Do active after.
+    if (activeMaster != null) {
+      activeMaster.getMaster().abort("killAll");
+    }
     for (RegionServerThread rst : getRegionServerThreads()) {
       rst.getRegionServer().abort("killAll");
-    }
-    for (MasterThread masterThread : getMasterThreads()) {
-      masterThread.getMaster().abort("killAll", new Throwable());
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZKNamespaceManager;
 import org.apache.hadoop.hbase.client.Delete;
@@ -68,8 +69,9 @@ import org.slf4j.LoggerFactory;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
   justification="TODO: synchronize access on nsTable but it is done in tiers above and this " +
     "class is going away/shrinking")
-public class TableNamespaceManager {
+public class TableNamespaceManager implements Stoppable {
   private static final Logger LOG = LoggerFactory.getLogger(TableNamespaceManager.class);
+  private volatile boolean stopped = false;
 
   private Configuration conf;
   private MasterServices masterServices;
@@ -367,5 +369,28 @@ public class TableNamespaceManager {
       maxRegions = Long.MAX_VALUE;
     }
     return maxRegions;
+  }
+
+  @Override
+  public boolean isStopped() {
+    return this.stopped;
+  }
+
+  @Override
+  public void stop(String why) {
+    if (this.stopped) {
+      return;
+    }
+    try {
+      this.zkNamespaceManager.stop();
+    } catch (IOException ioe) {
+      LOG.warn("Failed NamespaceManager close", ioe);
+    }
+    try {
+      this.nsTable.close();
+    } catch (IOException ioe) {
+      LOG.warn("Failed Namespace Table close", ioe);
+    }
+    this.stopped = true;
   }
 }

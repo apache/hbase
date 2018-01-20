@@ -1801,4 +1801,10 @@ possible configurations would overwhelm and obscure the important.
       Number of rows in a batch operation above which a warning will be logged.
     </description>
   </property>
+  <property>
+    <name>hbase.master.wait.on.service.seconds</name>
+    <value>30</value>
+    <description>Default is 5 minutes. Make it 30 seconds for tests. See
+    HBASE-19794 for some context.</description>
+  </property>
 </configuration>
