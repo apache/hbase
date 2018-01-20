@@ -27,10 +27,8 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -104,7 +102,7 @@ public class TestZKAsyncRegistry {
     String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
     assertEquals("Expected " + expectedClusterId + ", found=" + clusterId,
         expectedClusterId, clusterId);
-    assertEquals(TEST_UTIL.getHBaseCluster().getClusterStatus().getServersSize(),
+    assertEquals(TEST_UTIL.getHBaseCluster().getClusterMetrics().getLiveServerMetrics().size(),
       REGISTRY.getCurrentNrHRS().get().intValue());
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getMasterAddress().get());
@@ -122,19 +120,19 @@ public class TestZKAsyncRegistry {
 
   @Test
   public void testIndependentZKConnections() throws IOException {
-    ReadOnlyZKClient zk1 = REGISTRY.getZKClient();
-
-    Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
-    otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
-    try (ZKAsyncRegistry otherRegistry = new ZKAsyncRegistry(otherConf)) {
-      ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
-
-      assertNotSame("Using a different configuration / quorum should result in different backing " +
-          "zk connection.",
-        zk1, zk2);
-      assertNotEquals(
-        "Using a different configrution / quorum should be reflected in the " + "zk connection.",
-        zk1.getConnectString(), zk2.getConnectString());
+    try (ReadOnlyZKClient zk1 = REGISTRY.getZKClient()) {
+      Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
+      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
+      try (ZKAsyncRegistry otherRegistry = new ZKAsyncRegistry(otherConf)) {
+        ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
+        assertNotSame("Using a different configuration / quorum should result in different " +
+          "backing zk connection.", zk1, zk2);
+        assertNotEquals(
+          "Using a different configrution / quorum should be reflected in the zk connection.",
+          zk1.getConnectString(), zk2.getConnectString());
+      }
+    } finally {
+      LOG.info("DONE!");
     }
   }
 }

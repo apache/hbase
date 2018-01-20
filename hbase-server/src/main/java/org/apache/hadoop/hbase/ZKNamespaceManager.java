@@ -76,6 +76,10 @@ public class ZKNamespaceManager extends ZKListener {
     }
   }
 
+  public void stop() throws IOException {
+    this.watcher.unregisterListener(this);
+  }
+
   public NamespaceDescriptor get(String name) {
     return cache.get(name);
   }

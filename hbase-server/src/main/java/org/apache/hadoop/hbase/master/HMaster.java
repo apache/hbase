@@ -2692,9 +2692,11 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   @Override
   public void stop(String msg) {
-    super.stop(msg);
-    if (this.activeMasterManager != null) {
-      this.activeMasterManager.stop();
+    if (!isStopped()) {
+      super.stop(msg);
+      if (this.activeMasterManager != null) {
+        this.activeMasterManager.stop();
+      }
     }
   }
 
