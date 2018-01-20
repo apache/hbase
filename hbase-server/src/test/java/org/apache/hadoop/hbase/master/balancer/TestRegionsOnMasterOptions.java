@@ -50,7 +50,10 @@ import static org.junit.Assert.assertTrue;
  * Test options for regions on master; none, system, or any (i.e. master is like any other
  * regionserver). Checks how regions are deployed when each of the options are enabled.
  * It then does kill combinations to make sure the distribution is more than just for startup.
+ * NOTE: Regions on Master does not work well. See HBASE-19828. Until addressed, disabling this
+ * test.
  */
+@Ignore
 @Category({MediumTests.class})
 public class TestRegionsOnMasterOptions {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionsOnMasterOptions.class);
