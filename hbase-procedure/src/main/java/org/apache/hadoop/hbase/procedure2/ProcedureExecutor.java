@@ -510,10 +510,10 @@ public class ProcedureExecutor<TEnvironment> {
     // We have numThreads executor + one timer thread used for timing out
     // procedures and triggering periodic procedures.
     this.corePoolSize = numThreads;
-    LOG.info("Starting ProcedureExecutor Worker threads (ProcExecWrkr)=" + corePoolSize);
+    LOG.info("Starting ProcedureExecutor Worker threads (ProcedureExecutorWorker)=" + corePoolSize);
 
     // Create the Thread Group for the executors
-    threadGroup = new ThreadGroup("ProcExecThrdGrp");
+    threadGroup = new ThreadGroup("ProcedureExecutorWorkerGroup");
 
     // Create the timeout executor
     timeoutExecutor = new TimeoutExecutorThread(threadGroup);
@@ -592,7 +592,7 @@ public class ProcedureExecutor<TEnvironment> {
     try {
       threadGroup.destroy();
     } catch (IllegalThreadStateException e) {
-      LOG.error("Thread group " + threadGroup + " contains running threads");
+      LOG.error("ThreadGroup " + threadGroup + " contains running threads; " + e.getMessage());
       threadGroup.list();
     } finally {
       threadGroup = null;
@@ -1709,7 +1709,7 @@ public class ProcedureExecutor<TEnvironment> {
     private Procedure activeProcedure;
 
     public WorkerThread(final ThreadGroup group) {
-      super(group, "ProcExecWrkr-" + workerId.incrementAndGet());
+      super(group, "ProcedureExecutorWorker-" + workerId.incrementAndGet());
       setDaemon(true);
     }
 
@@ -1752,7 +1752,7 @@ public class ProcedureExecutor<TEnvironment> {
       } catch (Throwable t) {
         LOG.warn("Worker terminating UNNATURALLY " + this.activeProcedure, t);
       } finally {
-        LOG.debug("Worker terminated.");
+        LOG.trace("Worker terminated.");
       }
       workerThreads.remove(this);
     }
@@ -1904,9 +1904,12 @@ public class ProcedureExecutor<TEnvironment> {
         for (int i = 0; isAlive(); ++i) {
           sendStopSignal();
           join(250);
+          // Log every two seconds; send interrupt too.
           if (i > 0 && (i % 8) == 0) {
             LOG.warn("Waiting termination of thread " + getName() + ", " +
-              StringUtils.humanTimeDiff(EnvironmentEdgeManager.currentTime() - startTime));
+              StringUtils.humanTimeDiff(EnvironmentEdgeManager.currentTime() - startTime) +
+            "; sending interrupt");
+            interrupt();
           }
         }
       } catch (InterruptedException e) {

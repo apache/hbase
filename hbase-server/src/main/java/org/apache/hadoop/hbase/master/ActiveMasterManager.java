@@ -277,7 +277,8 @@ public class ActiveMasterManager extends ZKListener {
         ZNodeClearer.deleteMyEphemeralNodeOnDisk();
       }
     } catch (KeeperException e) {
-      LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);
+      LOG.debug(this.watcher.prefix("Failed delete of our master address node; " +
+          e.getMessage()));
     }
   }
 }
