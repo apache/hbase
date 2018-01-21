@@ -42,7 +42,6 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
@@ -150,8 +149,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
-  private AtomicLong storeSize = new AtomicLong();
-  private AtomicLong totalUncompressedBytes = new AtomicLong();
+  private volatile long storeSize = 0L;
+  private volatile long totalUncompressedBytes = 0L;
 
   /**
    * RWLock for store operations.
@@ -210,13 +209,13 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   private int compactionCheckMultiplier;
   protected Encryption.Context cryptoContext = Encryption.Context.NONE;
 
-  private AtomicLong flushedCellsCount = new AtomicLong();
-  private AtomicLong compactedCellsCount = new AtomicLong();
-  private AtomicLong majorCompactedCellsCount = new AtomicLong();
-  private AtomicLong flushedCellsSize = new AtomicLong();
-  private AtomicLong flushedOutputFileSize = new AtomicLong();
-  private AtomicLong compactedCellsSize = new AtomicLong();
-  private AtomicLong majorCompactedCellsSize = new AtomicLong();
+  private volatile long flushedCellsCount = 0;
+  private volatile long compactedCellsCount = 0;
+  private volatile long majorCompactedCellsCount = 0;
+  private volatile long flushedCellsSize = 0;
+  private volatile long flushedOutputFileSize = 0;
+  private volatile long compactedCellsSize = 0;
+  private volatile long majorCompactedCellsSize = 0;
 
   /**
    * Constructor
@@ -545,9 +544,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
           HStoreFile storeFile = completionService.take().get();
           if (storeFile != null) {
             long length = storeFile.getReader().length();
-            this.storeSize.addAndGet(length);
-            this.totalUncompressedBytes
-                .addAndGet(storeFile.getReader().getTotalUncompressedBytes());
+            this.storeSize += length;
+            this.totalUncompressedBytes += storeFile.getReader().getTotalUncompressedBytes();
             LOG.debug("loaded {}", storeFile);
             results.add(storeFile);
           }
@@ -846,8 +844,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   private void bulkLoadHFile(HStoreFile sf) throws IOException {
     StoreFileReader r = sf.getReader();
-    this.storeSize.addAndGet(r.length());
-    this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
+    this.storeSize += r.length();
+    this.totalUncompressedBytes += r.getTotalUncompressedBytes();
 
     // Append the new storefile into the list
     this.lock.writeLock().lock();
@@ -1023,8 +1021,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     HStoreFile sf = createStoreFileAndReader(dstPath);
 
     StoreFileReader r = sf.getReader();
-    this.storeSize.addAndGet(r.length());
-    this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
+    this.storeSize += r.length();
+    this.totalUncompressedBytes += r.getTotalUncompressedBytes();
 
     if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
@@ -1375,11 +1373,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {
-      majorCompactedCellsCount.addAndGet(getCompactionProgress().totalCompactingKVs);
-      majorCompactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
+      majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
+      majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
     } else {
-      compactedCellsCount.addAndGet(getCompactionProgress().totalCompactingKVs);
-      compactedCellsSize.addAndGet(getCompactionProgress().totalCompactedSize);
+      compactedCellsCount += getCompactionProgress().totalCompactingKVs;
+      compactedCellsSize += getCompactionProgress().totalCompactedSize;
     }
     long outputBytes = getTotalSize(sfs);
 
@@ -1451,9 +1449,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().addCompactionResults(compactedFiles, result);
-      synchronized (filesCompacting) {
-        filesCompacting.removeAll(compactedFiles);
-      }
+      filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock();
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -1482,7 +1478,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
       }
     }
     message.append("total size for store is ")
-      .append(StringUtils.TraditionalBinaryPrefix.long2String(storeSize.get(), "", 1))
+      .append(StringUtils.TraditionalBinaryPrefix.long2String(storeSize, "", 1))
       .append(". This selection was in queue for ")
       .append(StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()))
       .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
@@ -1776,8 +1772,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     completeCompaction(delSfs);
     LOG.info("Completed removal of " + delSfs.size() + " unnecessary (expired) file(s) in "
         + this + " of " + this.getRegionInfo().getRegionNameAsString()
-        + "; total size for store is "
-        + TraditionalBinaryPrefix.long2String(storeSize.get(), "", 1));
+        + "; total size for store is " + TraditionalBinaryPrefix.long2String(storeSize, "", 1));
   }
 
   public void cancelRequestedCompaction(CompactionContext compaction) {
@@ -1831,16 +1826,16 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   @VisibleForTesting
   protected void completeCompaction(Collection<HStoreFile> compactedFiles)
     throws IOException {
-    this.storeSize.set(0L);
-    this.totalUncompressedBytes.set(0L);
+    this.storeSize = 0L;
+    this.totalUncompressedBytes = 0L;
     for (HStoreFile hsf : this.storeEngine.getStoreFileManager().getStorefiles()) {
       StoreFileReader r = hsf.getReader();
       if (r == null) {
         LOG.warn("StoreFile {} has a null Reader", hsf);
         continue;
       }
-      this.storeSize.addAndGet(r.length());
-      this.totalUncompressedBytes.addAndGet(r.getTotalUncompressedBytes());
+      this.storeSize += r.length();
+      this.totalUncompressedBytes += r.getTotalUncompressedBytes();
     }
   }
 
@@ -1901,7 +1896,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public long getSize() {
-    return storeSize.get();
+    return storeSize;
   }
 
   public void triggerMajorCompaction() {
@@ -2048,7 +2043,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public long getStoreSizeUncompressed() {
-    return this.totalUncompressedBytes.get();
+    return this.totalUncompressedBytes;
   }
 
   @Override
@@ -2240,9 +2235,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         committedFiles.add(sf.getPath());
       }
 
-      HStore.this.flushedCellsCount.addAndGet(cacheFlushCount);
-      HStore.this.flushedCellsSize.addAndGet(cacheFlushSize);
-      HStore.this.flushedOutputFileSize.addAndGet(outputFileSize);
+      HStore.this.flushedCellsCount += cacheFlushCount;
+      HStore.this.flushedCellsSize += cacheFlushSize;
+      HStore.this.flushedOutputFileSize += outputFileSize;
 
       // Add new file to store files.  Clear snapshot too while we have the Store write lock.
       return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
@@ -2275,9 +2270,8 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
         StoreFileInfo storeFileInfo = fs.getStoreFileInfo(getColumnFamilyName(), file);
         HStoreFile storeFile = createStoreFileAndReader(storeFileInfo);
         storeFiles.add(storeFile);
-        HStore.this.storeSize.addAndGet(storeFile.getReader().length());
-        HStore.this.totalUncompressedBytes
-            .addAndGet(storeFile.getReader().getTotalUncompressedBytes());
+        HStore.this.storeSize += storeFile.getReader().length();
+        HStore.this.totalUncompressedBytes += storeFile.getReader().getTotalUncompressedBytes();
         if (LOG.isInfoEnabled()) {
           LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
             " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
@@ -2308,11 +2302,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public boolean needsCompaction() {
-    List<HStoreFile> filesCompactingClone = null;
-    synchronized (filesCompacting) {
-      filesCompactingClone = Lists.newArrayList(filesCompacting);
-    }
-    return this.storeEngine.needsCompaction(filesCompactingClone);
+    return this.storeEngine.needsCompaction(this.filesCompacting);
   }
 
   /**
@@ -2325,7 +2315,7 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (26 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
+      ClassSize.align((long)ClassSize.OBJECT + (17 * ClassSize.REFERENCE) + (11 * Bytes.SIZEOF_LONG)
               + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -2364,37 +2354,37 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public long getFlushedCellsCount() {
-    return flushedCellsCount.get();
+    return flushedCellsCount;
   }
 
   @Override
   public long getFlushedCellsSize() {
-    return flushedCellsSize.get();
+    return flushedCellsSize;
   }
 
   @Override
   public long getFlushedOutputFileSize() {
-    return flushedOutputFileSize.get();
+    return flushedOutputFileSize;
   }
 
   @Override
   public long getCompactedCellsCount() {
-    return compactedCellsCount.get();
+    return compactedCellsCount;
   }
 
   @Override
   public long getCompactedCellsSize() {
-    return compactedCellsSize.get();
+    return compactedCellsSize;
   }
 
   @Override
   public long getMajorCompactedCellsCount() {
-    return majorCompactedCellsCount.get();
+    return majorCompactedCellsCount;
   }
 
   @Override
   public long getMajorCompactedCellsSize() {
-    return majorCompactedCellsSize.get();
+    return majorCompactedCellsSize;
   }
 
   /**
