@@ -48,7 +48,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
 @InterfaceAudience.Private
 public abstract class Segment {
 
-  public final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+  public final static long FIXED_OVERHEAD = ClassSize.align((long)ClassSize.OBJECT
       + 6 * ClassSize.REFERENCE // cellSet, comparator, memStoreLAB, dataSize,
                                 // heapSize, and timeRangeTracker
       + Bytes.SIZEOF_LONG // minSequenceId

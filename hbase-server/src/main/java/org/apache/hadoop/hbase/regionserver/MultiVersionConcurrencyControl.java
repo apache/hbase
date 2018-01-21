@@ -291,7 +291,7 @@ public class MultiVersionConcurrencyControl {
   }
 
   public static final long FIXED_SIZE = ClassSize.align(
-      ClassSize.OBJECT +
+      (long)ClassSize.OBJECT +
       2 * Bytes.SIZEOF_LONG +
       2 * ClassSize.REFERENCE);
 }
