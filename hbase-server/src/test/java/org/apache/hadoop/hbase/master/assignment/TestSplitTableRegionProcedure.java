@@ -366,12 +366,13 @@ public class TestSplitTableRegionProcedure {
     long procId = procExec.submitProcedure(
       new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
 
-    // Failing before SPLIT_TABLE_REGION_UPDATE_META we should trigger the
+    // Failing before SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS we should trigger the
     // rollback
-    // NOTE: the 3 (number before SPLIT_TABLE_REGION_UPDATE_META step) is
+    // NOTE: the 3 (number before SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
     int numberOfSteps = 3;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
+        true);
     // check that we have only 1 region
     assertEquals(1, UTIL.getHBaseAdmin().getTableRegions(tableName).size());
     List<HRegion> daughters = UTIL.getMiniHBaseCluster().getRegions(tableName);
