@@ -260,7 +260,7 @@ public final class ProtobufUtil {
    * Return the Exception thrown by the remote server wrapped in
    * ServiceException as cause. RemoteException are left untouched.
    *
-   * @param se ServiceException that wraps IO exception thrown by the server
+   * @param e ServiceException that wraps IO exception thrown by the server
    * @return Exception wrapped in ServiceException.
    */
   public static IOException getServiceException(org.apache.hbase.thirdparty.com.google.protobuf.ServiceException e) {
