@@ -200,10 +200,8 @@ public class ServerManager {
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
-    this.connection = connect ? master.getClusterConnection() : null;
-    this.rpcControllerFactory = this.connection == null
-        ? null
-        : connection.getRpcControllerFactory();
+    this.connection = connect? master.getClusterConnection(): null;
+    this.rpcControllerFactory = this.connection == null? null: connection.getRpcControllerFactory();
   }
 
   /**
@@ -968,16 +966,10 @@ public class ServerManager {
   }
 
   /**
-   * Stop the ServerManager.  Currently closes the connection to the master.
+   * Stop the ServerManager.
    */
   public void stop() {
-    if (connection != null) {
-      try {
-        connection.close();
-      } catch (IOException e) {
-        LOG.error("Attempt to close connection to master failed", e);
-      }
-    }
+    // Nothing to do.
   }
 
   /**
