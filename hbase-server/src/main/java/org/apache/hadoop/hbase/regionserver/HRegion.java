@@ -6998,6 +6998,31 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this;
   }
 
+  /**
+   * Open a Region on a read-only file-system (like hdfs snapshots)
+   * @param conf The Configuration object to use.
+   * @param fs Filesystem to use
+   * @param info Info for region to be opened.
+   * @param htd the table descriptor
+   * @return new HRegion
+   * @throws IOException e
+   */
+  public static HRegion openReadOnlyFileSystemHRegion(final Configuration conf, final FileSystem fs,
+      final Path tableDir, HRegionInfo info, final HTableDescriptor htd) throws IOException {
+    if (info == null) {
+      throw new NullPointerException("Passed region info is null");
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Opening region (readOnly filesystem): " + info);
+    }
+    if (info.getReplicaId() <= 0) {
+      info = new HRegionInfo((HRegionInfo) info, 1);
+    }
+    HRegion r = HRegion.newHRegion(tableDir, null, fs, conf, info, htd, null);
+    r.writestate.setReadOnly(true);
+    return r.openHRegion(null);
+  }
+
   public static void warmupHRegion(final HRegionInfo info,
       final HTableDescriptor htd, final WAL wal, final Configuration conf,
       final RegionServerServices rsServices,
