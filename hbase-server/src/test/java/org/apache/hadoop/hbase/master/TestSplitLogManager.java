@@ -384,23 +384,23 @@ public class TestSplitLogManager {
   @Test (timeout=180000)
   public void testTaskResigned() throws Exception {
     LOG.info("TestTaskResigned - resubmit task node once in RESIGNED state");
-    assertEquals(tot_mgr_resubmit.sum(), 0);
+    assertEquals(0, tot_mgr_resubmit.sum());
     slm = new SplitLogManager(master, conf);
-    assertEquals(tot_mgr_resubmit.sum(), 0);
+    assertEquals(0, tot_mgr_resubmit.sum());
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    assertEquals(tot_mgr_resubmit.sum(), 0);
+    assertEquals(0, tot_mgr_resubmit.sum());
     final ServerName worker1 = ServerName.valueOf("worker1,1,1");
-    assertEquals(tot_mgr_resubmit.sum(), 0);
+    assertEquals(0, tot_mgr_resubmit.sum());
     SplitLogTask slt = new SplitLogTask.Resigned(worker1);
-    assertEquals(tot_mgr_resubmit.sum(), 0);
+    assertEquals(0, tot_mgr_resubmit.sum());
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     ZKUtil.checkExists(zkw, tasknode);
     // Could be small race here.
     if (tot_mgr_resubmit.sum() == 0) {
       waitForCounter(tot_mgr_resubmit, 0, 1, to/2);
     }
-    assertEquals(tot_mgr_resubmit.sum(), 1);
+    assertEquals(1, tot_mgr_resubmit.sum());
 
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
     slt = SplitLogTask.parseFrom(taskstate);

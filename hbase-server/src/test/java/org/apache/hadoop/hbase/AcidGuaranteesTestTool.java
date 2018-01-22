@@ -151,6 +151,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
       table = connection.getTable(TABLE_NAME);
     }
 
+    @Override
     public void doAnAction() throws Exception {
       // Pick a random row to write into
       byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
@@ -197,6 +198,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
       table = connection.getTable(TABLE_NAME);
     }
 
+    @Override
     public void doAnAction() throws Exception {
       Get g = new Get(targetRow);
       Result res = table.get(g);
@@ -264,6 +266,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
       table = connection.getTable(TABLE_NAME);
     }
 
+    @Override
     public void doAnAction() throws Exception {
       Scan s = new Scan();
       for (byte[] family : targetFamilies) {
@@ -344,6 +347,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     }
     // Add a flusher
     ctx.addThread(new RepeatingTestThread(ctx) {
+      @Override
       public void doAnAction() throws Exception {
         try {
           admin.flush(TABLE_NAME);

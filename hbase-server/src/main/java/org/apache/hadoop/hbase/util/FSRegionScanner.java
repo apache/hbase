@@ -52,7 +52,7 @@ class FSRegionScanner implements Runnable {
   /**
    * Maps each region to the RS with highest locality for that region.
    */
-  private Map<String,String> regionToBestLocalityRSMapping;
+  private final Map<String,String> regionToBestLocalityRSMapping;
 
   /**
    * Maps region encoded names to maps of hostnames to fractional locality of

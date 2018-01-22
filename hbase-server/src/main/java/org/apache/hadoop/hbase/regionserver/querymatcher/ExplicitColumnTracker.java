@@ -89,10 +89,12 @@ public class ExplicitColumnTracker implements ColumnTracker {
   /**
    * Done when there are no more columns to match against.
    */
+  @Override
   public boolean done() {
     return this.index >= columns.length;
   }
 
+  @Override
   public ColumnCount getColumnHint() {
     return this.column;
   }
@@ -182,6 +184,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   }
 
   // Called between every row.
+  @Override
   public void reset() {
     this.index = 0;
     this.column = this.columns[this.index];
@@ -240,6 +243,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
     }
   }
 
+  @Override
   public boolean isDone(long timestamp) {
     return minVersions <= 0 && isExpired(timestamp);
   }

@@ -112,6 +112,7 @@ public class TestBulkLoad {
             argThat(bulkLogWalEdit(WALEdit.BULK_LOAD, tableName.toBytes(),
                     familyName, storeFileNames)),
             anyBoolean())).thenAnswer(new Answer() {
+              @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
@@ -137,6 +138,7 @@ public class TestBulkLoad {
     when(log.append(any(),
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
+              @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
@@ -156,6 +158,7 @@ public class TestBulkLoad {
     when(log.append(any(),
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
+              @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
@@ -176,6 +179,7 @@ public class TestBulkLoad {
     when(log.append(any(),
             any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD)),
             anyBoolean())).thenAnswer(new Answer() {
+              @Override
               public Object answer(InvocationOnMock invocation) {
                 WALKeyImpl walKey = invocation.getArgument(1);
                 MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
@@ -281,7 +285,7 @@ public class TestBulkLoad {
         writer.append(new KeyValue(CellUtil.createCell(randomBytes,
             family,
             randomBytes,
-            0l,
+            0L,
             KeyValue.Type.Put.getCode(),
             randomBytes)));
       } finally {

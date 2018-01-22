@@ -142,7 +142,7 @@ public class TestServerBusyException {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private class TestPutThread extends Thread {
+  private static class TestPutThread extends Thread {
     Table table;
     int getServerBusyException = 0;
 
@@ -163,7 +163,7 @@ public class TestServerBusyException {
     }
   }
 
-  private class TestGetThread extends Thread {
+  private static class TestGetThread extends Thread {
     Table table;
     int getServerBusyException = 0;
 

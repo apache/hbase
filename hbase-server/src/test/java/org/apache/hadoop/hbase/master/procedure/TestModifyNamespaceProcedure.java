@@ -99,7 +99,7 @@ public class TestModifyNamespaceProcedure {
     // Before modify
     NamespaceDescriptor currentNsDescriptor =
         UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
-    assertEquals(currentNsDescriptor.getConfigurationValue(nsKey1), nsValue1before);
+    assertEquals(nsValue1before, currentNsDescriptor.getConfigurationValue(nsKey1));
     assertNull(currentNsDescriptor.getConfigurationValue(nsKey2));
 
     // Update
@@ -115,8 +115,8 @@ public class TestModifyNamespaceProcedure {
     // Verify the namespace is updated.
     currentNsDescriptor =
         UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
-    assertEquals(nsd.getConfigurationValue(nsKey1), nsValue1after);
-    assertEquals(currentNsDescriptor.getConfigurationValue(nsKey2), nsValue2);
+    assertEquals(nsValue1after, nsd.getConfigurationValue(nsKey1));
+    assertEquals(nsValue2, currentNsDescriptor.getConfigurationValue(nsKey2));
   }
 
   @Test(timeout=60000)
@@ -219,7 +219,7 @@ public class TestModifyNamespaceProcedure {
     // Validate
     NamespaceDescriptor currentNsDescriptor =
         UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
-    assertEquals(currentNsDescriptor.getConfigurationValue(nsKey), nsValue);
+    assertEquals(nsValue, currentNsDescriptor.getConfigurationValue(nsKey));
   }
 
   @Test(timeout = 60000)

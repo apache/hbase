@@ -135,7 +135,7 @@ public class TestWALProcedureStoreOnHDFS {
     final AtomicInteger reCount = new AtomicInteger(0);
     Thread[] thread = new Thread[store.getNumThreads() * 2 + 1];
     for (int i = 0; i < thread.length; ++i) {
-      final long procId = i + 1;
+      final long procId = i + 1L;
       thread[i] = new Thread(() -> {
         try {
           LOG.debug("[S] INSERT " + procId);

@@ -183,7 +183,7 @@ public class TestSnapshotFromMaster {
     DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
     Mockito.when(mockHandler.getException()).thenReturn(null);
     Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
-    Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
+    Mockito.when(mockHandler.isFinished()).thenReturn(Boolean.TRUE);
     Mockito.when(mockHandler.getCompletionTimestamp())
       .thenReturn(EnvironmentEdgeManager.currentTime());
 

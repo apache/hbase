@@ -187,7 +187,7 @@ public class TestReplicationWithTags {
           LOG.info("Row not available");
           Thread.sleep(SLEEP_TIME);
         } else {
-          assertArrayEquals(res.value(), ROW);
+          assertArrayEquals(ROW, res.value());
           assertEquals(1, TestCoprocessorForTagsAtSink.tags.size());
           Tag tag = TestCoprocessorForTagsAtSink.tags.get(0);
           assertEquals(TAG_TYPE, tag.getType());

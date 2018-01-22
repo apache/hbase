@@ -625,7 +625,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     } finally {
       rollWriterLock.unlock();
     }
-    if (lowReplication || writer != null && writer.getLength() > logrollsize) {
+    if (lowReplication || (writer != null && writer.getLength() > logrollsize)) {
       requestLogRoll(lowReplication);
     }
   }
@@ -866,7 +866,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     private final SyncFuture[] syncFutures;
     // Had 'interesting' issues when this was non-volatile. On occasion, we'd not pass all
     // syncFutures to the next sync'ing thread.
-    private volatile int syncFuturesCount = 0;
+    private AtomicInteger syncFuturesCount = new AtomicInteger();
     private volatile SafePointZigZagLatch zigzagLatch;
     /**
      * Set if we get an exception appending or syncing so that all subsequence appends and syncs on
@@ -894,10 +894,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
     private void cleanupOutstandingSyncsOnException(final long sequence, final Exception e) {
       // There could be handler-count syncFutures outstanding.
-      for (int i = 0; i < this.syncFuturesCount; i++) {
+      for (int i = 0; i < this.syncFuturesCount.get(); i++) {
         this.syncFutures[i].done(sequence, e);
       }
-      this.syncFuturesCount = 0;
+      this.syncFuturesCount.set(0);
     }
 
     /**
@@ -905,7 +905,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      */
     private boolean isOutstandingSyncs() {
       // Look at SyncFutures in the EventHandler
-      for (int i = 0; i < this.syncFuturesCount; i++) {
+      for (int i = 0; i < this.syncFuturesCount.get(); i++) {
         if (!this.syncFutures[i].isDone()) {
           return true;
         }
@@ -938,9 +938,9 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
       try {
         if (truck.type() == RingBufferTruck.Type.SYNC) {
-          this.syncFutures[this.syncFuturesCount++] = truck.unloadSync();
+          this.syncFutures[this.syncFuturesCount.getAndIncrement()] = truck.unloadSync();
           // Force flush of syncs if we are carrying a full complement of syncFutures.
-          if (this.syncFuturesCount == this.syncFutures.length) {
+          if (this.syncFuturesCount.get() == this.syncFutures.length) {
             endOfBatch = true;
           }
         } else if (truck.type() == RingBufferTruck.Type.APPEND) {
@@ -979,7 +979,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         if (this.exception == null) {
           // If not a batch, return to consume more events from the ring buffer before proceeding;
           // we want to get up a batch of syncs and appends before we go do a filesystem sync.
-          if (!endOfBatch || this.syncFuturesCount <= 0) {
+          if (!endOfBatch || this.syncFuturesCount.get() <= 0) {
             return;
           }
           // syncRunnerIndex is bound to the range [0, Integer.MAX_INT - 1] as follows:
@@ -997,7 +997,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             // Below expects that the offer 'transfers' responsibility for the outstanding syncs to
             // the syncRunner. We should never get an exception in here.
             this.syncRunners[this.syncRunnerIndex].offer(sequence, this.syncFutures,
-              this.syncFuturesCount);
+              this.syncFuturesCount.get());
           } catch (Exception e) {
             // Should NEVER get here.
             requestLogRoll();
@@ -1010,7 +1010,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
               ? this.exception : new DamagedWALException("On sync", this.exception));
         }
         attainSafePoint(sequence);
-        this.syncFuturesCount = 0;
+        this.syncFuturesCount.set(0);
       } catch (Throwable t) {
         LOG.error("UNEXPECTED!!! syncFutures.length=" + this.syncFutures.length, t);
       }

@@ -315,6 +315,7 @@ public class TestReplicationHFileCleaner {
           .when(zk).getData("/hbase/replication/hfile-refs", null, new Stat());
     }
 
+    @Override
     public RecoverableZooKeeper getRecoverableZooKeeper() {
       return zk;
     }

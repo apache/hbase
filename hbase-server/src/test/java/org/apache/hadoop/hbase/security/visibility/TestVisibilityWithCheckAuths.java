@@ -136,7 +136,7 @@ public class TestVisibilityWithCheckAuths {
                Table table = connection.getTable(tableName)) {
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
-            p.addColumn(fam, qual, 125l, value);
+            p.addColumn(fam, qual, 125L, value);
             table.put(p);
             Assert.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {

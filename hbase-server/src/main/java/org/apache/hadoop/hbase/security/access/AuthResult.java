@@ -207,6 +207,7 @@ public class AuthResult {
     return sb.toString();
   }
 
+  @Override
   public String toString() {
     return "AuthResult" + toContextString();
   }
@@ -279,6 +280,7 @@ public class AuthResult {
       return this;
     }
 
+    @Override
     public String toString() {
       String familiesString = toFamiliesString(families, family, qualifier);
       String[] params = new String[] {

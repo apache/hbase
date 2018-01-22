@@ -185,7 +185,7 @@ public class TestSnapshotFromClient {
     admin.deleteSnapshots(Pattern.compile("TableSnapshot.*"));
     List<SnapshotDescription> snapshots = admin.listSnapshots();
     assertEquals(1, snapshots.size());
-    assertEquals(snapshots.get(0).getName(), snapshot3);
+    assertEquals(snapshot3, snapshots.get(0).getName());
 
     admin.deleteSnapshot(snapshot3);
     admin.close();

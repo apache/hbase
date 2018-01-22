@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -82,15 +83,15 @@ public class HMobStore extends HStore {
   private MobCacheConfig mobCacheConfig;
   private Path homePath;
   private Path mobFamilyPath;
-  private volatile long cellsCountCompactedToMob = 0;
-  private volatile long cellsCountCompactedFromMob = 0;
-  private volatile long cellsSizeCompactedToMob = 0;
-  private volatile long cellsSizeCompactedFromMob = 0;
-  private volatile long mobFlushCount = 0;
-  private volatile long mobFlushedCellsCount = 0;
-  private volatile long mobFlushedCellsSize = 0;
-  private volatile long mobScanCellsCount = 0;
-  private volatile long mobScanCellsSize = 0;
+  private AtomicLong cellsCountCompactedToMob = new AtomicLong();
+  private AtomicLong cellsCountCompactedFromMob = new AtomicLong();
+  private AtomicLong cellsSizeCompactedToMob = new AtomicLong();
+  private AtomicLong cellsSizeCompactedFromMob = new AtomicLong();
+  private AtomicLong mobFlushCount = new AtomicLong();
+  private AtomicLong mobFlushedCellsCount = new AtomicLong();
+  private AtomicLong mobFlushedCellsSize = new AtomicLong();
+  private AtomicLong mobScanCellsCount = new AtomicLong();
+  private AtomicLong mobScanCellsSize = new AtomicLong();
   private ColumnFamilyDescriptor family;
   private Map<String, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
@@ -453,76 +454,75 @@ public class HMobStore extends HStore {
   }
 
   public void updateCellsCountCompactedToMob(long count) {
-    cellsCountCompactedToMob += count;
+    cellsCountCompactedToMob.addAndGet(count);
   }
 
   public long getCellsCountCompactedToMob() {
-    return cellsCountCompactedToMob;
+    return cellsCountCompactedToMob.get();
   }
 
   public void updateCellsCountCompactedFromMob(long count) {
-    cellsCountCompactedFromMob += count;
+    cellsCountCompactedFromMob.addAndGet(count);
   }
 
   public long getCellsCountCompactedFromMob() {
-    return cellsCountCompactedFromMob;
+    return cellsCountCompactedFromMob.get();
   }
 
   public void updateCellsSizeCompactedToMob(long size) {
-    cellsSizeCompactedToMob += size;
+    cellsSizeCompactedToMob.addAndGet(size);
   }
 
   public long getCellsSizeCompactedToMob() {
-    return cellsSizeCompactedToMob;
+    return cellsSizeCompactedToMob.get();
   }
 
   public void updateCellsSizeCompactedFromMob(long size) {
-    cellsSizeCompactedFromMob += size;
+    cellsSizeCompactedFromMob.addAndGet(size);
   }
 
   public long getCellsSizeCompactedFromMob() {
-    return cellsSizeCompactedFromMob;
+    return cellsSizeCompactedFromMob.get();
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT")
   public void updateMobFlushCount() {
-    mobFlushCount++;
+    mobFlushCount.incrementAndGet();
   }
 
   public long getMobFlushCount() {
-    return mobFlushCount;
+    return mobFlushCount.get();
   }
 
   public void updateMobFlushedCellsCount(long count) {
-    mobFlushedCellsCount += count;
+    mobFlushedCellsCount.addAndGet(count);
   }
 
   public long getMobFlushedCellsCount() {
-    return mobFlushedCellsCount;
+    return mobFlushedCellsCount.get();
   }
 
   public void updateMobFlushedCellsSize(long size) {
-    mobFlushedCellsSize += size;
+    mobFlushedCellsSize.addAndGet(size);
   }
 
   public long getMobFlushedCellsSize() {
-    return mobFlushedCellsSize;
+    return mobFlushedCellsSize.get();
   }
 
   public void updateMobScanCellsCount(long count) {
-    mobScanCellsCount += count;
+    mobScanCellsCount.addAndGet(count);
   }
 
   public long getMobScanCellsCount() {
-    return mobScanCellsCount;
+    return mobScanCellsCount.get();
   }
 
   public void updateMobScanCellsSize(long size) {
-    mobScanCellsSize += size;
+    mobScanCellsSize.addAndGet(size);
   }
 
   public long getMobScanCellsSize() {
-    return mobScanCellsSize;
+    return mobScanCellsSize.get();
   }
 
   public byte[] getRefCellTags() {

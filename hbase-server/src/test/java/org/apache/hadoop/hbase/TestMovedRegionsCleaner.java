@@ -48,6 +48,7 @@ import java.io.IOException;
       super(conf);
     }
 
+    @Override
     protected int movedRegionCleanerPeriod() {
       return 500;
     }

@@ -86,7 +86,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
   }
 
   @Override
-  public void setMasterServices(MasterServices masterServices) {
+  public synchronized void setMasterServices(MasterServices masterServices) {
     super.setMasterServices(masterServices);
     fnm = masterServices.getFavoredNodesManager();
   }
@@ -692,7 +692,8 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer implements
    * implementation. For the misplaced regions, we assign a bogus server to it and AM takes care.
    */
   @Override
-  public List<RegionPlan> balanceCluster(Map<ServerName, List<RegionInfo>> clusterState) {
+  public synchronized List<RegionPlan> balanceCluster(Map<ServerName,
+      List<RegionInfo>> clusterState) {
 
     if (this.services != null) {
 

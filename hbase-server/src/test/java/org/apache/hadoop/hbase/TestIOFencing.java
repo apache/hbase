@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -93,7 +94,7 @@ public class TestIOFencing {
   }
 
   public abstract static class CompactionBlockerRegion extends HRegion {
-    volatile int compactCount = 0;
+    AtomicInteger compactCount = new AtomicInteger();
     volatile CountDownLatch compactionsBlocked = new CountDownLatch(0);
     volatile CountDownLatch compactionsWaiting = new CountDownLatch(0);
 
@@ -129,7 +130,7 @@ public class TestIOFencing {
       try {
         return super.compact(compaction, store, throughputController);
       } finally {
-        compactCount++;
+        compactCount.getAndIncrement();
       }
     }
 
@@ -139,7 +140,7 @@ public class TestIOFencing {
       try {
         return super.compact(compaction, store, throughputController, user);
       } finally {
-        compactCount++;
+        compactCount.getAndIncrement();
       }
     }
 
@@ -336,7 +337,7 @@ public class TestIOFencing {
       }
       LOG.info("Allowing compaction to proceed");
       compactingRegion.allowCompactions();
-      while (compactingRegion.compactCount == 0) {
+      while (compactingRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
       }
       // The server we killed stays up until the compaction that was started before it was killed
@@ -349,7 +350,7 @@ public class TestIOFencing {
         FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
       admin.majorCompact(TABLE_NAME);
       startWaitTime = System.currentTimeMillis();
-      while (newRegion.compactCount == 0) {
+      while (newRegion.compactCount.get() == 0) {
         Thread.sleep(1000);
         assertTrue("New region never compacted",
           System.currentTimeMillis() - startWaitTime < 180000);

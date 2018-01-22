@@ -97,12 +97,12 @@ public class TestSeekBeforeWithReverseScan {
     while (scanner.next(res)) {
       count++;
     }
-    assertEquals(Bytes.toString(res.get(0).getRowArray(), res.get(0).getRowOffset(), res.get(0)
-        .getRowLength()), "b");
-    assertEquals(Bytes.toString(res.get(1).getRowArray(), res.get(1).getRowOffset(), res.get(1)
-        .getRowLength()), "ab");
-    assertEquals(Bytes.toString(res.get(2).getRowArray(), res.get(2).getRowOffset(), res.get(2)
-        .getRowLength()), "a");
+    assertEquals("b", Bytes.toString(res.get(0).getRowArray(), res.get(0).getRowOffset(),
+        res.get(0).getRowLength()));
+    assertEquals("ab", Bytes.toString(res.get(1).getRowArray(), res.get(1).getRowOffset(),
+        res.get(1).getRowLength()));
+    assertEquals("a", Bytes.toString(res.get(2).getRowArray(), res.get(2).getRowOffset(),
+        res.get(2).getRowLength()));
     assertEquals(3, count);
   }
 

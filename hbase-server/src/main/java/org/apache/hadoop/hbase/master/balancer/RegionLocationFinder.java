@@ -72,21 +72,22 @@ class RegionLocationFinder {
   private CacheLoader<RegionInfo, HDFSBlocksDistribution> loader =
       new CacheLoader<RegionInfo, HDFSBlocksDistribution>() {
 
-        public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
-               HDFSBlocksDistribution oldValue) throws Exception {
-          return executor.submit(new Callable<HDFSBlocksDistribution>() {
-            @Override
-            public HDFSBlocksDistribution call() throws Exception {
-              return internalGetTopBlockLocation(hri);
-            }
-          });
-        }
-
+    @Override
+    public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
+        HDFSBlocksDistribution oldValue) throws Exception {
+      return executor.submit(new Callable<HDFSBlocksDistribution>() {
         @Override
-        public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
-          return internalGetTopBlockLocation(key);
+        public HDFSBlocksDistribution call() throws Exception {
+          return internalGetTopBlockLocation(hri);
         }
-      };
+      });
+    }
+
+    @Override
+    public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
+      return internalGetTopBlockLocation(key);
+    }
+  };
 
   // The cache for where regions are located.
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> cache = null;

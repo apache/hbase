@@ -50,6 +50,7 @@ public class TestBlocksScanned extends HBaseTestCase {
 
   private static HBaseTestingUtility TEST_UTIL = null;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();

@@ -149,7 +149,7 @@ public class VisibilityNewVersionBehaivorTracker extends NewVersionBehaviorTrack
     List<Tag> putVisTags = new ArrayList<>();
     Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(put, putVisTags);
     return putVisTags.isEmpty() == delInfo.tags.isEmpty() && (
-        putVisTags.isEmpty() && delInfo.tags.isEmpty() || VisibilityLabelServiceManager
+        (putVisTags.isEmpty() && delInfo.tags.isEmpty()) || VisibilityLabelServiceManager
             .getInstance().getVisibilityLabelService()
             .matchVisibility(putVisTags, putCellVisTagsFormat, delInfo.tags, delInfo.format));
   }

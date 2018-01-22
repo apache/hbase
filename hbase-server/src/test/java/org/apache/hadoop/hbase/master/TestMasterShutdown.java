@@ -121,6 +121,7 @@ public class TestMasterShutdown {
     master.start();
     LOG.info("Called master start on " + master.getName());
     Thread shutdownThread = new Thread("Shutdown-Thread") {
+      @Override
       public void run() {
         LOG.info("Before call to shutdown master");
         try {

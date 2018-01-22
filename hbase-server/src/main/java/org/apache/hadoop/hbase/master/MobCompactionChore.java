@@ -89,7 +89,7 @@ public class MobCompactionChore extends ScheduledChore {
   }
 
   @Override
-  protected void cleanup() {
+  protected synchronized void cleanup() {
     super.cleanup();
     pool.shutdown();
   }

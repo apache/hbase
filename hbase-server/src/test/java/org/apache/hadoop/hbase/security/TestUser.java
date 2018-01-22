@@ -120,6 +120,7 @@ public class TestUser {
     Configuration conf = HBaseConfiguration.create();
     final User user = User.createUserForTesting(conf, "testuser", new String[]{"foo"});
     final PrivilegedExceptionAction<String> action = new PrivilegedExceptionAction<String>(){
+      @Override
       public String run() throws IOException {
           User u = User.getCurrent();
           return u.getName();
@@ -138,6 +139,7 @@ public class TestUser {
 
     // check the exception version
     username = user.runAs(new PrivilegedExceptionAction<String>(){
+      @Override
       public String run() throws Exception {
         return User.getCurrent().getName();
       }
@@ -146,6 +148,7 @@ public class TestUser {
 
     // verify that nested contexts work
     user2.runAs(new PrivilegedExceptionAction<Object>(){
+      @Override
       public Object run() throws IOException, InterruptedException{
         String nestedName = user.runAs(action);
         assertEquals("Nest name should match nested user", "testuser", nestedName);

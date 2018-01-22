@@ -105,7 +105,7 @@ public class TestSmallReversedScanner {
       Assert.assertArrayEquals(r.getRow(), Bytes.toBytes(inputRowKeys[value]));
     }
 
-    Assert.assertEquals(value, 0);
+    Assert.assertEquals(0, value);
   }
 
   /**
@@ -133,6 +133,6 @@ public class TestSmallReversedScanner {
       Assert.assertArrayEquals(r.getRow(), new byte[] { (char) 0x00 });
       Assert.assertTrue(--count >= 0);
     }
-    Assert.assertEquals(count, 0);
+    Assert.assertEquals(0, count);
   }
 }

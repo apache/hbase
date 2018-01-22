@@ -108,7 +108,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   }
 
   @Override
-  public void cleanup() {
+  public synchronized void cleanup() {
     super.cleanup();
     interruptOldWALsCleaner();
   }

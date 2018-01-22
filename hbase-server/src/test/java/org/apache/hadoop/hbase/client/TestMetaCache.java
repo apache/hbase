@@ -279,16 +279,19 @@ public class TestMetaCache {
     private int expCount = -1;
     private List<Throwable> metaCachePreservingExceptions = metaCachePreservingExceptions();
 
+    @Override
     public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request)
         throws ServiceException {
       throwSomeExceptions(rpcServices, request.getRegion());
     }
 
+    @Override
     public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request)
         throws ServiceException {
       throwSomeExceptions(rpcServices, request.getRegion());
     }
 
+    @Override
     public void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
         throws ServiceException {
       if (!request.hasScannerId()) {

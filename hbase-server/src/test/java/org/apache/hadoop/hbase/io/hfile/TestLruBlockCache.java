@@ -280,10 +280,10 @@ public class TestLruBlockCache {
     }
 
     // A single eviction run should have occurred
-    assertEquals(cache.getStats().getEvictionCount(), 1);
+    assertEquals(1, cache.getStats().getEvictionCount());
 
     // We expect two entries evicted
-    assertEquals(cache.getStats().getEvictedCount(), 2);
+    assertEquals(2, cache.getStats().getEvictedCount());
 
     // Our expected size overruns acceptable limit
     assertTrue(expectedCacheSize >

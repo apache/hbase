@@ -136,8 +136,8 @@ public class TestFilter {
       Bytes.toBytes("f1"), Bytes.toBytes("f2")
     };
 
-  private long numRows = ROWS_ONE.length + ROWS_TWO.length;
-  private long colsPerRow = FAMILIES.length * QUALIFIERS_ONE.length;
+  private long numRows = (long) ROWS_ONE.length + ROWS_TWO.length;
+  private long colsPerRow = (long) FAMILIES.length * QUALIFIERS_ONE.length;
 
   @Before
   public void setUp() throws Exception {
@@ -1756,15 +1756,14 @@ public class TestFilter {
         assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
         assertFalse("Should not have returned whole value", CellUtil.matchingValue(kv, kvs[idx]));
         if (useLen) {
-          assertEquals("Value in result is not SIZEOF_INT",
-                     kv.getValueLength(), Bytes.SIZEOF_INT);
+          assertEquals("Value in result is not SIZEOF_INT", Bytes.SIZEOF_INT, kv.getValueLength());
           LOG.info("idx = "  + idx + ", len=" + kvs[idx].getValueLength()
               + ", actual=" +  Bytes.toInt(CellUtil.cloneValue(kv)));
           assertEquals("Scan value should be the length of the actual value. ",
                      kvs[idx].getValueLength(), Bytes.toInt(CellUtil.cloneValue(kv)) );
           LOG.info("good");
         } else {
-          assertEquals("Value in result is not empty", kv.getValueLength(), 0);
+          assertEquals("Value in result is not empty", 0, kv.getValueLength());
         }
         idx++;
       }

@@ -77,6 +77,7 @@ public class TestFSVisitor {
     final Set<String> families = new HashSet<>();
     final Set<String> hfiles = new HashSet<>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
+      @Override
       public void storeFile(final String region, final String family, final String hfileName)
           throws IOException {
         regions.add(region);
@@ -84,9 +85,9 @@ public class TestFSVisitor {
         hfiles.add(hfileName);
       }
     });
-    assertEquals(tableRegions, regions);
-    assertEquals(tableFamilies, families);
-    assertEquals(tableHFiles, hfiles);
+    assertEquals(regions, tableRegions);
+    assertEquals(families, tableFamilies);
+    assertEquals(hfiles, tableHFiles);
   }
 
   /*

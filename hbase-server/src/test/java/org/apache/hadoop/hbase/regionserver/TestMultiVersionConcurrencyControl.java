@@ -46,6 +46,7 @@ public class TestMultiVersionConcurrencyControl {
     private Random rnd = new Random();
     public boolean failed = false;
 
+    @Override
     public void run() {
       while (!finished.get()) {
         MultiVersionConcurrencyControl.WriteEntry e =
@@ -82,6 +83,7 @@ public class TestMultiVersionConcurrencyControl {
     final AtomicBoolean readerFailed = new AtomicBoolean(false);
     final AtomicLong failedAt = new AtomicLong();
     Runnable reader = new Runnable() {
+      @Override
       public void run() {
         long prev = mvcc.getReadPoint();
         while (!finished.get()) {

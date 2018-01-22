@@ -69,11 +69,12 @@ public class HMasterCommandLine extends ServerCommandLine {
     this.masterClass = masterClass;
   }
 
+  @Override
   protected String getUsage() {
     return USAGE;
   }
 
-
+  @Override
   public int run(String args[]) throws Exception {
     Options opt = new Options();
     opt.addOption("localRegionServers", true,

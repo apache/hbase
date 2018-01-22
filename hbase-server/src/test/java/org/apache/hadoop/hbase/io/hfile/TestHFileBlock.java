@@ -124,7 +124,7 @@ public class TestHFileBlock {
   static int writeTestKeyValues(HFileBlock.Writer hbw, int seed, boolean includesMemstoreTS,
       boolean useTag) throws IOException {
     List<KeyValue> keyValues = new ArrayList<>();
-    Random randomizer = new Random(42l + seed); // just any fixed number
+    Random randomizer = new Random(42L + seed); // just any fixed number
 
     // generate keyValues
     for (int i = 0; i < NUM_KEYVALUES; ++i) {

@@ -120,6 +120,7 @@ public class TestConnectionImplementation {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Test
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
         5, TimeUnit.SECONDS,
@@ -636,7 +637,7 @@ public class TestConnectionImplementation {
       LOG.info("Put done, exception caught: " + e.getClass());
       Assert.assertEquals(1, e.getNumExceptions());
       Assert.assertEquals(1, e.getCauses().size());
-      Assert.assertArrayEquals(e.getRow(0).getRow(), ROW);
+      Assert.assertArrayEquals(ROW, e.getRow(0).getRow());
 
       // Check that we unserialized the exception as expected
       Throwable cause = ClientExceptionsUtil.findException(e.getCause(0));

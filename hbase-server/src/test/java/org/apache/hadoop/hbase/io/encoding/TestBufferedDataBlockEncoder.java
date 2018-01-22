@@ -72,16 +72,16 @@ public class TestBufferedDataBlockEncoder {
 
   @Test
   public void testCommonPrefixComparators() {
-    KeyValue kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    KeyValue kv2 = new KeyValue(row1, fam_1_2, qual1, 1l, Type.Maximum);
+    KeyValue kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
+    KeyValue kv2 = new KeyValue(row1, fam_1_2, qual1, 1L, Type.Maximum);
     assertTrue((BufferedDataBlockEncoder.compareCommonFamilyPrefix(kv1, kv2, 4) < 0));
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
-    kv2 = new KeyValue(row_1_0, fam_1_2, qual1, 1l, Type.Maximum);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
+    kv2 = new KeyValue(row_1_0, fam_1_2, qual1, 1L, Type.Maximum);
     assertTrue((BufferedDataBlockEncoder.compareCommonRowPrefix(kv1, kv2, 4) < 0));
 
-    kv1 = new KeyValue(row1, fam1, qual2, 1l, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Maximum);
+    kv1 = new KeyValue(row1, fam1, qual2, 1L, Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Maximum);
     assertTrue((BufferedDataBlockEncoder.compareCommonQualifierPrefix(kv1, kv2, 4) > 0));
   }
 

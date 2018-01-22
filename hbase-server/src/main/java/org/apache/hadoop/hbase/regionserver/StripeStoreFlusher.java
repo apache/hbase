@@ -104,12 +104,8 @@ public class StripeStoreFlusher extends StoreFlusher {
     return new StripeMultiFileWriter.WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        StoreFileWriter writer = store.createWriterInTmp(
-            kvCount, store.getColumnFamilyDescriptor().getCompressionType(),
-            /* isCompaction = */ false,
-            /* includeMVCCReadpoint = */ true,
-            /* includesTags = */ true,
-            /* shouldDropBehind = */ false);
+        StoreFileWriter writer = store.createWriterInTmp(kvCount,
+            store.getColumnFamilyDescriptor().getCompressionType(), false, true, true, false);
         return writer;
       }
     };

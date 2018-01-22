@@ -82,7 +82,7 @@ public class TestDataBlockEncoders {
   static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
 
   private RedundantKVGenerator generator = new RedundantKVGenerator();
-  private Random randomizer = new Random(42l);
+  private Random randomizer = new Random(42L);
 
   private final boolean includesMemstoreTS;
   private final boolean includesTags;
@@ -129,14 +129,14 @@ public class TestDataBlockEncoders {
     byte[] qualifier = new byte[0];
     byte[] value = new byte[0];
     if (!includesTags) {
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value));
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value));
+      kvList.add(new KeyValue(row, family, qualifier, 0L, value));
+      kvList.add(new KeyValue(row, family, qualifier, 0L, value));
     } else {
       byte[] metaValue1 = Bytes.toBytes("metaValue1");
       byte[] metaValue2 = Bytes.toBytes("metaValue2");
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+      kvList.add(new KeyValue(row, family, qualifier, 0L, value,
           new Tag[] { new ArrayBackedTag((byte) 1, metaValue1) }));
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+      kvList.add(new KeyValue(row, family, qualifier, 0L, value,
           new Tag[] { new ArrayBackedTag((byte) 1, metaValue2) }));
     }
     testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
@@ -158,13 +158,13 @@ public class TestDataBlockEncoders {
     if (includesTags) {
       byte[] metaValue1 = Bytes.toBytes("metaValue1");
       byte[] metaValue2 = Bytes.toBytes("metaValue2");
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+      kvList.add(new KeyValue(row, family, qualifier, 0L, value,
           new Tag[] { new ArrayBackedTag((byte) 1, metaValue1) }));
-      kvList.add(new KeyValue(row, family, qualifier, 0l, value,
+      kvList.add(new KeyValue(row, family, qualifier, 0L, value,
           new Tag[] { new ArrayBackedTag((byte) 1, metaValue2) }));
     } else {
-      kvList.add(new KeyValue(row, family, qualifier, -1l, Type.Put, value));
-      kvList.add(new KeyValue(row, family, qualifier, -2l, Type.Put, value));
+      kvList.add(new KeyValue(row, family, qualifier, -1L, Type.Put, value));
+      kvList.add(new KeyValue(row, family, qualifier, -2L, Type.Put, value));
     }
     testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
   }

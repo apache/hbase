@@ -348,6 +348,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     }
   }
 
+  @Override
   public void start(final String memberName, final ProcedureMember listener) {
     LOG.debug("Starting procedure member '" + memberName + "'");
     this.member = listener;

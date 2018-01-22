@@ -177,7 +177,7 @@ public class TestSnapshotWithAcl extends SecureTestUtil {
             byte[] value = result.getValue(TEST_FAMILY, TEST_QUALIFIER);
             Assert.assertArrayEquals(value, Bytes.toBytes(rowCount++));
           }
-          Assert.assertEquals(rowCount, ROW_COUNT);
+          Assert.assertEquals(ROW_COUNT, rowCount);
         }
       }
     }

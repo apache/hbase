@@ -93,7 +93,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {
         assertEquals("HBaseAdmin threw an interrupted IOException as expected.",
-            e.getClass().getName(), "java.io.InterruptedIOException");
+            "java.io.InterruptedIOException", e.getClass().getName());
       }
    }
   }

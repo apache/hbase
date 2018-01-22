@@ -244,7 +244,7 @@ public class TestZKProcedure {
             Subprocedure r = ((Subprocedure) invocation.getMock());
             LOG.error("Remote commit failure, not propagating error:" + remoteCause);
             comms.receiveAbortProcedure(r.getName(), remoteCause);
-            assertEquals(r.isComplete(), true);
+            assertEquals(true, r.isComplete());
             // don't complete the error phase until the coordinator has gotten the error
             // notification (which ensures that we never progress past prepare)
             try {

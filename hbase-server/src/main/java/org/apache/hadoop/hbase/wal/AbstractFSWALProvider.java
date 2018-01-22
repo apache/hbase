@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -455,7 +456,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       } catch (FileNotFoundException fnfe) {
         // If the log was archived, continue reading from there
         Path archivedLog = AbstractFSWALProvider.getArchivedLogPath(path, conf);
-        if (path != archivedLog) {
+        if (!Objects.equals(path, archivedLog)) {
           return openReader(archivedLog, conf);
         } else {
           throw fnfe;

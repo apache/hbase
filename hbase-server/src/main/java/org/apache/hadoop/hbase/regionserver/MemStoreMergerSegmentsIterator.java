@@ -76,6 +76,7 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
     return null;
   }
 
+  @Override
   public void close() {
     if (closed) {
       return;

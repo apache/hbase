@@ -73,113 +73,140 @@ public class CellSet implements NavigableSet<Cell>  {
     return delegatee;
   }
 
+  @Override
   public Cell ceiling(Cell e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Iterator<Cell> descendingIterator() {
     return this.delegatee.descendingMap().values().iterator();
   }
 
+  @Override
   public NavigableSet<Cell> descendingSet() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell floor(Cell e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public SortedSet<Cell> headSet(final Cell toElement) {
     return headSet(toElement, false);
   }
 
+  @Override
   public NavigableSet<Cell> headSet(final Cell toElement,
       boolean inclusive) {
     return new CellSet(this.delegatee.headMap(toElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
+  @Override
   public Cell higher(Cell e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Iterator<Cell> iterator() {
     return this.delegatee.values().iterator();
   }
 
+  @Override
   public Cell lower(Cell e) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell pollFirst() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell pollLast() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public SortedSet<Cell> subSet(Cell fromElement, Cell toElement) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public NavigableSet<Cell> subSet(Cell fromElement,
       boolean fromInclusive, Cell toElement, boolean toInclusive) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public SortedSet<Cell> tailSet(Cell fromElement) {
     return tailSet(fromElement, true);
   }
 
+  @Override
   public NavigableSet<Cell> tailSet(Cell fromElement, boolean inclusive) {
     return new CellSet(this.delegatee.tailMap(fromElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
+  @Override
   public Comparator<? super Cell> comparator() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public Cell first() {
     return this.delegatee.firstEntry().getValue();
   }
 
+  @Override
   public Cell last() {
     return this.delegatee.lastEntry().getValue();
   }
 
+  @Override
   public boolean add(Cell e) {
     return this.delegatee.put(e, e) == null;
   }
 
+  @Override
   public boolean addAll(Collection<? extends Cell> c) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public void clear() {
     this.delegatee.clear();
   }
 
+  @Override
   public boolean contains(Object o) {
     //noinspection SuspiciousMethodCalls
     return this.delegatee.containsKey(o);
   }
 
+  @Override
   public boolean containsAll(Collection<?> c) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public boolean isEmpty() {
     return this.delegatee.isEmpty();
   }
 
+  @Override
   public boolean remove(Object o) {
     return this.delegatee.remove(o) != null;
   }
 
+  @Override
   public boolean removeAll(Collection<?> c) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public boolean retainAll(Collection<?> c) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
@@ -188,14 +215,17 @@ public class CellSet implements NavigableSet<Cell>  {
     return this.delegatee.get(kv);
   }
 
+  @Override
   public int size() {
     return this.delegatee.size();
   }
 
+  @Override
   public Object[] toArray() {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
+  @Override
   public <T> T[] toArray(T[] a) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }

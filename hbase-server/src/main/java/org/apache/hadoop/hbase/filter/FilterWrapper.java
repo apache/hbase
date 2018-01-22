@@ -119,6 +119,7 @@ final public class FilterWrapper extends Filter {
     return filterCell(c);
   }
 
+  @Override
   public ReturnCode filterCell(final Cell c) throws IOException {
     return this.filter.filterCell(c);
   }

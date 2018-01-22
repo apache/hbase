@@ -756,7 +756,7 @@ public class TestHStore {
     }
 
     @Override
-    public void write(byte[] buf, int offset, int length) throws IOException {
+    public synchronized void write(byte[] buf, int offset, int length) throws IOException {
       System.err.println("faulty stream write at pos " + getPos());
       injectFault();
       super.write(buf, offset, length);
@@ -1551,7 +1551,7 @@ public class TestHStore {
       ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(5).build(), hook);
   }
 
-  private class MyStore extends HStore {
+  private static class MyStore extends HStore {
     private final MyStoreHook hook;
 
     MyStore(final HRegion region, final ColumnFamilyDescriptor family, final Configuration
@@ -1576,7 +1576,7 @@ public class TestHStore {
     }
   }
 
-  private abstract class MyStoreHook {
+  private abstract static class MyStoreHook {
 
     void getScanners(MyStore store) throws IOException {
     }
@@ -1595,7 +1595,7 @@ public class TestHStore {
     MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {});
     MemStoreSizing memStoreSizing = new MemStoreSizing();
     long ts = System.currentTimeMillis();
-    long seqID = 1l;
+    long seqID = 1L;
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       store.add(createCell(Bytes.toBytes("row" + i), qf1, ts, seqID++, Bytes.toBytes("")),
@@ -1663,6 +1663,7 @@ public class TestHStore {
       return this.heap;
     }
 
+    @Override
     public void run() {
       scanner.trySwitchToStreamRead();
       heap = scanner.heap;

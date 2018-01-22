@@ -455,7 +455,7 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   private static class NamedLock<T> {
-    private HashSet<T> locks = new HashSet<>();
+    private final HashSet<T> locks = new HashSet<>();
 
     public void lock(final T name) throws InterruptedException {
       synchronized (locks) {
@@ -501,6 +501,7 @@ public class MasterQuotaManager implements RegionStateListener {
       return time;
     }
 
+    @Override
     public boolean equals(Object o) {
       if (o instanceof SizeSnapshotWithTimestamp) {
         SizeSnapshotWithTimestamp other = (SizeSnapshotWithTimestamp) o;
@@ -509,6 +510,7 @@ public class MasterQuotaManager implements RegionStateListener {
       return false;
     }
 
+    @Override
     public int hashCode() {
       HashCodeBuilder hcb = new HashCodeBuilder();
       return hcb.append(size).append(time).toHashCode();

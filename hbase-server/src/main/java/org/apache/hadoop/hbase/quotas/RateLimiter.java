@@ -100,6 +100,7 @@ public abstract class RateLimiter {
     this.avail = limit;
   }
 
+  @Override
   public String toString() {
     String rateLimiter = this.getClass().getSimpleName();
     if (getLimit() == Long.MAX_VALUE) {

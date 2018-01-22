@@ -270,7 +270,7 @@ public class TestReplicationBase {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME);
       } else {
-        assertArrayEquals(res.value(), row);
+        assertArrayEquals(row, res.value());
         break;
       }
     }

@@ -19,6 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,37 +41,30 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -74,6 +73,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
@@ -497,12 +499,12 @@ public class TestFromClientSide3 {
     Get get = new Get(ROW);
 
     boolean exist = table.exists(get);
-    assertEquals(exist, false);
+    assertFalse(exist);
 
     table.put(put);
 
     exist = table.exists(get);
-    assertEquals(exist, true);
+    assertTrue(exist);
   }
 
   @Test
@@ -589,12 +591,12 @@ public class TestFromClientSide3 {
     Get get = new Get(ROW);
 
     boolean exist = table.exists(get);
-    assertEquals(exist, false);
+    assertFalse(exist);
 
     table.put(put);
 
     exist = table.exists(get);
-    assertEquals(exist, true);
+    assertTrue(exist);
   }
 
   @Test
@@ -614,10 +616,10 @@ public class TestFromClientSide3 {
 
     LOG.info("Calling exists");
     boolean[] results = table.existsAll(gets);
-    assertEquals(results[0], false);
-    assertEquals(results[1], false);
-    assertEquals(results[2], true);
-    assertEquals(results[3], false);
+    assertFalse(results[0]);
+    assertFalse(results[1]);
+    assertTrue(results[2]);
+    assertFalse(results[3]);
 
     // Test with the first region.
     put = new Put(new byte[] { 0x00 });
@@ -628,8 +630,8 @@ public class TestFromClientSide3 {
     gets.add(new Get(new byte[] { 0x00 }));
     gets.add(new Get(new byte[] { 0x00, 0x00 }));
     results = table.existsAll(gets);
-    assertEquals(results[0], true);
-    assertEquals(results[1], false);
+    assertTrue(results[0]);
+    assertFalse(results[1]);
 
     // Test with the last region
     put = new Put(new byte[] { (byte) 0xff, (byte) 0xff });
@@ -641,9 +643,9 @@ public class TestFromClientSide3 {
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
     results = table.existsAll(gets);
-    assertEquals(results[0], false);
-    assertEquals(results[1], true);
-    assertEquals(results[2], false);
+    assertFalse(results[0]);
+    assertTrue(results[1]);
+    assertFalse(results[2]);
   }
 
   @Test

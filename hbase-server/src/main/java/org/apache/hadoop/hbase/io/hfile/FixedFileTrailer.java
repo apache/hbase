@@ -545,7 +545,7 @@ public class FixedFileTrailer {
     try {
       // If null, it should be the Bytes.BYTES_RAWCOMPARATOR
       if (klass != null) {
-        CellComparator comp = klass.newInstance();
+        CellComparator comp = klass.getDeclaredConstructor().newInstance();
         // if the name wasn't one of the legacy names, maybe its a legit new
         // kind of comparator.
         comparatorClassName = klass.getName();
@@ -589,12 +589,8 @@ public class FixedFileTrailer {
   public static CellComparator createComparator(
       String comparatorClassName) throws IOException {
     try {
-      Class<? extends CellComparator> comparatorClass = getComparatorClass(comparatorClassName);
-      return comparatorClass != null ? comparatorClass.newInstance() : null;
-    } catch (InstantiationException e) {
-      throw new IOException("Comparator class " + comparatorClassName +
-        " is not instantiable", e);
-    } catch (IllegalAccessException e) {
+      return getComparatorClass(comparatorClassName).getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IOException("Comparator class " + comparatorClassName +
         " is not instantiable", e);
     }

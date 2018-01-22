@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -168,7 +169,7 @@ public class TestGetClosestAtOrBefore  {
     byte [] metaKey = HRegionInfo.createRegionName(
         tableb, tofindBytes,
       HConstants.NINES, false);
-    LOG.info("find=" + new String(metaKey));
+    LOG.info("find=" + new String(metaKey, StandardCharsets.UTF_8));
     Result r = UTIL.getClosestRowBefore(mr, metaKey, HConstants.CATALOG_FAMILY);
     if (answer == -1) {
       assertNull(r);

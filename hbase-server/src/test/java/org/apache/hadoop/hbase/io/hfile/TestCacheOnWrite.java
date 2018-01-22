@@ -297,7 +297,7 @@ public class TestCacheOnWrite {
         // block we cached at write-time and block read from file should be identical
         assertEquals(block.getChecksumType(), fromCache.getChecksumType());
         assertEquals(block.getBlockType(), fromCache.getBlockType());
-        assertNotEquals(block.getBlockType(), BlockType.ENCODED_DATA);
+        assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
         assertEquals(block.getOnDiskSizeWithHeader(), fromCache.getOnDiskSizeWithHeader());
         assertEquals(block.getOnDiskSizeWithoutHeader(), fromCache.getOnDiskSizeWithoutHeader());
         assertEquals(

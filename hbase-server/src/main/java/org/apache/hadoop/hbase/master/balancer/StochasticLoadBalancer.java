@@ -349,8 +349,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionLocationFinder finder = null;
-    if (this.localityCost != null && this.localityCost.getMultiplier() > 0
-        || this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0) {
+    if ((this.localityCost != null && this.localityCost.getMultiplier() > 0)
+        || (this.rackLocalityCost != null && this.rackLocalityCost.getMultiplier() > 0)) {
       finder = this.regionFinder;
     }
 
@@ -1401,7 +1401,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
           // Now if we found a region load get the type of cost that was requested.
           if (regionLoadList != null) {
-            cost += getRegionLoadCost(regionLoadList);
+            cost = (long) (cost + getRegionLoadCost(regionLoadList));
           }
         }
 

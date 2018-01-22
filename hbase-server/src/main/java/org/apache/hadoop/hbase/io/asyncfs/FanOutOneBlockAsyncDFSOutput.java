@@ -507,6 +507,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
    * @param syncBlock will call hsync if true, otherwise hflush.
    * @return A CompletableFuture that hold the acked length after flushing.
    */
+  @Override
   public CompletableFuture<Long> flush(boolean syncBlock) {
     CompletableFuture<Long> future = new CompletableFuture<>();
     flush0(future, syncBlock);

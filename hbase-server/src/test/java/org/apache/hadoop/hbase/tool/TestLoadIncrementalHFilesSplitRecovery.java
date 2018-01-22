@@ -420,7 +420,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       // check that data was loaded
       // The three expected attempts are 1) failure because need to split, 2)
       // load of split top 3) load of split bottom
-      assertEquals(attemptedCalls.get(), 3);
+      assertEquals(3, attemptedCalls.get());
       assertExpectedTable(table, ROWCOUNT, 2);
     }
   }

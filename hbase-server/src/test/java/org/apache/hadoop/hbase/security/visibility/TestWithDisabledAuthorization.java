@@ -209,25 +209,25 @@ public class TestWithDisabledAuthorization {
       s.setAuthorizations(new Authorizations());
       try (ResultScanner scanner = t.getScanner(s)) {
         Result[] next = scanner.next(10);
-        assertEquals(next.length, 4);
+        assertEquals(4, next.length);
       }
       s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET));
       try (ResultScanner scanner = t.getScanner(s)) {
         Result[] next = scanner.next(10);
-        assertEquals(next.length, 4);
+        assertEquals(4, next.length);
       }
       s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
       try (ResultScanner scanner = t.getScanner(s)) {
         Result[] next = scanner.next(10);
-        assertEquals(next.length, 4);
+        assertEquals(4, next.length);
       }
       s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL, PRIVATE));
       try (ResultScanner scanner = t.getScanner(s)) {
         Result[] next = scanner.next(10);
-        assertEquals(next.length, 4);
+        assertEquals(4, next.length);
       }
     }
   }

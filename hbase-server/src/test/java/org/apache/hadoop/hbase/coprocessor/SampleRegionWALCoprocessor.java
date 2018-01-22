@@ -123,7 +123,8 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
       if (Arrays.equals(family, changedFamily) &&
           Arrays.equals(qulifier, changedQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be changed.");
-        cell.getValueArray()[cell.getValueOffset()] += 1;
+        cell.getValueArray()[cell.getValueOffset()] =
+            (byte) (cell.getValueArray()[cell.getValueOffset()] + 1);
       }
     }
     if (null != row) {

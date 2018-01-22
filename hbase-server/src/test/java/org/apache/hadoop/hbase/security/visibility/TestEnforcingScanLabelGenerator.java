@@ -82,6 +82,7 @@ public class TestEnforcingScanLabelGenerator {
 
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
@@ -99,6 +100,7 @@ public class TestEnforcingScanLabelGenerator {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = TEST_UTIL.createTable(tableName, CF)) {
@@ -120,6 +122,7 @@ public class TestEnforcingScanLabelGenerator {
 
     // Test that super user can see all the cells.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -135,6 +138,7 @@ public class TestEnforcingScanLabelGenerator {
     });
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {

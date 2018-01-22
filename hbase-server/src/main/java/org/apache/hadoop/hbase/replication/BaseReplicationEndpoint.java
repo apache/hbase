@@ -84,7 +84,7 @@ public abstract class BaseReplicationEndpoint extends AbstractService
         for (String filterName : filterNames) {
           try {
             Class<?> clazz = Class.forName(filterName);
-            filters.add((WALEntryFilter) clazz.newInstance());
+            filters.add((WALEntryFilter) clazz.getDeclaredConstructor().newInstance());
           } catch (Exception e) {
             LOG.error("Unable to create WALEntryFilter " + filterName, e);
           }

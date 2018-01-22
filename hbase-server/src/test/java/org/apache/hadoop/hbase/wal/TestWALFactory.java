@@ -476,7 +476,7 @@ public class TestWALFactory {
     reader.close();
 
     // Reset the lease period
-    setLeasePeriod.invoke(cluster, new Object[]{new Long(60000), new Long(3600000)});
+    setLeasePeriod.invoke(cluster, new Object[]{ 60000L, 3600000L });
   }
 
   /**

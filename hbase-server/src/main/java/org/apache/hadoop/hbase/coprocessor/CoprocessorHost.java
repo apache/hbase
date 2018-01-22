@@ -572,6 +572,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
       return this.result;
     }
 
+    @Override
     void callObserver() throws IOException {
       Optional<O> observer = observerGetter.apply(getEnvironment().getInstance());
       if (observer.isPresent()) {

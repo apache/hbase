@@ -80,7 +80,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME * NB_RETRIES);
       } else {
-        assertArrayEquals(res.value(), row);
+        assertArrayEquals(row, res.value());
         return;
       }
     }

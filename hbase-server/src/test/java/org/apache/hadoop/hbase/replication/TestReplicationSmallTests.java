@@ -209,7 +209,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME);
       } else {
-        assertArrayEquals(res.value(), row);
+        assertArrayEquals(row, res.value());
         return;
       }
     }
@@ -262,7 +262,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME * i);
       } else {
-        assertArrayEquals(res.value(), row);
+        assertArrayEquals(row, res.value());
         break;
       }
     }

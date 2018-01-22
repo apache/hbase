@@ -88,11 +88,9 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
     E impl;
     Object o = null;
     try {
-      o = implClass.newInstance();
+      o = implClass.getDeclaredConstructor().newInstance();
       impl = (E)o;
-    } catch (InstantiationException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
+    } catch (Exception e) {
       throw new IOException(e);
     }
 

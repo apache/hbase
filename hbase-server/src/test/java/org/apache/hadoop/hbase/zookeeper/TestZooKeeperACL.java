@@ -129,10 +129,10 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase", new Stat());
-    assertEquals(acls.size(),1);
-    assertEquals(acls.get(0).getId().getScheme(),"sasl");
-    assertEquals(acls.get(0).getId().getId(),"hbase");
-    assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.ALL);
+    assertEquals(1, acls.size());
+    assertEquals("sasl", acls.get(0).getId().getScheme());
+    assertEquals("hbase", acls.get(0).getId().getId());
+    assertEquals(ZooDefs.Perms.ALL, acls.get(0).getPerms());
   }
 
   /**
@@ -148,20 +148,20 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase/root-region-server", new Stat());
-    assertEquals(acls.size(),2);
+    assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
     for(int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
-        assertEquals(acls.get(0).getId().getId(),"anyone");
-        assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.READ);
+        assertEquals("anyone", acls.get(0).getId().getId());
+        assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
       }
       else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
-          assertEquals(acls.get(1).getId().getId(),"hbase");
-          assertEquals(acls.get(1).getId().getScheme(),"sasl");
+          assertEquals("hbase", acls.get(1).getId().getId());
+          assertEquals("sasl", acls.get(1).getId().getScheme());
           foundHBaseOwnerAcl = true;
         } else { // error: should not get here: test fails.
           assertTrue(false);
@@ -185,19 +185,19 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase/master", new Stat());
-    assertEquals(acls.size(),2);
+    assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
     for(int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
-        assertEquals(acls.get(0).getId().getId(),"anyone");
-        assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.READ);
+        assertEquals("anyone", acls.get(0).getId().getId());
+        assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
       } else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
-          assertEquals(acls.get(1).getId().getId(),"hbase");
-          assertEquals(acls.get(1).getId().getScheme(),"sasl");
+          assertEquals("hbase", acls.get(1).getId().getId());
+          assertEquals("sasl", acls.get(1).getId().getScheme());
           foundHBaseOwnerAcl = true;
         } else { // error: should not get here: test fails.
           assertTrue(false);
@@ -221,19 +221,19 @@ public class TestZooKeeperACL {
 
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/hbase/hbaseid", new Stat());
-    assertEquals(acls.size(),2);
+    assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
     for(int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
-        assertEquals(acls.get(0).getId().getId(),"anyone");
-        assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.READ);
+        assertEquals("anyone", acls.get(0).getId().getId());
+        assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
       } else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
-          assertEquals(acls.get(1).getId().getId(),"hbase");
-          assertEquals(acls.get(1).getId().getScheme(),"sasl");
+          assertEquals("hbase", acls.get(1).getId().getId());
+          assertEquals("sasl", acls.get(1).getId().getScheme());
           foundHBaseOwnerAcl = true;
         } else { // error: should not get here: test fails.
           assertTrue(false);
@@ -257,10 +257,10 @@ public class TestZooKeeperACL {
     ZKUtil.createWithParents(zkw, "/testACLNode");
     List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
         .getACL("/testACLNode", new Stat());
-    assertEquals(acls.size(),1);
-    assertEquals(acls.get(0).getId().getScheme(),"sasl");
-    assertEquals(acls.get(0).getId().getId(),"hbase");
-    assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.ALL);
+    assertEquals(1, acls.size());
+    assertEquals("sasl", acls.get(0).getId().getScheme());
+    assertEquals("hbase", acls.get(0).getId().getId());
+    assertEquals(ZooDefs.Perms.ALL, acls.get(0).getPerms());
   }
 
   /**
@@ -281,7 +281,7 @@ public class TestZooKeeperACL {
         saslConfFile.getAbsolutePath());
 
     testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
-    assertEquals(testJaasConfig, false);
+    assertEquals(false, testJaasConfig);
     saslConfFile.delete();
   }
 
@@ -295,13 +295,13 @@ public class TestZooKeeperACL {
 
     Configuration config = new Configuration(HBaseConfiguration.create());
     boolean testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(testJaasConfig, false);
+    assertEquals(false, testJaasConfig);
 
     // Now set authentication scheme to Kerberos still it should return false
     // because no configuration set
     config.set("hbase.security.authentication", "kerberos");
     testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(testJaasConfig, false);
+    assertEquals(false, testJaasConfig);
 
     // Now set programmatic options related to security
     config.set(HConstants.ZK_CLIENT_KEYTAB_FILE, "/dummy/file");

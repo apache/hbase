@@ -133,6 +133,7 @@ public class MasterCoprocessorHost
      * @return An instance of MasterServices, an object NOT for general user-space Coprocessor
      * consumption.
      */
+    @Override
     public MasterServices getMasterServices() {
       return this.masterServices;
     }

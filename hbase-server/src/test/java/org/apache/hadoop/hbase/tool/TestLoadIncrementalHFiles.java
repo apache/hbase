@@ -681,7 +681,7 @@ public class TestLoadIncrementalHFiles {
     compare[1] = "r".getBytes();
     compare[2] = "u".getBytes();
 
-    assertEquals(keysArray.length, 3);
+    assertEquals(3, keysArray.length);
 
     for (int row = 0; row < keysArray.length; row++) {
       assertArrayEquals(keysArray[row], compare[row]);

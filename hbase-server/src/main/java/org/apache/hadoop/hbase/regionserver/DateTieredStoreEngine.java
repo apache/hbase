@@ -89,6 +89,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
       super.forceSelect(request);
     }
 
+    @Override
     public List<Path> compact(ThroughputController throughputController, User user)
         throws IOException {
       if (request instanceof DateTieredCompactionRequest) {

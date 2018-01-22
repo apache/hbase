@@ -289,7 +289,7 @@ public abstract class AbstractTestFSWAL {
       addEdits(wal, hri2, t2, 2, mvcc, scopes2);
       // get the regions to flush, it should still read region1.
       regionsToFlush = wal.findRegionsToForceFlush();
-      assertEquals(regionsToFlush.length, 1);
+      assertEquals(1, regionsToFlush.length);
       assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
       // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
       // remain.

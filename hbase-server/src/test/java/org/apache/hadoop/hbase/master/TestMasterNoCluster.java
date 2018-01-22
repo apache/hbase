@@ -191,6 +191,7 @@ public class TestMasterNoCluster {
         TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
         HRegionInfo.FIRST_META_REGIONINFO);
     HMaster master = new HMaster(conf) {
+      @Override
       InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
       throws UnknownHostException {
         // Return different address dependent on port passed.

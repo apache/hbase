@@ -161,11 +161,12 @@ public class TestFSHDFSUtils {
   /**
    * Version of DFS that has HDFS-4525 in it.
    */
-  class IsFileClosedDistributedFileSystem extends DistributedFileSystem {
+  static class IsFileClosedDistributedFileSystem extends DistributedFileSystem {
     /**
      * Close status of a file. Copied over from HDFS-4525
      * @return true if file is already closed
      **/
+    @Override
     public boolean isFileClosed(Path f) throws IOException{
       return false;
     }

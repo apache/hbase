@@ -129,35 +129,41 @@ public class HalfStoreFileReader extends StoreFileReader {
       final HFileScanner delegate = s;
       public boolean atEnd = false;
 
+      @Override
       public Cell getKey() {
         if (atEnd) return null;
         return delegate.getKey();
       }
 
+      @Override
       public String getKeyString() {
         if (atEnd) return null;
 
         return delegate.getKeyString();
       }
 
+      @Override
       public ByteBuffer getValue() {
         if (atEnd) return null;
 
         return delegate.getValue();
       }
 
+      @Override
       public String getValueString() {
         if (atEnd) return null;
 
         return delegate.getValueString();
       }
 
+      @Override
       public Cell getCell() {
         if (atEnd) return null;
 
         return delegate.getCell();
       }
 
+      @Override
       public boolean next() throws IOException {
         if (atEnd) return false;
 
@@ -200,10 +206,12 @@ public class HalfStoreFileReader extends StoreFileReader {
         return (this.delegate.getReader().getComparator().compare(splitCell, getKey())) > 0;
       }
 
+      @Override
       public org.apache.hadoop.hbase.io.hfile.HFile.Reader getReader() {
         return this.delegate.getReader();
       }
 
+      @Override
       public boolean isSeeked() {
         return this.delegate.isSeeked();
       }

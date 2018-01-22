@@ -313,6 +313,7 @@ public class TestFlushSnapshotFromClient {
     // Merge two regions
     List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
     Collections.sort(regions, new Comparator<HRegionInfo>() {
+      @Override
       public int compare(HRegionInfo r1, HRegionInfo r2) {
         return Bytes.compareTo(r1.getStartKey(), r2.getStartKey());
       }
@@ -354,6 +355,7 @@ public class TestFlushSnapshotFromClient {
     // Merge two regions
     List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
     Collections.sort(regions, new Comparator<HRegionInfo>() {
+      @Override
       public int compare(HRegionInfo r1, HRegionInfo r2) {
         return Bytes.compareTo(r1.getStartKey(), r2.getStartKey());
       }

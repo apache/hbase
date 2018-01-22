@@ -56,6 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -197,7 +198,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       Cell nr = ((CompactingMemStore)this.memstore).getNextRow(new KeyValue(Bytes.toBytes(i),
           System.currentTimeMillis()));
       if (i + 1 == ROW_COUNT) {
-        assertEquals(nr, null);
+        assertNull(nr);
       } else {
         assertTrue(CellComparator.getInstance().compareRows(nr,
             new KeyValue(Bytes.toBytes(i + 1), System.currentTimeMillis())) == 0);
@@ -317,7 +318,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
       long t = memstore.timeOfOldestEdit();
-      assertEquals(t, Long.MAX_VALUE);
+      assertEquals(Long.MAX_VALUE, t);
 
       // test the case that the timeOfOldestEdit is updated after a KV add
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"), null);

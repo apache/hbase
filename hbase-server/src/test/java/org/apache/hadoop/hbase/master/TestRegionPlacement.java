@@ -389,8 +389,7 @@ public class TestRegionPlacement {
     lastRegionOpenedCount = currentRegionOpened;
 
     assertEquals("There are only " + regionMovement + " instead of "
-          + expected + " region movement for " + attempt + " attempts",
-          regionMovement, expected);
+          + expected + " region movement for " + attempt + " attempts", expected, regionMovement);
   }
 
   /**
@@ -469,6 +468,7 @@ public class TestRegionPlacement {
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+      @Override
       public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")

@@ -194,7 +194,7 @@ public class TestResult extends TestCase {
       loadValueBuffer.clear();
       r.loadValue(family, qf, loadValueBuffer);
       loadValueBuffer.flip();
-      assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))), loadValueBuffer);
+      assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
           r.getValueAsByteBuffer(family, qf));
     }
@@ -219,7 +219,7 @@ public class TestResult extends TestCase {
       loadValueBuffer.clear();
       r.loadValue(family, qf, loadValueBuffer);
       loadValueBuffer.flip();
-      assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))), loadValueBuffer);
+      assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
           r.getValueAsByteBuffer(family, qf));
     }

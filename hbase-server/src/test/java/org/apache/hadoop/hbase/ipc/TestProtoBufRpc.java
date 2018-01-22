@@ -112,7 +112,7 @@ public class TestProtoBufRpc {
       // Test echo method
       EchoRequestProto echoRequest = EchoRequestProto.newBuilder().setMessage("hello").build();
       EchoResponseProto echoResponse = stub.echo(null, echoRequest);
-      assertEquals(echoResponse.getMessage(), "hello");
+      assertEquals("hello", echoResponse.getMessage());
 
       stub.error(null, emptyRequest);
       fail("Expected exception is not thrown");

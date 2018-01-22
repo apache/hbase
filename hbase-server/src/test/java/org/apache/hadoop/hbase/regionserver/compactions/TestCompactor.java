@@ -92,11 +92,13 @@ public class TestCompactor {
       writers.add(realWriter);
       StoreFileWriter writer = mock(StoreFileWriter.class);
       doAnswer(new Answer<Object>() {
+        @Override
         public Object answer(InvocationOnMock invocation) {
           return realWriter.kvs.add((KeyValue) invocation.getArgument(0));
         }
       }).when(writer).append(any());
       doAnswer(new Answer<Object>() {
+        @Override
         public Object answer(InvocationOnMock invocation) {
           Object[] args = invocation.getArguments();
           return realWriter.data.put((byte[]) args[0], (byte[]) args[1]);

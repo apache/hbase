@@ -101,7 +101,7 @@ public abstract class MultiThreadedAction {
 
     @Override
     public byte[] getDeterministicUniqueKey(long keyBase) {
-      return LoadTestKVGenerator.md5PrefixedKey(keyBase).getBytes();
+      return Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(keyBase));
     }
 
     @Override
@@ -114,7 +114,7 @@ public abstract class MultiThreadedAction {
       int numColumns = minColumnsPerKey + random.nextInt(maxColumnsPerKey - minColumnsPerKey + 1);
       byte[][] columns = new byte[numColumns][];
       for (int i = 0; i < numColumns; ++i) {
-        columns[i] = Integer.toString(i).getBytes();
+        columns[i] = Bytes.toBytes(Integer.toString(i));
       }
       return columns;
     }

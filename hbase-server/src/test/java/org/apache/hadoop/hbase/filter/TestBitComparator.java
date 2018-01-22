@@ -103,13 +103,13 @@ public class TestBitComparator {
   private void testOperation(byte[] data, byte[] comparatorBytes, BitComparator.BitwiseOp operator,
       int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
-    assertEquals(comparator.compareTo(data), expected);
+    assertEquals(expected, comparator.compareTo(data));
   }
 
   private void testOperation(ByteBuffer data, byte[] comparatorBytes,
       BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
-    assertEquals(comparator.compareTo(data, 0, data.capacity()), expected);
+    assertEquals(expected, comparator.compareTo(data, 0, data.capacity()));
   }
 
   @Test
@@ -142,13 +142,13 @@ public class TestBitComparator {
   private void testOperationWithOffset(byte[] data, byte[] comparatorBytes,
       BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
-    assertEquals(comparator.compareTo(data, 1, comparatorBytes.length), expected);
+    assertEquals(expected, comparator.compareTo(data, 1, comparatorBytes.length));
   }
 
   private void testOperationWithOffset(ByteBuffer data, byte[] comparatorBytes,
       BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
-    assertEquals(comparator.compareTo(data, 1, comparatorBytes.length), expected);
+    assertEquals(expected, comparator.compareTo(data, 1, comparatorBytes.length));
   }
 }
 

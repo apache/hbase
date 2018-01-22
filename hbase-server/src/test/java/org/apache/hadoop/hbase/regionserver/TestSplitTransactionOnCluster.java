@@ -673,7 +673,7 @@ public class TestSplitTransactionOnCluster {
       FileSystem fs = TESTING_UTIL.getDFSCluster().getFileSystem();
       Map<String, Path> storefiles =
           FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
-      assertEquals("Expected nothing but found " + storefiles.toString(), storefiles.size(), 0);
+      assertEquals("Expected nothing but found " + storefiles.toString(), 0, storefiles.size());
 
       // find a splittable region.  Refresh the regions list
       regions = cluster.getRegions(tableName);
@@ -696,8 +696,8 @@ public class TestSplitTransactionOnCluster {
       HBaseFsck.debugLsr(conf, new Path("/"));
       Map<String, Path> storefilesAfter =
           FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
-      assertEquals("Expected nothing but found " + storefilesAfter.toString(),
-          storefilesAfter.size(), 0);
+      assertEquals("Expected nothing but found " + storefilesAfter.toString(), 0,
+          storefilesAfter.size());
 
       hri = region.getRegionInfo(); // split parent
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
@@ -755,7 +755,7 @@ public class TestSplitTransactionOnCluster {
       region.flush(true);
       HStore store = region.getStore(Bytes.toBytes("f"));
       Collection<HStoreFile> storefiles = store.getStorefiles();
-      assertEquals(storefiles.size(), 1);
+      assertEquals(1, storefiles.size());
       assertFalse(region.hasReferences());
       Path referencePath =
           region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",

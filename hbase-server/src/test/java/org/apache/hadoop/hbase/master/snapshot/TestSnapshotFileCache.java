@@ -203,6 +203,7 @@ public class TestSnapshotFileCache {
   }
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
+    @Override
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<>();
       files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));

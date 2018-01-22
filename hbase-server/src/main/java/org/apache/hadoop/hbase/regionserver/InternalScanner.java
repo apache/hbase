@@ -67,5 +67,6 @@ public interface InternalScanner extends Closeable {
    * Closes the scanner and releases any resources it has allocated
    * @throws IOException
    */
+  @Override
   void close() throws IOException;
 }

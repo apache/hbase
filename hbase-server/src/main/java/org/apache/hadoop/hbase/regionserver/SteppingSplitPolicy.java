@@ -24,6 +24,7 @@ public class SteppingSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy
    * This allows a table to spread quickly across servers, while avoiding creating
    * too many regions.
    */
+  @Override
   protected long getSizeToCheck(final int tableRegionsCount) {
     return tableRegionsCount == 1  ? this.initialSize : getDesiredMaxFileSize();
   }

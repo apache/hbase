@@ -136,6 +136,7 @@ public class TestFilterFromRegionSide {
   public static class FirstSeveralCellsFilter extends FilterBase{
     private int count = 0;
 
+    @Override
     public void reset() {
       count = 0;
     }

@@ -141,7 +141,7 @@ public class TestCompactionFileNotFound {
         }
       });
       // Split at this point should not result in the RS being aborted
-      assertEquals(util.getMiniHBaseCluster().getLiveRegionServerThreads().size(), 3);
+      assertEquals(3, util.getMiniHBaseCluster().getLiveRegionServerThreads().size());
     } finally {
       if (admin != null) {
         admin.close();

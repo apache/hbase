@@ -164,6 +164,7 @@ public class TestStoreScanner {
         new KeyValueScanner[] { new KeyValueScanFixture(CellComparator.getInstance(), CELL_GRID) }));
     }
 
+    @Override
     protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
         CellComparator comparator) throws IOException {
       if (count == null) {
@@ -172,6 +173,7 @@ public class TestStoreScanner {
       heap = new KeyValueHeapWithCount(scanners, comparator, count);
     }
 
+    @Override
     protected boolean trySkipToNextRow(Cell cell) throws IOException {
       boolean optimized = super.trySkipToNextRow(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
@@ -182,6 +184,7 @@ public class TestStoreScanner {
       return optimized;
     }
 
+    @Override
     protected boolean trySkipToNextColumn(Cell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
@@ -227,6 +230,7 @@ public class TestStoreScanner {
               new KeyValueScanFixture(CellComparator.getInstance(), CELL_WITH_VERSIONS) }));
     }
 
+    @Override
     protected boolean trySkipToNextColumn(Cell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
@@ -255,6 +259,7 @@ public class TestStoreScanner {
               new KeyValueScanFixture(CellComparator.getInstance(), CELL_WITH_VERSIONS) }));
     }
 
+    @Override
     protected boolean trySkipToNextColumn(Cell cell) throws IOException {
       boolean optimized = super.trySkipToNextColumn(cell);
       LOG.info("Cell=" + cell + ", nextIndex=" + CellUtil.toString(getNextIndexedKey(), false)
@@ -884,6 +889,7 @@ public class TestStoreScanner {
     try {
       final long now = System.currentTimeMillis();
       EnvironmentEdgeManagerTestHelper.injectEdge(new EnvironmentEdge() {
+        @Override
         public long currentTime() {
           return now;
         }

@@ -582,8 +582,8 @@ public class TestPerTableCFReplication {
           replicatedToAll = false;
           break;
         } else {
-          assertEquals(res.size(), 1);
-          assertArrayEquals(res.value(), val);
+          assertEquals(1, res.size());
+          assertArrayEquals(val, res.value());
         }
       }
       if (replicatedToAll) {

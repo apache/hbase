@@ -52,6 +52,7 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
     super(rpcServices, clz);
   }
 
+  @Override
   public int getPriority(RPCProtos.RequestHeader header, Message param, User user) {
     // Yes this is copy pasted from the base class but it keeps from having to look in the
     // annotatedQos table twice something that could get costly since this is called for

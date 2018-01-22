@@ -68,7 +68,7 @@ public class TestSingleColumnValueExcludeFilter {
 
     filter.filterRowCells(kvs);
 
-    assertEquals("resultSize", kvs.size(), 2);
+    assertEquals("resultSize", 2, kvs.size());
     assertTrue("leftKV1", CellComparatorImpl.COMPARATOR.compare(kvs.get(0), c) == 0);
     assertTrue("leftKV2", CellComparatorImpl.COMPARATOR.compare(kvs.get(1), c) == 0);
     assertFalse("allRemainingWhenMatch", filter.filterAllRemaining());

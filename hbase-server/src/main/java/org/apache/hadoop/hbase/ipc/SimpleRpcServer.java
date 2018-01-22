@@ -548,6 +548,7 @@ public class SimpleRpcServer extends RpcServer {
    * The number of open RPC conections
    * @return the number of open rpc connections
    */
+  @Override
   public int getNumOpenConnections() {
     return connectionManager.size();
   }

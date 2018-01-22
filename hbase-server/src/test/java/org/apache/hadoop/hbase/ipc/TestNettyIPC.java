@@ -148,7 +148,7 @@ public class TestNettyIPC extends AbstractTestIPC {
       super(server, name, services, bindAddress, conf, scheduler, true);
     }
 
-    final class FailingConnection extends NettyServerRpcConnection {
+    static final class FailingConnection extends NettyServerRpcConnection {
       private FailingConnection(TestFailingRpcServer rpcServer, Channel channel) {
         super(rpcServer, channel);
       }

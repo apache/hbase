@@ -131,9 +131,9 @@ public class TestWALSplit {
   private static final String FILENAME_BEING_SPLIT = "testfile";
   private static final TableName TABLE_NAME =
       TableName.valueOf("t1");
-  private static final byte[] FAMILY = "f1".getBytes();
-  private static final byte[] QUALIFIER = "q1".getBytes();
-  private static final byte[] VALUE = "v1".getBytes();
+  private static final byte[] FAMILY = Bytes.toBytes("f1");
+  private static final byte[] QUALIFIER = Bytes.toBytes("q1");
+  private static final byte[] VALUE = Bytes.toBytes("v1");
   private static final String WAL_FILE_PREFIX = "wal.dat.";
   private static List<String> REGIONS = new ArrayList<>();
   private static final String HBASE_SKIP_ERRORS = "hbase.hlog.split.skip.errors";
@@ -341,7 +341,7 @@ public class TestWALSplit {
       while (!stop.get()) {
         try {
           long seq = appendEntry(writer, TABLE_NAME, regionBytes,
-              ("r" + editsCount.get()).getBytes(), regionBytes, QUALIFIER, VALUE, 0);
+              Bytes.toBytes("r" + editsCount.get()), regionBytes, QUALIFIER, VALUE, 0);
           long count = editsCount.incrementAndGet();
           LOG.info(getName() + " sync count=" + count + ", seq=" + seq);
           try {
@@ -407,7 +407,7 @@ public class TestWALSplit {
             TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
             new WALEdit());
     Path parent = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-    assertEquals(parent.getName(), HConstants.RECOVERED_EDITS_DIR);
+    assertEquals(HConstants.RECOVERED_EDITS_DIR, parent.getName());
     fs.createNewFile(parent); // create a recovered.edits file
 
     Path p = WALSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR,
@@ -588,8 +588,8 @@ public class TestWALSplit {
         archivedLogs.add(log.getPath().getName());
       }
       LOG.debug(archived.toString());
-      assertEquals(failureType.name() + ": expected to find all of our wals corrupt.",
-        walDirContents, archivedLogs);
+      assertEquals(failureType.name() + ": expected to find all of our wals corrupt.", archivedLogs,
+          walDirContents);
     }
   }
 
@@ -687,7 +687,7 @@ public class TestWALSplit {
 
     // should not have stored the EOF files as corrupt
     FileStatus[] archivedLogs = fs.listStatus(CORRUPTDIR);
-    assertEquals(archivedLogs.length, 0);
+    assertEquals(0, archivedLogs.length);
 
   }
 
@@ -749,7 +749,7 @@ public class TestWALSplit {
 
     InstrumentedLogWriter.activateFailure = false;
     appendEntry(writer, TABLE_NAME, Bytes.toBytes(region),
-        ("r" + 999).getBytes(), FAMILY, QUALIFIER, VALUE, 0);
+        Bytes.toBytes("r" + 999), FAMILY, QUALIFIER, VALUE, 0);
     writer.close();
 
     try {
@@ -1206,8 +1206,8 @@ public class TestWALSplit {
         int prefix = 0;
         for (String region : REGIONS) {
           String row_key = region + prefix++ + i + j;
-          appendEntry(ws[i], TABLE_NAME, region.getBytes(), row_key.getBytes(), FAMILY, QUALIFIER,
-              VALUE, seq++);
+          appendEntry(ws[i], TABLE_NAME, Bytes.toBytes(region), Bytes.toBytes(row_key), FAMILY,
+              QUALIFIER, VALUE, seq++);
 
           if (numRegionEventsAdded < regionEvents) {
             numRegionEventsAdded ++;
@@ -1233,7 +1233,7 @@ public class TestWALSplit {
     Path tdir = FSUtils.getTableDir(rootdir, table);
     @SuppressWarnings("deprecation")
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
-        Bytes.toString(region.getBytes())));
+        Bytes.toString(Bytes.toBytes(region))));
     FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
@@ -1260,46 +1260,46 @@ public class TestWALSplit {
     in.close();
 
     switch (corruption) {
-    case APPEND_GARBAGE:
-      fs.delete(path, false);
-      out = fs.create(path);
-      out.write(corrupted_bytes);
-      out.write("-----".getBytes());
-      closeOrFlush(close, out);
-      break;
+      case APPEND_GARBAGE:
+        fs.delete(path, false);
+        out = fs.create(path);
+        out.write(corrupted_bytes);
+        out.write(Bytes.toBytes("-----"));
+        closeOrFlush(close, out);
+        break;
 
-    case INSERT_GARBAGE_ON_FIRST_LINE:
-      fs.delete(path, false);
-      out = fs.create(path);
-      out.write(0);
-      out.write(corrupted_bytes);
-      closeOrFlush(close, out);
-      break;
+      case INSERT_GARBAGE_ON_FIRST_LINE:
+        fs.delete(path, false);
+        out = fs.create(path);
+        out.write(0);
+        out.write(corrupted_bytes);
+        closeOrFlush(close, out);
+        break;
 
-    case INSERT_GARBAGE_IN_THE_MIDDLE:
-      fs.delete(path, false);
-      out = fs.create(path);
-      int middle = (int) Math.floor(corrupted_bytes.length / 2);
-      out.write(corrupted_bytes, 0, middle);
-      out.write(0);
-      out.write(corrupted_bytes, middle, corrupted_bytes.length - middle);
-      closeOrFlush(close, out);
-      break;
+      case INSERT_GARBAGE_IN_THE_MIDDLE:
+        fs.delete(path, false);
+        out = fs.create(path);
+        int middle = (int) Math.floor(corrupted_bytes.length / 2);
+        out.write(corrupted_bytes, 0, middle);
+        out.write(0);
+        out.write(corrupted_bytes, middle, corrupted_bytes.length - middle);
+        closeOrFlush(close, out);
+        break;
 
-    case TRUNCATE:
-      fs.delete(path, false);
-      out = fs.create(path);
-      out.write(corrupted_bytes, 0, fileSize
-          - (32 + ProtobufLogReader.PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT));
-      closeOrFlush(close, out);
-      break;
+      case TRUNCATE:
+        fs.delete(path, false);
+        out = fs.create(path);
+        out.write(corrupted_bytes, 0, fileSize
+            - (32 + ProtobufLogReader.PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT));
+        closeOrFlush(close, out);
+        break;
 
-    case TRUNCATE_TRAILER:
-      fs.delete(path, false);
-      out = fs.create(path);
-      out.write(corrupted_bytes, 0, fileSize - Bytes.SIZEOF_INT);// trailer is truncated.
-      closeOrFlush(close, out);
-      break;
+      case TRUNCATE_TRAILER:
+        fs.delete(path, false);
+        out = fs.create(path);
+        out.write(corrupted_bytes, 0, fileSize - Bytes.SIZEOF_INT);// trailer is truncated.
+        closeOrFlush(close, out);
+        break;
     }
   }
 
@@ -1360,14 +1360,14 @@ public class TestWALSplit {
     WALProtos.RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
         WALProtos.RegionEventDescriptor.EventType.REGION_OPEN,
         TABLE_NAME.toBytes(),
-        region.getBytes(),
-        String.valueOf(region.hashCode()).getBytes(),
+        Bytes.toBytes(region),
+        Bytes.toBytes(String.valueOf(region.hashCode())),
         1,
         ServerName.parseServerName("ServerName:9099"), ImmutableMap.<byte[], List<Path>>of());
     final long time = EnvironmentEdgeManager.currentTime();
-    KeyValue kv = new KeyValue(region.getBytes(), WALEdit.METAFAMILY, WALEdit.REGION_EVENT,
+    KeyValue kv = new KeyValue(Bytes.toBytes(region), WALEdit.METAFAMILY, WALEdit.REGION_EVENT,
         time, regionOpenDesc.toByteArray());
-    final WALKeyImpl walKey = new WALKeyImpl(region.getBytes(), TABLE_NAME, 1, time,
+    final WALKeyImpl walKey = new WALKeyImpl(Bytes.toBytes(region), TABLE_NAME, 1, time,
         HConstants.DEFAULT_CLUSTER_ID);
     w.append(
         new Entry(walKey, new WALEdit().add(kv)));

@@ -125,6 +125,7 @@ public class TestCompactionArchiveConcurrentClose {
 
     // now run the cleaner with a concurrent close
     Thread cleanerThread = new Thread() {
+      @Override
       public void run() {
         cleaner.chore();
       }
@@ -138,6 +139,7 @@ public class TestCompactionArchiveConcurrentClose {
     }
     final AtomicReference<Exception> closeException = new AtomicReference<>();
     Thread closeThread = new Thread() {
+      @Override
       public void run() {
         // wait for the chore to complete and call close
         try {

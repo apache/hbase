@@ -90,11 +90,13 @@ public class TestHStoreFile extends HBaseTestCase {
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();
@@ -505,8 +507,8 @@ public class TestHStoreFile extends HBaseTestCase {
     long now = System.currentTimeMillis();
     for (int i = 0; i < 2000; i += 2) {
       String row = String.format(localFormatter, i);
-      KeyValue kv = new KeyValue(row.getBytes(), "family".getBytes(),
-        "col".getBytes(), now, "value".getBytes());
+      KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+        Bytes.toBytes("col"), now, Bytes.toBytes("value"));
       writer.append(kv);
     }
     writer.close();
@@ -523,12 +525,13 @@ public class TestHStoreFile extends HBaseTestCase {
     for (int i = 0; i < 2000; i++) {
       String row = String.format(localFormatter, i);
       TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-      columns.add("family:col".getBytes());
+      columns.add(Bytes.toBytes("family:col"));
 
-      Scan scan = new Scan(row.getBytes(),row.getBytes());
-      scan.addColumn("family".getBytes(), "family:col".getBytes());
+      Scan scan = new Scan(Bytes.toBytes(row),Bytes.toBytes(row));
+      scan.addColumn(Bytes.toBytes("family"), Bytes.toBytes("family:col"));
       HStore store = mock(HStore.class);
-      when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
+      when(store.getColumnFamilyDescriptor())
+          .thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
       boolean exists = scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
@@ -592,8 +595,8 @@ public class TestHStoreFile extends HBaseTestCase {
     long now = System.currentTimeMillis();
     for (int i = 0; i < 2000; i += 2) {
       String row = String.format(localFormatter, i);
-      KeyValue kv = new KeyValue(row.getBytes(), "family".getBytes(),
-          "col".getBytes(), now, KeyValue.Type.DeleteFamily, "value".getBytes());
+      KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+          Bytes.toBytes("col"), now, KeyValue.Type.DeleteFamily, Bytes.toBytes("value"));
       writer.append(kv);
     }
     writer.close();
@@ -696,9 +699,8 @@ public class TestHStoreFile extends HBaseTestCase {
           String row = String.format(localFormatter, i);
           String col = String.format(localFormatter, j);
           for (int k= 0; k < versions; ++k) { // versions
-            KeyValue kv = new KeyValue(row.getBytes(),
-              "family".getBytes(), ("col" + col).getBytes(),
-                now-k, Bytes.toBytes((long)-1));
+            KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+                Bytes.toBytes("col" + col), now-k, Bytes.toBytes(-1L));
             writer.append(kv);
           }
         }
@@ -713,7 +715,8 @@ public class TestHStoreFile extends HBaseTestCase {
       assertEquals(expKeys[x], reader.generalBloomFilter.getKeyCount());
 
       HStore store = mock(HStore.class);
-      when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
+      when(store.getColumnFamilyDescriptor())
+          .thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
       // check false positives rate
       int falsePos = 0;
       int falseNeg = 0;
@@ -722,10 +725,10 @@ public class TestHStoreFile extends HBaseTestCase {
           String row = String.format(localFormatter, i);
           String col = String.format(localFormatter, j);
           TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-          columns.add(("col" + col).getBytes());
+          columns.add(Bytes.toBytes("col" + col));
 
-          Scan scan = new Scan(row.getBytes(),row.getBytes());
-          scan.addColumn("family".getBytes(), ("col"+col).getBytes());
+          Scan scan = new Scan(Bytes.toBytes(row),Bytes.toBytes(row));
+          scan.addColumn(Bytes.toBytes("family"), Bytes.toBytes(("col"+col)));
 
           boolean exists =
               scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);

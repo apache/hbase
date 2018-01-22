@@ -34,7 +34,7 @@ public class TestCoprocessorHost {
   /**
    * An {@link Abortable} implementation for tests.
    */
-  private class TestAbortable implements Abortable {
+  private static class TestAbortable implements Abortable {
     private volatile boolean aborted = false;
 
     @Override

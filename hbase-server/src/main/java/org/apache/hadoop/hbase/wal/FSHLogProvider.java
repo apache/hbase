@@ -63,7 +63,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
       ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
-      writer = logWriterClass.newInstance();
+      writer = logWriterClass.getDeclaredConstructor().newInstance();
       writer.init(fs, path, conf, overwritable);
       return writer;
     } catch (Exception e) { 

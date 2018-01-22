@@ -910,7 +910,7 @@ public class HRegionServer extends HasThread implements
    */
   private boolean isClusterUp() {
     return this.masterless ||
-        this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp();
+        (this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp());
   }
 
   /**
@@ -1751,7 +1751,7 @@ public class HRegionServer extends HasThread implements
         if (r.shouldFlush(whyFlush)) {
           FlushRequester requester = server.getFlushRequester();
           if (requester != null) {
-            long randomDelay = RandomUtils.nextInt(0, RANGE_OF_DELAY) + MIN_DELAY_TIME;
+            long randomDelay = (long) RandomUtils.nextInt(0, RANGE_OF_DELAY) + MIN_DELAY_TIME;
             LOG.info(getName() + " requesting flush of " +
               r.getRegionInfo().getRegionNameAsString() + " because " +
               whyFlush.toString() +
@@ -3122,13 +3122,13 @@ public class HRegionServer extends HasThread implements
       }
     }
 
-    final Boolean previous = this.regionsInTransitionInRS.putIfAbsent(encodedName.getBytes(),
+    final Boolean previous = this.regionsInTransitionInRS.putIfAbsent(Bytes.toBytes(encodedName),
         Boolean.FALSE);
 
     if (Boolean.TRUE.equals(previous)) {
       LOG.info("Received CLOSE for the region:" + encodedName + " , which we are already " +
           "trying to OPEN. Cancelling OPENING.");
-      if (!regionsInTransitionInRS.replace(encodedName.getBytes(), previous, Boolean.FALSE)){
+      if (!regionsInTransitionInRS.replace(Bytes.toBytes(encodedName), previous, Boolean.FALSE)) {
         // The replace failed. That should be an exceptional case, but theoretically it can happen.
         // We're going to try to do a standard close then.
         LOG.warn("The opening for region " + encodedName + " was done before we could cancel it." +
@@ -3151,7 +3151,7 @@ public class HRegionServer extends HasThread implements
 
     if (actualRegion == null) {
       LOG.debug("Received CLOSE for a region which is not online, and we're not opening.");
-      this.regionsInTransitionInRS.remove(encodedName.getBytes());
+      this.regionsInTransitionInRS.remove(Bytes.toBytes(encodedName));
       // The master deletes the znode when it receives this exception.
       throw new NotServingRegionException("The region " + encodedName +
           " is not online, and is not opening.");

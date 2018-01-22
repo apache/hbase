@@ -501,8 +501,8 @@ public class TestSplitTableRegionProcedure {
         daughters.get(i),
         startRow,
         numRows,
-        ColumnFamilyName1.getBytes(),
-        ColumnFamilyName2.getBytes());
+        Bytes.toBytes(ColumnFamilyName1),
+        Bytes.toBytes(ColumnFamilyName2));
     }
   }
 

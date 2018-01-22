@@ -96,6 +96,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
@@ -116,6 +117,7 @@ public class TestVisibilityLablesWithGroups {
     TEST_UTIL.createTable(tableName, CF);
     // put the data.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -137,6 +139,7 @@ public class TestVisibilityLablesWithGroups {
 
     // 'admin' user is part of 'supergroup', thus can see all the cells.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -178,6 +181,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Get testgroup's labels.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -197,6 +201,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Test that test user can see what 'testgroup' has been authorized to.
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {
@@ -281,6 +286,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Clear 'testgroup' of CONFIDENTIAL label.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         VisibilityLabelsResponse response = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -295,6 +301,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Get testgroup's labels.  No label is returned.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -313,6 +320,7 @@ public class TestVisibilityLablesWithGroups {
 
     // Test that test user cannot see the cells with the labels anymore.
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = connection.getTable(tableName)) {

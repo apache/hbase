@@ -97,7 +97,7 @@ public class ServerNonceManager {
     }
 
     public boolean isExpired(long minRelevantTime) {
-      return getActivityTime() < (minRelevantTime & (~0l >>> 3));
+      return getActivityTime() < (minRelevantTime & (~0L >>> 3));
     }
 
     public void setMvcc(long mvcc) {

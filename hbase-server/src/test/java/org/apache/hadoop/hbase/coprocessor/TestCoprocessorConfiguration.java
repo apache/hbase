@@ -108,12 +108,10 @@ public class TestCoprocessorConfiguration {
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-      systemCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
     assertEquals("Table coprocessors loading default was not honored",
-      tableCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED &&
-      CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED &&
+        CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED, tableCoprocessorLoaded.get());
   }
 
   @Test
@@ -123,8 +121,7 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     new RegionServerCoprocessorHost(rsServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-      systemCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
   }
 
   @Test
@@ -134,8 +131,7 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     new MasterCoprocessorHost(masterServices, conf);
     assertEquals("System coprocessors loading default was not honored",
-      systemCoprocessorLoaded.get(),
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED);
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
   }
 
   @Test

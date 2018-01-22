@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.NavigableMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -383,7 +384,7 @@ public abstract class HBaseTestCase extends TestCase {
         if (res_value != null) {
           assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
               " at timestamp " +
-              timestamp, value, new String(res_value));
+              timestamp, value, new String(res_value, StandardCharsets.UTF_8));
         }
       }
     }

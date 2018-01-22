@@ -947,7 +947,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
       Cell ret;
       int cellBufSize = getKVBufSize();
-      long seqId = 0l;
+      long seqId = 0L;
       if (this.reader.shouldIncludeMemStoreTS()) {
         seqId = currMemstoreTS;
       }

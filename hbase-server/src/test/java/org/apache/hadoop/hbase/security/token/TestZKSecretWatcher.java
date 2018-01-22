@@ -56,11 +56,13 @@ public class TestZKSecretWatcher {
 
   private static class MockAbortable implements Abortable {
     private boolean abort;
+    @Override
     public void abort(String reason, Throwable e) {
       LOG.info("Aborting: "+reason, e);
       abort = true;
     }
 
+    @Override
     public boolean isAborted() {
       return abort;
     }

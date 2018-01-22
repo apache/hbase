@@ -36,7 +36,7 @@ public class TestByteBuffUtils {
     ByteBuffer bb2 = ByteBuffer.allocate(50);
     MultiByteBuff src = new MultiByteBuff(bb1, bb2);
     for (int i = 0; i < 7; i++) {
-      src.putLong(8l);
+      src.putLong(8L);
     }
     src.put((byte) 1);
     src.put((byte) 1);
@@ -58,7 +58,7 @@ public class TestByteBuffUtils {
     bb3 = ByteBuffer.allocate(100);
     SingleByteBuff sbb = new SingleByteBuff(bb3);
     for (int i = 0; i < 7; i++) {
-      sbb.putLong(8l);
+      sbb.putLong(8L);
     }
     sbb.put((byte) 1);
     sbb.put((byte) 1);

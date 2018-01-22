@@ -122,6 +122,7 @@ public class TestVisibilityLabelsWithACL {
     SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER2.getShortName(), tableName,
       null, null, Permission.Action.READ);
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
@@ -151,6 +152,7 @@ public class TestVisibilityLabelsWithACL {
     final Table table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
         + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
@@ -175,6 +177,7 @@ public class TestVisibilityLabelsWithACL {
     final Table table = createTableAndWriteDataWithLabels(tableName, SECRET + "&" + CONFIDENTIAL
         + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
@@ -204,6 +207,7 @@ public class TestVisibilityLabelsWithACL {
     SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER2.getShortName(), tableName,
       null, null, Permission.Action.READ);
     PrivilegedExceptionAction<Void> getAction = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
@@ -222,6 +226,7 @@ public class TestVisibilityLabelsWithACL {
   public void testLabelsTableOpsWithDifferentUsers() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.addLabels(conn, new String[] { "l1", "l2" });
@@ -237,6 +242,7 @@ public class TestVisibilityLabelsWithACL {
         .getResult(1).getException().getName());
 
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
@@ -252,6 +258,7 @@ public class TestVisibilityLabelsWithACL {
         .getResult(1).getException().getName());
 
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
@@ -265,6 +272,7 @@ public class TestVisibilityLabelsWithACL {
     assertTrue(response.getResult(1).getException().getValue().isEmpty());
 
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.clearAuths(conn, new String[] {
@@ -289,6 +297,7 @@ public class TestVisibilityLabelsWithACL {
       "user3");
     PrivilegedExceptionAction<GetAuthsResponse> action1 = 
         new PrivilegedExceptionAction<GetAuthsResponse>() {
+      @Override
       public GetAuthsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.getAuths(conn, "user3");

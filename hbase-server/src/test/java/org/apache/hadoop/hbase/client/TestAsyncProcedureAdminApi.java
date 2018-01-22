@@ -90,7 +90,7 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
     byte[] result = admin.execProcedureWithReturn(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
       "myTest2", new HashMap<>()).get();
     assertArrayEquals("Incorrect return data from execProcedure",
-      SimpleMasterProcedureManager.SIMPLE_DATA.getBytes(), result);
+      Bytes.toBytes(SimpleMasterProcedureManager.SIMPLE_DATA), result);
   }
 
   @Test

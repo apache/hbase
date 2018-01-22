@@ -127,14 +127,14 @@ public class TestMetaTableLocator {
       assertEquals(state, MetaTableLocator.getMetaRegionState(this.watcher).getState());
     }
     MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
-    assertEquals(mtl.getMetaRegionLocation(this.watcher), SN);
+    assertEquals(SN, mtl.getMetaRegionLocation(this.watcher));
     assertEquals(RegionState.State.OPEN,
       MetaTableLocator.getMetaRegionState(this.watcher).getState());
 
     mtl.deleteMetaLocation(this.watcher);
     assertNull(MetaTableLocator.getMetaRegionState(this.watcher).getServerName());
-    assertEquals(MetaTableLocator.getMetaRegionState(this.watcher).getState(),
-      RegionState.State.OFFLINE);
+    assertEquals(RegionState.State.OFFLINE,
+        MetaTableLocator.getMetaRegionState(this.watcher).getState());
     assertNull(mtl.getMetaRegionLocation(this.watcher));
   }
 

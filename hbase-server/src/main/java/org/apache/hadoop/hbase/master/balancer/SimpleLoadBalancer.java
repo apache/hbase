@@ -106,6 +106,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
   }
 
+  @Override
   public void setClusterLoad(Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad){
     serverLoadList = new ArrayList<>();
     float sum = 0;

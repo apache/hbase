@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.Table;
 
 public class TestVisibilityLabelsOnNewVersionBehaviorTable extends TestVisibilityLabelsWithDeletes {
 
+  @Override
   protected Table createTable(HColumnDescriptor fam) throws IOException {
     fam.setNewVersionBehavior(true);
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());

@@ -612,7 +612,7 @@ public class MergeTableRegionsProcedure
     final TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
 
     for (String family: regionFs.getFamilies()) {
-      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(family.getBytes());
+      final ColumnFamilyDescriptor hcd = htd.getColumnFamily(Bytes.toBytes(family));
       final Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family);
 
       if (storeFiles != null && storeFiles.size() > 0) {

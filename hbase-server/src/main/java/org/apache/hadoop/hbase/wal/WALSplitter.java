@@ -1085,7 +1085,7 @@ public class WALSplitter {
     protected EntryBuffers entryBuffers;
 
     protected ConcurrentHashMap<String, SinkWriter> writers = new ConcurrentHashMap<>();
-    protected ConcurrentHashMap<String, Long> regionMaximumEditLogSeqNum =
+    protected final ConcurrentHashMap<String, Long> regionMaximumEditLogSeqNum =
         new ConcurrentHashMap<>();
 
 
@@ -1642,8 +1642,10 @@ public class WALSplitter {
         List<IOException> thrown, List<Path> paths)
         throws InterruptedException, ExecutionException {
       for (final Map.Entry<byte[], RegionEntryBuffer> buffer : entryBuffers.buffers.entrySet()) {
-        LOG.info("Submitting writeThenClose of {}", buffer.getValue().encodedRegionName);
+        LOG.info("Submitting writeThenClose of {}",
+            Arrays.toString(buffer.getValue().encodedRegionName));
         completionService.submit(new Callable<Void>() {
+          @Override
           public Void call() throws Exception {
             Path dst = writeThenClose(buffer.getValue());
             paths.add(dst);

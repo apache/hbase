@@ -294,6 +294,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       this.endKey = endKey;
     }
 
+    @Override
     public int compareTo(CompactionDelPartitionId o) {
       /*
        * 1). Compare the start key, if the k1 < k2, then k1 is less

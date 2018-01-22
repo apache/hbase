@@ -235,16 +235,15 @@ public class HFileSystem extends FilterFileSystem {
     }
   }
 
- /**
+  /**
    * Returns a brand new instance of the FileSystem. It does not use
    * the FileSystem.Cache. In newer versions of HDFS, we can directly
    * invoke FileSystem.newInstance(Configuration).
-   * 
+   *
    * @param conf Configuration
    * @return A new instance of the filesystem
    */
-  private static FileSystem newInstanceFileSystem(Configuration conf)
-    throws IOException {
+  private static FileSystem newInstanceFileSystem(Configuration conf) throws IOException {
     URI uri = FileSystem.getDefaultUri(conf);
     FileSystem fs = null;
     Class<?> clazz = conf.getClass("fs." + uri.getScheme() + ".impl", null);
@@ -361,47 +360,43 @@ public class HFileSystem extends FilterFileSystem {
 
   private static ClientProtocol createReorderingProxy(final ClientProtocol cp,
       final ReorderBlocks lrb, final Configuration conf) {
-    return (ClientProtocol) Proxy.newProxyInstance
-        (cp.getClass().getClassLoader(),
-            new Class[]{ClientProtocol.class, Closeable.class},
-            new InvocationHandler() {
-              public Object invoke(Object proxy, Method method,
-                                   Object[] args) throws Throwable {
-                try {
-                  if ((args == null || args.length == 0)
-                      && "close".equals(method.getName())) {
-                    RPC.stopProxy(cp);
-                    return null;
-                  } else {
-                    Object res = method.invoke(cp, args);
-                    if (res != null && args != null && args.length == 3
-                        && "getBlockLocations".equals(method.getName())
-                        && res instanceof LocatedBlocks
-                        && args[0] instanceof String
-                        && args[0] != null) {
-                      lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
-                    }
-                    return res;
-                  }
-                } catch  (InvocationTargetException ite) {
-                  // We will have this for all the exception, checked on not, sent
-                  //  by any layer, including the functional exception
-                  Throwable cause = ite.getCause();
-                  if (cause == null){
-                    throw new RuntimeException(
-                      "Proxy invocation failed and getCause is null", ite);
-                  }
-                  if (cause instanceof UndeclaredThrowableException) {
-                    Throwable causeCause = cause.getCause();
-                    if (causeCause == null) {
-                      throw new RuntimeException("UndeclaredThrowableException had null cause!");
-                    }
-                    cause = cause.getCause();
-                  }
-                  throw cause;
+    return (ClientProtocol) Proxy.newProxyInstance(cp.getClass().getClassLoader(),
+        new Class[]{ClientProtocol.class, Closeable.class}, new InvocationHandler() {
+          @Override
+          public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            try {
+              if ((args == null || args.length == 0) && "close".equals(method.getName())) {
+                RPC.stopProxy(cp);
+                return null;
+              } else {
+                Object res = method.invoke(cp, args);
+                if (res != null && args != null && args.length == 3
+                    && "getBlockLocations".equals(method.getName())
+                    && res instanceof LocatedBlocks
+                    && args[0] instanceof String
+                    && args[0] != null) {
+                  lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
                 }
+                return res;
               }
-            });
+            } catch  (InvocationTargetException ite) {
+              // We will have this for all the exception, checked on not, sent
+              //  by any layer, including the functional exception
+              Throwable cause = ite.getCause();
+              if (cause == null){
+                throw new RuntimeException("Proxy invocation failed and getCause is null", ite);
+              }
+              if (cause instanceof UndeclaredThrowableException) {
+                Throwable causeCause = cause.getCause();
+                if (causeCause == null) {
+                  throw new RuntimeException("UndeclaredThrowableException had null cause!");
+                }
+                cause = cause.getCause();
+              }
+              throw cause;
+            }
+          }
+        });
   }
 
   /**
@@ -424,6 +419,7 @@ public class HFileSystem extends FilterFileSystem {
    * datanode is actually dead, so if we use it it will timeout.
    */
   static class ReorderWALBlocks implements ReorderBlocks {
+    @Override
     public void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src)
         throws IOException {
 
@@ -481,6 +477,7 @@ public class HFileSystem extends FilterFileSystem {
    * createNonRecursive. This is a hadoop bug and when it is fixed in Hadoop,
    * this definition will go away.
    */
+  @Override
   @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(Path f,
       boolean overwrite,

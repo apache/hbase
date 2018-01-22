@@ -62,8 +62,8 @@ public class TestMemStoreLAB {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    ChunkCreator.initialize(1 * 1024, false, 50*1024000l, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
-      null);
+    ChunkCreator.initialize(1 * 1024, false, 50 * 1024000L, 0.2f,
+        MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null);
   }
 
   @AfterClass

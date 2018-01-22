@@ -52,7 +52,7 @@ public class TestProcedure {
     when(coord.getRpcs()).thenReturn(comms); // make it not null
   }
 
-  class LatchedProcedure extends Procedure {
+  static class LatchedProcedure extends Procedure {
     CountDownLatch startedAcquireBarrier = new CountDownLatch(1);
     CountDownLatch startedDuringBarrier = new CountDownLatch(1);
     CountDownLatch completedProcedure = new CountDownLatch(1);
@@ -93,6 +93,7 @@ public class TestProcedure {
     final LatchedProcedure procspy = spy(proc);
     // coordinator: start the barrier procedure
     new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }
@@ -139,6 +140,7 @@ public class TestProcedure {
     final LatchedProcedure procspy = spy(proc);
     // start the barrier procedure
     new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }
@@ -192,6 +194,7 @@ public class TestProcedure {
 
     // start the barrier procedure
     Thread t = new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }
@@ -214,6 +217,7 @@ public class TestProcedure {
 
     // start the barrier procedure
     Thread t = new Thread() {
+      @Override
       public void run() {
         procspy.call();
       }

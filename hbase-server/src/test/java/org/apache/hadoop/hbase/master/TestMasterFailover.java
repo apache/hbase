@@ -190,7 +190,7 @@ public class TestMasterFailover {
       RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
       assertEquals("hbase:meta should be online on RS",
           metaState.getServerName(), metaServerName);
-      assertEquals("hbase:meta should be online on RS", metaState.getState(), State.OPEN);
+      assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
 
       // Start up a new master
       LOG.info("Starting up a new master");
@@ -203,7 +203,7 @@ public class TestMasterFailover {
       metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
       assertEquals("hbase:meta should be online on RS",
           metaState.getServerName(), metaServerName);
-      assertEquals("hbase:meta should be online on RS", metaState.getState(), State.OPEN);
+      assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
 
       // Done, shutdown the cluster
     } finally {

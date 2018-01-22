@@ -705,9 +705,8 @@ public abstract class AbstractTestWALReplay {
     try {
       region.flush(true);
       fail("Injected exception hasn't been thrown");
-    } catch (Throwable t) {
-      LOG.info("Expected simulated exception when flushing region,"
-          + t.getMessage());
+    } catch (IOException e) {
+      LOG.info("Expected simulated exception when flushing region, {}", e.getMessage());
       // simulated to abort server
       Mockito.doReturn(true).when(rsServices).isAborted();
       region.setClosing(false); // region normally does not accept writes after
@@ -928,8 +927,7 @@ public abstract class AbstractTestWALReplay {
    * testcase for https://issues.apache.org/jira/browse/HBASE-15252
    */
   @Test
-  public void testDatalossWhenInputError() throws IOException, InstantiationException,
-      IllegalAccessException {
+  public void testDatalossWhenInputError() throws Exception {
     final TableName tableName = TableName.valueOf("testDatalossWhenInputError");
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
@@ -964,7 +962,7 @@ public abstract class AbstractTestWALReplay {
     Class<? extends AbstractFSWALProvider.Reader> logReaderClass =
         conf.getClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
           AbstractFSWALProvider.Reader.class);
-    AbstractFSWALProvider.Reader reader = logReaderClass.newInstance();
+    AbstractFSWALProvider.Reader reader = logReaderClass.getDeclaredConstructor().newInstance();
     reader.init(this.fs, editFile, conf, stream);
     final long headerLength = stream.getPos();
     reader.close();
@@ -1108,7 +1106,7 @@ public abstract class AbstractTestWALReplay {
 
   // Flusher used in this test.  Keep count of how often we are called and
   // actually run the flush inside here.
-  class TestFlusher implements FlushRequester {
+  static class TestFlusher implements FlushRequester {
     private HRegion r;
 
     @Override

@@ -107,10 +107,12 @@ public class MockMasterServices extends MockNoopMasterServices {
     this.walManager = new MasterWalManager(this);
     // Mock an AM.
     this.assignmentManager = new AssignmentManager(this, new MockRegionStateStore(this)) {
+      @Override
       public boolean isTableEnabled(final TableName tableName) {
         return true;
       }
 
+      @Override
       public boolean isTableDisabled(final TableName tableName) {
         return false;
       }

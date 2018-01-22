@@ -156,6 +156,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     return result;
   }
 
+  @Override
   public boolean supportsAutoLoading() {
     return true;
   }

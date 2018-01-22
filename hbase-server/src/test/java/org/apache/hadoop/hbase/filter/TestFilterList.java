@@ -768,7 +768,7 @@ public class TestFilterList {
     MockFilter filter5 = new MockFilter(ReturnCode.SKIP);
     MockFilter filter6 = new MockFilter(ReturnCode.SEEK_NEXT_USING_HINT);
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, filter1, filter2);
-    assertEquals(filterList.filterCell(kv1), ReturnCode.INCLUDE);
+    assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ONE, filter2, filter3);
     assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv1));
@@ -936,6 +936,7 @@ public class TestFilterList {
   private static class MockNextRowFilter extends FilterBase {
     private int hitCount = 0;
 
+    @Override
     public ReturnCode filterCell(final Cell v) throws IOException {
       hitCount++;
       return ReturnCode.NEXT_ROW;

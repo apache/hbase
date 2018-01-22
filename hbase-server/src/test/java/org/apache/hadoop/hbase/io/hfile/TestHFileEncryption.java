@@ -262,7 +262,7 @@ public class TestHFileEncryption {
           assertTrue("Initial seekTo failed", scanner.seekTo());
           for (i = 0; i < 100; i++) {
             KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));
-            assertEquals("Unable to find KV as expected: " + kv, scanner.seekTo(kv), 0);
+            assertEquals("Unable to find KV as expected: " + kv, 0, scanner.seekTo(kv));
           }
         } finally {
           scanner.close();

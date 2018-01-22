@@ -36,6 +36,7 @@ public class TestCellSkipListSet extends TestCase {
   private final CellSet csls =
     new CellSet(CellComparatorImpl.COMPARATOR);
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     this.csls.clear();

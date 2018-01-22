@@ -111,6 +111,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
   private static Thread killARegionServer(final HBaseTestingUtility utility,
                                           final long timeout, final int rs) {
     Thread killer = new Thread() {
+      @Override
       public void run() {
         try {
           Thread.sleep(timeout);

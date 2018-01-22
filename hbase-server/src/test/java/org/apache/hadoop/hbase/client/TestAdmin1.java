@@ -421,7 +421,7 @@ public class TestAdmin1 {
     this.admin.createTable(htd);
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     TableDescriptor confirmedHtd = table.getDescriptor();
-    assertEquals(TableDescriptor.COMPARATOR.compare(htd, confirmedHtd), 0);
+    assertEquals(0, TableDescriptor.COMPARATOR.compare(htd, confirmedHtd));
     MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
     table.close();
   }

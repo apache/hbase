@@ -181,15 +181,15 @@ public class TestTimestampsFilter {
     Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     Put p = new Put(Bytes.toBytes("row"));
-    p.addColumn(FAMILY, Bytes.toBytes("column0"), (long) 3, Bytes.toBytes("value0-3"));
-    p.addColumn(FAMILY, Bytes.toBytes("column1"), (long) 3, Bytes.toBytes("value1-3"));
-    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 1, Bytes.toBytes("value2-1"));
-    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 2, Bytes.toBytes("value2-2"));
-    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 3, Bytes.toBytes("value2-3"));
-    p.addColumn(FAMILY, Bytes.toBytes("column3"), (long) 2, Bytes.toBytes("value3-2"));
-    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 1, Bytes.toBytes("value4-1"));
-    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 2, Bytes.toBytes("value4-2"));
-    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 3, Bytes.toBytes("value4-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column0"), 3L, Bytes.toBytes("value0-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column1"), 3L, Bytes.toBytes("value1-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), 1L, Bytes.toBytes("value2-1"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), 2L, Bytes.toBytes("value2-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), 3L, Bytes.toBytes("value2-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column3"), 2L, Bytes.toBytes("value3-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), 1L, Bytes.toBytes("value4-1"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), 2L, Bytes.toBytes("value4-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), 3L, Bytes.toBytes("value4-3"));
     ht.put(p);
 
     ArrayList<Long> timestamps = new ArrayList<>();
@@ -209,7 +209,7 @@ public class TestTimestampsFilter {
           + Bytes.toString(CellUtil.cloneValue(kv)));
     }
 
-    assertEquals(result.listCells().size(), 2);
+    assertEquals(2, result.listCells().size());
     assertTrue(CellUtil.matchingValue(result.listCells().get(0), Bytes.toBytes("value2-3")));
     assertTrue(CellUtil.matchingValue(result.listCells().get(1), Bytes.toBytes("value4-3")));
 

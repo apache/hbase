@@ -85,7 +85,7 @@ public class TestConstraint {
     try {
       // test that we don't fail on a valid put
       Put put = new Put(row1);
-      byte[] value = Integer.toString(10).getBytes();
+      byte[] value = Bytes.toBytes(Integer.toString(10));
       byte[] qualifier = new byte[0];
       put.addColumn(dummy, qualifier, value);
       table.put(put);
@@ -119,7 +119,7 @@ public class TestConstraint {
     // test that we do fail on violation
     Put put = new Put(row1);
     byte[] qualifier = new byte[0];
-    put.addColumn(dummy, qualifier, "fail".getBytes());
+    put.addColumn(dummy, qualifier, Bytes.toBytes("fail"));
     LOG.warn("Doing put in table");
     try {
       table.put(put);
@@ -158,7 +158,7 @@ public class TestConstraint {
       // test that we don't fail because its disabled
       Put put = new Put(row1);
       byte[] qualifier = new byte[0];
-      put.addColumn(dummy, qualifier, "pass".getBytes());
+      put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
       table.put(put);
     } finally {
       table.close();
@@ -191,7 +191,7 @@ public class TestConstraint {
       // test that we do fail on violation
       Put put = new Put(row1);
       byte[] qualifier = new byte[0];
-      put.addColumn(dummy, qualifier, "pass".getBytes());
+      put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
       LOG.warn("Doing put in table");
       table.put(put);
     } finally {
@@ -224,7 +224,7 @@ public class TestConstraint {
     // test that we do fail on violation
     Put put = new Put(row1);
     byte[] qualifier = new byte[0];
-    put.addColumn(dummy, qualifier, "pass".getBytes());
+    put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
 
     try{
     table.put(put);

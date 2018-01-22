@@ -261,9 +261,9 @@ public class TestReplicasClient {
     AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
       getRS().getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
-    Assert.assertEquals(responseOpen.getOpeningStateCount(), 1);
-    Assert.assertEquals(responseOpen.getOpeningState(0),
-      AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED);
+    Assert.assertEquals(1, responseOpen.getOpeningStateCount());
+    Assert.assertEquals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED,
+        responseOpen.getOpeningState(0));
     checkRegionIsOpened(hri);
   }
 
@@ -583,8 +583,8 @@ public class TestReplicasClient {
       r = table.get(g);
       Assert.assertFalse(r.isStale());
       Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
-      Assert.assertEquals(hedgedReadOps.getCount(), 1);
-      Assert.assertEquals(hedgedReadWin.getCount(), 0);
+      Assert.assertEquals(1, hedgedReadOps.getCount());
+      Assert.assertEquals(0, hedgedReadWin.getCount());
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.getSecondaryCdl().get().countDown();
       LOG.info("hedged read occurred but not faster");
@@ -597,8 +597,8 @@ public class TestReplicasClient {
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
-      Assert.assertEquals(hedgedReadOps.getCount(), 2);
-      Assert.assertEquals(hedgedReadWin.getCount(), 1);
+      Assert.assertEquals(2, hedgedReadOps.getCount());
+      Assert.assertEquals(1, hedgedReadWin.getCount());
       SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("hedged read occurred and faster");
 

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -103,7 +104,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(2, currentHtd.getFamiliesKeys().size());
-    assertTrue(currentHtd.hasFamily(cf2.getBytes()));
+    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf2)));
 
     // Test 2: Modify the table descriptor offline
     UTIL.getAdmin().disableTable(tableName);
@@ -119,7 +120,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
     currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
-    assertTrue(currentHtd.hasFamily(cf3.getBytes()));
+    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf3)));
     assertEquals(3, currentHtd.getFamiliesKeys().size());
   }
 
@@ -137,7 +138,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Test 1: Modify the table descriptor
     HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    htd.removeFamily(cf2.getBytes());
+    htd.removeFamily(Bytes.toBytes(cf2));
 
     long procId = ProcedureTestingUtility.submitAndWait(
         procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
@@ -145,7 +146,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(2, currentHtd.getFamiliesKeys().size());
-    assertFalse(currentHtd.hasFamily(cf2.getBytes()));
+    assertFalse(currentHtd.hasFamily(Bytes.toBytes(cf2)));
 
     // Test 2: Modify the table descriptor offline
     UTIL.getAdmin().disableTable(tableName);
@@ -153,7 +154,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     HTableDescriptor htd2 =
         new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    htd2.removeFamily(cf3.getBytes());
+    htd2.removeFamily(Bytes.toBytes(cf3));
     // Disable Sanity check
     htd2.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
 
@@ -164,12 +165,12 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(1, currentHtd.getFamiliesKeys().size());
-    assertFalse(currentHtd.hasFamily(cf3.getBytes()));
+    assertFalse(currentHtd.hasFamily(Bytes.toBytes(cf3)));
 
     //Removing the last family will fail
     HTableDescriptor htd3 =
         new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
-    htd3.removeFamily(cf1.getBytes());
+    htd3.removeFamily(Bytes.toBytes(cf1));
     long procId3 =
         ProcedureTestingUtility.submitAndWait(procExec,
             new ModifyTableProcedure(procExec.getEnvironment(), htd3));
@@ -179,7 +180,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     assertTrue("expected DoNotRetryIOException, got " + cause,
         cause instanceof DoNotRetryIOException);
     assertEquals(1, currentHtd.getFamiliesKeys().size());
-    assertTrue(currentHtd.hasFamily(cf1.getBytes()));
+    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf1)));
   }
 
   @Test(timeout=60000)
@@ -202,7 +203,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(cf2));
-    htd.removeFamily(cf3.getBytes());
+    htd.removeFamily(Bytes.toBytes(cf3));
     htd.setRegionReplication(3);
 
     // Start the Modify procedure && kill the executor
@@ -240,7 +241,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(cf2));
-    htd.removeFamily(cf3.getBytes());
+    htd.removeFamily(Bytes.toBytes(cf3));
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
@@ -253,8 +254,8 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(newCompactionEnableOption, currentHtd.isCompactionEnabled());
     assertEquals(2, currentHtd.getFamiliesKeys().size());
-    assertTrue(currentHtd.hasFamily(cf2.getBytes()));
-    assertFalse(currentHtd.hasFamily(cf3.getBytes()));
+    assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf2)));
+    assertFalse(currentHtd.hasFamily(Bytes.toBytes(cf3)));
 
     // cf2 should be added cf3 should be removed
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),

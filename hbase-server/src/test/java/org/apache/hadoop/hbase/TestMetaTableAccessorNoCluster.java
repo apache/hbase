@@ -163,6 +163,7 @@ public class TestMetaTableAccessorNoCluster {
           .thenThrow(new ServiceException("Server not running (2 of 3)"))
           .thenThrow(new ServiceException("Server not running (3 of 3)"))
           .thenAnswer(new Answer<ScanResponse>() {
+            @Override
             public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
               ((HBaseRpcController) invocation.getArgument(0)).setCellScanner(CellUtil
                   .createCellScanner(cellScannables));

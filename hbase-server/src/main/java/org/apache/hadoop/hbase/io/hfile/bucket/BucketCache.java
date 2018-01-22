@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -904,6 +905,7 @@ public class BucketCache implements BlockCache, HeapSize {
       this.writerEnabled = false;
     }
 
+    @Override
     public void run() {
       List<RAMQueueEntry> entries = new ArrayList<>();
       try {
@@ -1395,10 +1397,22 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     @Override
-    public boolean equals(Object that) {
-      return this == that;
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      BucketEntryGroup that = (BucketEntryGroup) o;
+      return totalSize == that.totalSize && bucketSize == that.bucketSize
+          && Objects.equals(queue, that.queue);
     }
 
+    @Override
+    public int hashCode() {
+      return Objects.hash(queue, totalSize, bucketSize);
+    }
   }
 
   /**

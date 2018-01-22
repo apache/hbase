@@ -142,7 +142,7 @@ public class TestQuotaStatusRPCs {
     assertTrue(
         "Observed table usage was " + snapshot.getUsage(),
         snapshot.getUsage() >= tableSize);
-    assertEquals(snapshot.getLimit(), sizeLimit);
+    assertEquals(sizeLimit, snapshot.getLimit());
     SpaceQuotaStatus pbStatus = snapshot.getQuotaStatus();
     assertFalse(pbStatus.isInViolation());
   }

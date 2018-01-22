@@ -33,6 +33,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -864,7 +865,7 @@ public class RegionStates {
     private final RegionStateNode regionNode;
 
     private volatile Exception exception = null;
-    private volatile int retries = 0;
+    private AtomicInteger retries = new AtomicInteger();
 
     public RegionFailedOpen(final RegionStateNode regionNode) {
       this.regionNode = regionNode;
@@ -879,11 +880,11 @@ public class RegionStates {
     }
 
     public int incrementAndGetRetries() {
-      return ++this.retries;
+      return this.retries.incrementAndGet();
     }
 
     public int getRetries() {
-      return retries;
+      return retries.get();
     }
 
     public void setException(final Exception exception) {

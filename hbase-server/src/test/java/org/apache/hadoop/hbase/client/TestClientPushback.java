@@ -127,7 +127,7 @@ public class TestClientPushback {
       regionStats.getMemStoreLoadPercent());
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
-    assertNotEquals("Reported load does not produce a backoff", backoffTime, 0);
+    assertNotEquals("Reported load does not produce a backoff", 0, backoffTime);
     LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ " +
       server + " is " + backoffTime);
 
@@ -166,13 +166,13 @@ public class TestClientPushback {
 
     MetricsConnection.RunnerStats runnerStats = conn.getConnectionMetrics().runnerStats;
 
-    assertEquals(runnerStats.delayRunners.getCount(), 1);
-    assertEquals(runnerStats.normalRunners.getCount(), 1);
+    assertEquals(1, runnerStats.delayRunners.getCount());
+    assertEquals(1, runnerStats.normalRunners.getCount());
     assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(),
       (double)backoffTime, 0.1);
 
     latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);
-    assertNotEquals("AsyncProcess did not submit the work time", endTime.get(), 0);
+    assertNotEquals("AsyncProcess did not submit the work time", 0, endTime.get());
     assertTrue("AsyncProcess did not delay long enough", endTime.get() - startTime >= backoffTime);
   }
 

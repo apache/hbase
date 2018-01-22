@@ -346,7 +346,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     long currentHighestProcessedAppendTxid = highestProcessedAppendTxid;
     highestProcessedAppendTxidAtLastSync = currentHighestProcessedAppendTxid;
     final long startTimeNs = System.nanoTime();
-    final long epoch = epochAndState >>> 2;
+    final long epoch = (long) epochAndState >>> 2L;
     writer.sync().whenCompleteAsync((result, error) -> {
       if (error != null) {
         syncFailed(epoch, error);

@@ -86,6 +86,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
       justification="Intentional")
+  @Override
   public int run(String[] args) throws Exception {
     if (args.length != 2) {
       printUsage();

@@ -49,7 +49,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
         new ArrayList<>(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get()
           .getLiveServerMetrics().keySet());
 
-    assertEquals(clusterRegionServers.size(), 2);
+    assertEquals(2, clusterRegionServers.size());
 
     HashMap<ServerName, List<RegionInfo>> serversToDecommssion = new HashMap<>();
     // Get a server that has regions. We will decommission one of the servers,

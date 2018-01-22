@@ -143,8 +143,8 @@ public class TestRegionReplicaReplicationEndpoint {
     assertNotNull(peerConfig);
     assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
         HTU.getConfiguration()));
-    assertEquals(peerConfig.getReplicationEndpointImpl(),
-      RegionReplicaReplicationEndpoint.class.getName());
+    assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
+        peerConfig.getReplicationEndpointImpl());
     admin.close();
   }
 
@@ -190,8 +190,8 @@ public class TestRegionReplicaReplicationEndpoint {
     assertNotNull(peerConfig);
     assertEquals(peerConfig.getClusterKey(), ZKConfig.getZooKeeperClusterKey(
         HTU.getConfiguration()));
-    assertEquals(peerConfig.getReplicationEndpointImpl(),
-      RegionReplicaReplicationEndpoint.class.getName());
+    assertEquals(RegionReplicaReplicationEndpoint.class.getName(),
+        peerConfig.getReplicationEndpointImpl());
     admin.close();
   }
 

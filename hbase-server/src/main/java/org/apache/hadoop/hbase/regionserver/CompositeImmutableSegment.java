@@ -279,6 +279,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * Dumps all cells of the segment into the given log
    */
+  @Override
   void dump(Logger log) {
     for (ImmutableSegment s : segments) {
       s.dump(log);

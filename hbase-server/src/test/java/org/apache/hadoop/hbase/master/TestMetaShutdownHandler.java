@@ -88,8 +88,7 @@ public class TestMetaShutdownHandler {
     }
     RegionState metaState =
         MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals("Meta should be not in transition",
-      metaState.getState(), RegionState.State.OPEN);
+    assertEquals("Meta should be not in transition", RegionState.State.OPEN, metaState.getState());
     assertNotEquals("Meta should be moved off master",
       metaServerName, master.getServerName());
 
@@ -115,8 +114,7 @@ public class TestMetaShutdownHandler {
       regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
     // Now, make sure meta is registered in zk
     metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals("Meta should be not in transition",
-      metaState.getState(), RegionState.State.OPEN);
+    assertEquals("Meta should be not in transition", RegionState.State.OPEN, metaState.getState());
     assertEquals("Meta should be assigned", metaState.getServerName(),
       regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
     assertNotEquals("Meta should be assigned on a different server",

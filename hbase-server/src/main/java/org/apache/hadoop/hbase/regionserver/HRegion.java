@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -1015,7 +1016,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           long storeMaxSequenceId = store.getMaxSequenceId().orElse(0L);
-          maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
+          maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()),
               storeMaxSequenceId);
           if (maxSeqId == -1 || storeMaxSequenceId > maxSeqId) {
             maxSeqId = storeMaxSequenceId;
@@ -5524,7 +5525,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         HStore store = this.stores.get(column);
         if (store == null) {
           throw new IllegalArgumentException(
-              "No column family : " + new String(column) + " available");
+              "No column family : " + new String(column, StandardCharsets.UTF_8) + " available");
         }
         Collection<HStoreFile> storeFiles = store.getStorefiles();
         if (storeFiles == null) {

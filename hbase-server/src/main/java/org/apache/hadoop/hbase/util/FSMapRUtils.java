@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 public class FSMapRUtils extends FSUtils {
   private static final Logger LOG = LoggerFactory.getLogger(FSMapRUtils.class);
 
+  @Override
   public void recoverFileLease(final FileSystem fs, final Path p,
       Configuration conf, CancelableProgressable reporter) throws IOException {
     LOG.info("Recovering file " + p.toString() +

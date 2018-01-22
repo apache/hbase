@@ -84,6 +84,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
   /**
    * Close the KeyValue scanner.
    */
+  @Override
   void close();
 
   /**

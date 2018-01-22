@@ -233,6 +233,7 @@ public class TestScannerWithBulkload {
     // Create a scanner and then do bulk load
     final CountDownLatch latch = new CountDownLatch(1);
     new Thread() {
+      @Override
       public void run() {
         try {
           Put put1 = new Put(Bytes.toBytes("row5"));
