@@ -342,10 +342,20 @@ public class ThriftServerRunner implements Runnable {
                               QualityOfProtection.INTEGRITY.name(),
                               QualityOfProtection.PRIVACY.name()));
       }
+      checkHttpSecurity(qop, conf);
       if (!securityEnabled) {
         throw new IOException("Thrift server must"
           + " run in secure mode to support authentication");
       }
+    }
+  }
+
+  private void checkHttpSecurity(QualityOfProtection qop, Configuration conf) {
+    if (qop == QualityOfProtection.PRIVACY &&
+        conf.getBoolean(USE_HTTP_CONF_KEY, false) &&
+        !conf.getBoolean(THRIFT_SSL_ENABLED, false)) {
+      throw new IllegalArgumentException("Thrift HTTP Server's QoP is privacy, but " +
+          THRIFT_SSL_ENABLED + " is false");
     }
   }
 
