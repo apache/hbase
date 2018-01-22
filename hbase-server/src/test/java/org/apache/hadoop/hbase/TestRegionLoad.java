@@ -111,6 +111,10 @@ public class TestRegionLoad {
       checkRegionsAndRegionLoads(tableRegions, regionLoads);
     }
 
+    // Just wait here. If this fixes the test, come back and do a better job.
+    // Thought is that cluster status is stale.
+    Threads.sleep(10000);
+
     // Check RegionLoad matches the regionLoad from ClusterStatus
     ClusterStatus clusterStatus
       = new ClusterStatus(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)));
