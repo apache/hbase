@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.http.conf;
 
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -60,6 +62,9 @@ public class TestConfServlet extends TestCase {
     ConfServlet.writeResponse(getTestConf(), sw, "json");
     String json = sw.toString();
     boolean foundSetting = false;
+    Set<String> programSet = new HashSet<>();
+    programSet.add("programatically");
+    programSet.add("programmatically");
     Object parsed = JSON.parse(json);
     Object[] properties = ((Map<String, Object[]>)parsed).get("properties");
     for (Object o : properties) {
@@ -69,7 +74,7 @@ public class TestConfServlet extends TestCase {
       String resource = (String)propertyInfo.get("resource");
       System.err.println("k: " + key + " v: " + val + " r: " + resource);
       if (TEST_KEY.equals(key) && TEST_VAL.equals(val)
-          && "programatically".equals(resource)) {
+          && programSet.contains(resource)) {
         foundSetting = true;
       }
     }
