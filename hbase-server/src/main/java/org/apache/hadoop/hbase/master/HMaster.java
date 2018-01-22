@@ -2616,7 +2616,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public void abort(final String msg, final Throwable t) {
+  public void abort(String reason, Throwable cause) {
     if (isAborted() || isStopped()) {
       return;
     }
@@ -2625,8 +2625,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.error(HBaseMarkers.FATAL, "Master server abort: loaded coprocessors are: " +
           getLoadedCoprocessors());
     }
-    if (t != null) {
-      LOG.error(HBaseMarkers.FATAL, msg, t);
+    String msg = "***** ABORTING master " + this + ": " + reason + " *****";
+    if (cause != null) {
+      LOG.error(HBaseMarkers.FATAL, msg, cause);
     } else {
       LOG.error(HBaseMarkers.FATAL, msg);
     }
@@ -2677,20 +2678,32 @@ public class HMaster extends HRegionServer implements MasterServices {
     return rsFatals;
   }
 
+  /**
+   * Shutdown the cluster.
+   * Master runs a coordinated stop of all RegionServers and then itself.
+   */
   public void shutdown() throws IOException {
     if (cpHost != null) {
       cpHost.preShutdown();
     }
-
+    // Tell the servermanager cluster is down.
     if (this.serverManager != null) {
       this.serverManager.shutdownCluster();
     }
+    // Set the cluster down flag; broadcast across the cluster.
     if (this.clusterStatusTracker != null){
       try {
         this.clusterStatusTracker.setClusterDown();
       } catch (KeeperException e) {
         LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
       }
+    }
+    // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
+    // this is what we want especially if the Master is in startup phase doing call outs to
+    // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
+    // the rpc to timeout.
+    if (this.clusterConnection != null) {
+      this.clusterConnection.close();
     }
   }
 
