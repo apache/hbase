@@ -788,7 +788,8 @@ class MetricsRegionServerWrapperImpl
 
             OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
             if (storeAvgStoreFileAge.isPresent()) {
-              avgAgeNumerator += storeAvgStoreFileAge.getAsDouble() * storeHFiles;
+              avgAgeNumerator =
+                  (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
             }
 
             tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
@@ -931,6 +932,7 @@ class MetricsRegionServerWrapperImpl
     return averageRegionSize;
   }
 
+  @Override
   public long getDataMissCount() {
     if (this.cacheStats == null) {
       return 0;

@@ -91,6 +91,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
       this.fastPathHandlerStack = fastPathHandlerStack;
     }
 
+    @Override
     protected CallRunner getCallRunner() throws InterruptedException {
       // Get a callrunner if one in the Q.
       CallRunner cr = this.q.poll();

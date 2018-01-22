@@ -107,6 +107,7 @@ public class TestVisibilityLabelsWithSLGStack {
   private static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {

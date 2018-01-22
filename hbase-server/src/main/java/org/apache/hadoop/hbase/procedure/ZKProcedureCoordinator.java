@@ -19,18 +19,20 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * ZooKeeper based {@link ProcedureCoordinatorRpcs} for a {@link ProcedureCoordinator}
@@ -218,8 +220,8 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
                 } else {
                   dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
                     dataFromMember.length);
-                  LOG.debug("Finished data from procedure '" + procName
-                    + "' member '" + member + "': " + new String(dataFromMember));
+                  LOG.debug("Finished data from procedure '{}' member '{}': {}", procName, member,
+                      new String(dataFromMember, StandardCharsets.UTF_8));
                   coordinator.memberFinishedBarrier(procName, member, dataFromMember);
                 }
               } else {

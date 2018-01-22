@@ -213,6 +213,7 @@ public class TestProcedureCoordinator {
     final Procedure spy = spy(task);
 
     AcquireBarrierAnswer prepare = new AcquireBarrierAnswer(procName, cohort) {
+      @Override
       public void doWork() {
         // then do some fun where we commit before all nodes have prepared
         // "one" commits before anyone else is done
@@ -288,7 +289,7 @@ public class TestProcedureCoordinator {
     inorder.verify(controller).sendGlobalBarrierReached(eq(task), anyListOf(String.class));
   }
 
-  private abstract class OperationAnswer implements Answer<Void> {
+  private static abstract class OperationAnswer implements Answer<Void> {
     private boolean ran = false;
 
     public void ensureRan() {

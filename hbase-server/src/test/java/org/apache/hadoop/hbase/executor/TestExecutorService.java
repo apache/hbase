@@ -145,7 +145,7 @@ public class TestExecutorService {
   }
 
   public static class TestEventHandler extends EventHandler {
-    private AtomicBoolean lock;
+    private final AtomicBoolean lock;
     private AtomicInteger counter;
 
     public TestEventHandler(Server server, EventType eventType,

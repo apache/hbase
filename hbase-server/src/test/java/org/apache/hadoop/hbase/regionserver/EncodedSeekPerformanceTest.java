@@ -51,7 +51,7 @@ public class EncodedSeekPerformanceTest {
   /** Use this benchmark with default options */
   public EncodedSeekPerformanceTest() {
     configuration.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.5f);
-    randomizer = new Random(42l);
+    randomizer = new Random(42L);
     numberOfSeeks = DEFAULT_NUMBER_OF_SEEKS;
   }
 

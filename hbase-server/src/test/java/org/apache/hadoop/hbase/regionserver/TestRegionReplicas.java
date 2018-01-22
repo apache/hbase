@@ -71,7 +71,7 @@ public class TestRegionReplicas {
 
   private static final int NB_SERVERS = 1;
   private static Table table;
-  private static final byte[] row = "TestRegionReplicas".getBytes();
+  private static final byte[] row = Bytes.toBytes("TestRegionReplicas");
 
   private static HRegionInfo hriPrimary;
   private static HRegionInfo hriSecondary;

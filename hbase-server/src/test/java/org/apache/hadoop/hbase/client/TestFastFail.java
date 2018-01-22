@@ -171,6 +171,7 @@ public class TestFastFail {
          * will follow the killing of a regionserver so that we make sure that
          * some of threads go into PreemptiveFastFailExcception
          */
+        @Override
         public Boolean call() throws Exception {
           try (Table table = connection.getTable(TableName.valueOf(tableName))) {
             Thread.sleep(Math.abs(random.nextInt()) % 250); // Add some jitter here
@@ -275,7 +276,7 @@ public class TestFastFail {
         "All the failures should be coming from the secondput failure",
         numFailedThreads.get(), numThreadsReturnedFalse);
     assertEquals("Number of threads that threw execution exceptions "
-        + "otherwise should be 0", numThreadsThrewExceptions, 0);
+        + "otherwise should be 0", 0, numThreadsThrewExceptions);
     assertEquals("The regionservers that returned true should equal to the"
         + " number of successful threads", numThreadsReturnedTrue,
         numSuccessfullThreads.get());

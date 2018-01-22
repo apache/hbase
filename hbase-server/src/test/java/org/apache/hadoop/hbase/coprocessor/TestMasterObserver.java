@@ -932,6 +932,7 @@ public class TestMasterObserver {
       return preModifyTableActionCalled && !postCompletedModifyTableActionCalled;
     }
 
+    @Override
     public void preEnableTableAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
         throws IOException {

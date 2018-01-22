@@ -180,7 +180,7 @@ public class TestMultipleTimestamps {
 
     Integer[] scanRows = new Integer[] {5, 7};
     Integer[] scanColumns = new Integer[] {3, 4, 5};
-    Long[] scanTimestamps = new Long[] {2l, 3L};
+    Long[] scanTimestamps = new Long[] { 2L, 3L};
     int scanMaxVersions = 2;
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
@@ -241,7 +241,7 @@ public class TestMultipleTimestamps {
 
     Integer[] scanRows = new Integer[] {3, 5, 7};
     Integer[] scanColumns = new Integer[] {3, 4, 5};
-    Long[] scanTimestamps = new Long[] {2l, 4L};
+    Long[] scanTimestamps = new Long[] { 2L, 4L};
     int scanMaxVersions = 5;
 
     put(ht, FAMILY, putRows1, putColumns1, putTimestamps1);

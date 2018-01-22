@@ -116,7 +116,8 @@ public class TestCompaction {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
   @Before
@@ -264,7 +265,7 @@ public class TestCompaction {
     FileSystem fs = store.getFileSystem();
     // default compaction policy created one and only one new compacted file
     Path dstPath = store.getRegionFileSystem().createTempName();
-    FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, (long)1024, null);
+    FSDataOutputStream stream = fs.create(dstPath, null, true, 512, (short)3, 1024L, null);
     stream.writeChars("CORRUPT FILE!!!!");
     stream.close();
     Path origPath = store.getRegionFileSystem().commitStoreFile(
@@ -390,7 +391,7 @@ public class TestCompaction {
   class StoreMockMaker extends StatefulStoreMockMaker {
     public ArrayList<HStoreFile> compacting = new ArrayList<>();
     public ArrayList<HStoreFile> notCompacting = new ArrayList<>();
-    private ArrayList<Integer> results;
+    private final ArrayList<Integer> results;
 
     public StoreMockMaker(ArrayList<Integer> results) {
       this.results = results;

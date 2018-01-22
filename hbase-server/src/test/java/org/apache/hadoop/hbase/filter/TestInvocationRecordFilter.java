@@ -162,20 +162,24 @@ public class TestInvocationRecordFilter {
 
     private List<Cell> visitedKeyValues = new ArrayList<>();
 
+    @Override
     public void reset() {
       visitedKeyValues.clear();
     }
 
+    @Override
     public ReturnCode filterCell(final Cell ignored) {
       visitedKeyValues.add(ignored);
       return ReturnCode.INCLUDE;
     }
 
+    @Override
     public void filterRowCells(List<Cell> kvs) {
       kvs.clear();
       kvs.addAll(visitedKeyValues);
     }
 
+    @Override
     public boolean hasFilterRow() {
       return true;
     }

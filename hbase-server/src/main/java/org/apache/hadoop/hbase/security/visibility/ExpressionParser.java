@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -103,7 +104,8 @@ public class ExpressionParser {
             }
             index++;
           } while (index < endPos && !isEndOfLabel(exp[index]));
-          leafExp = new String(exp, labelOffset, index - labelOffset).trim();
+          leafExp =
+              new String(exp, labelOffset, index - labelOffset, StandardCharsets.UTF_8).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
           }

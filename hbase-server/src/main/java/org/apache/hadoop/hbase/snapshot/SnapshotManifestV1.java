@@ -75,23 +75,28 @@ public final class SnapshotManifestV1 {
       this.fs = fs;
     }
 
+    @Override
     public HRegionFileSystem regionOpen(final RegionInfo regionInfo) throws IOException {
       HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
         fs, snapshotDir, regionInfo);
       return snapshotRegionFs;
     }
 
+    @Override
     public void regionClose(final HRegionFileSystem region) {
     }
 
+    @Override
     public Path familyOpen(final HRegionFileSystem snapshotRegionFs, final byte[] familyName) {
       Path familyDir = snapshotRegionFs.getStoreDir(Bytes.toString(familyName));
       return familyDir;
     }
 
+    @Override
     public void familyClose(final HRegionFileSystem region, final Path family) {
     }
 
+    @Override
     public void storeFile(final HRegionFileSystem region, final Path familyDir,
         final StoreFileInfo storeFile) throws IOException {
       Path referenceFile = new Path(familyDir, storeFile.getPath().getName());

@@ -117,7 +117,8 @@ public class TestScanner {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
   }
 
@@ -589,6 +590,7 @@ public class TestScanner {
       if (flushIndex == count) {
         LOG.info("Starting flush at flush index " + flushIndex);
         Thread t = new Thread() {
+          @Override
           public void run() {
             try {
               region.flush(true);

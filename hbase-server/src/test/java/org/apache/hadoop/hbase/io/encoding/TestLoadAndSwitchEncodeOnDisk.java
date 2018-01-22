@@ -61,10 +61,12 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
   }
 
+  @Override
   protected int numKeys() {
     return 3000;
   }
 
+  @Override
   @Test(timeout=TIMEOUT_MS)
   public void loadTest() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();

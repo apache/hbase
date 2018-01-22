@@ -87,7 +87,7 @@ class ReadOnlyConfiguration extends Configuration {
   }
 
   @Override
-  public void reloadConfiguration() {
+  public synchronized void reloadConfiguration() {
     // This is a write operation. We need to allow it though because if any Configuration in
     // current JVM context calls addDefaultResource, this forces a reload of all Configurations
     // (all Configurations are 'registered' by the default constructor. Rather than turn
@@ -100,10 +100,12 @@ class ReadOnlyConfiguration extends Configuration {
     return conf.get(name);
   }
 
+  // Do not add @Override because it is not in Hadoop 2.6.5
   public void setAllowNullValueProperties(boolean val) {
     throw new UnsupportedOperationException("Read-only Configuration");
   }
 
+  @Override
   public String getTrimmed(String name) {
     return conf.getTrimmed(name);
   }
@@ -129,12 +131,12 @@ class ReadOnlyConfiguration extends Configuration {
   }
 
   @Override
-  public void unset(String name) {
+  public synchronized void unset(String name) {
     throw new UnsupportedOperationException("Read-only Configuration");
   }
 
   @Override
-  public void setIfUnset(String name, String value) {
+  public synchronized void setIfUnset(String name, String value) {
     throw new UnsupportedOperationException("Read-only Configuration");
   }
 
@@ -239,7 +241,7 @@ class ReadOnlyConfiguration extends Configuration {
   }
 
   @Override
-  public String[] getPropertySources(String name) {
+  public synchronized String[] getPropertySources(String name) {
     return conf.getPropertySources(name);
   }
 
@@ -326,7 +328,7 @@ class ReadOnlyConfiguration extends Configuration {
   }
 
   @Override
-  public Class<?>[] getClasses(String name, Class<?>[] defaultValue) {
+  public Class<?>[] getClasses(String name, Class<?>... defaultValue) {
     return conf.getClasses(name, defaultValue);
   }
 
@@ -422,7 +424,7 @@ class ReadOnlyConfiguration extends Configuration {
   }
 
   @Override
-  public void setQuietMode(boolean quietmode) {
+  public synchronized void setQuietMode(boolean quietmode) {
     throw new UnsupportedOperationException("Read-only Configuration");
   }
 

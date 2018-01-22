@@ -249,7 +249,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
           OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
           if (storeAvgStoreFileAge.isPresent()) {
-            avgAgeNumerator += storeAvgStoreFileAge.getAsDouble() * storeHFiles;
+            avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
         }
       }

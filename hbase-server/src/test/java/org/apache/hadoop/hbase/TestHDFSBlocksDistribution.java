@@ -49,6 +49,7 @@ public class TestHDFSBlocksDistribution {
   }
 
   public class MockHDFSBlocksDistribution extends HDFSBlocksDistribution {
+    @Override
     public Map<String,HostAndWeight> getHostAndWeights() {
       HashMap<String, HostAndWeight> map = new HashMap<>();
       map.put("test", new HostAndWeight(null, 100));

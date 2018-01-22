@@ -581,7 +581,7 @@ public class TestWalAndCompactingMemStoreFlush {
     // The total memstores size should be empty
     assertEquals(0, totalMemstoreSizePhaseV);
     // Because there is nothing in any memstore the WAL's LSN should be -1
-    assertEquals(smallestSeqInRegionCurrentMemstorePhaseV, HConstants.NO_SEQNUM);
+    assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstorePhaseV);
 
     // What happens when we hit the memstore limit, but we are not able to find
     // any Column Family above the threshold?

@@ -118,18 +118,18 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
       // A corrupt mob file doesn't abort the start of regions, so we can enable the table.
       admin.enableTable(table);
       HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, table);
-      assertEquals(res.getRetCode(), 0);
+      assertEquals(0, res.getRetCode());
       HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
-      assertEquals(hfcc.getHFilesChecked(), 4);
-      assertEquals(hfcc.getCorrupted().size(), 0);
-      assertEquals(hfcc.getFailures().size(), 0);
-      assertEquals(hfcc.getQuarantined().size(), 0);
-      assertEquals(hfcc.getMissing().size(), 0);
-      assertEquals(hfcc.getMobFilesChecked(), 5);
-      assertEquals(hfcc.getCorruptedMobFiles().size(), 1);
-      assertEquals(hfcc.getFailureMobFiles().size(), 0);
-      assertEquals(hfcc.getQuarantinedMobFiles().size(), 1);
-      assertEquals(hfcc.getMissedMobFiles().size(), 0);
+      assertEquals(4, hfcc.getHFilesChecked());
+      assertEquals(0, hfcc.getCorrupted().size());
+      assertEquals(0, hfcc.getFailures().size());
+      assertEquals(0, hfcc.getQuarantined().size());
+      assertEquals(0, hfcc.getMissing().size());
+      assertEquals(5, hfcc.getMobFilesChecked());
+      assertEquals(1, hfcc.getCorruptedMobFiles().size());
+      assertEquals(0, hfcc.getFailureMobFiles().size());
+      assertEquals(1, hfcc.getQuarantinedMobFiles().size());
+      assertEquals(0, hfcc.getMissedMobFiles().size());
       String quarantinedMobFile = hfcc.getQuarantinedMobFiles().iterator().next().getName();
       assertEquals(corruptMobFile, quarantinedMobFile);
     } finally {

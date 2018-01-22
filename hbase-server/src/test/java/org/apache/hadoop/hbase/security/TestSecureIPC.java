@@ -153,7 +153,7 @@ public class TestSecureIPC {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
     // check that the login user is okay:
-    assertSame(ugi, ugi2);
+    assertSame(ugi2, ugi);
     assertEquals(AuthenticationMethod.KERBEROS, ugi.getAuthenticationMethod());
     assertEquals(krbPrincipal, ugi.getUserName());
 
@@ -280,6 +280,7 @@ public class TestSecureIPC {
       final Throwable exception[] = new Throwable[1];
       Collections.synchronizedList(new ArrayList<Throwable>());
       Thread.UncaughtExceptionHandler exceptionHandler = new Thread.UncaughtExceptionHandler() {
+        @Override
         public void uncaughtException(Thread th, Throwable ex) {
           exception[0] = ex;
         }

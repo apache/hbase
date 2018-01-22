@@ -301,6 +301,7 @@ public class TestVisibilityLabelsReplication {
       final boolean nullExpected, final String... auths) throws IOException,
       InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf1);
              Table table2 = connection.getTable(TABLE_NAME)) {
@@ -346,6 +347,7 @@ public class TestVisibilityLabelsReplication {
   public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, UNICODE_VIS_TAG };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -362,6 +364,7 @@ public class TestVisibilityLabelsReplication {
   public static void setAuths(final Configuration conf) throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { SECRET,

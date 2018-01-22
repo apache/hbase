@@ -33,6 +33,7 @@ public class SslRMIServerSocketFactorySecure extends SslRMIServerSocketFactory {
   @Override
   public ServerSocket createServerSocket(int port) throws IOException {
     return new ServerSocket(port) {
+      @Override
       public Socket accept() throws IOException {
         Socket socket = super.accept();
         SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();

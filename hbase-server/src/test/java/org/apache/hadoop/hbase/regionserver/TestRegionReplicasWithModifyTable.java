@@ -111,7 +111,7 @@ public class TestRegionReplicasWithModifyTable {
       List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
       List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-      assertEquals("the number of regions should be more than 1", totalRegions, 3);
+      assertEquals("the number of regions should be more than 1", 3, totalRegions);
     } finally {
       disableAndDeleteTable(tableName);
     }
@@ -132,7 +132,7 @@ public class TestRegionReplicasWithModifyTable {
       List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
       List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-      assertEquals("the number of regions should be equal to 30", totalRegions, 30);
+      assertEquals("the number of regions should be equal to 30", 30, totalRegions);
     } finally {
       disableAndDeleteTable(tableName);
     }
@@ -148,7 +148,7 @@ public class TestRegionReplicasWithModifyTable {
       List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
       List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-      assertEquals("the number of regions should be 3", totalRegions, 3);
+      assertEquals("the number of regions should be 3", 3, totalRegions);
     } finally {
       disableAndDeleteTable(tableName);
     }
@@ -164,7 +164,7 @@ public class TestRegionReplicasWithModifyTable {
       List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
       List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-      assertEquals("the number of regions should be reduced to 2", totalRegions, 2);
+      assertEquals("the number of regions should be reduced to 2", 2, totalRegions);
     } finally {
       disableAndDeleteTable(tableName);
     }
@@ -181,7 +181,7 @@ public class TestRegionReplicasWithModifyTable {
       List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
       List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-      assertEquals("the number of regions should be reduced to 40", totalRegions, 40);
+      assertEquals("the number of regions should be reduced to 40", 40, totalRegions);
     } finally {
       disableAndDeleteTable(tableName);
     }
@@ -198,7 +198,7 @@ public class TestRegionReplicasWithModifyTable {
       List<HRegion> onlineRegions2 = getSecondaryRS().getRegions(tableName);
       List<HRegion> onlineRegions3 = getTertiaryRS().getRegions(tableName);
       int totalRegions = onlineRegions.size() + onlineRegions2.size() + onlineRegions3.size();
-      assertEquals("the number of regions should be equal to 45", totalRegions, 3 * 15);
+      assertEquals("the number of regions should be equal to 45", 3 * 15, totalRegions);
     } finally {
       disableAndDeleteTable(tableName);
     }

@@ -93,7 +93,7 @@ public class TestBucketCache {
   String ioEngineName = "offheap";
   String persistencePath = null;
 
-  private class MockedBucketCache extends BucketCache {
+  private static class MockedBucketCache extends BucketCache {
 
     public MockedBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
         int writerThreads, int writerQLen, String persistencePath) throws FileNotFoundException,
@@ -314,12 +314,18 @@ public class TestBucketCache {
     BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
 
-    assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getAcceptableFactor(), 0.9f, 0);
-    assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMinFactor(), 0.5f, 0);
-    assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getExtraFreeFactor(), 0.5f, 0);
-    assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getSingleFactor(), 0.1f, 0);
-    assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMultiFactor(), 0.7f, 0);
-    assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", cache.getMemoryFactor(), 0.2f, 0);
+    assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", 0.9f,
+        cache.getAcceptableFactor(), 0);
+    assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
+        cache.getMinFactor(), 0);
+    assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
+        cache.getExtraFreeFactor(), 0);
+    assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f,
+        cache.getSingleFactor(), 0);
+    assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", 0.7f,
+        cache.getMultiFactor(), 0);
+    assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", 0.2f,
+        cache.getMemoryFactor(), 0);
   }
 
   @Test

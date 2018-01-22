@@ -88,6 +88,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     return actual;
   }
 
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
@@ -185,7 +186,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     for (KeyValueScanner scanner : scanners) {
       // Verify that close is called and only called once for each scanner
       assertTrue(((SeekTestScanner) scanner).isClosed());
-      assertEquals(((SeekTestScanner) scanner).getClosedNum(), 1);
+      assertEquals(1, ((SeekTestScanner) scanner).getClosedNum());
     }
   }
 

@@ -135,7 +135,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     admin.createTable(desc).join();
     ModifyableTableDescriptor modifyableDesc = ((ModifyableTableDescriptor) desc);
     TableDescriptor confirmedHtd = admin.getDescriptor(tableName).get();
-    assertEquals(modifyableDesc.compareTo((ModifyableTableDescriptor) confirmedHtd), 0);
+    assertEquals(0, modifyableDesc.compareTo((ModifyableTableDescriptor) confirmedHtd));
   }
 
   @Test

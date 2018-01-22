@@ -279,6 +279,7 @@ public class RegionServerCoprocessorHost extends
      * @return An instance of RegionServerServices, an object NOT for general user-space Coprocessor
      * consumption.
      */
+    @Override
     public RegionServerServices getRegionServerServices() {
       return this.regionServerServices;
     }

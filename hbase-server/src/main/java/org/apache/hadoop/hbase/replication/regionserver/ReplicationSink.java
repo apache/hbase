@@ -110,7 +110,7 @@ public class ReplicationSink {
     try {
       @SuppressWarnings("rawtypes")
       Class c = Class.forName(className);
-      this.provider = (SourceFSConfigurationProvider) c.newInstance();
+      this.provider = (SourceFSConfigurationProvider) c.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new IllegalArgumentException("Configured source fs configuration provider class "
           + className + " throws error.", e);
@@ -123,7 +123,7 @@ public class ReplicationSink {
     WALEntrySinkFilter filter = null;
     try {
       filter = walEntryFilterClass == null? null:
-          (WALEntrySinkFilter)walEntryFilterClass.newInstance();
+          (WALEntrySinkFilter)walEntryFilterClass.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       LOG.warn("Failed to instantiate " + walEntryFilterClass);
     }

@@ -81,6 +81,7 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     ASYNC_CONN.getAdmin().addReplicationPeer(ID_SECOND, rpc).join();
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     Pattern pattern = Pattern.compile(tableName.getNameAsString() + ".*");

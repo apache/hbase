@@ -143,7 +143,7 @@ public class CompactingMemStore extends AbstractMemStore {
       factor = conf.getDouble(IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
           IN_MEMORY_FLUSH_THRESHOLD_FACTOR_DEFAULT);
     }
-    inmemoryFlushSize *= factor;
+    inmemoryFlushSize = (long) (inmemoryFlushSize * factor);
     LOG.info("Setting in-memory flush size threshold to " + inmemoryFlushSize
         + " and immutable segments index to be of type " + indexType);
   }
@@ -365,7 +365,7 @@ public class CompactingMemStore extends AbstractMemStore {
     MutableSegment activeTmp = active;
     List<? extends Segment> pipelineList = pipeline.getSegments();
     List<? extends Segment> snapshotList = snapshot.getAllSegments();
-    long order = 1 + pipelineList.size() + snapshotList.size();
+    long order = 1L + pipelineList.size() + snapshotList.size();
     // The list of elements in pipeline + the active element + the snapshot segment
     // The order is the Segment ordinal
     List<KeyValueScanner> list = createList((int) order);

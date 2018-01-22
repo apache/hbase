@@ -182,7 +182,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
   }
 
   @Override
-  public void cleanup() {
+  public synchronized void cleanup() {
     super.cleanup();
     stopHFileDeleteThreads();
   }

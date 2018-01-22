@@ -35,7 +35,7 @@ public class DefaultSourceFSConfigurationProvider implements SourceFSConfigurati
       LoggerFactory.getLogger(DefaultSourceFSConfigurationProvider.class);
 
   // Map containing all the source clusters configurations against their replication cluster id
-  private Map<String, Configuration> sourceClustersConfs = new HashMap<>();
+  private final Map<String, Configuration> sourceClustersConfs = new HashMap<>();
   private static final String XML = ".xml";
 
   @Override

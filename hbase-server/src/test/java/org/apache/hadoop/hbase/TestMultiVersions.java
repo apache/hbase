@@ -101,6 +101,7 @@ public class TestMultiVersions {
     // TODO: Remove these deprecated classes or pull them in here if this is
     // only test using them.
     TimestampTestBase.doTestDelete(table, new FlushCache() {
+      @Override
       public void flushcache() throws IOException {
         UTIL.getHBaseCluster().flushcache();
       }
@@ -109,6 +110,7 @@ public class TestMultiVersions {
     // Perhaps drop and readd the table between tests so the former does
     // not pollute this latter?  Or put into separate tests.
     TimestampTestBase.doTestTimestampScanning(table, new FlushCache() {
+      @Override
       public void flushcache() throws IOException {
         UTIL.getMiniHBaseCluster().flushcache();
       }

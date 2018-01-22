@@ -85,6 +85,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   public void testLabelsTableOpsWithDifferentUsers() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
@@ -99,6 +100,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     
     // Ideally this should not be allowed.  this operation should fail or do nothing.
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user3");
@@ -115,6 +117,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
 
     PrivilegedExceptionAction<GetAuthsResponse> action1 =
         new PrivilegedExceptionAction<GetAuthsResponse>() {
+      @Override
       public GetAuthsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.getAuths(conn, "user1");
@@ -138,6 +141,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
 
     PrivilegedExceptionAction<VisibilityLabelsResponse> action2 = 
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
           return VisibilityClient.clearAuths(conn, new String[] {
@@ -162,6 +166,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   private static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL, PRIVATE };
         try (Connection conn = ConnectionFactory.createConnection(conf)) {

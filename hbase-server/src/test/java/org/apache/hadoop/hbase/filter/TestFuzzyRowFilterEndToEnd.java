@@ -86,7 +86,7 @@ public class TestFuzzyRowFilterEndToEnd {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
     // set no splits
-    conf.setLong(HConstants.HREGION_MAX_FILESIZE, ((long) 1024) * 1024 * 1024 * 10);
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, (1024L) * 1024 * 1024 * 10);
 
     TEST_UTIL.startMiniCluster();
   }

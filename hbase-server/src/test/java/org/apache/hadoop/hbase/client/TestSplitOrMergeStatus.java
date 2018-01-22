@@ -80,13 +80,13 @@ public class TestSplitOrMergeStatus {
     Admin admin = TEST_UTIL.getAdmin();
     initSwitchStatus(admin);
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.SPLIT);
-    assertEquals(results.length, 1);
+    assertEquals(1, results.length);
     assertTrue(results[0]);
     admin.split(t.getName());
     int count = admin.getTableRegions(tableName).size();
     assertTrue(originalCount == count);
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.SPLIT);
-    assertEquals(results.length, 1);
+    assertEquals(1, results.length);
     assertFalse(results[0]);
     admin.split(t.getName());
     while ((count = admin.getTableRegions(tableName).size()) == originalCount) {
@@ -117,7 +117,7 @@ public class TestSplitOrMergeStatus {
 
     // Merge switch is off so merge should NOT succeed.
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.MERGE);
-    assertEquals(results.length, 1);
+    assertEquals(1, results.length);
     assertTrue(results[0]);
     List<HRegionInfo> regions = admin.getTableRegions(t.getName());
     assertTrue(regions.size() > 1);
@@ -134,7 +134,7 @@ public class TestSplitOrMergeStatus {
 
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
     regions = admin.getTableRegions(t.getName());
-    assertEquals(results.length, 1);
+    assertEquals(1, results.length);
     assertFalse(results[0]);
     f = admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
       regions.get(1).getEncodedNameAsBytes(), true);

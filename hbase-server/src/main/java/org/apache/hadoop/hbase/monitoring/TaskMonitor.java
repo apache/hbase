@@ -319,7 +319,7 @@ public class TaskMonitor {
       OPERATION("operation"),
       ALL("all");
 
-      private String type;
+      private final String type;
 
       private TaskType(String type) {
         this.type = type.toLowerCase();

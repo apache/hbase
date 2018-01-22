@@ -68,6 +68,7 @@ public class TestRegionSplitCalculator {
       return end;
     }
 
+    @Override
     public String toString() {
       return "[" + Bytes.toString(start) + ", " + Bytes.toString(end) + "]";
     }
@@ -135,8 +136,7 @@ public class TestRegionSplitCalculator {
     LOG.info("Standard");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 1, 1, 1, 0);
-    assertEquals(res, "A:\t[A, B]\t\n" + "B:\t[B, C]\t\n" + "C:\t[C, D]\t\n"
-        + "D:\t\n");
+    assertEquals("A:\t[A, B]\t\n" + "B:\t[B, C]\t\n" + "C:\t[C, D]\t\nD:\t\n", res);
   }
 
   @Test

@@ -35,6 +35,7 @@ public class TestWALSplitBoundedLogWriterCreation extends TestWALSplit{
   /**
    * The logic of this test has conflict with the limit writers split logic, skip this test
    */
+  @Override
   @Test(timeout=300000)
   @Ignore
   public void testThreadingSlowWriterSmallBuffer() throws Exception {

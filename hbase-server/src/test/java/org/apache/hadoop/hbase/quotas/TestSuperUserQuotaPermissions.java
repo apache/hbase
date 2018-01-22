@@ -267,6 +267,7 @@ public class TestSuperUserQuotaPermissions {
 
   private <T> T doAsUser(UserGroupInformation ugi, Callable<T> task) throws Exception {
     return ugi.doAs(new PrivilegedExceptionAction<T>() {
+      @Override
       public T run() throws Exception {
         return task.call();
       }

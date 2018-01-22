@@ -46,6 +46,7 @@ public class StatefulStoreMockMaker {
     return 0;
   }
   private class CancelAnswer implements Answer<Object> {
+    @Override
     public CompactionContext answer(InvocationOnMock invocation) throws Throwable {
       cancelCompaction(invocation.getArgument(0));
       return null;

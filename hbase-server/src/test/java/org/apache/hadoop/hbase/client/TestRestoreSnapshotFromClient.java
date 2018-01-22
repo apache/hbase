@@ -205,7 +205,7 @@ public class TestRestoreSnapshotFromClient {
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
     assertEquals(2, htd.getFamilies().size());
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, TEST_FAMILY2);
-    long snapshot2Rows = snapshot1Rows + 500;
+    long snapshot2Rows = snapshot1Rows + 500L;
     assertEquals(snapshot2Rows, countRows(table));
     assertEquals(500, countRows(table, TEST_FAMILY2));
     Set<String> fsFamilies = getFamiliesFromFS(tableName);

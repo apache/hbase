@@ -86,6 +86,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
     return false;
   }
 
+  @Override
   public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {
@@ -95,6 +96,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
       Path rootDir = FSUtils.getRootDir(conf);
       cache = new SnapshotFileCache(fs, rootDir, cacheRefreshPeriod, cacheRefreshPeriod,
           "snapshot-hfile-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
+            @Override
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
               return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);

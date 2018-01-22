@@ -75,7 +75,7 @@ public class WALFactory implements WALFileLengthProvider {
     multiwal(RegionGroupingProvider.class),
     asyncfs(AsyncFSWALProvider.class);
 
-    Class<? extends WALProvider> clazz;
+    final Class<? extends WALProvider> clazz;
     Providers(Class<? extends WALProvider> clazz) {
       this.clazz = clazz;
     }
@@ -139,17 +139,13 @@ public class WALFactory implements WALFileLengthProvider {
       List<WALActionsListener> listeners, String providerId) throws IOException {
     LOG.info("Instantiating WALProvider of type " + clazz);
     try {
-      final WALProvider result = clazz.newInstance();
+      final WALProvider result = clazz.getDeclaredConstructor().newInstance();
       result.init(this, conf, listeners, providerId);
       return result;
-    } catch (InstantiationException exception) {
+    } catch (Exception e) {
       LOG.error("couldn't set up WALProvider, the configured class is " + clazz);
-      LOG.debug("Exception details for failure to load WALProvider.", exception);
-      throw new IOException("couldn't set up WALProvider", exception);
-    } catch (IllegalAccessException exception) {
-      LOG.error("couldn't set up WALProvider, the configured class is " + clazz);
-      LOG.debug("Exception details for failure to load WALProvider.", exception);
-      throw new IOException("couldn't set up WALProvider", exception);
+      LOG.debug("Exception details for failure to load WALProvider.", e);
+      throw new IOException("couldn't set up WALProvider", e);
     }
   }
 
@@ -294,7 +290,7 @@ public class WALFactory implements WALFileLengthProvider {
       AbstractFSWALProvider.Reader reader = null;
       while (true) {
         try {
-          reader = lrClass.newInstance();
+          reader = lrClass.getDeclaredConstructor().newInstance();
           reader.init(fs, path, conf, null);
           return reader;
         } catch (IOException e) {

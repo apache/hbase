@@ -131,12 +131,12 @@ public class TestHBaseFsckEncryption {
 
     // Insure HBck doesn't consider them corrupt
     HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, htd.getTableName());
-    assertEquals(res.getRetCode(), 0);
+    assertEquals(0, res.getRetCode());
     HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
-    assertEquals(hfcc.getCorrupted().size(), 0);
-    assertEquals(hfcc.getFailures().size(), 0);
-    assertEquals(hfcc.getQuarantined().size(), 0);
-    assertEquals(hfcc.getMissing().size(), 0);
+    assertEquals(0, hfcc.getCorrupted().size());
+    assertEquals(0, hfcc.getFailures().size());
+    assertEquals(0, hfcc.getQuarantined().size());
+    assertEquals(0, hfcc.getMissing().size());
   }
 
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {

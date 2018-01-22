@@ -166,7 +166,8 @@ public class TestSimpleRpcScheduler {
     for (String callQueueName:callQueueInfo.getCallQueueNames()) {
 
       for (String calledMethod: callQueueInfo.getCalledMethodNames(callQueueName)) {
-        assertEquals(callQueueInfo.getCallMethodCount(callQueueName, calledMethod), totalCallMethods);
+        assertEquals(totalCallMethods,
+            callQueueInfo.getCallMethodCount(callQueueName, calledMethod));
       }
 
     }
@@ -327,7 +328,7 @@ public class TestSimpleRpcScheduler {
 
     RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 2, 1, 1, priority,
                                                     HConstants.QOS_THRESHOLD);
-    assertNotEquals(scheduler, null);
+    assertNotEquals(null, scheduler);
   }
 
   @Test
@@ -571,6 +572,7 @@ public class TestSimpleRpcScheduler {
     };
 
     CallRunner cr = new CallRunner(null, putCall) {
+      @Override
       public void run() {
         if (sleepTime <= 0) return;
         try {
@@ -581,10 +583,12 @@ public class TestSimpleRpcScheduler {
         }
       }
 
+      @Override
       public RpcCall getRpcCall() {
         return putCall;
       }
 
+      @Override
       public void drop() {
       }
     };

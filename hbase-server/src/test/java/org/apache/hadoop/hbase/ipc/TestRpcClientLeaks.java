@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -49,6 +48,8 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestRpcClientLeaks {
@@ -112,7 +113,7 @@ public class TestRpcClientLeaks {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     Connection connection = ConnectionFactory.createConnection(conf);
     Table table = connection.getTable(TableName.valueOf(name.getMethodName()));
-    table.get(new Get("asd".getBytes()));
+    table.get(new Get(Bytes.toBytes("asd")));
     connection.close();
     for (Socket socket : MyRpcClientImpl.savedSockets) {
       assertTrue("Socket + " +  socket + " is not closed", socket.isClosed());

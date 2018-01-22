@@ -303,7 +303,7 @@ public class TestAdmin2 {
     TableName tableName = TableName
         .valueOf("testTableNotFoundExceptionWithoutAnyTables");
     Table ht = TEST_UTIL.getConnection().getTable(tableName);
-    ht.get(new Get("e".getBytes()));
+    ht.get(new Get(Bytes.toBytes("e")));
   }
 
   @Test (timeout=300000)
@@ -582,8 +582,9 @@ public class TestAdmin2 {
     }
     // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName().getBytes()));
-    HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
+    HTableDescriptor htd =
+        new HTableDescriptor(TableName.valueOf(Bytes.toBytes(name.getMethodName())));
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("cf1"));
     htd.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(htd);
   }
@@ -695,13 +696,13 @@ public class TestAdmin2 {
     assertTrue(decommissionedRegionServers.isEmpty());
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createMultiRegionTable(tableName, "f".getBytes(), 6);
+    TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
 
     ArrayList<ServerName> clusterRegionServers =
         new ArrayList<>(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
           .getLiveServerMetrics().keySet());
 
-    assertEquals(clusterRegionServers.size(), 3);
+    assertEquals(3, clusterRegionServers.size());
 
     HashMap<ServerName, List<RegionInfo>> serversToDecommssion = new HashMap<>();
     // Get a server that has regions. We will decommission two of the servers,

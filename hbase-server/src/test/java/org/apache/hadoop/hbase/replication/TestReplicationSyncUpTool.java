@@ -277,14 +277,14 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     // delete half of the rows
     for (int i = 0; i < NB_ROWS_IN_BATCH / 2; i++) {
       String rowKey = "row" + i;
-      Delete del = new Delete(rowKey.getBytes());
+      Delete del = new Delete(Bytes.toBytes(rowKey));
       list.add(del);
     }
     ht1Source.delete(list);
 
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       String rowKey = "row" + i;
-      Delete del = new Delete(rowKey.getBytes());
+      Delete del = new Delete(Bytes.toBytes(rowKey));
       list.add(del);
     }
     ht2Source.delete(list);

@@ -91,6 +91,7 @@ public class NonLeafExpressionNode implements ExpressionNode {
     return this.op == Operator.NOT;
   }
 
+  @Override
   public NonLeafExpressionNode deepClone() {
     NonLeafExpressionNode clone = new NonLeafExpressionNode(this.op);
     for (ExpressionNode exp : this.childExps) {

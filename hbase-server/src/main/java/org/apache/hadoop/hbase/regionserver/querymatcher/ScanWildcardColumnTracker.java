@@ -180,6 +180,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * scanner).
    * @return The column count.
    */
+  @Override
   public ColumnCount getColumnHint() {
     return null;
   }
@@ -205,6 +206,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     }
   }
 
+  @Override
   public boolean isDone(long timestamp) {
     return minVersions <= 0 && isExpired(timestamp);
   }

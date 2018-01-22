@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class RegionServerTracker extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(RegionServerTracker.class);
-  private NavigableMap<ServerName, RegionServerInfo> regionServers = new TreeMap<>();
+  private final NavigableMap<ServerName, RegionServerInfo> regionServers = new TreeMap<>();
   private ServerManager serverManager;
   private MasterServices server;
 

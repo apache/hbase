@@ -166,5 +166,6 @@ public interface HFileScanner extends Shipper, Closeable {
   /**
    * Close this HFile scanner and do necessary cleanup.
    */
+  @Override
   void close();
 }

@@ -157,6 +157,7 @@ public abstract class ZKProcedureUtil
     return ZNodePaths.joinZNode(controller.abortZnode, opInstanceName);
   }
 
+  @Override
   public ZKWatcher getWatcher() {
     return watcher;
   }

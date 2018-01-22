@@ -104,19 +104,14 @@ public class RegionGroupingProvider implements WALProvider {
     }
     LOG.info("Instantiating RegionGroupingStrategy of type " + clazz);
     try {
-      final RegionGroupingStrategy result = clazz.newInstance();
+      final RegionGroupingStrategy result = clazz.getDeclaredConstructor().newInstance();
       result.init(conf, providerId);
       return result;
-    } catch (InstantiationException exception) {
+    } catch (Exception e) {
       LOG.error("couldn't set up region grouping strategy, check config key " +
           REGION_GROUPING_STRATEGY);
-      LOG.debug("Exception details for failure to load region grouping strategy.", exception);
-      throw new IOException("couldn't set up region grouping strategy", exception);
-    } catch (IllegalAccessException exception) {
-      LOG.error("couldn't set up region grouping strategy, check config key " +
-          REGION_GROUPING_STRATEGY);
-      LOG.debug("Exception details for failure to load region grouping strategy.", exception);
-      throw new IOException("couldn't set up region grouping strategy", exception);
+      LOG.debug("Exception details for failure to load region grouping strategy.", e);
+      throw new IOException("couldn't set up region grouping strategy", e);
     }
   }
 

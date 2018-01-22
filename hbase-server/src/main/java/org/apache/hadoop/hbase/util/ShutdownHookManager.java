@@ -52,10 +52,12 @@ abstract public class ShutdownHookManager {
 
   private static class ShutdownHookManagerV1 extends ShutdownHookManager {
     // priority is ignored in hadoop versions earlier than 2.0
-    public void addShutdownHook(Thread shutdownHookThread, int priority) {      
+    @Override
+    public void addShutdownHook(Thread shutdownHookThread, int priority) {
       Runtime.getRuntime().addShutdownHook(shutdownHookThread);
     }
     
+    @Override
     public boolean removeShutdownHook(Runnable shutdownHook) {
       Thread shutdownHookThread = null;
       if (!(shutdownHook instanceof Thread)) {
@@ -67,6 +69,7 @@ abstract public class ShutdownHookManager {
   };
 
   private static class ShutdownHookManagerV2 extends ShutdownHookManager {
+    @Override
     public void addShutdownHook(Thread shutdownHookThread, int priority) {
       try {
         Methods.call(shutdownHookManagerClass, 
@@ -79,6 +82,7 @@ abstract public class ShutdownHookManager {
       }
     }
     
+    @Override
     public boolean removeShutdownHook(Runnable shutdownHook) {
       try {
         return (Boolean)

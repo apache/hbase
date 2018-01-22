@@ -193,14 +193,15 @@ abstract class ServerRpcConnection implements Closeable {
     String className = header.getCellBlockCodecClass();
     if (className == null || className.length() == 0) return;
     try {
-      this.codec = (Codec)Class.forName(className).newInstance();
+      this.codec = (Codec)Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new UnsupportedCellCodecException(className, e);
     }
     if (!header.hasCellBlockCompressorClass()) return;
     className = header.getCellBlockCompressorClass();
     try {
-      this.compressionCodec = (CompressionCodec)Class.forName(className).newInstance();
+      this.compressionCodec =
+          (CompressionCodec)Class.forName(className).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new UnsupportedCompressionCodecException(className, e);
     }

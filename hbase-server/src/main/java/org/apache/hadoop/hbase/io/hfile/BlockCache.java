@@ -126,6 +126,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * @return Iterator over the blocks in the cache.
    */
+  @Override
   Iterator<CachedBlock> iterator();
 
   /**

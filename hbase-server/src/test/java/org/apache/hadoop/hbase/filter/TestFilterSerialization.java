@@ -301,8 +301,8 @@ public class TestFilterSerialization {
 
     // Non-empty timestamp list
     LinkedList<Long> list = new LinkedList<>();
-    list.add(new Long(System.currentTimeMillis()));
-    list.add(new Long(System.currentTimeMillis()));
+    list.add(System.currentTimeMillis());
+    list.add(System.currentTimeMillis());
     timestampsFilter = new TimestampsFilter(list);
     assertTrue(timestampsFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));

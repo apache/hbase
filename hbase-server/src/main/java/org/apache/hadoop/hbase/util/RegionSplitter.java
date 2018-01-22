@@ -685,7 +685,7 @@ public class RegionSplitter {
       }
     }
     try {
-      return splitClass.asSubclass(SplitAlgorithm.class).newInstance();
+      return splitClass.asSubclass(SplitAlgorithm.class).getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new IOException("Problem loading split algorithm: ", e);
     }

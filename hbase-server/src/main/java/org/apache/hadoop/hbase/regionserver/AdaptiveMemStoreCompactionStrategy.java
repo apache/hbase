@@ -101,10 +101,13 @@ public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrate
   public void resetStats() {
     compactionProbability = initialCompactionProbability;
   }
+
+  @Override
   protected Action getMergingAction() {
     return Action.MERGE_COUNT_UNIQUE_KEYS;
   }
 
+  @Override
   protected Action getFlattenAction() {
     return Action.FLATTEN;
   }

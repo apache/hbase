@@ -86,7 +86,7 @@ public class TestJSONMetricUtil {
     Hashtable<String, String> properties = JSONMetricUtil.buldKeyValueTable(keys, values);
     ObjectName testObject = JSONMetricUtil.buildObjectName(JSONMetricUtil.JAVA_LANG_DOMAIN,
       properties);
-    assertEquals(testObject.getDomain(), JSONMetricUtil.JAVA_LANG_DOMAIN);
+    assertEquals(JSONMetricUtil.JAVA_LANG_DOMAIN, testObject.getDomain());
     assertEquals(testObject.getKeyPropertyList(), properties);
   }
 

@@ -90,6 +90,7 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
     return this.cachedTime;
   }
 
+  @Override
   public long heapSize() {
     return size;
   }

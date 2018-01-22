@@ -414,6 +414,7 @@ public final class BucketAllocator {
     }
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     for (int i = 0; i < buckets.length; ++i) {

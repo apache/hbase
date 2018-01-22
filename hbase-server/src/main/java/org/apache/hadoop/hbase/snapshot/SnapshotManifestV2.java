@@ -77,12 +77,14 @@ public final class SnapshotManifestV2 {
       this.fs = fs;
     }
 
+    @Override
     public SnapshotRegionManifest.Builder regionOpen(final RegionInfo regionInfo) {
       SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
       manifest.setRegionInfo(ProtobufUtil.toRegionInfo(regionInfo));
       return manifest;
     }
 
+    @Override
     public void regionClose(final SnapshotRegionManifest.Builder region) throws IOException {
       // we should ensure the snapshot dir exist, maybe it has been deleted by master
       // see HBASE-16464
@@ -99,6 +101,7 @@ public final class SnapshotManifestV2 {
       }
     }
 
+    @Override
     public SnapshotRegionManifest.FamilyFiles.Builder familyOpen(
         final SnapshotRegionManifest.Builder region, final byte[] familyName) {
       SnapshotRegionManifest.FamilyFiles.Builder family =
@@ -107,11 +110,13 @@ public final class SnapshotManifestV2 {
       return family;
     }
 
+    @Override
     public void familyClose(final SnapshotRegionManifest.Builder region,
         final SnapshotRegionManifest.FamilyFiles.Builder family) {
       region.addFamilyFiles(family.build());
     }
 
+    @Override
     public void storeFile(final SnapshotRegionManifest.Builder region,
         final SnapshotRegionManifest.FamilyFiles.Builder family, final StoreFileInfo storeFile)
         throws IOException {

@@ -59,6 +59,7 @@ public class CachedEntryQueue {
     }
     queue = MinMaxPriorityQueue.orderedBy(new Comparator<Map.Entry<BlockCacheKey, BucketEntry>>() {
 
+      @Override
       public int compare(Entry<BlockCacheKey, BucketEntry> entry1,
           Entry<BlockCacheKey, BucketEntry> entry2) {
         return BucketEntry.COMPARATOR.compare(entry1.getValue(), entry2.getValue());

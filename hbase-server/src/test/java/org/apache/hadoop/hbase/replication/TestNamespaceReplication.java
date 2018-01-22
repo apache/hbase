@@ -220,8 +220,8 @@ public class TestNamespaceReplication extends TestReplicationBase {
         if (res.isEmpty()) {
           LOG.info("Row not available");
         } else {
-          assertEquals(res.size(), 1);
-          assertArrayEquals(res.value(), val);
+          assertEquals(1, res.size());
+          assertArrayEquals(val, res.value());
           break;
         }
         Thread.sleep(SLEEP_TIME);

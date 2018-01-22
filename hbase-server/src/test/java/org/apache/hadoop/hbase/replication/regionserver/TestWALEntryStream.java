@@ -363,7 +363,7 @@ public class TestWALEntryStream {
     appendToLog("foo");
     entryBatch = batcher.take();
     assertEquals(1, entryBatch.getNbEntries());
-    assertEquals(getRow(entryBatch.getWalEntries().get(0)), "foo");
+    assertEquals("foo", getRow(entryBatch.getWalEntries().get(0)));
   }
 
   private String getRow(WAL.Entry entry) {

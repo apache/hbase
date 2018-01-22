@@ -103,6 +103,7 @@ public class LruCachedBlockQueue implements HeapSize {
    * Total size of all elements in this queue.
    * @return size of all elements currently in queue, in bytes
    */
+  @Override
   public long heapSize() {
     return heapSize;
   }

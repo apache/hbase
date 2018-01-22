@@ -154,6 +154,7 @@ class AccessControlFilter extends FilterBase {
   /**
    * @return The filter serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     // no implementation, server-side use only
     throw new UnsupportedOperationException(

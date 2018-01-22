@@ -33,6 +33,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1596,7 +1597,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       if (status.getSecond() != 0) {
         LOG.debug(status.getSecond() - status.getFirst() + "/" + status.getSecond()
           + " regions updated.");
-        Thread.sleep(1 * 1000l);
+        Thread.sleep(1 * 1000L);
       } else {
         LOG.debug("All regions updated.");
         break;
@@ -1983,7 +1984,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
               expectedCount = 1;
             }
             if (count != expectedCount) {
-              String row = new String(new byte[] {b1,b2,b3});
+              String row = new String(new byte[] {b1,b2,b3}, StandardCharsets.UTF_8);
               throw new RuntimeException("Row:" + row + " has a seen count of " + count + " " +
                   "instead of " + expectedCount);
             }
@@ -2079,7 +2080,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       get.setConsistency(Consistency.TIMELINE);
       Result result = table.get(get);
       assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
+      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
       Cell cell = result.getColumnLatestCell(f, null);
       assertTrue(failMsg,
         Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
@@ -2114,7 +2115,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       if (!present) continue;
 
       assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
+      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
       Cell cell = result.getColumnLatestCell(f, null);
       assertTrue(failMsg,
         Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),

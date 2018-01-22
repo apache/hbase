@@ -185,7 +185,7 @@ class DisabledWALProvider implements WALProvider {
     public void sync() {
       if (!this.listeners.isEmpty()) {
         for (WALActionsListener listener : this.listeners) {
-          listener.postSync(0l, 0);
+          listener.postSync(0L, 0);
         }
       }
     }
@@ -195,6 +195,7 @@ class DisabledWALProvider implements WALProvider {
       sync();
     }
 
+    @Override
     public Long startCacheFlush(final byte[] encodedRegionName, Map<byte[], Long>
         flushedFamilyNamesToSeq) {
       return startCacheFlush(encodedRegionName, flushedFamilyNamesToSeq.keySet());

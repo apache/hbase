@@ -386,7 +386,8 @@ public class QuotaObserverChore extends ScheduledChore {
         for (TableName tableInNS : tablesByNamespace.get(namespace)) {
           final SpaceQuotaSnapshot tableQuotaSnapshot =
                 tableSnapshotStore.getCurrentState(tableInNS);
-          final boolean hasTableQuota = QuotaSnapshotStore.NO_QUOTA != tableQuotaSnapshot;
+          final boolean hasTableQuota =
+              !Objects.equals(QuotaSnapshotStore.NO_QUOTA, tableQuotaSnapshot);
           if (hasTableQuota && tableQuotaSnapshot.getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
             if (LOG.isTraceEnabled()) {

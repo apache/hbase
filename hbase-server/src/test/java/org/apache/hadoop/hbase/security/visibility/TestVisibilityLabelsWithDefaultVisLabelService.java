@@ -82,6 +82,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   public void testAddLabels() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
         VisibilityLabelsResponse response = null;
@@ -122,6 +123,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     do {
       PrivilegedExceptionAction<VisibilityLabelsResponse> action =
           new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
         public VisibilityLabelsResponse run() throws Exception {
           String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
           try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -170,6 +172,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   public void testListLabels() throws Throwable {
     PrivilegedExceptionAction<ListLabelsResponse> action =
         new PrivilegedExceptionAction<ListLabelsResponse>() {
+      @Override
       public ListLabelsResponse run() throws Exception {
         ListLabelsResponse response = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
@@ -200,6 +203,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   public void testListLabelsWithRegEx() throws Throwable {
     PrivilegedExceptionAction<ListLabelsResponse> action =
         new PrivilegedExceptionAction<ListLabelsResponse>() {
+      @Override
       public ListLabelsResponse run() throws Exception {
         ListLabelsResponse response = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {

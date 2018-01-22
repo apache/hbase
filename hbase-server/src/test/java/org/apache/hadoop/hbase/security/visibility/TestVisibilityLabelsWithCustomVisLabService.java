@@ -56,6 +56,7 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
   }
 
   // Extending this test from super as we don't verify predefined labels in ExpAsStringVisibilityLabelServiceImpl
+  @Override
   @Test
   public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
@@ -63,6 +64,7 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
     createTableAndWriteDataWithLabels(tableName, "SAMPLE_LABEL", "TEST");
   }
 
+  @Override
   protected List<String> extractAuths(String user, List<Result> results) {
     List<String> auths = new ArrayList<>();
     for (Result result : results) {

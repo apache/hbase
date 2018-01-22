@@ -65,9 +65,8 @@ public class TestTableStateManager {
     TEST_UTIL.restartHBaseCluster(1);
 
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    Assert.assertEquals(
-        master.getTableStateManager().getTableState(tableName),
-        TableState.State.DISABLED);
+    Assert.assertEquals(TableState.State.DISABLED,
+        master.getTableStateManager().getTableState(tableName));
   }
 
   private void setTableStateInZK(ZKWatcher watcher, final TableName tableName,

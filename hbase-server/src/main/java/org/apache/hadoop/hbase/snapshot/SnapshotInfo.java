@@ -300,7 +300,8 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       boolean inArchive = false;
       long size = -1;
       try {
-        if ((inArchive = fs.exists(link.getArchivePath()))) {
+        if (fs.exists(link.getArchivePath())) {
+          inArchive = true;
           size = fs.getFileStatus(link.getArchivePath()).getLen();
           hfilesArchiveSize.addAndGet(size);
           hfilesArchiveCount.incrementAndGet();
@@ -311,7 +312,8 @@ public final class SnapshotInfo extends AbstractHBaseTool {
               !isArchivedFileStillReferenced(link.getArchivePath(), filesMap)) {
             nonSharedHfilesArchiveSize.addAndGet(size);
           }
-        } else if (inArchive = fs.exists(link.getMobPath())) {
+        } else if (fs.exists(link.getMobPath())) {
+          inArchive = true;
           size = fs.getFileStatus(link.getMobPath()).getLen();
           hfilesMobSize.addAndGet(size);
           hfilesMobCount.incrementAndGet();

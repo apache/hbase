@@ -454,7 +454,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         count++;
       }
     }
-    assertEquals("the count should be ", count, 150);
+    assertEquals("the count should be ", 150, count);
     for(int i = 0; i < scanners.size(); i++) {
       scanners.get(i).close();
     }
@@ -481,7 +481,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     } finally {
       itr.close();
     }
-    assertEquals("the count should be ", cnt, 150);
+    assertEquals("the count should be ", 150, cnt);
   }
 
   private void addRowsByKeysWith50Cols(AbstractMemStore hmc, String[] keys) {

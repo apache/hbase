@@ -108,7 +108,8 @@ public class TestMajorCompaction {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
   @Before
@@ -277,7 +278,7 @@ public class TestMajorCompaction {
 
     // Force major compaction.
     r.compact(true);
-    assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
+    assertEquals(1, r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size());
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
@@ -398,8 +399,8 @@ public class TestMajorCompaction {
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     Table loader = new RegionAsTable(region);
-    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
-        "bbb").getBytes(), null);
+    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), Bytes.toBytes("" +
+        "bbb"), null);
     region.flush(true);
   }
 

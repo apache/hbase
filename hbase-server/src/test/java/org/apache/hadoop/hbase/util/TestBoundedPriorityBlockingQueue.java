@@ -42,7 +42,7 @@ import org.junit.experimental.categories.Category;
 public class TestBoundedPriorityBlockingQueue {
   private final static int CAPACITY = 16;
 
-  class TestObject {
+  static class TestObject {
     private final int priority;
     private final int seqId;
 
@@ -60,7 +60,7 @@ public class TestBoundedPriorityBlockingQueue {
     }
   }
 
-  class TestObjectComparator implements Comparator<TestObject> {
+  static class TestObjectComparator implements Comparator<TestObject> {
     public TestObjectComparator() {}
 
     @Override
@@ -208,6 +208,7 @@ public class TestBoundedPriorityBlockingQueue {
     final CyclicBarrier threadsStarted = new CyclicBarrier(2);
     ExecutorService executor = Executors.newFixedThreadPool(2);
     executor.execute(new Runnable() {
+      @Override
       public void run() {
         try {
           assertNull(queue.poll(1000, TimeUnit.MILLISECONDS));
@@ -221,6 +222,7 @@ public class TestBoundedPriorityBlockingQueue {
     });
 
     executor.execute(new Runnable() {
+      @Override
       public void run() {
         try {
             threadsStarted.await();

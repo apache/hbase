@@ -971,7 +971,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         continue;
       }
       Path familyDir = familyStat.getPath();
-      byte[] familyName = familyDir.getName().getBytes();
+      byte[] familyName = Bytes.toBytes(familyDir.getName());
       // Skip invalid family
       try {
         ColumnFamilyDescriptorBuilder.isLegalColumnFamilyName(familyName);

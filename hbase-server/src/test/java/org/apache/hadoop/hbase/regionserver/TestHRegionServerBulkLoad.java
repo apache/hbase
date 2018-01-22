@@ -186,6 +186,7 @@ public class TestHRegionServerBulkLoad {
       this.tableName = tableName;
     }
 
+    @Override
     public void doAnAction() throws Exception {
       long iteration = numBulkLoads.getAndIncrement();
       Path dir =  UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d",
@@ -295,6 +296,7 @@ public class TestHRegionServerBulkLoad {
       table = UTIL.getConnection().getTable(TABLE_NAME);
     }
 
+    @Override
     public void doAnAction() throws Exception {
       Scan s = new Scan();
       for (byte[] family : targetFamilies) {

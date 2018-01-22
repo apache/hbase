@@ -125,7 +125,7 @@ public class TestHFileLink {
             HFileLink.parseBackReferenceName(encodedRegion+"."+
                 tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='));
         assertEquals(parsedRef.getFirst(), tableName);
-        assertEquals(parsedRef.getSecond(), encodedRegion);
+        assertEquals(encodedRegion, parsedRef.getSecond());
 
         //verify resolving back reference
         Path storeFileDir =  new Path(refLinkDir, encodedRegion+"."+

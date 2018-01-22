@@ -74,7 +74,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements
 
   private TaskExecutor splitTaskExecutor;
 
-  private AtomicInteger taskReadySeq = new AtomicInteger(0);
+  private final AtomicInteger taskReadySeq = new AtomicInteger(0);
   private volatile String currentTask = null;
   private int currentVersion;
   private volatile boolean shouldStop = false;

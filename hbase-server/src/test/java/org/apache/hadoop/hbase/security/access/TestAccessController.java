@@ -306,12 +306,15 @@ public class TestAccessController extends SecureTestUtil {
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
     assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
+    int size = 0;
     try {
-      assertEquals(5, AccessControlClient.getUserPermissions(systemUserConnection,
-          TEST_TABLE.toString()).size());
+      size = AccessControlClient.getUserPermissions(systemUserConnection, TEST_TABLE.toString())
+          .size();
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
+      fail("error during call of AccessControlClient.getUserPermissions.");
     }
+    assertEquals(5, size);
   }
 
   private static void cleanUp() throws Exception {
@@ -992,7 +995,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  public class BulkLoadHelper {
+  public static class BulkLoadHelper {
     private final FileSystem fs;
     private final Path loadPath;
     private final Configuration conf;

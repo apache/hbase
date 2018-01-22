@@ -242,7 +242,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     }
   }
 
-  private class AlwaysIncludeAndSeekNextRowFilter extends FilterBase {
+  private static class AlwaysIncludeAndSeekNextRowFilter extends FilterBase {
 
     @Override
     public ReturnCode filterKeyValue(final Cell c) throws IOException {
@@ -287,7 +287,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     }
   }
 
-  private class AlwaysIncludeFilter extends FilterBase {
+  private static class AlwaysIncludeFilter extends FilterBase {
     @Override
     public ReturnCode filterKeyValue(final Cell c) throws IOException {
       return ReturnCode.INCLUDE;

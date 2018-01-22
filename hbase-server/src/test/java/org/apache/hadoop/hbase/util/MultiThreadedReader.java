@@ -201,8 +201,7 @@ public class MultiThreadedReader extends MultiThreadedAction
                 "to read " + k + " is out of range (startKey=" + startKey +
                 ", endKey=" + endKey + ")");
           }
-          if (k % numThreads != readerId ||
-              writer != null && writer.failedToWriteKey(k)) {
+          if (k % numThreads != readerId || (writer != null && writer.failedToWriteKey(k))) {
             // Skip keys that this thread should not read, as well as the keys
             // that we know the writer failed to write.
             continue;

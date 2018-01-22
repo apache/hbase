@@ -85,6 +85,7 @@ class FSWALEntry extends Entry {
     }
   }
 
+  @Override
   public String toString() {
     return "sequence=" + this.txid + ", " + super.toString();
   };

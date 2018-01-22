@@ -212,8 +212,8 @@ public class TestSnapshotMetadata {
                         cloneHtd.getValues().size());
     assertEquals(originalTableDescriptor.getConfiguration().size(),
                         cloneHtd.getConfiguration().size());
-    assertEquals(cloneHtd.getValue(TEST_CUSTOM_VALUE), TEST_CUSTOM_VALUE);
-    assertEquals(cloneHtd.getConfigurationValue(TEST_CONF_CUSTOM_VALUE), TEST_CONF_CUSTOM_VALUE);
+    assertEquals(TEST_CUSTOM_VALUE, cloneHtd.getValue(TEST_CUSTOM_VALUE));
+    assertEquals(TEST_CONF_CUSTOM_VALUE, cloneHtd.getConfigurationValue(TEST_CONF_CUSTOM_VALUE));
     assertEquals(originalTableDescriptor.getValues(), cloneHtd.getValues());
     assertEquals(originalTableDescriptor.getConfiguration(), cloneHtd.getConfiguration());
 

@@ -154,6 +154,7 @@ class MonitoredTaskImpl implements MonitoredTask {
    * Force the completion timestamp backwards so that
    * it expires now.
    */
+  @Override
   public void expireNow() {
     stateTime -= 180 * 1000;
   }

@@ -40,11 +40,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ClusterMarkingEntryFilter;
@@ -61,8 +57,11 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Class that handles the source of a replication stream.
@@ -225,7 +224,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       // A peerId will not have "-" in its name, see HBASE-11394
       peerId = peerClusterZnode.split("-")[0];
     }
-    Map<TableName, List<String>> tableCFMap = replicationPeers.getConnectedPeer(peerId).getTableCFs();
+    Map<TableName, List<String>> tableCFMap =
+        replicationPeers.getConnectedPeer(peerId).getTableCFs();
     if (tableCFMap != null) {
       List<String> tableCfs = tableCFMap.get(tableName);
       if (tableCFMap.containsKey(tableName)
@@ -470,7 +470,8 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
       }
       if (this.replicationEndpoint != null) {
         try {
-          this.replicationEndpoint.awaitTerminated(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
+          this.replicationEndpoint
+              .awaitTerminated(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
           LOG.warn("Got exception while waiting for endpoint to shutdown for replication source :"
               + this.peerClusterZnode,
@@ -494,7 +495,9 @@ public class ReplicationSource extends Thread implements ReplicationSourceInterf
   public Path getCurrentPath() {
     // only for testing
     for (ReplicationSourceShipper worker : workerThreads.values()) {
-      if (worker.getCurrentPath() != null) return worker.getCurrentPath();
+      if (worker.getCurrentPath() != null) {
+        return worker.getCurrentPath();
+      }
     }
     return null;
   }

@@ -76,7 +76,8 @@ public class TestMinorCompaction {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
-    thirdRowBytes[START_KEY_BYTES.length - 1] += 2;
+    thirdRowBytes[START_KEY_BYTES.length - 1] =
+        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
     col2 = Bytes.toBytes("column2");
   }

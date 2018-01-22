@@ -102,10 +102,12 @@ public class ProtobufLogReader extends ReaderBase {
   public long trailerSize() {
     if (trailerPresent) {
       // sizeof PB_WAL_COMPLETE_MAGIC + sizof trailerSize + trailer
-      final long calculatedSize = PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT + trailer.getSerializedSize();
+      final long calculatedSize = (long) PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT
+          + trailer.getSerializedSize();
       final long expectedSize = fileLength - walEditsStopOffset;
       if (expectedSize != calculatedSize) {
-        LOG.warn("After parsing the trailer, we expect the total footer to be "+ expectedSize +" bytes, but we calculate it as being " + calculatedSize);
+        LOG.warn("After parsing the trailer, we expect the total footer to be {} bytes, but we "
+            + "calculate it as being {}", expectedSize, calculatedSize);
       }
       return expectedSize;
     } else {

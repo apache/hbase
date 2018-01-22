@@ -364,9 +364,9 @@ public class TestAtomicOperation {
     assertEquals(0, failures.get());
     Get g = new Get(row);
     Result result = region.get(g);
-    assertEquals(result.getValue(fam1, qual1).length, 10000);
-    assertEquals(result.getValue(fam1, qual2).length, 10000);
-    assertEquals(result.getValue(fam2, qual3).length, 10000);
+    assertEquals(10000, result.getValue(fam1, qual1).length);
+    assertEquals(10000, result.getValue(fam1, qual2).length);
+    assertEquals(10000, result.getValue(fam2, qual3).length);
   }
   /**
    * Test multi-threaded row mutations.

@@ -94,9 +94,8 @@ public class TestServerName {
       ServerName.valueOf("www.example.org", 1234, 5678).toString());
     assertEquals(sn.toString(),
       ServerName.valueOf("www.example.org:1234", 5678).toString());
-    assertEquals(sn.toString(),
-      "www.example.org" + ServerName.SERVERNAME_SEPARATOR + "1234" +
-      ServerName.SERVERNAME_SEPARATOR + "5678");
+    assertEquals("www.example.org" + ServerName.SERVERNAME_SEPARATOR + "1234"
+        + ServerName.SERVERNAME_SEPARATOR + "5678", sn.toString());
   }
 
   @Test

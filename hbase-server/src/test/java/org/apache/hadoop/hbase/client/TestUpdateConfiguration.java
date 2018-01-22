@@ -70,7 +70,7 @@ public class TestUpdateConfiguration {
     admin.updateConfiguration(server);
     Configuration conf = TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     int custom = conf.getInt("hbase.custom.config", 0);
-    assertEquals(custom, 1000);
+    assertEquals(1000, custom);
     // restore hbase-site.xml
     Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);
   }
@@ -97,17 +97,20 @@ public class TestUpdateConfiguration {
     admin.updateConfiguration();
 
     // Check the configuration of the Masters
-    Configuration masterConfiguration = TEST_UTIL.getMiniHBaseCluster().getMaster(0).getConfiguration();
+    Configuration masterConfiguration =
+        TEST_UTIL.getMiniHBaseCluster().getMaster(0).getConfiguration();
     int custom = masterConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(custom, 1000);
-    Configuration backupMasterConfiguration = TEST_UTIL.getMiniHBaseCluster().getMaster(1).getConfiguration();
+    assertEquals(1000, custom);
+    Configuration backupMasterConfiguration =
+        TEST_UTIL.getMiniHBaseCluster().getMaster(1).getConfiguration();
     custom = backupMasterConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(custom, 1000);
+    assertEquals(1000, custom);
 
     // Check the configuration of the RegionServer
-    Configuration regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getConfiguration();
+    Configuration regionServerConfiguration =
+        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getConfiguration();
     custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(custom, 1000);
+    assertEquals(1000, custom);
 
     // restore hbase-site.xml
     Files.copy(cnf3Path, cnfPath, StandardCopyOption.REPLACE_EXISTING);

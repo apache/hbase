@@ -479,7 +479,7 @@ public class FSTableDescriptors implements TableDescriptors {
       // Clean away old versions
       for (FileStatus file : status) {
         Path path = file.getPath();
-        if (file != mostCurrent) {
+        if (!file.equals(mostCurrent)) {
           if (!fs.delete(file.getPath(), false)) {
             LOG.warn("Failed cleanup of " + path);
           } else {

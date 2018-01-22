@@ -18,7 +18,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,17 +38,21 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
-public class TestMobFile extends TestCase {
+public class TestMobFile {
   static final Logger LOG = LoggerFactory.getLogger(TestMobFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf = TEST_UTIL.getConfiguration();
   private CacheConfig cacheConf =  new CacheConfig(conf);
+  @Rule
+  public TestName testName = new TestName();
 
   @Test
   public void testReadKeyValue() throws Exception {
@@ -57,7 +63,7 @@ public class TestMobFile extends TestCase {
             .withOutputDir(testDir)
             .withFileContext(meta)
             .build();
-    String caseName = getName();
+    String caseName = testName.getMethodName();
     MobTestUtil.writeStoreFile(writer, caseName);
 
     MobFile mobFile =
@@ -110,7 +116,7 @@ public class TestMobFile extends TestCase {
             .withOutputDir(testDir)
             .withFileContext(meta)
             .build();
-    MobTestUtil.writeStoreFile(writer, getName());
+    MobTestUtil.writeStoreFile(writer, testName.getMethodName());
 
     MobFile mobFile =
         new MobFile(new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true));

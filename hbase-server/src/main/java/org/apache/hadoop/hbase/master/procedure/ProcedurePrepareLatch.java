@@ -71,7 +71,9 @@ public abstract class ProcedurePrepareLatch {
   }
 
   private static class NoopLatch extends ProcedurePrepareLatch {
+    @Override
     protected void countDown(final Procedure proc) {}
+    @Override
     public void await() throws IOException {}
   }
 
@@ -80,6 +82,7 @@ public abstract class ProcedurePrepareLatch {
 
     private IOException exception = null;
 
+    @Override
     protected void countDown(final Procedure proc) {
       if (proc.hasException()) {
         exception = proc.getException().unwrapRemoteIOException();
@@ -87,6 +90,7 @@ public abstract class ProcedurePrepareLatch {
       latch.countDown();
     }
 
+    @Override
     public void await() throws IOException {
       try {
         latch.await();

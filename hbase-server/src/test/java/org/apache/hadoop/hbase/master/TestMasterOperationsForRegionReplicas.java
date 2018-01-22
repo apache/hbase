@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -242,7 +243,7 @@ public class TestMasterOperationsForRegionReplicas {
       }
       assert(defaultReplicas.size() == numRegions);
       Collection<Integer> counts = new HashSet<>(defaultReplicas.values());
-      assert(counts.size() == 1 && counts.contains(new Integer(numReplica)));
+      assert(counts.size() == 1 && counts.contains(numReplica));
     } finally {
       ADMIN.disableTable(tableName);
       ADMIN.deleteTable(tableName);
@@ -336,7 +337,7 @@ public class TestMasterOperationsForRegionReplicas {
         byte[] startKey = region.getStartKey();
         if (region.getTable().equals(table)) {
           setOfStartKeys.add(startKey); //ignore other tables
-          LOG.info("--STARTKEY " + new String(startKey)+"--");
+          LOG.info("--STARTKEY {}--", new String(startKey, StandardCharsets.UTF_8));
         }
       }
       // the number of startkeys will be equal to the number of regions hosted in each server

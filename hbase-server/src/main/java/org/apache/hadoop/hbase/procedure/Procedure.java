@@ -103,7 +103,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   //
 
   /** lock to prevent nodes from acquiring and then releasing before we can track them */
-  private Object joinBarrierLock = new Object();
+  private final Object joinBarrierLock = new Object();
   private final List<String> acquiringMembers;
   private final List<String> inBarrierMembers;
   private final HashMap<String, byte[]> dataFromFinishedMembers;

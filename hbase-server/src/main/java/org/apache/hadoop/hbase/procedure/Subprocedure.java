@@ -153,6 +153,7 @@ abstract public class Subprocedure implements Callable<Void> {
    * Subprocedure, ForeignException)}.
    */
   @SuppressWarnings("finally")
+  @Override
   final public Void call() {
     LOG.debug("Starting subprocedure '" + barrierName + "' with timeout " +
         executionTimeoutTimer.getMaxTime() + "ms");

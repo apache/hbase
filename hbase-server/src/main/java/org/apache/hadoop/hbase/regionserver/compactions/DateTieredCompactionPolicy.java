@@ -108,6 +108,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
     }
   }
 
+  @Override
   public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
       throws IOException {
     long mcTime = getNextMajorCompactTime(filesToCompact);

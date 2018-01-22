@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
@@ -753,8 +754,9 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
           logResult(true, "addLabels", "Adding labels allowed", null, labels, null);
           int i = 0;
           for (OperationStatus status : opStatus) {
-            while (response.getResult(i) != successResult)
+            while (!Objects.equals(response.getResult(i), successResult)) {
               i++;
+            }
             if (status.getOperationStatusCode() != SUCCESS) {
               RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
               failureResultBuilder.setException(buildException(new DoNotRetryIOException(

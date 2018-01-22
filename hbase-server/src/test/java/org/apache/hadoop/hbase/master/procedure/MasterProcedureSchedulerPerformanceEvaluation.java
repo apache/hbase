@@ -102,6 +102,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       this.hri = hri;
     }
 
+    @Override
     public Procedure newProcedure(long procId) {
       return new RegionProcedure(procId, hri);
     }
@@ -132,6 +133,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       this.tableName = tableName;
     }
 
+    @Override
     public Procedure newProcedure(long procId) {
       return new TableProcedure(procId, tableName);
     }
@@ -196,6 +198,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   private final AtomicLong completed = new AtomicLong(0);
 
   private class AddProcsWorker extends Thread {
+    @Override
     public void run() {
       final Random rand = new Random(System.currentTimeMillis());
       long procId = procIds.incrementAndGet();
@@ -209,6 +212,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   }
 
   private class PollAndLockWorker extends Thread {
+    @Override
     public void run() {
       while (completed.get() < numOps) {
         // With lock/unlock being ~100ns, and no other workload, 1000ns wait seams reasonable.

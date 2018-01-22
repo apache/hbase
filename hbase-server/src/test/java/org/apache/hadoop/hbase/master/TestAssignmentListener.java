@@ -365,10 +365,8 @@ public class TestAssignmentListener {
     drainingServerTracker.start();
 
     // Confirm our ServerManager lists are empty.
-    Assert.assertEquals(serverManager.getOnlineServers(),
-        new HashMap<ServerName, ServerLoad>());
-    Assert.assertEquals(serverManager.getDrainingServersList(),
-        new ArrayList<ServerName>());
+    Assert.assertEquals(new HashMap<ServerName, ServerLoad>(), serverManager.getOnlineServers());
+    Assert.assertEquals(new ArrayList<ServerName>(), serverManager.getDrainingServersList());
 
     // checkAndRecordNewServer() is how servers are added to the ServerManager.
     ArrayList<ServerName> onlineDrainingServers = new ArrayList<>();
@@ -381,8 +379,7 @@ public class TestAssignmentListener {
     }
 
     // Verify the ServerManager lists are correctly updated.
-    Assert.assertEquals(serverManager.getOnlineServers(), onlineServers);
-    Assert.assertEquals(serverManager.getDrainingServersList(),
-        onlineDrainingServers);
+    Assert.assertEquals(onlineServers, serverManager.getOnlineServers());
+    Assert.assertEquals(onlineDrainingServers, serverManager.getDrainingServersList());
   }
 }

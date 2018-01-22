@@ -123,6 +123,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
     // test read
     READER.runAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
@@ -151,6 +152,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
     // test read with qualifier filter
     LIMITED.runAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
@@ -178,6 +180,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
     // test as user with no permission
     DENIED.runAs(new PrivilegedExceptionAction<Object>(){
+      @Override
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection

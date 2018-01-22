@@ -20,10 +20,11 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generator of random data (keys/cfs/columns/values) for load testing.
@@ -35,11 +36,11 @@ public abstract class LoadTestDataGenerator {
 
   // The mutate info column stores information
   // about update done to this column family this row.
-  public final static byte[] MUTATE_INFO = "mutate_info".getBytes();
+  public final static byte[] MUTATE_INFO = Bytes.toBytes("mutate_info");
 
   // The increment column always has a long value,
   // which can be incremented later on during updates.
-  public final static byte[] INCREMENT = "increment".getBytes();
+  public final static byte[] INCREMENT = Bytes.toBytes("increment");
 
   protected String[] args;
 

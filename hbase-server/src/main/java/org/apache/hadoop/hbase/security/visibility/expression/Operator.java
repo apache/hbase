@@ -23,12 +23,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 public enum Operator {
   AND('&'), OR('|'), NOT('!');
 
-  private char rep;
+  private final char rep;
 
   private Operator(char rep) {
     this.rep = rep;
   }
 
+  @Override
   public String toString() {
     return String.valueOf(this.rep);
   };

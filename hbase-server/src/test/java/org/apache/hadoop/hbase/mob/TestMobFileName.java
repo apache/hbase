@@ -18,26 +18,31 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Date;
 import java.util.Random;
 import java.util.UUID;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestMobFileName extends TestCase {
+public class TestMobFileName {
 
   private String uuid;
   private Date date;
   private String dateStr;
   private byte[] startKey;
 
+  @Before
   public void setUp() {
     Random random = new Random();
     uuid = UUID.randomUUID().toString().replaceAll("-", "");

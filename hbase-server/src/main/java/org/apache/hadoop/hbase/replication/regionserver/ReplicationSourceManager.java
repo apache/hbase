@@ -110,7 +110,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   private final Configuration conf;
   private final FileSystem fs;
   // The paths to the latest log of each wal group, for new coming peers
-  private Set<Path> latestPaths;
+  private final Set<Path> latestPaths;
   // Path to the wals directories
   private final Path logDir;
   // Path to the wal archive

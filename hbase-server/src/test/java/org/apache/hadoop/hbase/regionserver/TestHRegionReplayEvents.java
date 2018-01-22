@@ -232,7 +232,7 @@ public class TestHRegionReplayEvents {
 
     // flush region
     FlushResultImpl flush = (FlushResultImpl)secondaryRegion.flush(true);
-    assertEquals(flush.result, FlushResultImpl.Result.CANNOT_FLUSH);
+    assertEquals(FlushResultImpl.Result.CANNOT_FLUSH, flush.result);
 
     verifyData(secondaryRegion, 0, 1000, cq, families);
 
@@ -1207,13 +1207,13 @@ public class TestHRegionReplayEvents {
     // primary region is empty at this point. Request a flush with writeFlushRequestWalMarker=false
     FlushResultImpl result = primaryRegion.flushcache(true, false, FlushLifeCycleTracker.DUMMY);
     assertNotNull(result);
-    assertEquals(result.result, FlushResultImpl.Result.CANNOT_FLUSH_MEMSTORE_EMPTY);
+    assertEquals(FlushResultImpl.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, result.result);
     assertFalse(result.wroteFlushWalMarker);
 
     // request flush again, but this time with writeFlushRequestWalMarker = true
     result = primaryRegion.flushcache(true, true, FlushLifeCycleTracker.DUMMY);
     assertNotNull(result);
-    assertEquals(result.result, FlushResultImpl.Result.CANNOT_FLUSH_MEMSTORE_EMPTY);
+    assertEquals(FlushResultImpl.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, result.result);
     assertTrue(result.wroteFlushWalMarker);
 
     List<FlushDescriptor> flushes = Lists.newArrayList();
@@ -1644,7 +1644,7 @@ public class TestHRegionReplayEvents {
       hFileFactory.withFileContext(new HFileContext());
       HFile.Writer writer = hFileFactory.create();
       try {
-        writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0l,
+        writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0L,
           KeyValue.Type.Put.getCode(), valueBytes)));
       } finally {
         writer.close();

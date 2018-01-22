@@ -637,7 +637,7 @@ public class SplitLogManager {
   public enum TerminationStatus {
     IN_PROGRESS("in_progress"), SUCCESS("success"), FAILURE("failure"), DELETED("deleted");
 
-    String statusMsg;
+    final String statusMsg;
 
     TerminationStatus(String msg) {
       statusMsg = msg;

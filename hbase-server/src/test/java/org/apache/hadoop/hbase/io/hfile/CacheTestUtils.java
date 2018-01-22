@@ -302,7 +302,7 @@ public class CacheTestUtils {
 
     @Override
     public long heapSize() {
-      return 4 + buf.length;
+      return 4L + buf.length;
     }
 
     @Override
@@ -373,9 +373,10 @@ public class CacheTestUtils {
 
       String strKey;
       /* No conflicting keys */
-      for (strKey = new Long(rand.nextLong()).toString(); !usedStrings
-          .add(strKey); strKey = new Long(rand.nextLong()).toString())
-        ;
+      strKey = Long.toString(rand.nextLong());
+      while (!usedStrings.add(strKey)) {
+        strKey = Long.toString(rand.nextLong());
+      }
 
       returnedBlocks[i] = new HFileBlockPair();
       returnedBlocks[i].blockName = new BlockCacheKey(strKey, 0);

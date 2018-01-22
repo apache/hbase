@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -248,7 +249,7 @@ public class TestBlockReorder {
    */
   @Test()
   public void testHBaseCluster() throws Exception {
-    byte[] sb = "sb".getBytes();
+    byte[] sb = Bytes.toBytes("sb");
     htu.startMiniZKCluster();
 
     MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 1);
@@ -442,7 +443,7 @@ public class TestBlockReorder {
       do {
         l = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
         Assert.assertNotNull(l.getLocatedBlocks());
-        Assert.assertEquals(l.getLocatedBlocks().size(), 1);
+        Assert.assertEquals(1, l.getLocatedBlocks().size());
         Assert.assertTrue("Expecting " + repCount + " , got " + l.get(0).getLocations().length,
             System.currentTimeMillis() < max);
       } while (l.get(0).getLocations().length != repCount);

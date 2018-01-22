@@ -105,6 +105,7 @@ public class Replication implements
   public Replication() {
   }
 
+  @Override
   public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
       WALFileLengthProvider walFileLengthProvider) throws IOException {
     this.server = server;
@@ -165,12 +166,14 @@ public class Replication implements
    /*
     * Returns an object to listen to new wal changes
     **/
+  @Override
   public WALActionsListener getWALActionsListener() {
     return this;
   }
   /**
    * Stops replication service.
    */
+  @Override
   public void stopReplicationService() {
     join();
   }
@@ -199,6 +202,7 @@ public class Replication implements
    * @param sourceHFileArchiveDirPath Path that point to the source cluster hfile archive directory
    * @throws IOException
    */
+  @Override
   public void replicateLogEntries(List<WALEntry> entries, CellScanner cells,
       String replicationClusterId, String sourceBaseNamespaceDirPath,
       String sourceHFileArchiveDirPath) throws IOException {
@@ -211,6 +215,7 @@ public class Replication implements
    * it starts
    * @throws IOException
    */
+  @Override
   public void startReplicationService() throws IOException {
     try {
       this.replicationManager.init();

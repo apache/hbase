@@ -54,8 +54,8 @@ public class SpaceQuotaSnapshotNotifierFactory {
         .getClass(SNAPSHOT_NOTIFIER_KEY, SNAPSHOT_NOTIFIER_DEFAULT,
             SpaceQuotaSnapshotNotifier.class);
     try {
-      return clz.newInstance();
-    } catch (InstantiationException | IllegalAccessException e) {
+      return clz.getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
       throw new IllegalArgumentException("Failed to instantiate the implementation", e);
     }
   }

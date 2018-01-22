@@ -227,6 +227,7 @@ public class EntityLock {
       return this;
     }
 
+    @Override
     public void run() {
       final LockHeartbeatRequest lockHeartbeatRequest =
           LockHeartbeatRequest.newBuilder().setProcId(procId).build();

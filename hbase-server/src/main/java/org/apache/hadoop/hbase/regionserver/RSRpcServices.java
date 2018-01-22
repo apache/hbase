@@ -2807,7 +2807,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private static final long serialVersionUID = -4305297078988180130L;
 
     @Override
-    public Throwable fillInStackTrace() {
+    public synchronized Throwable fillInStackTrace() {
       return this;
     }
   };

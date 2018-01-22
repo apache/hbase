@@ -341,6 +341,7 @@ public class TestWALObserver {
     User user = HBaseTestingUtility.getDifferentUser(newConf,
         ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction<Void>() {
+      @Override
       public Void run() throws Exception {
         Path p = runWALSplit(newConf);
         LOG.info("WALSplit path == " + p);

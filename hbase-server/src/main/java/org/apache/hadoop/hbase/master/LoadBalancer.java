@@ -156,6 +156,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * Notification that config has changed
    * @param conf
    */
+  @Override
   void onConfigurationChange(Configuration conf);
 
   /**

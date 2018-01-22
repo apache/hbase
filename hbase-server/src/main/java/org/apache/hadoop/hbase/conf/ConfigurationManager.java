@@ -79,7 +79,7 @@ public class ConfigurationManager {
   // notified when the configuration is reloaded from disk. This is a set
   // constructed from a WeakHashMap, whose entries would be removed if the
   // observer classes go out of scope.
-  private Set<ConfigurationObserver> configurationObservers =
+  private final Set<ConfigurationObserver> configurationObservers =
     Collections.newSetFromMap(new WeakHashMap<ConfigurationObserver,
                                               Boolean>());
 

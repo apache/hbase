@@ -546,9 +546,9 @@ public class TestHeapSize  {
       assertTrue(ClassSize.OBJECT == 12 || ClassSize.OBJECT == 16); // depending on CompressedOops
     }
     if (ClassSize.useUnsafeLayout()) {
-      assertEquals(ClassSize.OBJECT + 4, ClassSize.ARRAY);
+      assertEquals(ClassSize.ARRAY, ClassSize.OBJECT + 4);
     } else {
-      assertEquals(ClassSize.OBJECT + 8, ClassSize.ARRAY);
+      assertEquals(ClassSize.ARRAY, ClassSize.OBJECT + 8);
     }
   }
 }

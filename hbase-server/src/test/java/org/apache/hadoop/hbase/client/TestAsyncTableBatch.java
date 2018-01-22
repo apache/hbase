@@ -212,13 +212,13 @@ public class TestAsyncTableBatch {
         .collect(Collectors.toList())).get();
     List<Row> actions = new ArrayList<>();
     actions.add(new Get(Bytes.toBytes(0)));
-    actions.add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, CQ, Bytes.toBytes((long) 2)));
+    actions.add(new Put(Bytes.toBytes(1)).addColumn(FAMILY, CQ, Bytes.toBytes(2L)));
     actions.add(new Delete(Bytes.toBytes(2)));
     actions.add(new Increment(Bytes.toBytes(3)).addColumn(FAMILY, CQ, 1));
     actions.add(new Append(Bytes.toBytes(4)).addColumn(FAMILY, CQ, Bytes.toBytes(4)));
     RowMutations rm = new RowMutations(Bytes.toBytes(5));
-    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ, Bytes.toBytes((long) 100)));
-    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ1, Bytes.toBytes((long) 200)));
+    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ, Bytes.toBytes(100L)));
+    rm.add(new Put(Bytes.toBytes(5)).addColumn(FAMILY, CQ1, Bytes.toBytes(200L)));
     actions.add(rm);
     actions.add(new Get(Bytes.toBytes(6)));
 

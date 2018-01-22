@@ -40,6 +40,7 @@ public class TestMiniClusterLoadParallel
     super(isMultiPut, encoding);
   }
 
+  @Override
   @Test(timeout=TIMEOUT_MS)
   public void loadTest() throws Exception {
     prepareForLoadTest();

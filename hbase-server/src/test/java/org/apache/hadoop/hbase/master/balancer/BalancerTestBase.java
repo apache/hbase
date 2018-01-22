@@ -159,6 +159,7 @@ public class BalancerTestBase {
     public MockMapping(Configuration conf) {
     }
 
+    @Override
     public List<String> resolve(List<String> names) {
       List<String> ret = new ArrayList<>(names.size());
       for (String name : names) {

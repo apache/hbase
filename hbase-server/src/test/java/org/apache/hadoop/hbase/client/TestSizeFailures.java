@@ -160,8 +160,8 @@ public class TestSizeFailures {
    * @return An entry where the first item is rows observed and the second is entries observed.
    */
   private Entry<Long,Long> sumTable(ResultScanner scanner) {
-    long rowsObserved = 0l;
-    long entriesObserved = 0l;
+    long rowsObserved = 0L;
+    long entriesObserved = 0L;
 
     // Read all the records in the table
     for (Result result : scanner) {

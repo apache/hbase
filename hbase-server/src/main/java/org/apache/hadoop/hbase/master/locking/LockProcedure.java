@@ -202,7 +202,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    * @return false, so procedure framework doesn't mark this procedure as failure.
    */
   @Override
-  protected boolean setTimeoutFailure(final MasterProcedureEnv env) {
+  protected synchronized boolean setTimeoutFailure(final MasterProcedureEnv env) {
     synchronized (event) {
       if (LOG.isDebugEnabled()) LOG.debug("Timeout failure " + this.event);
       if (!event.isReady()) {  // Maybe unlock() awakened the event.

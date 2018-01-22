@@ -205,7 +205,8 @@ public class TestServerSideScanMetricsFromClientSide {
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
-    Filter filter = new RowFilter(CompareOperator.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter =
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     scan = new Scan(baseScan);
     scan.setFilter(filter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
@@ -255,7 +256,8 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, null, 0);
 
     // Row filter doesn't match any row key. All rows should be filtered
-    Filter filter = new RowFilter(CompareOperator.EQUAL, new BinaryComparator("xyz".getBytes()));
+    Filter filter =
+        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Filter will return results containing only the first key. Number of entire rows filtered
@@ -269,7 +271,7 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // Column prefix will NOT find any matching qualifier on any row. All rows should be filtered
-    filter = new ColumnPrefixFilter("xyz".getBytes());
+    filter = new ColumnPrefixFilter(Bytes.toBytes("xyz"));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Matching column value should exist in each row. No rows should be filtered.

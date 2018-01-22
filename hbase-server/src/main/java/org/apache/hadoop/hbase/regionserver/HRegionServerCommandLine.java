@@ -44,6 +44,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     this.regionServerClass = clazz;
   }
 
+  @Override
   protected String getUsage() {
     return USAGE;
   }
@@ -73,6 +74,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     return 0;
   }
 
+  @Override
   public int run(String args[]) throws Exception {
     if (args.length != 1) {
       usage(null);

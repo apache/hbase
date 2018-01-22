@@ -56,6 +56,7 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
   }
 
   @Before
+  @Override
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1, 3);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
@@ -63,6 +64,7 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
   }
 
   @After
+  @Override
   public void tearDown() throws Exception {
     IOUtils.closeQuietly(ASYNC_CONN);
     TEST_UTIL.shutdownMiniCluster();

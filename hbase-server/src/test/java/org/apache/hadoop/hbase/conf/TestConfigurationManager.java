@@ -42,6 +42,7 @@ public class TestConfigurationManager {
       register();
     }
 
+    @Override
     public void onConfigurationChange(Configuration conf) {
       notifiedOnChange = true;
     }

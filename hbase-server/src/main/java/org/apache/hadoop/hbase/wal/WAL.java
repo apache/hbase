@@ -99,6 +99,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * underlying resources after this call; i.e. filesystem based WALs can archive or
    * delete files.
    */
+  @Override
   void close() throws IOException;
 
   /**

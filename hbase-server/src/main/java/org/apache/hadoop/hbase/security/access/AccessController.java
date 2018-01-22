@@ -2186,8 +2186,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           // Also using acl as table name to be inline  with the results of global admin and will
           // help in avoiding any leakage of information about being superusers.
           for (String user: Superusers.getSuperUsers()) {
-            perms.add(new UserPermission(user.getBytes(), AccessControlLists.ACL_TABLE_NAME, null,
-                Action.values()));
+            perms.add(new UserPermission(Bytes.toBytes(user), AccessControlLists.ACL_TABLE_NAME,
+                null, Action.values()));
           }
         }
         response = AccessControlUtil.buildGetUserPermissionsResponse(perms);

@@ -53,7 +53,7 @@ public class RegionServerSpaceQuotaManager {
   private SpaceQuotaRefresherChore spaceQuotaRefresher;
   private AtomicReference<Map<TableName, SpaceQuotaSnapshot>> currentQuotaSnapshots;
   private boolean started = false;
-  private ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
+  private final ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
   private SpaceViolationPolicyEnforcementFactory factory;
 
   public RegionServerSpaceQuotaManager(RegionServerServices rsServices) {

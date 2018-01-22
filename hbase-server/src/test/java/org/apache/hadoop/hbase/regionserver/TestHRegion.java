@@ -43,6 +43,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -669,7 +670,7 @@ public class TestHRegion {
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (HStore store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId - 1);
+        maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()), minSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
@@ -721,7 +722,7 @@ public class TestHRegion {
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (HStore store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
+        maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()), recoverSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
@@ -766,7 +767,7 @@ public class TestHRegion {
 
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (HStore store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
+        maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()), minSeqId);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, null);
       assertEquals(minSeqId, seqId);
@@ -824,7 +825,7 @@ public class TestHRegion {
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       for (HStore store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
+        maxSeqIdInStores.put(Bytes.toBytes(store.getColumnFamilyName()), recoverSeqId - 1);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
@@ -1070,7 +1071,7 @@ public class TestHRegion {
     }
   }
 
-  class IsFlushWALMarker implements ArgumentMatcher<WALEdit> {
+  static class IsFlushWALMarker implements ArgumentMatcher<WALEdit> {
     volatile FlushAction[] actions;
     public IsFlushWALMarker(FlushAction... actions) {
       this.actions = actions;
@@ -2192,7 +2193,7 @@ public class TestHRegion {
         deleteMap.put(family, kvs);
         region.delete(deleteMap, Durability.SYNC_WAL);
       } catch (Exception e) {
-        assertTrue("Family " + new String(family) + " does not exist", false);
+        fail("Family " + new String(family, StandardCharsets.UTF_8) + " does not exist");
       }
 
       // testing non existing family
@@ -2205,7 +2206,8 @@ public class TestHRegion {
       } catch (Exception e) {
         ok = true;
       }
-      assertEquals("Family " + new String(family) + " does exist", true, ok);
+      assertEquals("Family " + new String(family, StandardCharsets.UTF_8) + " does exist",
+          true, ok);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -3467,18 +3469,18 @@ public class TestHRegion {
 
       List<Cell> results = new ArrayList<>();
       assertTrue(s.next(results));
-      assertEquals(results.size(), 1);
+      assertEquals(1, results.size());
       results.clear();
 
       assertTrue(s.next(results));
-      assertEquals(results.size(), 3);
+      assertEquals(3, results.size());
       assertTrue("orderCheck", CellUtil.matchingFamily(results.get(0), cf_alpha));
       assertTrue("orderCheck", CellUtil.matchingFamily(results.get(1), cf_essential));
       assertTrue("orderCheck", CellUtil.matchingFamily(results.get(2), cf_joined));
       results.clear();
 
       assertFalse(s.next(results));
-      assertEquals(results.size(), 0);
+      assertEquals(0, results.size());
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -3564,16 +3566,19 @@ public class TestHRegion {
       while (true) {
         boolean more = s.next(results, scannerContext);
         if ((index >> 1) < 5) {
-          if (index % 2 == 0)
-            assertEquals(results.size(), 3);
-          else
-            assertEquals(results.size(), 1);
-        } else
-          assertEquals(results.size(), 1);
+          if (index % 2 == 0) {
+            assertEquals(3, results.size());
+          } else {
+            assertEquals(1, results.size());
+          }
+        } else {
+          assertEquals(1, results.size());
+        }
         results.clear();
         index++;
-        if (!more)
+        if (!more) {
           break;
+        }
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -4448,7 +4453,7 @@ public class TestHRegion {
     // after all increment finished, the row will increment to 20*100 = 2000
     int threadNum = 20;
     int incCounter = 100;
-    long expected = threadNum * incCounter;
+    long expected = (long) threadNum * incCounter;
     Thread[] incrementers = new Thread[threadNum];
     Thread flushThread = new Thread(flusher);
     for (int i = 0; i < threadNum; i++) {
@@ -4470,7 +4475,7 @@ public class TestHRegion {
     List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
 
     // we just got the latest version
-    assertEquals(kvs.size(), 1);
+    assertEquals(1, kvs.size());
     Cell kv = kvs.get(0);
     assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
     this.region = null;
@@ -4561,7 +4566,7 @@ public class TestHRegion {
     List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
 
     // we just got the latest version
-    assertEquals(kvs.size(), 1);
+    assertEquals(1, kvs.size());
     Cell kv = kvs.get(0);
     byte[] appendResult = new byte[kv.getValueLength()];
     System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
@@ -6150,7 +6155,7 @@ public class TestHRegion {
       r = region.get(new Get(row));
       byte[] val = r.getValue(fam1, q1);
       assertNotNull(val);
-      assertEquals(Bytes.toLong(val), 1L);
+      assertEquals(1L, Bytes.toLong(val));
 
       // Increment with a TTL of 5 seconds
       Increment incr = new Increment(row).addColumn(fam1, q1, 1L);
@@ -6161,7 +6166,7 @@ public class TestHRegion {
       r = region.get(new Get(row));
       val = r.getValue(fam1, q1);
       assertNotNull(val);
-      assertEquals(Bytes.toLong(val), 2L);
+      assertEquals(2L, Bytes.toLong(val));
 
       // Increment time to T+25 seconds
       edge.incrementTime(5000);
@@ -6170,7 +6175,7 @@ public class TestHRegion {
       r = region.get(new Get(row));
       val = r.getValue(fam1, q1);
       assertNotNull(val);
-      assertEquals(Bytes.toLong(val), 1L);
+      assertEquals(1L, Bytes.toLong(val));
 
       // Increment time to T+30 seconds
       edge.incrementTime(5000);
@@ -6199,14 +6204,14 @@ public class TestHRegion {
     Result result = region.get(new Get(row));
     Cell c = result.getColumnLatestCell(fam1, qual1);
     assertNotNull(c);
-    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(10L, c.getTimestamp());
 
     edge.setValue(1); // clock goes back
     region.increment(inc);
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
-    assertEquals(c.getTimestamp(), 11L);
-    assertEquals(Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength()), 2L);
+    assertEquals(11L, c.getTimestamp());
+    assertEquals(2L, Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
   }
 
   @Test
@@ -6224,13 +6229,13 @@ public class TestHRegion {
     Result result = region.get(new Get(row));
     Cell c = result.getColumnLatestCell(fam1, qual1);
     assertNotNull(c);
-    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(10L, c.getTimestamp());
 
     edge.setValue(1); // clock goes back
     region.append(a);
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
-    assertEquals(c.getTimestamp(), 11L);
+    assertEquals(11L, c.getTimestamp());
 
     byte[] expected = new byte[qual1.length*2];
     System.arraycopy(qual1, 0, expected, 0, qual1.length);
@@ -6255,7 +6260,7 @@ public class TestHRegion {
     Result result = region.get(new Get(row));
     Cell c = result.getColumnLatestCell(fam1, qual1);
     assertNotNull(c);
-    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(10L, c.getTimestamp());
 
     edge.setValue(1); // clock goes back
     p = new Put(row);
@@ -6264,7 +6269,7 @@ public class TestHRegion {
     region.checkAndMutate(row, fam1, qual1, CompareOperator.EQUAL, new BinaryComparator(qual1), p, false);
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
-    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(10L, c.getTimestamp());
 
     assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
       qual2, 0, qual2.length));
@@ -6304,9 +6309,9 @@ public class TestHRegion {
     };
 
     OperationStatus[] status = region.batchMutate(mutations);
-    assertEquals(status[0].getOperationStatusCode(), OperationStatusCode.SUCCESS);
-    assertEquals(status[1].getOperationStatusCode(), OperationStatusCode.SANITY_CHECK_FAILURE);
-    assertEquals(status[2].getOperationStatusCode(), OperationStatusCode.SUCCESS);
+    assertEquals(OperationStatusCode.SUCCESS, status[0].getOperationStatusCode());
+    assertEquals(OperationStatusCode.SANITY_CHECK_FAILURE, status[1].getOperationStatusCode());
+    assertEquals(OperationStatusCode.SUCCESS, status[2].getOperationStatusCode());
 
 
     // test with a row lock held for a long time
@@ -6347,8 +6352,8 @@ public class TestHRegion {
 
         // this will wait for the row lock, and it will eventually succeed
         OperationStatus[] status = region.batchMutate(mutations);
-        assertEquals(status[0].getOperationStatusCode(), OperationStatusCode.SUCCESS);
-        assertEquals(status[1].getOperationStatusCode(), OperationStatusCode.SUCCESS);
+        assertEquals(OperationStatusCode.SUCCESS, status[0].getOperationStatusCode());
+        assertEquals(OperationStatusCode.SUCCESS, status[1].getOperationStatusCode());
         return null;
       }
     });
@@ -6374,7 +6379,7 @@ public class TestHRegion {
     Result result = region.get(new Get(row));
     Cell c = result.getColumnLatestCell(fam1, qual1);
     assertNotNull(c);
-    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(10L, c.getTimestamp());
 
     edge.setValue(1); // clock goes back
     p = new Put(row);
@@ -6386,7 +6391,7 @@ public class TestHRegion {
         new BinaryComparator(qual1), rm, false));
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
-    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(10L, c.getTimestamp());
     LOG.info("c value " +
       Bytes.toStringBinary(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
 

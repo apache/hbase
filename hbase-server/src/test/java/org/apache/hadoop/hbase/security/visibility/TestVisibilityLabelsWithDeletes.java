@@ -17,6 +17,17 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -42,31 +53,16 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DefaultEnvironmentEdge;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests visibility labels with deletes
@@ -205,7 +201,7 @@ public class TestVisibilityLabelsWithDeletes {
   public void testVisibilityLabelsWithDeleteFamilyVersion() throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    long[] ts = new long[] { 123l, 125l };
+    long[] ts = new long[] { 123L, 125L };
     try (Table table = createTableAndWriteDataWithLabels(ts,
         CONFIDENTIAL + "|" + TOPSECRET, SECRET)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -215,7 +211,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "|" + CONFIDENTIAL));
-            d.addFamilyVersion(fam, 123l);
+            d.addFamilyVersion(fam, 123L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -243,7 +239,7 @@ public class TestVisibilityLabelsWithDeletes {
   public void testVisibilityLabelsWithDeleteColumnExactVersion() throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    long[] ts = new long[] { 123l, 125l };
+    long[] ts = new long[] { 123L, 125L };
     try (Table table = createTableAndWriteDataWithLabels(ts,
         CONFIDENTIAL + "|" + TOPSECRET, SECRET);) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -253,7 +249,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "|" + CONFIDENTIAL));
-            d.addColumn(fam, qual, 123l);
+            d.addColumn(fam, qual, 123L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -291,7 +287,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" +
                 SECRET + "&" + TOPSECRET+")"));
-            d.addColumns(fam, qual, 125l);
+            d.addColumns(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -313,17 +309,17 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -508,7 +504,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 1);
+            assertEquals(1, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -529,7 +525,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -566,7 +562,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -586,7 +582,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -622,7 +618,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 1);
+            assertEquals(1, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -643,7 +639,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -680,7 +676,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -700,7 +696,7 @@ public class TestVisibilityLabelsWithDeletes {
             Scan s = new Scan();
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -737,7 +733,7 @@ public class TestVisibilityLabelsWithDeletes {
             ResultScanner scanner = table.getScanner(s);
             // The delete would not be able to apply it because of visibility mismatch
             Result[] next = scanner.next(3);
-            assertEquals(next.length, 1);
+            assertEquals(1, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -759,7 +755,7 @@ public class TestVisibilityLabelsWithDeletes {
             ResultScanner scanner = table.getScanner(s);
             Result[] next = scanner.next(3);
             // this will alone match
-            assertEquals(next.length, 0);
+            assertEquals(0, next.length);
           } catch (Throwable t) {
             throw new IOException(t);
           }
@@ -810,7 +806,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(s);
       Result[] next = scanner.next(3);
-      assertEquals(next.length, 1);
+      assertEquals(1, next.length);
       put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual, value1);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
@@ -836,13 +832,13 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(CONFIDENTIAL));
       scanner = table.getScanner(s);
       next = scanner.next(3);
-      assertEquals(next.length, 1);
+      assertEquals(1, next.length);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET));
       scanner = table.getScanner(s);
       Result[] next1 = scanner.next(3);
-      assertEquals(next1.length, 0);
+      assertEquals(0, next1.length);
     }
   }
 
@@ -886,7 +882,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(s);
       Result[] next = scanner.next(3);
-      assertEquals(next.length, 1);
+      assertEquals(1, next.length);
       put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual, value1);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
@@ -912,13 +908,13 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(CONFIDENTIAL));
       scanner = table.getScanner(s);
       next = scanner.next(3);
-      assertEquals(next.length, 1);
+      assertEquals(1, next.length);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET));
       scanner = table.getScanner(s);
       Result[] next1 = scanner.next(3);
-      assertEquals(next1.length, 0);
+      assertEquals(0, next1.length);
     }
   }
 
@@ -933,11 +929,11 @@ public class TestVisibilityLabelsWithDeletes {
     hBaseAdmin.createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual, 123l, value);
+      put.addColumn(fam, qual, 123L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
       table.put(put);
       put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual, 124l, value1);
+      put.addColumn(fam, qual, 124L, value1);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -947,7 +943,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
-            d.addColumns(fam, qual, 126l);
+            d.addColumns(fam, qual, 126L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -957,7 +953,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
-            d.addColumn(fam, qual, 123l);
+            d.addColumn(fam, qual, 123L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -971,7 +967,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(CONFIDENTIAL, SECRET));
       ResultScanner scanner = table.getScanner(s);
       Result[] next = scanner.next(3);
-      assertEquals(next.length, 0);
+      assertEquals(0, next.length);
     }
   }
   @Test
@@ -987,11 +983,11 @@ public class TestVisibilityLabelsWithDeletes {
 
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put1 = new Put(Bytes.toBytes("row1"));
-      put1.addColumn(fam, qual, 123l, value);
+      put1.addColumn(fam, qual, 123L, value);
       put1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
 
       Put put2 = new Put(Bytes.toBytes("row1"));
-      put2.addColumn(fam, qual, 123l, value1);
+      put2.addColumn(fam, qual, 123L, value1);
       put2.setCellVisibility(new CellVisibility(SECRET));
       table.put(createList(put1, put2));
 
@@ -1000,7 +996,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(CONFIDENTIAL, SECRET));
 
       ResultScanner scanner = table.getScanner(s);
-      assertEquals(scanner.next(3).length, 1);
+      assertEquals(1, scanner.next(3).length);
       scanner.close();
 
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1010,7 +1006,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
-            d.addColumn(fam, qual, 123l);
+            d.addColumn(fam, qual, 123L);
             table.delete(d);
           }
 
@@ -1018,7 +1014,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET));
-            d.addColumn(fam, qual, 123l);
+            d.addColumn(fam, qual, 123L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1031,7 +1027,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(CONFIDENTIAL));
       scanner = table.getScanner(s);
-      assertEquals(scanner.next(3).length, 0);
+      assertEquals(0, scanner.next(3).length);
       scanner.close();
     }
   }
@@ -1126,22 +1122,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1162,36 +1158,36 @@ public class TestVisibilityLabelsWithDeletes {
 
     List<Put> puts = new ArrayList<>(5);
     Put put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 123l, value);
+    put.addColumn(fam, qual, 123L, value);
     put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 124l, value);
+    put.addColumn(fam, qual, 124L, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
     + TOPSECRET + "&" + SECRET+")"));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 125l, value);
+    put.addColumn(fam, qual, 125L, value);
     put.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 126l, value);
+    put.addColumn(fam, qual, 126L, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
         + TOPSECRET + "&" + SECRET+")"));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 127l, value);
+    put.addColumn(fam, qual, 127L, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
         + TOPSECRET + "&" + SECRET+")"));
     puts.add(put);
 
     TEST_UTIL.getAdmin().flush(tableName);
     put = new Put(Bytes.toBytes("row2"));
-    put.addColumn(fam, qual, 127l, value);
+    put.addColumn(fam, qual, 127L, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET
         + "&" + SECRET + ")"));
     puts.add(put);
@@ -1212,28 +1208,28 @@ public class TestVisibilityLabelsWithDeletes {
 
     List<Put> puts = new ArrayList<>(5);
     Put put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 123l, value);
+    put.addColumn(fam, qual, 123L, value);
     put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 124l, value);
+    put.addColumn(fam, qual, 124L, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
     + TOPSECRET + "&" + SECRET+")"));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 125l, value);
+    put.addColumn(fam, qual, 125L, value);
     put.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual1, 126l, value);
+    put.addColumn(fam, qual1, 126L, value);
     put.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual2, 127l, value);
+    put.addColumn(fam, qual2, 127L, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
         + TOPSECRET + "&" + SECRET+")"));
     puts.add(put);
@@ -1253,23 +1249,23 @@ public class TestVisibilityLabelsWithDeletes {
     hBaseAdmin.createTable(desc);
     List<Put> puts = new ArrayList<>(5);
     Put put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 123l, value);
+    put.addColumn(fam, qual, 123L, value);
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 124l, value);
+    put.addColumn(fam, qual, 124L, value);
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 125l, value);
+    put.addColumn(fam, qual, 125L, value);
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 126l, value);
+    put.addColumn(fam, qual, 126L, value);
     puts.add(put);
 
     put = new Put(Bytes.toBytes("row1"));
-    put.addColumn(fam, qual, 127l, value);
+    put.addColumn(fam, qual, 127L, value);
     puts.add(put);
 
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -1278,7 +1274,7 @@ public class TestVisibilityLabelsWithDeletes {
     TEST_UTIL.getAdmin().flush(tableName);
 
     put = new Put(Bytes.toBytes("row2"));
-    put.addColumn(fam, qual, 127l, value);
+    put.addColumn(fam, qual, 127L, value);
     table.put(put);
 
     return table;
@@ -1300,7 +1296,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" +
                 SECRET + "&" + TOPSECRET+")"));
-            d.addColumn(fam, qual, 125l);
+            d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1322,27 +1318,27 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1386,22 +1382,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1417,7 +1413,7 @@ public class TestVisibilityLabelsWithDeletes {
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual, 128l, value);
+      put.addColumn(fam, qual, 128L, value);
       put.setCellVisibility(new CellVisibility(TOPSECRET));
       table.put(put);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1449,27 +1445,27 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 128l);
+      assertEquals(128L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1477,7 +1473,7 @@ public class TestVisibilityLabelsWithDeletes {
           current.getRowLength(), row2, 0, row2.length));
 
       put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual, 129l, value);
+      put.addColumn(fam, qual, 129L, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
 
@@ -1493,7 +1489,7 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 129l);
+      assertEquals(129L, current.getTimestamp());
     }
   }
   @Test
@@ -1521,7 +1517,7 @@ public class TestVisibilityLabelsWithDeletes {
       SUPERUSER.runAs(actiona);
       TEST_UTIL.getAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row3"));
-      put.addColumn(fam, qual, 127l, value);
+      put.addColumn(fam, qual, 127L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL + "&" + PRIVATE));
       table.put(put);
       TEST_UTIL.getAdmin().flush(tableName);
@@ -1539,22 +1535,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1598,12 +1594,12 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1623,7 +1619,7 @@ public class TestVisibilityLabelsWithDeletes {
         public Void run() throws Exception {
           Delete d = new Delete(row1);
           d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-          d.addColumns(fam, qual, 125l);
+          d.addColumns(fam, qual, 125L);
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             table.delete(d);
@@ -1647,24 +1643,24 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
       assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
           current.getQualifierLength(), qual1, 0, qual1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
           current.getQualifierLength(), qual2, 0, qual2.length));
     }
@@ -1681,11 +1677,11 @@ public class TestVisibilityLabelsWithDeletes {
     hBaseAdmin.createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual1, 125l, value);
+      put.addColumn(fam, qual1, 125L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
       table.put(put);
       put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual1, 126l, value);
+      put.addColumn(fam, qual1, 126L, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       TEST_UTIL.getAdmin().flush(tableName);
@@ -1694,11 +1690,11 @@ public class TestVisibilityLabelsWithDeletes {
         public Void run() throws Exception {
           Delete d1 = new Delete(row1);
           d1.setCellVisibility(new CellVisibility(SECRET));
-          d1.addColumns(fam, qual, 126l);
+          d1.addColumns(fam, qual, 126L);
 
           Delete d2 = new Delete(row1);
           d2.setCellVisibility(new CellVisibility(CONFIDENTIAL));
-          d2.addColumns(fam, qual1, 125l);
+          d2.addColumns(fam, qual1, 125L);
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
@@ -1715,7 +1711,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
       ResultScanner scanner = table.getScanner(s);
       Result[] next = scanner.next(3);
-      assertEquals(next.length, 1);
+      assertEquals(1, next.length);
     }
   }
   @Test
@@ -1729,11 +1725,11 @@ public class TestVisibilityLabelsWithDeletes {
     hBaseAdmin.createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual1, 125l, value);
+      put.addColumn(fam, qual1, 125L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
       table.put(put);
       put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual1, 126l, value);
+      put.addColumn(fam, qual1, 126L, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       TEST_UTIL.getAdmin().flush(tableName);
@@ -1742,11 +1738,11 @@ public class TestVisibilityLabelsWithDeletes {
         public Void run() throws Exception {
           Delete d1 = new Delete(row1);
           d1.setCellVisibility(new CellVisibility(SECRET));
-          d1.addColumns(fam, qual, 126l);
+          d1.addColumns(fam, qual, 126L);
 
           Delete d2 = new Delete(row1);
           d2.setCellVisibility(new CellVisibility(CONFIDENTIAL));
-          d2.addColumns(fam, qual1, 126l);
+          d2.addColumns(fam, qual1, 126L);
 
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
@@ -1763,7 +1759,7 @@ public class TestVisibilityLabelsWithDeletes {
       s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
       ResultScanner scanner = table.getScanner(s);
       Result[] next = scanner.next(3);
-      assertEquals(next.length, 1);
+      assertEquals(1, next.length);
     }
   }
   @Test
@@ -1838,27 +1834,27 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1881,7 +1877,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|("
                 + SECRET + "&" + TOPSECRET + ")"));
-            d.addFamily(fam, 126l);
+            d.addFamily(fam, 126L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1903,17 +1899,17 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1936,7 +1932,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|(" +
                 SECRET + "&" + TOPSECRET+")"));
-            d.addFamily(fam, 126l);
+            d.addFamily(fam, 126L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1948,7 +1944,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       TEST_UTIL.getAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row3"));
-      put.addColumn(fam, qual, 127l, value);
+      put.addColumn(fam, qual, 127L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL + "&" + PRIVATE));
       table.put(put);
       TEST_UTIL.getAdmin().flush(tableName);
@@ -1966,7 +1962,7 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -1989,7 +1985,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addFamily(fam, 125l);
+            d.addFamily(fam, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2010,22 +2006,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2041,7 +2037,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addFamily(fam, 127l);
+            d.addFamily(fam, 127L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2061,18 +2057,18 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row2, 0, row2.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
     }
   }
 
@@ -2100,11 +2096,11 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
-            d.addFamilyVersion(fam, 123l);
+            d.addFamilyVersion(fam, 123L);
             table.delete(d);
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.addFamilyVersion(fam, 125l);
+            d.addFamilyVersion(fam, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2126,17 +2122,17 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
     }
   }
 
@@ -2153,11 +2149,11 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
                 + TOPSECRET + "&" + SECRET + ")"));
-            d.addColumn(fam, qual, 126l);
+            d.addColumn(fam, qual, 126L);
             table.delete(d);
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.addFamilyVersion(fam, 125l);
+            d.addFamilyVersion(fam, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2179,17 +2175,17 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -2218,12 +2214,12 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
     }
   }
 
@@ -2258,7 +2254,7 @@ public class TestVisibilityLabelsWithDeletes {
 
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.addFamilyVersion(fam, 125l);
+            d.addFamilyVersion(fam, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2280,17 +2276,17 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -2319,12 +2315,12 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
     }
   }
 
@@ -2340,7 +2336,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.addColumn(fam, qual, 125l);
+            d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2361,22 +2357,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2392,7 +2388,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addColumn(fam, qual, 127l);
+            d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2412,23 +2408,23 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row2, 0, row2.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
     }
   }
 
@@ -2446,7 +2442,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")" +
                 "|(" + TOPSECRET + "&" + SECRET + ")"));
-            d.addColumn(fam, qual, 127l);
+            d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2467,22 +2463,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2497,7 +2493,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.addColumn(fam, qual, 127l);
+            d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2517,28 +2513,28 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row2, 0, row2.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
     }
   }
   @Test
@@ -2556,7 +2552,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addColumn(fam, qual, 125l);
+            d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2577,27 +2573,27 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2613,7 +2609,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addColumn(fam, qual, 127l);
+            d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2633,28 +2629,28 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row2, 0, row2.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
     }
   }
   @Test
@@ -2671,7 +2667,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.addColumn(fam, qual, 125l);
+            d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2692,22 +2688,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2723,7 +2719,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addFamily(fam, 124l);
+            d.addFamily(fam, 124L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2743,18 +2739,18 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row2, 0, row2.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
     }
   }
 
@@ -2789,7 +2785,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + PRIVATE + "&" + CONFIDENTIAL + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addColumns(fam, qual, 125l);
+            d.addColumns(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2810,22 +2806,22 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 127l);
+      assertEquals(127L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2841,7 +2837,7 @@ public class TestVisibilityLabelsWithDeletes {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
                 + TOPSECRET + "&" + SECRET+")"));
-            d.addColumn(fam, qual, 127l);
+            d.addColumn(fam, qual, 127L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2861,17 +2857,17 @@ public class TestVisibilityLabelsWithDeletes {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 126l);
+      assertEquals(126L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 125l);
+      assertEquals(125L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
       cellScanner = next[1].cellScanner();
       cellScanner.advance();
       current = cellScanner.current();
@@ -2892,7 +2888,7 @@ public class TestVisibilityLabelsWithDeletes {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
-            d.addColumn(fam, qual, 125l);
+            d.addColumn(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2916,7 +2912,7 @@ public class TestVisibilityLabelsWithDeletes {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
-            d.addColumns(fam, qual, 125l);
+            d.addColumns(fam, qual, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2941,7 +2937,7 @@ public class TestVisibilityLabelsWithDeletes {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
-            d.addFamily(fam, 125l);
+            d.addFamily(fam, 125L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -3016,7 +3012,7 @@ public class TestVisibilityLabelsWithDeletes {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
-            d.addFamilyVersion(fam, 126l);
+            d.addFamilyVersion(fam, 126L);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -3043,27 +3039,27 @@ public class TestVisibilityLabelsWithDeletes {
     Cell current = cellScanner.current();
     assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
         row1, 0, row1.length));
-    assertEquals(current.getTimestamp(), 127l);
+    assertEquals(127L, current.getTimestamp());
     cellScanner.advance();
     current = cellScanner.current();
     assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
         row1, 0, row1.length));
-    assertEquals(current.getTimestamp(), 126l);
+    assertEquals(126L, current.getTimestamp());
     cellScanner.advance();
     current = cellScanner.current();
     assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
         row1, 0, row1.length));
-    assertEquals(current.getTimestamp(), 125l);
+    assertEquals(125L, current.getTimestamp());
     cellScanner.advance();
     current = cellScanner.current();
     assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
         row1, 0, row1.length));
-    assertEquals(current.getTimestamp(), 124l);
+    assertEquals(124L, current.getTimestamp());
     cellScanner.advance();
     current = cellScanner.current();
     assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
         row1, 0, row1.length));
-    assertEquals(current.getTimestamp(), 123l);
+    assertEquals(123L, current.getTimestamp());
     cellScanner = next[1].cellScanner();
     cellScanner.advance();
     current = cellScanner.current();
@@ -3083,11 +3079,11 @@ public class TestVisibilityLabelsWithDeletes {
     hBaseAdmin.createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual, 123l, value);
+      put.addColumn(fam, qual, 123L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
       table.put(put);
       put = new Put(Bytes.toBytes("row1"));
-      put.addColumn(fam, qual, 124l, value);
+      put.addColumn(fam, qual, 124L, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL + "|" + PRIVATE));
       table.put(put);
       TEST_UTIL.getAdmin().flush(tableName);
@@ -3097,7 +3093,7 @@ public class TestVisibilityLabelsWithDeletes {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
-            d.addColumn(fam, qual, 124l);
+            d.addColumn(fam, qual, 124L);
             d.setCellVisibility(new CellVisibility(PRIVATE ));
             table.delete(d);
           } catch (Throwable t) {
@@ -3120,12 +3116,12 @@ public class TestVisibilityLabelsWithDeletes {
       Cell current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 124l);
+      assertEquals(124L, current.getTimestamp());
       cellScanner.advance();
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row1, 0, row1.length));
-      assertEquals(current.getTimestamp(), 123l);
+      assertEquals(123L, current.getTimestamp());
     }
   }
 

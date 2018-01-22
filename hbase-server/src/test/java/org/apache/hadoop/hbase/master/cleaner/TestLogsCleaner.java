@@ -392,6 +392,7 @@ public class TestLogsCleaner {
           .when(zk).getData("/hbase/replication/rs", null, new Stat());
     }
 
+    @Override
     public RecoverableZooKeeper getRecoverableZooKeeper() {
       return zk;
     }

@@ -222,6 +222,7 @@ public class Reference {
     return Arrays.hashCode(splitkey) + region.hashCode();
   }
 
+  @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null) return false;

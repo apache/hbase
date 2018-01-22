@@ -82,7 +82,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
 
   @Override
   protected long indexEntrySize() {
-    return (ClassSize.CELL_CHUNK_MAP_ENTRY - KeyValue.FIXED_OVERHEAD);
+    return ((long) ClassSize.CELL_CHUNK_MAP_ENTRY - KeyValue.FIXED_OVERHEAD);
   }
 
   @Override

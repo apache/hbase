@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.CellSink;
-import org.apache.hadoop.hbase.regionserver.CustomizedScanInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -261,10 +260,8 @@ public abstract class Compactor<T extends CellSink> {
       throws IOException {
     // When all MVCC readpoints are 0, don't write them.
     // See HBASE-8166, HBASE-12600, and HBASE-13389.
-    return store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
-    /* isCompaction = */true,
-    /* includeMVCCReadpoint = */fd.maxMVCCReadpoint > 0,
-    /* includesTags = */fd.maxTagsLength > 0, shouldDropBehind);
+    return store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
+    fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0, shouldDropBehind);
   }
 
   private ScanInfo preCompactScannerOpen(CompactionRequestImpl request, ScanType scanType,

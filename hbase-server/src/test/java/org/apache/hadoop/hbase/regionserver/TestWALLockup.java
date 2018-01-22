@@ -258,6 +258,7 @@ public class TestWALLockup {
       // in HBASE-14317. Flush hangs trying to get sequenceid because the ringbuffer is held up
       // by the zigzaglatch waiting on syncs to come home.
       Thread t = new Thread ("Flusher") {
+        @Override
         public void run() {
           try {
             if (region.getMemStoreSize() <= 0) {
@@ -444,6 +445,7 @@ public class TestWALLockup {
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 
       Thread t = new Thread("Sync") {
+        @Override
         public void run() {
           try {
             dodgyWAL2.sync();

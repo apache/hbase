@@ -76,7 +76,7 @@ public class TestSplitLogWorker {
   private SplitLogWorker slw;
   private ExecutorService executorService;
 
-  class DummyServer implements Server {
+  static class DummyServer implements Server {
     private ZKWatcher zkw;
     private Configuration conf;
     private CoordinatedStateManager cm;
