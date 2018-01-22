@@ -457,3 +457,7 @@ enum InitMetaState {
 
 message InitMetaStateData {
 }
+
+message TransitPeerSyncReplicationStateStateData {
+  required SyncReplicationState syncReplicationState = 1;
+}
