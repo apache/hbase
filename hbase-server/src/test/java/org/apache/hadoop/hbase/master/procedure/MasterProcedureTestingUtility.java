@@ -427,6 +427,12 @@ public class MasterProcedureTestingUtility {
   public static void testRollbackAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
       final int lastStep) throws Exception {
+    testRollbackAndDoubleExecution(procExec, procId, lastStep, false);
+  }
+
+  public static void testRollbackAndDoubleExecution(
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
+      final int lastStep, boolean waitForAsyncProcs) throws Exception {
     // Execute up to last step
     testRecoveryAndDoubleExecution(procExec, procId, lastStep, false);
 
@@ -446,6 +452,19 @@ public class MasterProcedureTestingUtility {
       }
     } finally {
       assertTrue(procExec.unregisterListener(abortListener));
+    }
+
+    if (waitForAsyncProcs) {
+      // Sometimes there are other procedures still executing (including asynchronously spawned by
+      // procId) and due to KillAndToggleBeforeStoreUpdate flag ProcedureExecutor is stopped before
+      // store update. Let all pending procedures finish normally.
+      if (!procExec.isRunning()) {
+        LOG.warn("ProcedureExecutor not running, may have been stopped by pending procedure due to"
+            + " KillAndToggleBeforeStoreUpdate flag.");
+        ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+        restartMasterProcedureExecutor(procExec);
+        ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+      }
     }
 
     assertEquals(true, procExec.isRunning());

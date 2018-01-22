@@ -266,11 +266,12 @@ public class TestMergeTableRegionsProcedure {
     long procId = procExec.submitProcedure(
       new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
 
-    // Failing before MERGE_TABLE_REGIONS_UPDATE_META we should trigger the rollback
-    // NOTE: the 5 (number before MERGE_TABLE_REGIONS_UPDATE_META step) is
+    // Failing before MERGE_TABLE_REGIONS_CREATE_MERGED_REGION we should trigger the rollback
+    // NOTE: the 5 (number before MERGE_TABLE_REGIONS_CREATE_MERGED_REGION step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
     int numberOfSteps = 5;
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
+        true);
   }
 
   @Test

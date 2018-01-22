@@ -263,6 +263,12 @@ public class SplitTableRegionProcedure
     return Flow.HAS_MORE_STATE;
   }
 
+  /**
+   * To rollback {@link SplitTableRegionProcedure}, an AssignProcedure is asynchronously
+   * submitted for parent region to be split (rollback doesn't wait on the completion of the
+   * AssignProcedure) . This can be improved by changing rollback() to support sub-procedures.
+   * See HBASE-19851 for details.
+   */
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final SplitTableRegionState state)
       throws IOException, InterruptedException {
