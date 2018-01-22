@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -90,6 +89,7 @@ public class TestZooKeeper {
   @After
   public void after() throws Exception {
     try {
+      TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster(10000);
       // Some regionserver could fail to delete its znode.
       // So shutdown could hang. Let's kill them all instead.
       TEST_UTIL.getHBaseCluster().killAll();
@@ -102,14 +102,14 @@ public class TestZooKeeper {
     }
   }
 
-  @Test (timeout = 120000)
+  @Test
   public void testRegionServerSessionExpired() throws Exception {
     LOG.info("Starting " + name.getMethodName());
     TEST_UTIL.expireRegionServerSession(0);
     testSanity(name.getMethodName());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting " + name.getMethodName());
     TEST_UTIL.expireMasterSession();
@@ -121,7 +121,7 @@ public class TestZooKeeper {
    *  test differs from {@link #testMasterSessionExpired} because here
    *  the master znode will exist in ZK.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testMasterZKSessionRecoveryFailure() throws Exception {
     LOG.info("Starting " + name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -160,7 +160,7 @@ public class TestZooKeeper {
    * session. Without the HBASE-6046 fix master always tries to assign all the user regions by
    * calling retainAssignment.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
@@ -226,51 +226,42 @@ public class TestZooKeeper {
    * Tests whether the logs are split when master recovers from a expired zookeeper session and an
    * RS goes down.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
-    HMaster m = cluster.getMaster();
-    // now the cluster is up. So assign some regions.
-    Admin admin = TEST_UTIL.getAdmin();
-    Table table = null;
-    try {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    byte[] family = Bytes.toBytes("col");
+    try (Admin admin = TEST_UTIL.getAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
-          Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
-      TableDescriptor htd =
-          TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-              .addColumnFamily(ColumnFamilyDescriptorBuilder.of("col")).build();
+        Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+          .addColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
       admin.createTable(htd, SPLIT_KEYS);
-      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-      table = TEST_UTIL.getConnection().getTable(htd.getTableName());
-      Put p;
+    }
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+    HMaster m = cluster.getMaster();
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       int numberOfPuts;
       for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {
-        p = new Put(Bytes.toBytes(numberOfPuts));
+        Put p = new Put(Bytes.toBytes(numberOfPuts));
         p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"),
-                Bytes.toBytes("value" + numberOfPuts));
+          Bytes.toBytes("value" + numberOfPuts));
         table.put(p);
       }
-      m.getZooKeeper().close();
       m.abort("Test recovery from zk session expired",
         new KeeperException.SessionExpiredException());
       assertTrue(m.isStopped()); // Master doesn't recover any more
-      cluster.getRegionServer(0).abort("Aborting");
+      cluster.killRegionServer(TEST_UTIL.getRSForFirstRegionInTable(tableName).getServerName());
       // Without patch for HBASE-6046 this test case will always timeout
       // with patch the test case should pass.
-      Scan scan = new Scan();
       int numberOfRows = 0;
-      ResultScanner scanner = table.getScanner(scan);
-      Result[] result = scanner.next(1);
-      while (result != null && result.length > 0) {
-        numberOfRows++;
-        result = scanner.next(1);
+      try (ResultScanner scanner = table.getScanner(new Scan())) {
+        while (scanner.next() != null) {
+          numberOfRows++;
+        }
       }
-      assertEquals("Number of rows should be equal to number of puts.", numberOfPuts,
-        numberOfRows);
-    } finally {
-      if (table != null) table.close();
-      admin.close();
+      assertEquals("Number of rows should be equal to number of puts.", numberOfPuts, numberOfRows);
     }
   }
 
