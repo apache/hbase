@@ -19,10 +19,13 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -81,6 +84,26 @@ public class TestThriftHttpServer {
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     EnvironmentEdgeManager.reset();
+  }
+
+  @Test
+  public void testExceptionThrownWhenMisConfigured() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set("hbase.thrift.security.qop", "privacy");
+    conf.setBoolean("hbase.thrift.ssl.enabled", false);
+
+    ThriftServerRunner runner = null;
+    ExpectedException thrown = ExpectedException.none();
+    try {
+      thrown.expect(IllegalArgumentException.class);
+      thrown.expectMessage("Thrift HTTP Server's QoP is privacy, " +
+          "but hbase.thrift.ssl.enabled is false");
+      runner = new ThriftServerRunner(conf);
+      fail("Thrift HTTP Server starts up even with wrong security configurations.");
+    } catch (Exception e) {
+    }
+
+    assertNull(runner);
   }
 
   private void startHttpServerThread(final String[] args) {
