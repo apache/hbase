@@ -30,6 +30,8 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -93,14 +95,14 @@ public class TestMetaWithReplicas {
     // disable the balancer
     LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
         new Abortable() {
-      boolean aborted = false;
+      AtomicBoolean aborted = new AtomicBoolean(false);
       @Override
       public boolean isAborted() {
-        return aborted;
+        return aborted.get();
       }
       @Override
       public void abort(String why, Throwable e) {
-        aborted = true;
+        aborted.set(true);
       }
     });
     l.setBalancerOn(false);
@@ -174,6 +176,7 @@ public class TestMetaWithReplicas {
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName primary = ProtobufUtil.toServerName(data);
+    LOG.info("Primary=" + primary.toString());
 
     TableName TABLE = TableName.valueOf("testShutdownHandling");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
@@ -208,14 +211,17 @@ public class TestMetaWithReplicas {
         master = util.getHBaseClusterInterface().getClusterMetrics().getMasterName();
         // kill the master so that regionserver recovery is not triggered at all
         // for the meta server
+        LOG.info("Stopping master=" + master.toString());
         util.getHBaseClusterInterface().stopMaster(master);
         util.getHBaseClusterInterface().waitForMasterToStop(master, 60000);
+        LOG.info("Master stopped!");
         if (!master.equals(primary)) {
           util.getHBaseClusterInterface().killRegionServer(primary);
           util.getHBaseClusterInterface().waitForRegionServerToStop(primary, 60000);
         }
         ((ClusterConnection)c).clearRegionCache();
       }
+      LOG.info("Running GETs");
       Get get = null;
       Result r = null;
       byte[] row = "test".getBytes();
@@ -231,13 +237,16 @@ public class TestMetaWithReplicas {
         assertTrue(Arrays.equals(r.getRow(), row));
         // now start back the killed servers and disable use of replicas. That would mean
         // calls go to the primary
+        LOG.info("Starting Master");
         util.getHBaseClusterInterface().startMaster(master.getHostname(), 0);
         util.getHBaseClusterInterface().startRegionServer(primary.getHostname(), 0);
         util.getHBaseClusterInterface().waitForActiveAndReadyMaster();
+        LOG.info("Master active!");
         ((ClusterConnection)c).clearRegionCache();
       }
       conf.setBoolean(HConstants.USE_META_REPLICAS, false);
-      try (Table htable = c.getTable(TABLE)) {
+      LOG.info("Running GETs no replicas");
+      try (Table htable = c.getTable(TABLE);) {
         r = htable.get(get);
         assertTrue(Arrays.equals(r.getRow(), row));
       }
