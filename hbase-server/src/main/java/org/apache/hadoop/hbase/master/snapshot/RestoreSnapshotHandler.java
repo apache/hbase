@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -154,6 +155,9 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       if (metaChanges.hasRegionsToRemove()) hrisToRemove.addAll(metaChanges.getRegionsToRemove());
       MetaTableAccessor.deleteRegions(conn, hrisToRemove);
 
+      // We also need to remove the current set of regions from in memory states
+      deleteRegionsFromInMemoryStates(hrisToRemove, hTableDescriptor.getRegionReplication());
+
       // 4.2 Add the new set of regions to META
       //
       // At this point the old regions are no longer present in META.
@@ -174,7 +178,6 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
           && SnapshotDescriptionUtils.isSecurityAvailable(server.getConfiguration())) {
         RestoreSnapshotHelper.restoreSnapshotACL(snapshot, tableName, server.getConfiguration());
       }
-
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
@@ -201,6 +204,36 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     if (hris != null) {
       for (HRegionInfo hri: hris) {
         states.regionOffline(hri);
+      }
+    }
+  }
+
+  /**
+   * Delete regions from in-memory states
+   * @param regionInfos regions to delete
+   * @param regionReplication the number of region replications
+   */
+  private void deleteRegionsFromInMemoryStates(List<HRegionInfo> regionInfos,
+    int regionReplication) {
+    // Delete the regions from AssignmentManager
+    for (HRegionInfo hri : regionInfos) {
+      masterServices.getAssignmentManager().getRegionStates().deleteRegion(hri);
+    }
+    // Delete the regions from ServerManager
+    masterServices.getServerManager().removeRegions(regionInfos);
+
+    // For region replicas
+    if (regionReplication > 1) {
+      for (HRegionInfo regionInfo : regionInfos) {
+        for (int i = 1; i < regionReplication; i++) {
+          HRegionInfo regionInfoForReplica =
+            RegionReplicaUtil.getRegionInfoForReplica(regionInfo, i);
+          // Delete the regions from AssignmentManager
+          masterServices.getAssignmentManager().getRegionStates()
+            .deleteRegion(regionInfoForReplica);
+          // Delete the regions from ServerManager
+          masterServices.getServerManager().removeRegion(regionInfoForReplica);
+        }
       }
     }
   }

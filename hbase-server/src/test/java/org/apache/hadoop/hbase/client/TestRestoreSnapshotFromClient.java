@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
@@ -384,8 +384,7 @@ public class TestRestoreSnapshotFromClient {
   }
 
   public static class DelayCompactionObserver extends BaseRegionObserver {
-    @Override
-    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+    @Override public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
         final Store store, final InternalScanner scanner, final ScanType scanType)
         throws IOException {
 
@@ -398,6 +397,28 @@ public class TestRestoreSnapshotFromClient {
 
       return scanner;
     }
+  }
+
+  @Test
+  public void testOfflineRegionsShouldBeZeroAfterRestoreSnapshot() throws IOException,
+      InterruptedException {
+    // Load more data to split regions
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 2000, FAMILY);
+
+    // Split regions
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    RegionReplicaUtil.removeNonDefaultRegions(regions);
+    splitRegion(regions.get(0));
+
+    // Restore the snapshot
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName0);
+    admin.enableTable(tableName);
+
+    int offlineRegions = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+      .getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.OFFLINE).size();
+
+    assertEquals(0, offlineRegions);
   }
 
   // ==========================================================================
