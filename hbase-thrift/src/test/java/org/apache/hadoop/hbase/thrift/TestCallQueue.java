@@ -58,8 +58,7 @@ public class TestCallQueue {
     Collection<Object[]> parameters = new ArrayList<>();
     for (int elementsAdded : new int[] {100, 200, 300}) {
       for (int elementsRemoved : new int[] {0, 20, 100}) {
-        parameters.add(new Object[]{new Integer(elementsAdded),
-                                    new Integer(elementsRemoved)});
+        parameters.add(new Object[]{ elementsAdded, elementsRemoved });
       }
     }
     return parameters;

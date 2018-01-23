@@ -161,6 +161,7 @@ public class TBoundedThreadPoolServer extends TServer {
     serverOptions = options;
   }
 
+  @Override
   public void serve() {
     try {
       serverTransport_.listen();
@@ -274,6 +275,7 @@ public class TBoundedThreadPoolServer extends TServer {
     /**
      * Loops on processing a client forever
      */
+    @Override
     public void run() {
       TProcessor processor = null;
       TTransport inputTransport = null;

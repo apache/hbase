@@ -1990,7 +1990,7 @@ public class ThriftServerRunner implements Runnable {
     }
 
     @Override
-    public Throwable getCause() {
+    public synchronized Throwable getCause() {
       return cause;
     }
 
