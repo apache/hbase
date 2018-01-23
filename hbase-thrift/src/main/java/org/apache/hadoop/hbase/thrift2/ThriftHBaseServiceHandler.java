@@ -143,7 +143,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
 
     @Override
-    public Throwable getCause() {
+    public synchronized Throwable getCause() {
       return cause;
     }
 
