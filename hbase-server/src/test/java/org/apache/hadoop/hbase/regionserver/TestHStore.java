@@ -146,7 +146,7 @@ public class TestHStore {
   long id = System.currentTimeMillis();
   Get get = new Get(row);
 
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
 
 
@@ -234,7 +234,7 @@ public class TestHStore {
   public void testFlushSizeSizing() throws Exception {
     LOG.info("Setting up a faulty file system that cannot write in " +
       this.name.getMethodName());
-    final Configuration conf = HBaseConfiguration.create();
+    final Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     // Only retry once.
     conf.setInt("hbase.hstore.flush.retries.number", 1);
     User user = User.createUserForTesting(conf, this.name.getMethodName(),
@@ -661,7 +661,7 @@ public class TestHStore {
   public void testHandleErrorsInFlush() throws Exception {
     LOG.info("Setting up a faulty file system that cannot write");
 
-    final Configuration conf = HBaseConfiguration.create();
+    final Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     User user = User.createUserForTesting(conf,
         "testhandleerrorsinflush", new String[]{"foo"});
     // Inject our faulty LocalFileSystem

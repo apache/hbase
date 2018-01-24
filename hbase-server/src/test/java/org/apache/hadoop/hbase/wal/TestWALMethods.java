@@ -56,7 +56,7 @@ public class TestWALMethods {
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
 
-  private final HBaseTestingUtility util = new HBaseTestingUtility();
+  private final HBaseTestingUtility util = HBaseTestingUtility.createLocalHTU();
 
   @Test
   public void testServerNameFromWAL() throws Exception {

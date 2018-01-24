@@ -70,7 +70,7 @@ public class TestStoreFileRefresherChore {
 
   @Before
   public void setUp() throws IOException {
-    TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
   }

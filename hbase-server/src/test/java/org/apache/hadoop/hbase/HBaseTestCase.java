@@ -113,6 +113,7 @@ public abstract class HBaseTestCase extends TestCase {
         if (fs.exists(testDir)) {
           fs.delete(testDir, true);
         }
+        conf.setBoolean("hbase.unsafe.stream.capability.enforce",false);
       } else {
         testDir = FSUtils.getRootDir(conf);
       }

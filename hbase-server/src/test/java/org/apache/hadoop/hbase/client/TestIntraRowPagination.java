@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 @Category({SmallTests.class, ClientTests.class})
 public class TestIntraRowPagination {
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   /**
    * Test from client side for scan with maxResultPerCF set

@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory;
 public class TestFilter {
   private final static Logger LOG = LoggerFactory.getLogger(TestFilter.class);
   private HRegion region;
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   @Rule
   public TestName name = new TestName();

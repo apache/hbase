@@ -394,7 +394,13 @@ public abstract class CommonFSUtils {
 
   public static FileSystem getWALFileSystem(final Configuration c) throws IOException {
     Path p = getWALRootDir(c);
-    return p.getFileSystem(c);
+    FileSystem fs = p.getFileSystem(c);
+    // Need to copy this to the new filesystem we are returning in case it is localFS
+    String enforceStreamCapabilities = c.get(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
+    if (enforceStreamCapabilities != null) {
+      fs.getConf().set(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, enforceStreamCapabilities);
+    }
+    return fs;
   }
 
   private static boolean isValidWALRootDir(Path walDir, final Configuration c) throws IOException {
