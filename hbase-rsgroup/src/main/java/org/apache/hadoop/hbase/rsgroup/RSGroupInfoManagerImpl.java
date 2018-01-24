@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
@@ -313,17 +313,8 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       orphanTables.add(TableName.valueOf(entry));
     }
 
-    List<TableName> specialTables;
-    if(!master.isInitialized()) {
-      specialTables = new ArrayList<TableName>();
-      specialTables.add(AccessControlLists.ACL_TABLE_NAME);
-      specialTables.add(TableName.META_TABLE_NAME);
-      specialTables.add(TableName.NAMESPACE_TABLE_NAME);
-      specialTables.add(RSGROUP_TABLE_NAME);
-    } else {
-      specialTables =
-          master.listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
-    }
+    final List<TableName> specialTables = Arrays.asList(AccessControlLists.ACL_TABLE_NAME,
+        TableName.META_TABLE_NAME, TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME);
 
     for(TableName table : specialTables) {
       orphanTables.add(table);
