@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -172,6 +173,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil{
           TEST_TABLE.toString()).size());
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
+      fail("error during call of AccessControlClient.getUserPermissions.");
     }
   }
 
