@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Group user API interface used between client and server.
@@ -84,7 +84,7 @@ public interface RSGroupAdmin {
    * @param servers set of servers to move
    * @param tables set of tables to move
    * @param targetGroup the target group name
-   * @throws IOException
+   * @throws IOException if moving the server and tables fail
    */
   void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
                             String targetGroup) throws IOException;

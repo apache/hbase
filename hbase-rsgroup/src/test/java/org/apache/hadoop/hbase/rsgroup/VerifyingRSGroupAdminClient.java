@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -32,15 +34,14 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Assert;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
 public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
@@ -51,7 +52,8 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   public VerifyingRSGroupAdminClient(RSGroupAdmin RSGroupAdmin, Configuration conf)
       throws IOException {
     wrapped = RSGroupAdmin;
-    table = ConnectionFactory.createConnection(conf).getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
+    table = ConnectionFactory.createConnection(conf)
+        .getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
     zkw = new ZKWatcher(conf, this.getClass().getSimpleName(), null);
   }
 
@@ -105,7 +107,8 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   }
 
   @Override
-  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup) throws IOException {
+  public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
+      throws IOException {
     wrapped.moveServersAndTables(servers, tables, targetGroup);
     verify();
   }

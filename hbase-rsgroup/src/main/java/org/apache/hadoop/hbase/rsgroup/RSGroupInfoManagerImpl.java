@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.protobuf.ServiceException;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -86,8 +88,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
-import com.google.protobuf.ServiceException;
-
 /**
  * This is an implementation of {@link RSGroupInfoManager} which makes
  * use of an HBase table as the persistence store for the group information.
@@ -113,7 +113,7 @@ import com.google.protobuf.ServiceException;
  * no other has access concurrently. Reads must be able to continue concurrently.
  */
 @InterfaceAudience.Private
-class RSGroupInfoManagerImpl implements RSGroupInfoManager {
+final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private static final Logger LOG = LoggerFactory.getLogger(RSGroupInfoManagerImpl.class);
 
   /** Table descriptor for <code>hbase:rsgroup</code> catalog table */

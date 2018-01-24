@@ -35,4 +35,5 @@
   <suppress checks="." files=".*/generated-jamon/.*\.java"/>
   <suppress checks="MagicNumberCheck" files=".*/src/test/.*\.java"/>
   <suppress checks="VisibilityModifier" files=".*/src/test/.*\.java"/>
+  <suppress checks="InterfaceIsTypeCheck" files=".*/src/main/.*\.java"/>
 </suppressions>

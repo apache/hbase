@@ -345,8 +345,10 @@ public abstract class TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null)
+        if (regions == null) {
           return false;
+        }
+
         return getTableRegionMap().get(tableName).size() >= 5;
       }
     });
@@ -478,8 +480,9 @@ public abstract class TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null)
+        if (regions == null) {
           return false;
+        }
         return getTableRegionMap().get(tableName).size() >= 6;
       }
     });
@@ -518,8 +521,8 @@ public abstract class TestRSGroupsBase {
     });
 
     // Lets move this region to the new group.
-    TEST_UTIL.getAdmin().move(Bytes.toBytes(RegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
-        Bytes.toBytes(targetServer.getServerName()));
+    TEST_UTIL.getAdmin().move(Bytes.toBytes(RegionInfo.encodeRegionName(
+        Bytes.toBytes(targetRegion))), Bytes.toBytes(targetServer.getServerName()));
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -678,11 +681,14 @@ public abstract class TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         List<String> regionsA = getTableRegionMap().get(tableNameA);
-        if (regionsA == null)
+        if (regionsA == null) {
           return false;
+        }
+
         List<String> regionsB = getTableRegionMap().get(tableNameB);
-        if (regionsB == null)
+        if (regionsB == null) {
           return false;
+        }
 
         return getTableRegionMap().get(tableNameA).size() >= 1
                 && getTableRegionMap().get(tableNameB).size() >= 1;
@@ -706,7 +712,8 @@ public abstract class TestRSGroupsBase {
             rsGroupAdmin.getRSGroupInfoOfTable(tableNameB).getName());
 
     //verify tables' not exist in old group
-    Set<TableName> DefaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    Set<TableName> DefaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
+        .getTables();
     assertFalse(DefaultTables.contains(tableNameA));
     assertFalse(DefaultTables.contains(tableNameB));
 
@@ -760,8 +767,9 @@ public abstract class TestRSGroupsBase {
       @Override
       public boolean evaluate() throws Exception {
         List<String> regions = getTableRegionMap().get(tableName);
-        if (regions == null)
+        if (regions == null) {
           return false;
+        }
         return getTableRegionMap().get(tableName).size() >= 5;
       }
     });
@@ -850,7 +858,8 @@ public abstract class TestRSGroupsBase {
             rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
 
     //verify servers' not exist in old group
-    Set<Address> defaultServers = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
+    Set<Address> defaultServers = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
+        .getServers();
     assertFalse(defaultServers.contains(targetServer.getAddress()));
 
     //verify servers' exist in new group
@@ -858,7 +867,8 @@ public abstract class TestRSGroupsBase {
     assertTrue(newGroupServers.contains(targetServer.getAddress()));
 
     //verify tables' not exist in old group
-    Set<TableName> defaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    Set<TableName> defaultTables = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
+        .getTables();
     assertFalse(defaultTables.contains(tableName));
 
     //verify tables' exist in new group

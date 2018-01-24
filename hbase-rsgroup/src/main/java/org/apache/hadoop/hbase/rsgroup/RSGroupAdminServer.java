@@ -43,11 +43,12 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Service to support Region Server Grouping (HBase-6721).
@@ -116,7 +117,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     LinkedList<RegionInfo> regions = new LinkedList<>();
     for (Map.Entry<RegionInfo, ServerName> el :
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
-      if (el.getValue() == null) continue;
+      if (el.getValue() == null) {
+        continue;
+      }
+
       if (el.getValue().getAddress().equals(server)) {
         addRegion(regions, el.getKey());
       }
@@ -133,17 +137,20 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     // If meta, move it last otherwise other unassigns fail because meta is not
     // online for them to update state in. This is dodgy. Needs to be made more
     // robust. See TODO below.
-    if (hri.isMetaRegion()) regions.addLast(hri);
-    else regions.addFirst(hri);
+    if (hri.isMetaRegion()) {
+      regions.addLast(hri);
+    } else {
+      regions.addFirst(hri);
+    }
   }
 
   /**
    * Check servers and tables.
-   * Fail if nulls or if servers and tables not belong to the same group
+   *
    * @param servers servers to move
    * @param tables tables to move
    * @param targetGroupName target group name
-   * @throws IOException
+   * @throws IOException if nulls or if servers and tables not belong to the same group
    */
   private void checkServersAndTables(Set<Address> servers, Set<TableName> tables,
                                      String targetGroupName) throws IOException {
@@ -157,7 +164,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
     RSGroupInfo srcGrp = new RSGroupInfo(tmpSrcGrp);
     if (srcGrp.getName().equals(targetGroupName)) {
-      throw new ConstraintException( "Target RSGroup " + targetGroupName +
+      throw new ConstraintException("Target RSGroup " + targetGroupName +
               " is same as source " + srcGrp.getName() + " RSGroup.");
     }
     // Only move online servers
@@ -181,8 +188,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
     }
 
-    if (srcGrp.getServers().size() <= servers.size()
-            && srcGrp.getTables().size() > tables.size() ) {
+    if (srcGrp.getServers().size() <= servers.size() && srcGrp.getTables().size() > tables.size()) {
       throw new ConstraintException("Cannot leave a RSGroup " + srcGrp.getName() +
               " that contains tables without servers to host them.");
     }
@@ -194,7 +200,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * @param servers the servers that will move to new group
    * @param tables these tables will be kept on the servers, others will be moved
    * @param targetGroupName the target group name
-   * @throws IOException
+   * @throws IOException if moving the server and tables fail
    */
   private void moveRegionsFromServers(Set<Address> servers, Set<TableName> tables,
       String targetGroupName) throws IOException {
@@ -244,18 +250,19 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   /**
    * Moves every region of tables which should be kept on the servers,
    * but currently they are located on other servers.
-   * @param servers the regions of these servers will be kept on the servers,
-   * others will be moved
+   * @param servers the regions of these servers will be kept on the servers, others will be moved
    * @param tables the tables that will move to new group
    * @param targetGroupName the target group name
-   * @throws IOException
+   * @throws IOException if moving the region fails
    */
   private void moveRegionsToServers(Set<Address> servers, Set<TableName> tables,
       String targetGroupName) throws IOException {
     for (TableName table: tables) {
       LOG.info("Moving region(s) from " + table + " for table move to " + targetGroupName);
-      for (RegionInfo region : master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
-        ServerName sn = master.getAssignmentManager().getRegionStates().getRegionServerOfRegion(region);
+      for (RegionInfo region : master.getAssignmentManager().getRegionStates()
+          .getRegionsOfTable(table)) {
+        ServerName sn = master.getAssignmentManager().getRegionStates()
+            .getRegionServerOfRegion(region);
         if (!servers.contains(sn.getAddress())) {
           master.getAssignmentManager().move(region);
         }
@@ -294,7 +301,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
             + " does not exist.");
       }
       if (srcGrp.getName().equals(targetGroupName)) {
-        throw new ConstraintException( "Target RSGroup " + targetGroupName +
+        throw new ConstraintException("Target RSGroup " + targetGroupName +
             " is same as source " + srcGrp + " RSGroup.");
       }
       // Only move online servers (when moving from 'default') or servers from other
@@ -482,7 +489,10 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
     synchronized (balancer) {
       // If balance not true, don't run balancer.
-      if (!((HMaster) master).isBalancerOn()) return false;
+      if (!((HMaster) master).isBalancerOn()) {
+        return false;
+      }
+
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preBalanceRSGroup(groupName);
       }
@@ -547,7 +557,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   @Override
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
       throws IOException {
-    if (servers == null || servers.isEmpty() ) {
+    if (servers == null || servers.isEmpty()) {
       throw new ConstraintException("The list of servers to move cannot be null or empty.");
     }
     if (tables == null || tables.isEmpty()) {
