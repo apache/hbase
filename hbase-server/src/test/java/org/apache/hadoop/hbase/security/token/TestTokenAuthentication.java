@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.coprocessor.HasRegionServerServices;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
@@ -88,6 +91,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,41 +164,37 @@ public class TestTokenAuthentication {
         AuthenticationProtos.AuthenticationService.newReflectiveBlockingService(this);
       final org.apache.hbase.thirdparty.com.google.protobuf.BlockingService proxy =
           new org.apache.hbase.thirdparty.com.google.protobuf.BlockingService() {
-        @Override
-        public Message callBlockingMethod(MethodDescriptor md,
-            org.apache.hbase.thirdparty.com.google.protobuf.RpcController controller,
-            Message param)
+            @Override public Message callBlockingMethod(MethodDescriptor md,
+                org.apache.hbase.thirdparty.com.google.protobuf.RpcController controller,
+                Message param)
                 throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
-          com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor =
-              service.getDescriptorForType().findMethodByName(md.getName());
-          com.google.protobuf.Message request = service.getRequestPrototype(methodDescriptor);
-          // TODO: Convert rpcController
-          com.google.protobuf.Message response = null;
-          try {
-            response = service.callBlockingMethod(methodDescriptor, null, request);
-          } catch (ServiceException e) {
-            throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
-          }
-          return null;// Convert 'response'.
-        }
+              com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor =
+                  service.getDescriptorForType().findMethodByName(md.getName());
+              com.google.protobuf.Message request = service.getRequestPrototype(methodDescriptor);
+              // TODO: Convert rpcController
+              com.google.protobuf.Message response = null;
+              try {
+                response = service.callBlockingMethod(methodDescriptor, null, request);
+              } catch (ServiceException e) {
+                throw new org.apache.hbase.thirdparty.com.google.protobuf.ServiceException(e);
+              }
+              return null;// Convert 'response'.
+            }
 
-        @Override
-        public ServiceDescriptor getDescriptorForType() {
-          return null;
-        }
+            @Override public ServiceDescriptor getDescriptorForType() {
+              return null;
+            }
 
-        @Override
-        public Message getRequestPrototype(MethodDescriptor arg0) {
-          // TODO Auto-generated method stub
-          return null;
-        }
+            @Override public Message getRequestPrototype(MethodDescriptor arg0) {
+              // TODO Auto-generated method stub
+              return null;
+            }
 
-        @Override
-        public Message getResponsePrototype(MethodDescriptor arg0) {
-          // TODO Auto-generated method stub
-          return null;
-        }
-      };
+            @Override public Message getResponsePrototype(MethodDescriptor arg0) {
+              // TODO Auto-generated method stub
+              return null;
+            }
+          };
       sai.add(new BlockingServiceAndInterface(proxy,
         AuthenticationProtos.AuthenticationService.BlockingInterface.class));
       this.rpcServer = RpcServerFactory.createRpcServer(this, "tokenServer", sai,
@@ -268,76 +268,18 @@ public class TestTokenAuthentication {
           this, true);
       this.rpcServer.start();
 
-      // mock RegionServerServices to provide to coprocessor environment
-      final RegionServerServices mockServices = TEST_UTIL.createMockRegionServerService(rpcServer);
+      // Mock up region coprocessor environment
+      RegionCoprocessorEnvironment mockRegionCpEnv = mock(RegionCoprocessorEnvironment.class,
+          Mockito.withSettings().extraInterfaces(HasRegionServerServices.class));
+      when(mockRegionCpEnv.getConfiguration()).thenReturn(conf);
+      when(mockRegionCpEnv.getClassLoader()).then(
+          (var1) -> Thread.currentThread().getContextClassLoader());
+      RegionServerServices mockRss = mock(RegionServerServices.class);
+      when(mockRss.getRpcServer()).thenReturn(rpcServer);
+      when(((HasRegionServerServices) mockRegionCpEnv).getRegionServerServices())
+          .thenReturn(mockRss);
 
-      // mock up coprocessor environment
-      super.start( new RegionCoprocessorEnvironment()  {
-        @Override
-        public HRegion getRegion() { return null; }
-
-        @Override
-        public OnlineRegions getOnlineRegions() {
-          return null;
-        }
-
-        @Override
-        public ConcurrentMap<String, Object> getSharedData() { return null; }
-
-        @Override
-        public MetricRegistry getMetricRegistryForRegionServer() {
-          return null;
-        }
-
-        @Override
-        public int getVersion() { return 0; }
-
-        @Override
-        public String getHBaseVersion() { return null; }
-
-        @Override
-        public RegionCoprocessor getInstance() { return null; }
-
-        @Override
-        public int getPriority() { return 0; }
-
-        @Override
-        public int getLoadSequence() { return 0; }
-
-        @Override
-        public Configuration getConfiguration() { return conf; }
-
-        @Override
-        public ClassLoader getClassLoader() {
-          return Thread.currentThread().getContextClassLoader();
-        }
-
-        @Override
-        public HRegionInfo getRegionInfo() {
-          return null;
-        }
-
-        @Override
-        public ServerName getServerName() {
-          return null;
-        }
-
-        @Override
-        public Connection getConnection() {
-          return null;
-        }
-
-        @Override
-        public Connection createConnection(Configuration conf) throws IOException {
-          return null;
-        }
-
-        @Override
-        public RawCellBuilder getCellBuilder() {
-          return null;
-        }
-      });
-
+      super.start(mockRegionCpEnv);
       started = true;
     }
 
