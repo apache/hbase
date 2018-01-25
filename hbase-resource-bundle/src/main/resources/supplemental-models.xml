@@ -2081,6 +2081,21 @@ Copyright 2005 Sun Microsystems, Inc. and portions Copyright Apache Software Fou
   </supplement>
   <supplement>
     <project>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+      <url>http://asm.objectweb.org/asm/</url>
+
+      <licenses>
+        <license>
+          <url>http://www.mozilla.org/MPL/2.0</url>
+          <name>Mozilla Public License Version 2.0</name>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>org.jamon</groupId>
       <artifactId>jamon-runtime</artifactId>
       <name>Jamon runtime support classes</name>
