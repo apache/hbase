@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 
 import javax.ws.rs.Consumes;
@@ -63,7 +64,7 @@ public class ProtobufMessageBodyConsumer
       throws IOException, WebApplicationException {
     ProtobufMessageHandler obj = null;
     try {
-      obj = type.newInstance();
+      obj = type.getDeclaredConstructor().newInstance();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       byte[] buffer = new byte[4096];
       int read;
@@ -78,9 +79,8 @@ public class ProtobufMessageBodyConsumer
           inputStream);
       }
       obj = obj.getObjectFromMessage(baos.toByteArray());
-    } catch (InstantiationException e) {
-      throw new WebApplicationException(e);
-    } catch (IllegalAccessException e) {
+    } catch (InstantiationException | NoSuchMethodException | InvocationTargetException
+        | IllegalAccessException e) {
       throw new WebApplicationException(e);
     }
     return obj;

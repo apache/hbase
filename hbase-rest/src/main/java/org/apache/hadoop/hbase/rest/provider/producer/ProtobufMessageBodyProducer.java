@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.rest.provider.producer;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
@@ -32,9 +31,9 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An adapter between Jersey and ProtobufMessageHandler implementors. Hooks up
@@ -61,6 +60,7 @@ public class ProtobufMessageBodyProducer
     return -1;
   }
 
+  @Override
   public void writeTo(ProtobufMessageHandler m, Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType, 
       MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 

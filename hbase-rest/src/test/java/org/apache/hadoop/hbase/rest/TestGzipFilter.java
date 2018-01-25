@@ -99,7 +99,7 @@ public class TestGzipFilter {
     headers[0] = new BasicHeader("Content-Type", Constants.MIMETYPE_BINARY);
     headers[1] = new BasicHeader("Content-Encoding", "gzip");
     Response response = client.put(path, headers, value_1_gzip);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
 
     Table table = TEST_UTIL.getConnection().getTable(TABLE);
     Get get = new Get(Bytes.toBytes(ROW_1));
@@ -114,7 +114,7 @@ public class TestGzipFilter {
     headers[0] = new BasicHeader("Accept", Constants.MIMETYPE_BINARY);
     headers[1] = new BasicHeader("Accept-Encoding", "gzip");
     response = client.get(path, headers);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     ByteArrayInputStream bis = new ByteArrayInputStream(response.getBody());
     GZIPInputStream is = new GZIPInputStream(bis);
     value = new byte[VALUE_1.length];
@@ -131,15 +131,14 @@ public class TestGzipFilter {
     headers[0] = new BasicHeader("Content-Type", Constants.MIMETYPE_XML);
     headers[1] = new BasicHeader("Accept", Constants.MIMETYPE_JSON);
     headers[2] = new BasicHeader("Accept-Encoding", "gzip");
-    Response response = client.post("/" + TABLE + "/scanner", headers,
-        "<Scanner/>".getBytes());
-    assertEquals(response.getCode(), 201);
+    Response response = client.post("/" + TABLE + "/scanner", headers, Bytes.toBytes("<Scanner/>"));
+    assertEquals(201, response.getCode());
     String scannerUrl = response.getLocation();
     assertNotNull(scannerUrl);
     response = client.get(scannerUrl);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = client.get(scannerUrl);
-    assertEquals(response.getCode(), 204);
+    assertEquals(204, response.getCode());
   }
 
 }

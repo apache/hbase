@@ -135,7 +135,7 @@ public class TestScannerResource {
     model.setBatch(100);
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
     int count = 0;
@@ -161,7 +161,7 @@ public class TestScannerResource {
     }
     // delete the scanner
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     return count;
   }
 
@@ -217,7 +217,7 @@ public class TestScannerResource {
     conf.set("hbase.rest.readonly", "true");
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_XML, body);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     String scannerURI = response.getLocation();
     assertNull(scannerURI);
 
@@ -225,28 +225,28 @@ public class TestScannerResource {
     conf.set("hbase.rest.readonly", "false");
     response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML,
       body);
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     // confirm batch size conformance
-    assertEquals(countCellSet(cellSet), BATCH_SIZE);
+    assertEquals(BATCH_SIZE, countCellSet(cellSet));
 
     // test delete scanner operation is forbidden in read-only mode
     conf.set("hbase.rest.readonly", "true");
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
 
     // recall previous delete scanner operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -261,7 +261,7 @@ public class TestScannerResource {
     conf.set("hbase.rest.readonly", "true");
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     String scannerURI = response.getLocation();
     assertNull(scannerURI);
 
@@ -269,28 +269,28 @@ public class TestScannerResource {
     conf.set("hbase.rest.readonly", "false");
     response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
     response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
     cellSet.getObjectFromMessage(response.getBody());
     // confirm batch size conformance
-    assertEquals(countCellSet(cellSet), BATCH_SIZE);
+    assertEquals(BATCH_SIZE, countCellSet(cellSet));
 
     // test delete scanner operation is forbidden in read-only mode
     conf.set("hbase.rest.readonly", "true");
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
 
     // recall previous delete scanner operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -304,7 +304,7 @@ public class TestScannerResource {
     conf.set("hbase.rest.readonly", "true");
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     String scannerURI = response.getLocation();
     assertNull(scannerURI);
 
@@ -312,13 +312,13 @@ public class TestScannerResource {
     conf.set("hbase.rest.readonly", "false");
     response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell
     response = client.get(scannerURI, Constants.MIMETYPE_BINARY);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_BINARY, response.getHeader("content-type"));
     // verify that data was returned
     assertTrue(response.getBody().length > 0);
@@ -341,23 +341,23 @@ public class TestScannerResource {
     // test delete scanner operation is forbidden in read-only mode
     conf.set("hbase.rest.readonly", "true");
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
 
     // recall previous delete scanner operation with read-only off
     conf.set("hbase.rest.readonly", "false");
     response = client.delete(scannerURI);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testFullTableScan() throws IOException {
     ScannerModel model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_1));
-    assertEquals(fullTableScan(model), expectedRows1);
+    assertEquals(expectedRows1, fullTableScan(model));
 
     model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_2));
-    assertEquals(fullTableScan(model), expectedRows2);
+    assertEquals(expectedRows2, fullTableScan(model));
   }
 
   @Test
@@ -371,7 +371,7 @@ public class TestScannerResource {
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
   }
 
   // performs table scan during which the underlying table is disabled
@@ -383,7 +383,7 @@ public class TestScannerResource {
     model.setCaching(1);
     Response response = client.put("/" + TABLE_TO_BE_DISABLED + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 201);
+    assertEquals(201, response.getCode());
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
     TEST_UTIL.getAdmin().disableTable(TABLE_TO_BE_DISABLED);

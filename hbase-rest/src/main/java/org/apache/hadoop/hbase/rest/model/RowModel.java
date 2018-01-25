@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -30,12 +32,12 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Representation of a row. A row is a related set of cells, grouped by common
@@ -77,7 +79,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
    * @param key the row key
    */
   public RowModel(final String key) {
-    this(key.getBytes());
+    this(Bytes.toBytes(key));
   }
   
   /**
@@ -95,7 +97,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
    * @param cells the cells
    */
   public RowModel(final String key, final List<CellModel> cells) {
-    this(key.getBytes(), cells);
+    this(Bytes.toBytes(key), cells);
   }
   
   /**

@@ -19,8 +19,12 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
@@ -48,6 +52,7 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
           "\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}";
   }
 
+  @Override
   protected ColumnSchemaModel buildTestModel() {
     ColumnSchemaModel model = new ColumnSchemaModel();
     model.setName(COLUMN_NAME);
@@ -61,6 +66,7 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(ColumnSchemaModel model) {
     assertEquals("name", COLUMN_NAME, model.getName());
     assertEquals("block cache", BLOCKCACHE, model.__getBlockcache());
@@ -72,6 +78,8 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
     assertEquals("versions", VERSIONS, model.__getVersions());
   }
 
+  @Override
+  @Test
   public void testFromPB() throws Exception {
   }
 }

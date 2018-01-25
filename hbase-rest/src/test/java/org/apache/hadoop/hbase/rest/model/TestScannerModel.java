@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,6 +61,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
         + "JDj/////B0joB1IHcHJpdmF0ZVIGcHVibGljWAA=";
   }
 
+  @Override
   protected ScannerModel buildTestModel() {
     ScannerModel model = new ScannerModel();
     model.setStartRow(START_ROW);
@@ -74,6 +78,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(ScannerModel model) {
     assertTrue(Bytes.equals(model.getStartRow(), START_ROW));
     assertTrue(Bytes.equals(model.getEndRow(), END_ROW));
@@ -87,11 +92,11 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     }
     assertTrue(foundCol1);
     assertTrue(foundCol2);
-    assertEquals(model.getStartTime(), START_TIME);
-    assertEquals(model.getEndTime(), END_TIME);
-    assertEquals(model.getBatch(), BATCH);
-    assertEquals(model.getCaching(), CACHING);
-    assertEquals(model.getCacheBlocks(), CACHE_BLOCKS);
+    assertEquals(START_TIME, model.getStartTime());
+    assertEquals(END_TIME, model.getEndTime());
+    assertEquals(BATCH, model.getBatch());
+    assertEquals(CACHING, model.getCaching());
+    assertEquals(CACHE_BLOCKS, model.getCacheBlocks());
     boolean foundLabel1 = false;
     boolean foundLabel2 = false;
     if (model.getLabels() != null && model.getLabels().size() > 0) {

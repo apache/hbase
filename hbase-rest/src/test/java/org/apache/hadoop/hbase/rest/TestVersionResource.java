@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -34,17 +41,9 @@ import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.glassfish.jersey.servlet.ServletContainer;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +78,7 @@ public class TestVersionResource {
   private static void validate(VersionModel model) {
     assertNotNull(model);
     assertNotNull(model.getRESTVersion());
-    assertEquals(model.getRESTVersion(), RESTServlet.VERSION_STRING);
+    assertEquals(RESTServlet.VERSION_STRING, model.getRESTVersion());
     String osVersion = model.getOSVersion(); 
     assertNotNull(osVersion);
     assertTrue(osVersion.contains(System.getProperty("os.name")));

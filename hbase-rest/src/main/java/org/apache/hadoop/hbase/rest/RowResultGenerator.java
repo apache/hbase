@@ -23,17 +23,17 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class RowResultGenerator extends ResultGenerator {
@@ -83,9 +83,11 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
+  @Override
   public void close() {
   }
 
+  @Override
   public boolean hasNext() {
     if (cache != null) {
       return true;
@@ -96,6 +98,7 @@ public class RowResultGenerator extends ResultGenerator {
     return valuesI.hasNext();
   }
 
+  @Override
   public Cell next() {
     if (cache != null) {
       Cell kv = cache;
@@ -112,10 +115,12 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
+  @Override
   public void putBack(Cell kv) {
     this.cache = kv;
   }
 
+  @Override
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }

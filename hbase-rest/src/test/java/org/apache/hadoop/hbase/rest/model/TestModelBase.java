@@ -18,26 +18,30 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+
+import javax.ws.rs.core.MediaType;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
 import org.apache.hadoop.hbase.util.Base64;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import javax.ws.rs.core.MediaType;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-
 @Category({RestTests.class, SmallTests.class})
-public abstract class TestModelBase<T> extends TestCase {
+public abstract class TestModelBase<T> {
 
   protected String AS_XML;
 
@@ -94,29 +98,34 @@ public abstract class TestModelBase<T> extends TestCase {
   protected T fromPB(String pb) throws
       Exception {
     return (T)clazz.getMethod("getObjectFromMessage", byte[].class).invoke(
-        clazz.newInstance(),
+        clazz.getDeclaredConstructor().newInstance(),
         Base64.decode(AS_PB));
   }
 
   protected abstract  void checkModel(T model);
 
+  @Test
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Test
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }
 
+  @Test
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Test
   public void testToXML() throws Exception {
     // Uses fromXML to check model because XML element ordering can be random.
     checkModel(fromXML(toXML(buildTestModel())));
   }
 
+  @Test
   public void testToJSON() throws Exception {
     try {
       ObjectNode expObj = mapper.readValue(AS_JSON, ObjectNode.class);
@@ -127,6 +136,7 @@ public abstract class TestModelBase<T> extends TestCase {
     }
   }
 
+  @Test
   public void testFromJSON() throws Exception {
     checkModel(fromJSON(AS_JSON));
   }

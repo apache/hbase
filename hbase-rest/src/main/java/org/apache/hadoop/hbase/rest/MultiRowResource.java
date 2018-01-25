@@ -27,14 +27,15 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MultiRowResource extends ResourceBase implements Constants {
@@ -83,7 +84,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
 
         if (this.columns != null) {
           for (int i = 0; i < this.columns.length; i++) {
-            rowSpec.addColumn(this.columns[i].getBytes());
+            rowSpec.addColumn(Bytes.toBytes(this.columns[i]));
           }
         }
 
