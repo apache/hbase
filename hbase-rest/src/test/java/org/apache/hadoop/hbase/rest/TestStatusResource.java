@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -35,9 +40,6 @@ import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -108,7 +110,7 @@ public class TestStatusResource {
   @Test
   public void testGetClusterStatusXML() throws IOException, JAXBException {
     Response response = client.get("/status/cluster", Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     StorageClusterStatusModel model = (StorageClusterStatusModel)
       context.createUnmarshaller().unmarshal(
@@ -119,13 +121,13 @@ public class TestStatusResource {
   @Test
   public void testGetClusterStatusPB() throws IOException {
     Response response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.getObjectFromMessage(response.getBody());
     validate(model);
     response = client.get("/status/cluster", Constants.MIMETYPE_PROTOBUF_IETF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new StorageClusterStatusModel();
     model.getObjectFromMessage(response.getBody());

@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,6 +56,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
       "\"KEY_1\":\"VALUE_1\",\"KEY_2\":\"VALUE_2\"}}";
   }
 
+  @Override
   protected NamespacesInstanceModel buildTestModel() {
     return buildTestModel(NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
@@ -65,6 +69,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     return model;
   }
 
+  @Override
   protected void checkModel(NamespacesInstanceModel model) {
     checkModel(model, NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
@@ -80,16 +85,19 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     }
   }
 
+  @Override
   @Test
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
   @Test
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
   @Test
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));

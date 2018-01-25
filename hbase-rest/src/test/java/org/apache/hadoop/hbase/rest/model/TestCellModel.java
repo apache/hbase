@@ -19,6 +19,10 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -48,6 +52,7 @@ public class TestCellModel extends TestModelBase<CellModel> {
       "{\"column\":\"dGVzdGNvbHVtbg==\",\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVl\"}";
   }
 
+  @Override
   protected CellModel buildTestModel() {
     CellModel model = new CellModel();
     model.setColumn(COLUMN);
@@ -56,21 +61,25 @@ public class TestCellModel extends TestModelBase<CellModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(CellModel model) {
     assertTrue(Bytes.equals(model.getColumn(), COLUMN));
     assertTrue(Bytes.equals(model.getValue(), VALUE));
     assertTrue(model.hasUserTimestamp());
-    assertEquals(model.getTimestamp(), TIMESTAMP);
+    assertEquals(TIMESTAMP, model.getTimestamp());
   }
 
+  @Override
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
   }
 
+  @Override
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
 
+  @Override
   public void testFromPB() throws Exception {
     checkModel(fromPB(AS_PB));
   }

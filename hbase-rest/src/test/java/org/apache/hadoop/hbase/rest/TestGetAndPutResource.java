@@ -55,92 +55,92 @@ public class TestGetAndPutResource extends RowResourceBase {
     conf.set("hbase.rest.readonly", "true");
 
     Response response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_2);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_2);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     response = deleteValue(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 403);
+    assertEquals(403, response.getCode());
 
     conf.set("hbase.rest.readonly", "false");
 
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2, VALUE_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteValue(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testSingleCellGetPutXML() throws IOException, JAXBException {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2, VALUE_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
     response = checkAndDeleteXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testSingleCellGetPutPB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
     
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2);
 
     response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2, VALUE_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3, VALUE_4);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testMultipleCellCheckPutPB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // Add 2 Columns to setup the test
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
 
     response = putValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
     HashMap<String,String> otherCells = new HashMap<>();
@@ -148,32 +148,32 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // On Success update both the cells
     response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_3, otherCells);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_3);
 
     // On Failure, we dont update any cells
     response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_4, otherCells);
-    assertEquals(response.getCode(), 304);
+    assertEquals(304, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_3);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testMultipleCellCheckPutXML() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // Add 2 Columns to setup the test
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
 
     response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
     HashMap<String,String> otherCells = new HashMap<>();
@@ -181,36 +181,36 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // On Success update both the cells
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_3, otherCells);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_3);
 
     // On Failure, we dont update any cells
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_4, otherCells);
-    assertEquals(response.getCode(), 304);
+    assertEquals(304, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_3);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testMultipleCellCheckDeletePB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // Add 3 Columns to setup the test
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
 
     response = putValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
     response = putValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     // Deletes the following columns based on Column1 check
@@ -220,44 +220,44 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // On Success update both the cells
     response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1, cellsToDelete);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
 
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
 
     response = getValuePB(TABLE, ROW_1, COLUMN_2);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     response = getValuePB(TABLE, ROW_1, COLUMN_3);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     response = putValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
     response = putValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     // On Failure, we dont update any cells
     response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_3, cellsToDelete);
-    assertEquals(response.getCode(), 304);
+    assertEquals(304, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
     checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
   @Test
   public void testSingleCellGetPutBinary() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_3 + "/" + COLUMN_1;
     final byte[] body = Bytes.toBytes(VALUE_3);
     Response response = client.put(path, Constants.MIMETYPE_BINARY, body);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     Thread.yield();
 
     response = client.get(path, Constants.MIMETYPE_BINARY);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_BINARY, response.getHeader("content-type"));
     assertTrue(Bytes.equals(response.getBody(), body));
     boolean foundTimestampHeader = false;
@@ -270,7 +270,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertTrue(foundTimestampHeader);
 
     response = deleteRow(TABLE, ROW_3);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -278,13 +278,13 @@ public class TestGetAndPutResource extends RowResourceBase {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
     Response response = client.put(path, Constants.MIMETYPE_BINARY,
       Bytes.toBytes(VALUE_4));
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     response = deleteRow(TABLE, ROW_4);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -302,10 +302,10 @@ public class TestGetAndPutResource extends RowResourceBase {
     String jsonString = jsonMapper.writeValueAsString(cellSetModel);
     Response response = client.put(path, Constants.MIMETYPE_JSON,
       Bytes.toBytes(jsonString));
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     CellSetModel cellSet = jsonMapper.readValue(response.getBody(), CellSetModel.class);
     assertTrue(cellSet.getRows().size() == 1);
@@ -314,7 +314,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(VALUE_2 , Bytes.toString(cell.getValue()));
     assertEquals(2L , cell.getTimestamp());
     response = deleteRow(TABLE, ROW_4);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -330,7 +330,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response;
     response = putValueXML(path.toString(), TABLE, urlKey, COLUMN_1,
       VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(path.toString(), TABLE, urlKey, COLUMN_1, VALUE_1);
   }
 
@@ -340,13 +340,10 @@ public class TestGetAndPutResource extends RowResourceBase {
     final String badPath = "/" + TABLE + "/" + ROW_1 + "/" + "BAD";
     Response response = client.post(goodPath, Constants.MIMETYPE_BINARY,
       Bytes.toBytes(VALUE_1));
-    assertEquals(response.getCode(), 200);
-    assertEquals(client.get(goodPath, Constants.MIMETYPE_BINARY).getCode(),
-      200);
-    assertEquals(client.get(badPath, Constants.MIMETYPE_BINARY).getCode(),
-      404);
-    assertEquals(client.get(goodPath, Constants.MIMETYPE_BINARY).getCode(),
-      200);
+    assertEquals(200, response.getCode());
+    assertEquals(200, client.get(goodPath, Constants.MIMETYPE_BINARY).getCode());
+    assertEquals(404, client.get(badPath, Constants.MIMETYPE_BINARY).getCode());
+    assertEquals(200, client.get(goodPath, Constants.MIMETYPE_BINARY).getCode());
   }
 
   @Test
@@ -374,7 +371,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // make sure the fake row was not actually created
     response = client.get(path, Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // check that all of the values were created
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -383,9 +380,9 @@ public class TestGetAndPutResource extends RowResourceBase {
     checkValueXML(TABLE, ROW_2, COLUMN_2, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteRow(TABLE, ROW_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -411,7 +408,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // make sure the fake row was not actually created
     response = client.get(path, Constants.MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // check that all of the values were created
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -420,9 +417,9 @@ public class TestGetAndPutResource extends RowResourceBase {
     checkValuePB(TABLE, ROW_2, COLUMN_2, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteRow(TABLE, ROW_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -467,7 +464,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     Response response = client.put(path, Constants.MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
-    assertEquals(response.getCode(), 400);
+    assertEquals(400, response.getCode());
   }
 
   @Test
@@ -485,7 +482,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     Response response = client.put(path, Constants.MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
   }
 
   @Test
@@ -513,7 +510,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // make sure the fake row was not actually created
     response = client.get(path, Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // check that all of the values were created
     checkValueJSON(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -522,9 +519,9 @@ public class TestGetAndPutResource extends RowResourceBase {
     checkValueJSON(TABLE, ROW_2, COLUMN_2, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteRow(TABLE, ROW_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
   
   @Test
@@ -532,13 +529,13 @@ public class TestGetAndPutResource extends RowResourceBase {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
     Response response = client.put(path, Constants.MIMETYPE_BINARY,
         Bytes.toBytes(VALUE_4));
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     response = deleteRow(TABLE, ROW_4);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
 
     UserProvider userProvider = UserProvider.instantiate(conf);
     METRICS_ASSERT.assertCounterGt("requests", 2l,
@@ -571,14 +568,14 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // make sure the fake row was not actually created
     response = client.get(path, Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // Try getting all the column values at once.
     path = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1 + "," + COLUMN_2 + "," + COLUMN_3;
     response = client.get(path, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
-    CellSetModel cellSet = (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response
-        .getBody()));
+    CellSetModel cellSet =
+        (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertTrue(cellSet.getRows().size() == 1);
     assertTrue(cellSet.getRows().get(0).getCells().size() == 3);
     List<CellModel> cells = cellSet.getRows().get(0).getCells();
@@ -587,7 +584,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertTrue(containsCellModel(cells, COLUMN_2, VALUE_2));
     assertTrue(containsCellModel(cells, COLUMN_3, VALUE_2));
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   private boolean containsCellModel(List<CellModel> cells, String column, String value) {
@@ -627,7 +624,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // make sure the fake row was not actually created
     response = client.get(path, Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // check that all of the values were created
     StringBuilder query = new StringBuilder();
@@ -636,16 +633,16 @@ public class TestGetAndPutResource extends RowResourceBase {
     query.append('/');
     query.append("testrow*");
     response = client.get(query.toString(), Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertTrue(cellSet.getRows().size() == 2);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteRow(TABLE, ROW_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
@@ -673,7 +670,7 @@ public class TestGetAndPutResource extends RowResourceBase {
 
     // make sure the fake row was not actually created
     response = client.get(path, Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     // check that all of the values were created
     StringBuilder query = new StringBuilder();
@@ -684,7 +681,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     query.append('/');
     query.append(COLUMN_1);
     response = client.get(query.toString(), Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -695,114 +692,114 @@ public class TestGetAndPutResource extends RowResourceBase {
       assertEquals(COLUMN_1, Bytes.toString(row.getCells().get(0).getColumn()));
     }
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = deleteRow(TABLE, ROW_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testAppendXML() throws IOException, JAXBException {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //append cell
     response = appendValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     response = appendValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1 + VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testAppendPB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //append cell
     response = appendValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     response = appendValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1 + VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testAppendJSON() throws IOException, JAXBException {
     Response response = getValueJson(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //append cell
     response = appendValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     putValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
     response = appendValueJson(TABLE, ROW_1, COLUMN_1, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     putValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1 + VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testIncrementXML() throws IOException, JAXBException {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //append single cell
     response = incrementValueXML(TABLE, ROW_1, COLUMN_1, VALUE_5);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkIncrementValueXML(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
     response = incrementValueXML(TABLE, ROW_1, COLUMN_1, VALUE_6);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkIncrementValueXML(TABLE, ROW_1, COLUMN_1,
         Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testIncrementPB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //append cell
     response = incrementValuePB(TABLE, ROW_1, COLUMN_1, VALUE_5);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkIncrementValuePB(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
     response = incrementValuePB(TABLE, ROW_1, COLUMN_1, VALUE_6);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkIncrementValuePB(TABLE, ROW_1, COLUMN_1,
         Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 
   @Test
   public void testIncrementJSON() throws IOException, JAXBException {
     Response response = getValueJson(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //append cell
     response = incrementValueJson(TABLE, ROW_1, COLUMN_1, VALUE_5);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkIncrementValueJSON(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
     response = incrementValueJson(TABLE, ROW_1, COLUMN_1, VALUE_6);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkIncrementValueJSON(TABLE, ROW_1, COLUMN_1,
         Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
   }
 }
 

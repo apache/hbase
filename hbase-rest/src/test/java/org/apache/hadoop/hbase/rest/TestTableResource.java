@@ -32,12 +32,12 @@ import java.util.List;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -123,7 +123,7 @@ public class TestTableResource {
     
     RegionLocator regionLocator = connection.getRegionLocator(TABLE);
     List<HRegionLocation> m = regionLocator.getAllRegionLocations();
-    assertEquals(m.size(), 1);
+    assertEquals(1, m.size());
     // tell the master to split the table
     admin.split(TABLE);
     // give some time for the split to happen
@@ -142,7 +142,7 @@ public class TestTableResource {
     }
 
     // should have two regions now
-    assertEquals(m.size(), 2);
+    assertEquals(2, m.size());
     regionMap = m;
     LOG.info("regions: " + regionMap);
     regionLocator.close();
@@ -202,14 +202,14 @@ public class TestTableResource {
   @Test
   public void testTableListText() throws IOException {
     Response response = client.get("/", Constants.MIMETYPE_TEXT);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableListXML() throws IOException, JAXBException {
     Response response = client.get("/", Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     TableListModel model = (TableListModel)
       context.createUnmarshaller()
@@ -220,20 +220,20 @@ public class TestTableResource {
   @Test
   public void testTableListJSON() throws IOException {
     Response response = client.get("/", Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableListPB() throws IOException, JAXBException {
     Response response = client.get("/", Constants.MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     TableListModel model = new TableListModel();
     model.getObjectFromMessage(response.getBody());
     checkTableList(model);
     response = client.get("/", Constants.MIMETYPE_PROTOBUF_IETF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableListModel();
     model.getObjectFromMessage(response.getBody());
@@ -243,14 +243,14 @@ public class TestTableResource {
   @Test
   public void testTableInfoText() throws IOException {
     Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_TEXT);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_TEXT, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableInfoXML() throws IOException, JAXBException {
     Response response = client.get("/" + TABLE + "/regions",  Constants.MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     TableInfoModel model = (TableInfoModel)
       context.createUnmarshaller()
@@ -261,20 +261,20 @@ public class TestTableResource {
   @Test
   public void testTableInfoJSON() throws IOException {
     Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
   }
 
   @Test
   public void testTableInfoPB() throws IOException, JAXBException {
     Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     TableInfoModel model = new TableInfoModel();
     model.getObjectFromMessage(response.getBody());
     checkTableInfo(model);
     response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_PROTOBUF_IETF);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableInfoModel();
     model.getObjectFromMessage(response.getBody());

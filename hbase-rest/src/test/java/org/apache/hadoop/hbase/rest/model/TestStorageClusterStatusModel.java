@@ -19,6 +19,10 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Iterator;
 
 import org.apache.hadoop.hbase.testclassification.RestTests;
@@ -74,6 +78,7 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
           "\"heapSizeMB\":512,\"maxHeapSizeMB\":1024}],\"DeadNodes\":[]}";
   }
 
+  @Override
   protected StorageClusterStatusModel buildTestModel() {
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.setRegions(2);
@@ -87,56 +92,57 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     return model;
   }
 
+  @Override
   protected void checkModel(StorageClusterStatusModel model) {
-    assertEquals(model.getRegions(), 2);
-    assertEquals(model.getRequests(), 0);
-    assertEquals(model.getAverageLoad(), 1.0);
+    assertEquals(2, model.getRegions());
+    assertEquals(0, model.getRequests());
+    assertEquals(1.0, model.getAverageLoad(), 0.0);
     Iterator<StorageClusterStatusModel.Node> nodes =
       model.getLiveNodes().iterator();
     StorageClusterStatusModel.Node node = nodes.next();
-    assertEquals(node.getName(), "test1");
-    assertEquals(node.getStartCode(), 1245219839331L);
-    assertEquals(node.getHeapSizeMB(), 128);
-    assertEquals(node.getMaxHeapSizeMB(), 1024);
+    assertEquals("test1", node.getName());
+    assertEquals(1245219839331L, node.getStartCode());
+    assertEquals(128, node.getHeapSizeMB());
+    assertEquals(1024, node.getMaxHeapSizeMB());
     Iterator<StorageClusterStatusModel.Node.Region> regions =
       node.getRegions().iterator();
     StorageClusterStatusModel.Node.Region region = regions.next();
     assertTrue(Bytes.toString(region.getName()).equals(
         "hbase:root,,0"));
-    assertEquals(region.getStores(), 1);
-    assertEquals(region.getStorefiles(), 1);
-    assertEquals(region.getStorefileSizeMB(), 0);
-    assertEquals(region.getMemStoreSizeMB(), 0);
-    assertEquals(region.getStorefileIndexSizeKB(), 0);
-    assertEquals(region.getReadRequestsCount(), 1);
-    assertEquals(region.getWriteRequestsCount(), 2);
-    assertEquals(region.getRootIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticBloomSizeKB(), 1);
-    assertEquals(region.getTotalCompactingKVs(), 1);
-    assertEquals(region.getCurrentCompactedKVs(), 1);
+    assertEquals(1, region.getStores());
+    assertEquals(1, region.getStorefiles());
+    assertEquals(0, region.getStorefileSizeMB());
+    assertEquals(0, region.getMemStoreSizeMB());
+    assertEquals(0, region.getStorefileIndexSizeKB());
+    assertEquals(1, region.getReadRequestsCount());
+    assertEquals(2, region.getWriteRequestsCount());
+    assertEquals(1, region.getRootIndexSizeKB());
+    assertEquals(1, region.getTotalStaticIndexSizeKB());
+    assertEquals(1, region.getTotalStaticBloomSizeKB());
+    assertEquals(1, region.getTotalCompactingKVs());
+    assertEquals(1, region.getCurrentCompactedKVs());
     assertFalse(regions.hasNext());
     node = nodes.next();
-    assertEquals(node.getName(), "test2");
-    assertEquals(node.getStartCode(), 1245239331198L);
-    assertEquals(node.getHeapSizeMB(), 512);
-    assertEquals(node.getMaxHeapSizeMB(), 1024);
+    assertEquals("test2", node.getName());
+    assertEquals(1245239331198L, node.getStartCode());
+    assertEquals(512, node.getHeapSizeMB());
+    assertEquals(1024, node.getMaxHeapSizeMB());
     regions = node.getRegions().iterator();
     region = regions.next();
     assertEquals(Bytes.toString(region.getName()),
         TableName.META_TABLE_NAME+",,1246000043724");
-    assertEquals(region.getStores(), 1);
-    assertEquals(region.getStorefiles(), 1);
-    assertEquals(region.getStorefileSizeMB(), 0);
-    assertEquals(region.getMemStoreSizeMB(), 0);
-    assertEquals(region.getStorefileIndexSizeKB(), 0);
-    assertEquals(region.getReadRequestsCount(), 1);
-    assertEquals(region.getWriteRequestsCount(), 2);
-    assertEquals(region.getRootIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticIndexSizeKB(), 1);
-    assertEquals(region.getTotalStaticBloomSizeKB(), 1);
-    assertEquals(region.getTotalCompactingKVs(), 1);
-    assertEquals(region.getCurrentCompactedKVs(), 1);
+    assertEquals(1, region.getStores());
+    assertEquals(1, region.getStorefiles());
+    assertEquals(0, region.getStorefileSizeMB());
+    assertEquals(0, region.getMemStoreSizeMB());
+    assertEquals(0, region.getStorefileIndexSizeKB());
+    assertEquals(1, region.getReadRequestsCount());
+    assertEquals(2, region.getWriteRequestsCount());
+    assertEquals(1, region.getRootIndexSizeKB());
+    assertEquals(1, region.getTotalStaticIndexSizeKB());
+    assertEquals(1, region.getTotalStaticBloomSizeKB());
+    assertEquals(1, region.getTotalCompactingKVs());
+    assertEquals(1, region.getCurrentCompactedKVs());
 
     assertFalse(regions.hasNext());
     assertFalse(nodes.hasNext());

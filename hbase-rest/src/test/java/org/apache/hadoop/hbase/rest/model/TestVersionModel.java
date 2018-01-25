@@ -18,15 +18,11 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-
-import org.junit.Assume;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
-
-import javax.servlet.ServletContext;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestVersionModel extends TestModelBase<VersionModel> {
@@ -55,6 +51,7 @@ public class TestVersionModel extends TestModelBase<VersionModel> {
           "REST\":\"0.0.1\",\"Server\":\"6.1.14\"}";
   }
 
+  @Override
   protected VersionModel buildTestModel() {
     VersionModel model = new VersionModel();
     model.setRESTVersion(REST_VERSION);
@@ -65,12 +62,13 @@ public class TestVersionModel extends TestModelBase<VersionModel> {
     return model;
   }
 
+  @Override
   protected void checkModel(VersionModel model) {
-    assertEquals(model.getRESTVersion(), REST_VERSION);
-    assertEquals(model.getOSVersion(), OS_VERSION);
-    assertEquals(model.getJVMVersion(), JVM_VERSION);
-    assertEquals(model.getServerVersion(), JETTY_VERSION);
-    assertEquals(model.getJerseyVersion(), JERSEY_VERSION);
+    assertEquals(REST_VERSION, model.getRESTVersion());
+    assertEquals(OS_VERSION, model.getOSVersion());
+    assertEquals(JVM_VERSION, model.getJVMVersion());
+    assertEquals(JETTY_VERSION, model.getServerVersion());
+    assertEquals(JERSEY_VERSION, model.getJerseyVersion());
   }
 }
 

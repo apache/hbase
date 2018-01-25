@@ -154,7 +154,7 @@ public class RowResourceBase {
   protected static void checkValueXML(String url, String table, String row,
       String column, String value) throws IOException, JAXBException {
     Response response = getValueXML(url);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -167,7 +167,7 @@ public class RowResourceBase {
   protected static void checkValueXML(String table, String row, String column,
       String value) throws IOException, JAXBException {
     Response response = getValueXML(table, row, column);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
       xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -180,7 +180,7 @@ public class RowResourceBase {
   protected static void checkIncrementValueXML(String table, String row, String column,
                                       long value) throws IOException, JAXBException {
     Response response1 = getValueXML(table, row, column);
-    assertEquals(response1.getCode(), 200);
+    assertEquals(200, response1.getCode());
     assertEquals(Constants.MIMETYPE_XML, response1.getHeader("content-type"));
     CellSetModel cellSet = (CellSetModel)
             xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response1.getBody()));
@@ -237,7 +237,7 @@ public class RowResourceBase {
   protected static void checkValuePB(String table, String row, String column,
       String value) throws IOException {
     Response response = getValuePB(table, row, column);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
     cellSet.getObjectFromMessage(response.getBody());
@@ -250,7 +250,7 @@ public class RowResourceBase {
   protected static void checkIncrementValuePB(String table, String row, String column,
       long value) throws IOException {
     Response response = getValuePB(table, row, column);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     CellSetModel cellSet = new CellSetModel();
     cellSet.getObjectFromMessage(response.getBody());
@@ -536,7 +536,7 @@ public class RowResourceBase {
   protected static void checkValueJSON(String table, String row, String column,
       String value) throws IOException, JAXBException {
     Response response = getValueJson(table, row, column);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     ObjectMapper mapper = new JacksonJaxbJsonProvider()
     .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
@@ -550,7 +550,7 @@ public class RowResourceBase {
   protected static void checkIncrementValueJSON(String table, String row, String column,
       long value) throws IOException, JAXBException {
     Response response = getValueJson(table, row, column);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     ObjectMapper mapper = new JacksonJaxbJsonProvider()
             .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);

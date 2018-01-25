@@ -59,39 +59,39 @@ public class TestDeleteRow extends RowResourceBase {
   @Test
   public void testDeleteXML() throws IOException, JAXBException {
     Response response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
     response = deleteValue(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);
+    assertEquals(200, response.getCode());
     response = getValueXML(TABLE, ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
     response = getValueXML(TABLE, ROW_1, COLUMN_2);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //Delete a row in non existent table
     response = deleteValue("dummy", ROW_1, COLUMN_1);
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
 
     //Delete non existent column
     response = deleteValue(TABLE, ROW_1, "dummy");
-    assertEquals(response.getCode(), 404);
+    assertEquals(404, response.getCode());
   }
 
 }
