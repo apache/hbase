@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -814,13 +813,13 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.serverManager = createServerManager(this);
 
+    // This manager is started AFTER hbase:meta is confirmed on line.
+    // See inside metaBootstrap.recoverMeta(); below. Shouldn't be so cryptic!
     this.tableStateManager = new TableStateManager(this);
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
-
-    // Set Master as active now after we've setup zk with stuff like whether cluster is up or not.
-    // RegionServers won't come up if the cluster status is not up.
+    // Set ourselves as active Master now our claim has succeeded up in zk.
     this.activeMaster = true;
 
     // This is for backwards compatibility
@@ -863,10 +862,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
 
-    // Check if master is shutting down because of some issue
-    // in initializing the regionserver or the balancer.
-    if (isStopped()) return;
-
     // Make sure meta assigned before proceeding.
     status.setStatus("Recovering  Meta Region");
 
@@ -875,9 +870,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     MasterMetaBootstrap metaBootstrap = createMetaBootstrap(this, status);
     metaBootstrap.recoverMeta();
 
-    // check if master is shutting down because above assignMeta could return even hbase:meta isn't
-    // assigned when master is shutting down
-    if (isStopped()) return;
 
     //Initialize after meta as it scans meta
     if (favoredNodesManager != null) {
@@ -935,15 +927,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(this.balancer);
     configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
-
     // Set master as 'initialized'.
     setInitialized(true);
-
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
-
     status.setStatus("Assign meta replicas");
     metaBootstrap.assignMetaReplicas();
-
     status.setStatus("Starting quota manager");
     initQuotaManager();
     if (QuotaUtil.isQuotaEnabled(conf)) {
@@ -2686,17 +2674,24 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (cpHost != null) {
       cpHost.preShutdown();
     }
-    // Tell the servermanager cluster is down.
+    // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
+    // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
+    // the cluster status as down. RegionServers will notice this change in state and will start
+    // shutting themselves down. When last has exited, Master can go down.
     if (this.serverManager != null) {
       this.serverManager.shutdownCluster();
     }
-    // Set the cluster down flag; broadcast across the cluster.
-    if (this.clusterStatusTracker != null){
+    if (this.clusterStatusTracker != null) {
       try {
         this.clusterStatusTracker.setClusterDown();
       } catch (KeeperException e) {
         LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
       }
+    }
+    // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
+    // processing so we can go down.
+    if (this.procedureExecutor != null) {
+      this.procedureExecutor.stop();
     }
     // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
     // this is what we want especially if the Master is in startup phase doing call outs to

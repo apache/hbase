@@ -20,15 +20,18 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.assignment.AssignProcedure;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -74,12 +77,45 @@ public class MasterMetaBootstrap {
     }
   }
 
-  public void assignMetaReplicas()
+  /**
+   * For assigning hbase:meta replicas only.
+   * TODO: The way this assign runs, nothing but chance to stop all replicas showing up on same
+   * server as the hbase:meta region.
+   */
+  protected void assignMetaReplicas()
       throws IOException, InterruptedException, KeeperException {
     int numReplicas = master.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
            HConstants.DEFAULT_META_REPLICA_NUM);
+    if (numReplicas <= 1) {
+      // No replicaas to assign. Return.
+      return;
+    }
+    final AssignmentManager assignmentManager = master.getAssignmentManager();
+    if (!assignmentManager.isMetaInitialized()) {
+      throw new IllegalStateException("hbase:meta must be initialized first before we can " +
+          "assign out its replicas");
+    }
+    ServerName metaServername =
+        this.master.getMetaTableLocator().getMetaRegionLocation(this.master.getZooKeeper());
     for (int i = 1; i < numReplicas; i++) {
-      assignMeta(i);
+      // Get current meta state for replica from zk.
+      RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper(), i);
+      RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
+          RegionInfoBuilder.FIRST_META_REGIONINFO, i);
+      LOG.debug(hri.getRegionNameAsString() + " replica region state from zookeeper=" + metaState);
+      if (metaServername.equals(metaState.getServerName())) {
+        metaState = null;
+        LOG.info(hri.getRegionNameAsString() +
+          " old location is same as current hbase:meta location; setting location as null...");
+      }
+      // These assigns run inline. All is blocked till they complete. Only interrupt is shutting
+      // down hosting server which calls AM#stop.
+      if (metaState != null && metaState.getServerName() != null) {
+        // Try to retain old assignment.
+        assignmentManager.assign(hri, metaState.getServerName());
+      } else {
+        assignmentManager.assign(hri);
+      }
     }
     unassignExcessMetaReplica(numReplicas);
   }
@@ -106,49 +142,6 @@ public class MasterMetaBootstrap {
       // issues in the cleanup of the extra regions. We can do that cleanup via hbck or manually
       LOG.warn("Ignoring exception " + ex);
     }
-  }
-
-  /**
-   * Check <code>hbase:meta</code> is assigned. If not, assign it.
-   */
-  protected void assignMeta(int replicaId)
-      throws InterruptedException, IOException, KeeperException {
-    final AssignmentManager assignmentManager = master.getAssignmentManager();
-
-    // Work on meta region
-    // TODO: Unimplemented
-    // long timeout =
-    //   master.getConfiguration().getLong("hbase.catalog.verification.timeout", 1000);
-    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-      status.setStatus("Assigning hbase:meta region");
-    } else {
-      status.setStatus("Assigning hbase:meta region, replicaId " + replicaId);
-    }
-
-    // Get current meta state from zk.
-    RegionState metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper(), replicaId);
-    LOG.debug("meta state from zookeeper: " + metaState);
-    RegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
-        RegionInfoBuilder.FIRST_META_REGIONINFO, replicaId);
-    assignmentManager.assignMeta(hri, metaState.getServerName());
-
-    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-      // TODO: should we prevent from using state manager before meta was initialized?
-      // tableStateManager.start();
-      master.getTableStateManager()
-        .setTableState(TableName.META_TABLE_NAME, TableState.State.ENABLED);
-    }
-
-    master.getTableStateManager().start();
-
-    // Make sure a hbase:meta location is set. We need to enable SSH here since
-    // if the meta region server is died at this time, we need it to be re-assigned
-    // by SSH so that system tables can be assigned.
-    // No need to wait for meta is assigned = 0 when meta is just verified.
-    if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) enableCrashedServerProcessing(false);
-    LOG.info("hbase:meta with replicaId " + replicaId + ", location="
-      + master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper(), replicaId));
-    status.setStatus("META assigned.");
   }
 
   private void enableCrashedServerProcessing(final boolean waitForMeta)

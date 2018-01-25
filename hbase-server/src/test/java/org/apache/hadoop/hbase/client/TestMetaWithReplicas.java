@@ -28,7 +28,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.NoSuchProcedureException;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -81,6 +84,7 @@ public class TestMetaWithReplicas {
       build();
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaWithReplicas.class);
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final int REGIONSERVERS_COUNT = 3;
 
   @Rule
   public TestName name = new TestName();
@@ -91,30 +95,47 @@ public class TestMetaWithReplicas {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
-    TEST_UTIL.startMiniCluster(3);
-    // disable the balancer
-    LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
-        new Abortable() {
-      AtomicBoolean aborted = new AtomicBoolean(false);
-      @Override
-      public boolean isAborted() {
-        return aborted.get();
-      }
-      @Override
-      public void abort(String why, Throwable e) {
-        aborted.set(true);
-      }
-    });
-    l.setBalancerOn(false);
-    for (int replicaId = 1; replicaId < 3; replicaId ++) {
-      RegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
-        replicaId);
+    TEST_UTIL.startMiniCluster(REGIONSERVERS_COUNT);
+    AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
+    Set<ServerName> sns = new HashSet<ServerName>();
+    for (int replicaId = 0; replicaId < 3; replicaId ++) {
+      RegionInfo h =
+          RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
+              replicaId);
       try {
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().waitForAssignment(h);
+        am.waitForAssignment(h);
+        ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
+        LOG.info(h.getRegionNameAsString() + " on " + sn);
+        sns.add(sn);
       } catch (NoSuchProcedureException e) {
         LOG.info("Presume the procedure has been cleaned up so just proceed: " + e.toString());
       }
     }
+    // Fun. All meta region replicas have ended up on the one server. This will cause this test
+    // to fail ... sometimes.
+    if (sns.size() == 1) {
+      LOG.warn("All hbase:meta replicas are on the one server; moving hbase:meta");
+      int metaServerIndex = TEST_UTIL.getHBaseCluster().getServerWithMeta();
+      int newServerIndex = (metaServerIndex + 1) % REGIONSERVERS_COUNT;
+      ServerName destinationServerName =
+          TEST_UTIL.getHBaseCluster().getRegionServer(newServerIndex).getServerName();
+      TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+          Bytes.toBytes(destinationServerName.toString()));
+    }
+    // Disable the balancer
+    LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
+        new Abortable() {
+          AtomicBoolean aborted = new AtomicBoolean(false);
+          @Override
+          public boolean isAborted() {
+            return aborted.get();
+          }
+          @Override
+          public void abort(String why, Throwable e) {
+            aborted.set(true);
+          }
+        });
+    l.setBalancerOn(false);
     LOG.debug("All meta replicas assigned");
   }
 
@@ -208,13 +229,15 @@ public class TestMetaWithReplicas {
           Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
               30000) * 3);
         }
+        // Ensure all metas are not on same hbase:meta replica=0 server!
+
         master = util.getHBaseClusterInterface().getClusterMetrics().getMasterName();
         // kill the master so that regionserver recovery is not triggered at all
         // for the meta server
         LOG.info("Stopping master=" + master.toString());
         util.getHBaseClusterInterface().stopMaster(master);
         util.getHBaseClusterInterface().waitForMasterToStop(master, 60000);
-        LOG.info("Master stopped!");
+        LOG.info("Master " + master + " stopped!");
         if (!master.equals(primary)) {
           util.getHBaseClusterInterface().killRegionServer(primary);
           util.getHBaseClusterInterface().waitForRegionServerToStop(primary, 60000);

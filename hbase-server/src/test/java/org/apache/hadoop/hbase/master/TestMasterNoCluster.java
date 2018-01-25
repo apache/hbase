@@ -262,7 +262,10 @@ public class TestMasterNoCluster {
       MasterMetaBootstrap createMetaBootstrap(final HMaster master, final MonitoredTask status) {
         return new MasterMetaBootstrap(this, status) {
           @Override
-          protected void assignMeta(int replicaId) { }
+          protected void assignMetaReplicas()
+              throws IOException, InterruptedException, KeeperException {
+            // Nothing to do.
+          }
         };
       }
 
