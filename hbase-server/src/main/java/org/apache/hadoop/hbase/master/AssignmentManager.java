@@ -4256,6 +4256,8 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.warn("Couldn't assign all replica(s) of region " + mergedHri+ " because of " +
                 ie.getMessage());
     }
+    // Remove merged region's replica from AM's memory
+    clearReplicaRegions(c);
   }
 
   private void doSplittingOfReplicas(final HRegionInfo parentHri, final HRegionInfo hri_a,
@@ -4298,6 +4300,21 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.warn("Caught exception " + e + " while trying to assign replica(s) of daughter(s)");
     } catch (InterruptedException e) {
       LOG.warn("Caught exception " + e + " while trying to assign replica(s) of daughter(s)");
+    }
+    // Remove parent region's replica from AM's memory
+    clearReplicaRegions(c);
+  }
+
+  /*
+   * Clear the replica regions after region split or merge.
+   */
+  private void clearReplicaRegions(Collection<List<HRegionInfo>> regionInfos) {
+    for (List<HRegionInfo> regionInfoList : regionInfos) {
+      for (HRegionInfo regionInfo : regionInfoList) {
+        if (!RegionReplicaUtil.isDefaultReplica(regionInfo)) {
+          regionStates.deleteRegion(regionInfo);
+        }
+      }
     }
   }
 
