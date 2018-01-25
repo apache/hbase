@@ -30,7 +30,9 @@ AssignmentManager assignmentManager = null;
 </%args>
 <%import>
 java.util.*;
+java.io.IOException;
 org.apache.hadoop.hbase.client.RegionInfo;
+org.apache.hadoop.hbase.client.TableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.HTableDescriptor;
@@ -40,7 +42,6 @@ org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.TableName;
 org.apache.hadoop.hbase.client.Admin;
 org.apache.hadoop.hbase.client.MasterSwitchType;
-org.apache.hadoop.hbase.client.SnapshotDescription;
 org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.master.HMaster;
@@ -50,6 +51,7 @@ org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
 org.apache.hadoop.hbase.security.access.AccessControlLists;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
+org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 org.apache.hadoop.hbase.tool.Canary;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.FSUtils;
@@ -90,6 +92,26 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     }
 
     return quorums.toString();
+  }
+</%class>
+
+<%class>
+  public static String getUserTables(HMaster master, List<TableDescriptor> tables){
+    if (master.isInitialized()){
+      try {
+        Map<String, TableDescriptor> descriptorMap = master.getTableDescriptors().getAll();
+        if (descriptorMap != null) {
+          for (TableDescriptor desc : descriptorMap.values()) {
+            if (!desc.getTableName().isSystemTable()) {
+             tables.add(desc);
+            }
+          }
+        }
+      } catch (IOException e) {
+        return "Got user tables error, " + e.getMessage();
+      }
+    }
+    return null;
   }
 </%class>
 
@@ -363,13 +385,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def catalogTables>
 <%java>
- HTableDescriptor[] sysTables = null;
- try (Admin admin = master.getConnection().getAdmin()) {
-   sysTables = master.isInitialized() ? admin.listTableDescriptorsByNamespace(
-     NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
- }
+ List<TableDescriptor> sysTables = master.isInitialized() ?
+   master.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
 </%java>
-<%if (sysTables != null && sysTables.length > 0)%>
+<%if (sysTables != null && sysTables.size() > 0)%>
 <table class="table table-striped">
 <tr>
     <th>Table Name</th>
@@ -378,7 +397,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </%if>
     <th>Description</th>
 </tr>
-<%for HTableDescriptor systemTable : sysTables%>
+<%for TableDescriptor systemTable : sysTables%>
 <tr>
 <%java>TableName tableName = systemTable.getTableName();</%java>
     <td><a href="table.jsp?name=<% tableName %>"><% tableName %></a></td>
@@ -417,12 +436,14 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userTables>
 <%java>
-   HTableDescriptor[] tables = null;
-   try (Admin admin = master.getConnection().getAdmin()) {
-     tables = master.isInitialized() ? admin.listTables() : null;
-   }
+   List<TableDescriptor> tables = new ArrayList<TableDescriptor>();
+   String errorMessage = getUserTables(master, tables);
 </%java>
-<%if (tables != null && tables.length > 0)%>
+<%if (tables.size() == 0 && errorMessage != null)%>
+<p> <% errorMessage %> </p>
+</%if>
+
+<%if (tables != null && tables.size() > 0)%>
 <table class="table table-striped">
     <tr>
         <th>Namespace</th>
@@ -437,8 +458,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>Other Regions</th>
         <th>Description</th>
     </tr>
-    <%for HTableDescriptor htDesc : tables%>
+    <%for TableDescriptor desc : tables%>
     <%java>
+      HTableDescriptor htDesc = new HTableDescriptor(desc);
       TableName tableName = htDesc.getTableName();
       Map<RegionState.State, List<RegionInfo>> tableRegions =
           master.getAssignmentManager().getRegionStates()
@@ -471,17 +493,15 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <td><% htDesc.toStringCustomizedValues() %></td>
     </tr>
     </%for>
-    <p><% tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
+    <p><% tables.size() %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
 </table>
 </%if>
 </%def>
 
 <%def userSnapshots>
 <%java>
-   List<SnapshotDescription> snapshots = null;
-   try (Admin admin = master.getConnection().getAdmin()) {
-     snapshots = master.isInitialized() ? admin.listSnapshots() : null;
-   }
+   List<SnapshotDescription> snapshots = master.isInitialized() ?
+     master.getSnapshotManager().getCompletedSnapshots() : null;
 </%java>
 <%if (snapshots != null && snapshots.size() > 0)%>
 <table class="table table-striped">
@@ -492,7 +512,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
     <%for SnapshotDescription snapshotDesc : snapshots%>
     <%java>
-        TableName snapshotTable = snapshotDesc.getTableName();
+        TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
     </%java>
     <tr>
         <td><a href="snapshot.jsp?name=<% snapshotDesc.getName() %>"><% snapshotDesc.getName() %></a> </td>
