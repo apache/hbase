@@ -45,7 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, MediumTests.class })
-public class TestSynchronousReplicationWALProvider {
+public class TestSyncReplicationWALProvider {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -75,7 +75,7 @@ public class TestSynchronousReplicationWALProvider {
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniDFSCluster(3);
     FACTORY = new WALFactory(UTIL.getConfiguration(), "test",
-        TestSynchronousReplicationWALProvider::getPeerIdAndRemoteWALDir);
+        TestSyncReplicationWALProvider::getPeerIdAndRemoteWALDir);
     UTIL.getTestFileSystem().mkdirs(new Path(REMOTE_WAL_DIR, PEER_ID));
   }
 
@@ -145,8 +145,8 @@ public class TestSynchronousReplicationWALProvider {
     DualAsyncFSWAL wal = (DualAsyncFSWAL) FACTORY.getWAL(REGION);
     assertEquals(2, FACTORY.getWALs().size());
     testReadWrite(wal);
-    SynchronousReplicationWALProvider walProvider =
-      (SynchronousReplicationWALProvider) FACTORY.getWALProvider();
+    SyncReplicationWALProvider walProvider =
+      (SyncReplicationWALProvider) FACTORY.getWALProvider();
     walProvider.peerRemoved(PEER_ID);
     assertEquals(1, FACTORY.getWALs().size());
   }

@@ -37,8 +37,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
-import org.apache.hadoop.hbase.replication.regionserver.SynchronousReplicationPeerProvider;
+import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
@@ -58,16 +59,15 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
  * the request to the normal {@link WALProvider}.
  */
 @InterfaceAudience.Private
-public class SynchronousReplicationWALProvider implements WALProvider, PeerActionListener {
+public class SyncReplicationWALProvider implements WALProvider, PeerActionListener {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(SynchronousReplicationWALProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SyncReplicationWALProvider.class);
 
   private static final String LOG_SUFFIX = ".syncrep";
 
   private final WALProvider provider;
 
-  private final SynchronousReplicationPeerProvider peerProvider;
+  private final SyncReplicationPeerProvider peerProvider;
 
   private WALFactory factory;
 
@@ -85,8 +85,7 @@ public class SynchronousReplicationWALProvider implements WALProvider, PeerActio
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
-  SynchronousReplicationWALProvider(WALProvider provider,
-      SynchronousReplicationPeerProvider peerProvider) {
+  SyncReplicationWALProvider(WALProvider provider, SyncReplicationPeerProvider peerProvider) {
     this.provider = provider;
     this.peerProvider = peerProvider;
   }
@@ -100,7 +99,7 @@ public class SynchronousReplicationWALProvider implements WALProvider, PeerActio
     this.conf = conf;
     this.factory = factory;
     Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
-      NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
+        NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
     eventLoopGroup = eventLoopGroupAndChannelClass.getFirst();
     channelClass = eventLoopGroupAndChannelClass.getSecond();
   }
@@ -140,7 +139,7 @@ public class SynchronousReplicationWALProvider implements WALProvider, PeerActio
   @Override
   public WAL getWAL(RegionInfo region) throws IOException {
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
-      peerProvider.getPeerIdAndRemoteWALDir(region);
+        peerProvider.getPeerIdAndRemoteWALDir(region);
     if (peerIdAndRemoteWALDir.isPresent()) {
       Pair<String, String> pair = peerIdAndRemoteWALDir.get();
       return getWAL(pair.getFirst(), pair.getSecond());
@@ -205,9 +204,7 @@ public class SynchronousReplicationWALProvider implements WALProvider, PeerActio
       provider.getLogFileSize();
   }
 
-  @Override
-  public void peerRemoved(String peerId) {
-    WAL wal = peerId2WAL.remove(peerId);
+  private void safeClose(WAL wal) {
     if (wal != null) {
       try {
         wal.close();
@@ -221,5 +218,17 @@ public class SynchronousReplicationWALProvider implements WALProvider, PeerActio
   public void addWALActionsListener(WALActionsListener listener) {
     listeners.add(listener);
     provider.addWALActionsListener(listener);
+  }
+
+  @Override
+  public void peerRemoved(String peerId) {
+    safeClose(peerId2WAL.remove(peerId));
+  }
+
+  @Override
+  public void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
+      SyncReplicationState to) {
+    assert to == SyncReplicationState.DOWNGRADE_ACTIVE;
+    safeClose(peerId2WAL.remove(peerId));
   }
 }

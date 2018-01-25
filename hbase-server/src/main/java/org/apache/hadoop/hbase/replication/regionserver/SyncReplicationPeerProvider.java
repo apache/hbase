@@ -26,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Get the peer id and remote root dir if the region is synchronously replicated.
  */
 @InterfaceAudience.Private
-public interface SynchronousReplicationPeerProvider {
+public interface SyncReplicationPeerProvider {
 
   /**
    * Return the peer id and remote WAL directory if the region is synchronously replicated.
