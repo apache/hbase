@@ -92,9 +92,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * A server is fully processed only after the handler is fully enabled
  * and has completed the handling.
  */
-/**
- *
- */
 @InterfaceAudience.Private
 public class ServerManager {
   public static final String WAIT_ON_REGIONSERVERS_MAXTOSTART =
@@ -587,7 +584,7 @@ public class ServerManager {
 
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
-    if (this.clusterShutdown.get()) {
+    if (isClusterShutdown()) {
       LOG.info("Cluster shutdown set; " + serverName +
         " expired; onlineServers=" + this.onlineServers.size());
       if (this.onlineServers.isEmpty()) {
@@ -961,7 +958,7 @@ public class ServerManager {
     this.clusterShutdown.set(true);
   }
 
-  public boolean isClusterShutdown() {
+  boolean isClusterShutdown() {
     return this.clusterShutdown.get();
   }
 
