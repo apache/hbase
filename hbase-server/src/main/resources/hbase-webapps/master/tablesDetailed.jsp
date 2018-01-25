@@ -18,51 +18,55 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
-  import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.client.Admin"
-  import="org.apache.hadoop.hbase.client.Connection"
-  import="org.apache.hadoop.hbase.HTableDescriptor"
+         import="static org.apache.commons.lang3.StringEscapeUtils.escapeXml"
+         import="java.io.IOException"
+         import="java.util.ArrayList"
+         import="java.util.List"
+         import="java.util.Map"
 %>
+<%@ page import="org.apache.hadoop.hbase.client.TableDescriptor" %>
+<%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
+<%@ page import="org.apache.hadoop.hbase.tmpl.master.MasterStatusTmplImpl" %>
 <%
-  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master: " + master.getServerName());
 %>
 <jsp:include page="header.jsp">
-    <jsp:param name="pageTitle" value="${pageTitle}"/>
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
 </jsp:include>
 
-  <div class="container-fluid content">
-    <div class="row inner_header">
-        <div class="page-header">
-            <h1>User Tables</h1>
-        </div>
+<div class="container-fluid content">
+  <div class="row inner_header">
+    <div class="page-header">
+      <h1>User Tables</h1>
     </div>
+  </div>
 
-<% HTableDescriptor[] tables;
-   Connection connection = master.getConnection();
-   Admin admin = connection.getAdmin();
-   try {
-     tables = admin.listTables();
-   } finally {
-     admin.close();
-   }
-   if(tables != null && tables.length > 0) { %>
-<table class="table table-striped">
-<tr>
-    <th>Table</th>
-    <th>Description</th>
-</tr>
-<%   for(HTableDescriptor htDesc : tables ) { %>
-<tr>
-    <td><a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(htDesc.getTableName().getNameAsString()) %></a></td>
-    <td><%= htDesc.toString() %></td>
-</tr>
-<%   }  %>
+  <% List<TableDescriptor> tables = new ArrayList<TableDescriptor>();
+     String errorMessage = MasterStatusTmplImpl.getUserTables(master, tables);
+  if (tables.size() == 0 && errorMessage != null) { %>
+  <p> <%= errorMessage %> </p>
+  <% }
+  if (tables != null && tables.size() > 0) { %>
+  <table class="table table-striped">
+    <tr>
+      <th>Table</th>
+      <th>Description</th>
+    </tr>
+    <% for (TableDescriptor htDesc : tables) { %>
+    <tr>
+      <td>
+        <a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(
+            htDesc.getTableName().getNameAsString()) %>
+        </a></td>
+      <td><%= htDesc.toString() %>
+      </td>
+    </tr>
+    <% } %>
 
-<p> <%= tables.length %> table(s) in set.</p>
-</table>
-<% } %>
+    <p><%= tables.size() %> table(s) in set.</p>
+  </table>
+  <% } %>
 </div>
 
-<jsp:include page="footer.jsp" />
+<jsp:include page="footer.jsp"/>
