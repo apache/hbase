@@ -1,5 +1,58 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.1 2/2/2018
+
+** Sub-task
+    * [HBASE-19378] - Backport HBASE-19252 "Move the transform logic of FilterList into transformCell() method to avoid extra ref to question cell"
+    * [HBASE-19468] - FNFE during scans and flushes
+    * [HBASE-19481] - Enable Checkstyle in hbase-error-prone
+    * [HBASE-19502] - Make sure we have closed all StoreFileScanners if we fail to open any StoreFileScanners
+
+** Bug
+    * [HBASE-11409] - Add more flexibility for input directory structure to LoadIncrementalHFiles
+    * [HBASE-17079] - HBase build fails on windows, hbase-archetype-builder is reason for failure
+    * [HBASE-17513] - Thrift Server 1 uses different QOP settings than RPC and Thrift Server 2 and can easily be misconfigured so there is no encryption when the operator expects it.
+    * [HBASE-18625] - Splitting of region with replica, doesn't update region list in serverHolding. A server crash leads to overlap.
+    * [HBASE-19125] - TestReplicator is flaky
+    * [HBASE-19163] - "Maximum lock count exceeded" from region server's batch processing
+    * [HBASE-19383] - [1.2] java.lang.AssertionError: expected:<2> but was:<1> 	at org.apache.hadoop.hbase.TestChoreService.testTriggerNowFailsWhenNotScheduled(TestChoreService.java:707)
+    * [HBASE-19424] - Metrics servlet throws NPE
+    * [HBASE-19483] - Add proper privilege check for rsgroup commands
+    * [HBASE-19490] - Rare failure in TestRateLimiter
+    * [HBASE-19509] - RSGroupAdminEndpoint#preCreateTable triggers TableNotFoundException
+    * [HBASE-19546] - TestMasterReplication.testCyclicReplication2 uses wrong assertion
+    * [HBASE-19551] - hbck -boundaries doesn't work correctly
+    * [HBASE-19588] - Additional jar dependencies needed for mapreduce PerformanceEvaluation
+    * [HBASE-19685] - Fix TestFSErrorsExposed#testFullSystemBubblesFSErrors
+    * [HBASE-19691] - Do not require ADMIN permission for obtaining ClusterStatus
+    * [HBASE-19708] - Avoid NPE when the RPC listener's accept channel is closed
+    * [HBASE-19752] - RSGroupBasedLoadBalancer#getMisplacedRegions() should handle the case where rs group cannot be determined
+    * [HBASE-19756] - Master NPE during completed failed proc eviction
+    * [HBASE-19757] - System table gets stuck after enabling region server group feature in secure cluster
+    * [HBASE-19816] - Replication sink list is not updated on UnknownHostException
+
+** New Feature
+    * [HBASE-15321] - Ability to open a HRegion from hdfs snapshot.
+
+** Improvement
+    * [HBASE-15580] - Tag coprocessor limitedprivate scope to StoreFile.Reader
+    * [HBASE-19358] - Improve the stability of splitting log when do fail over
+    * [HBASE-19489] - Check against only the latest maintenance release in pre-commit hadoopcheck.
+    * [HBASE-19491] - Exclude flaky tests from nightly master run
+    * [HBASE-19545] - Replace getBytes(StandardCharsets.UTF_8) with Bytes.toBytes
+    * [HBASE-19570] - Add hadoop3 tests to Nightly master/branch-2 runs
+    * [HBASE-19571] - Minor refactor of Nightly run scripts
+    * [HBASE-19684] - BlockCacheKey toString Performance
+    * [HBASE-19789] - Not exclude flaky tests from nightly builds
+
+** Test
+    * [HBASE-19514] - Use random port for TestJMXListener
+
+** Task
+    * [HBASE-19485] - Minor improvement to TestCompactedHFilesDischarger
+    * [HBASE-19637] - Add .checkstyle to gitignore
+
+
 Release Notes - HBase - Version 1.4.0 12/18/2017
 
 ** Sub-task
