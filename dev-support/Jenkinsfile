@@ -21,7 +21,7 @@ pipeline {
     }
   }
   triggers {
-    cron('@daily')
+    cron('H */6 * * *')  // Run every 6 hours.
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '30'))
