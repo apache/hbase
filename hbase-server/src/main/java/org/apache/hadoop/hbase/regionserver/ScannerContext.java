@@ -51,11 +51,13 @@ import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 @InterfaceStability.Evolving
 public class ScannerContext {
 
-  /**
-   * Two sets of the same fields. One for the limits, another for the progress towards those limits
-   */
   LimitFields limits;
-  LimitFields progress;
+  /**
+   * A different set of progress fields. Only include batch, dataSize and heapSize. Compare to
+   * LimitFields, ProgressFields doesn't contain time field. As we save a deadline in LimitFields,
+   * so use {@link System#currentTimeMillis()} directly when check time limit.
+   */
+  ProgressFields progress;
 
   /**
    * The state of the scanner after the invocation of {@link InternalScanner#next(java.util.List)}
@@ -104,10 +106,12 @@ public class ScannerContext {
 
   ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics) {
     this.limits = new LimitFields();
-    if (limitsToCopy != null) this.limits.copy(limitsToCopy);
+    if (limitsToCopy != null) {
+      this.limits.copy(limitsToCopy);
+    }
 
     // Progress fields are initialized to 0
-    progress = new LimitFields(0, LimitFields.DEFAULT_SCOPE, 0, 0, LimitFields.DEFAULT_SCOPE, 0);
+    progress = new ProgressFields(0, 0, 0);
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
@@ -162,9 +166,10 @@ public class ScannerContext {
 
   /**
    * Update the time progress with {@link System#currentTimeMillis()}
+   * @deprecated will be removed in 3.0
    */
+  @Deprecated
   void updateTimeProgress() {
-    progress.setTime(System.currentTimeMillis());
   }
 
   int getBatchProgress() {
@@ -179,14 +184,25 @@ public class ScannerContext {
     return progress.getHeapSize();
   }
 
+  /**
+   * @deprecated will be removed in 3.0
+   */
+  @Deprecated
   long getTimeProgress() {
-    return progress.getTime();
+    return System.currentTimeMillis();
   }
 
+  /**
+   * @deprecated will be removed in 3.0
+   */
+  @Deprecated
   void setProgress(int batchProgress, long sizeProgress, long heapSizeProgress, long timeProgress) {
+    setProgress(batchProgress, sizeProgress, heapSizeProgress);
+  }
+
+  void setProgress(int batchProgress, long sizeProgress, long heapSizeProgress) {
     setBatchProgress(batchProgress);
     setSizeProgress(sizeProgress, heapSizeProgress);
-    setTimeProgress(timeProgress);
   }
 
   void setSizeProgress(long dataSizeProgress, long heapSizeProgress) {
@@ -198,8 +214,11 @@ public class ScannerContext {
     progress.setBatch(batchProgress);
   }
 
+  /**
+   * @deprecated will be removed in 3.0
+   */
+  @Deprecated
   void setTimeProgress(long timeProgress) {
-    progress.setTime(timeProgress);
   }
 
   /**
@@ -207,7 +226,7 @@ public class ScannerContext {
    * values
    */
   void clearProgress() {
-    progress.setFields(0, LimitFields.DEFAULT_SCOPE, 0, 0, LimitFields.DEFAULT_SCOPE, 0);
+    progress.setFields(0, 0, 0);
   }
 
   /**
@@ -319,7 +338,7 @@ public class ScannerContext {
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkTimeLimit(LimitScope checkerScope) {
-    return hasTimeLimit(checkerScope) && progress.getTime() >= limits.getTime();
+    return hasTimeLimit(checkerScope) && (System.currentTimeMillis() >= limits.getTime());
   }
 
   /**
@@ -685,6 +704,83 @@ public class ScannerContext {
 
       sb.append(", timeScope:");
       sb.append(timeScope);
+
+      sb.append("}");
+      return sb.toString();
+    }
+  }
+
+  private static class ProgressFields {
+
+    private static int DEFAULT_BATCH = -1;
+    private static long DEFAULT_SIZE = -1L;
+
+    // The batch limit will always be enforced between cells, thus, there isn't a field to hold the
+    // batch scope
+    int batch = DEFAULT_BATCH;
+
+    // The sum of cell data sizes(key + value). The Cell data might be in on heap or off heap area.
+    long dataSize = DEFAULT_SIZE;
+    // The sum of heap space occupied by all tracked cells. This includes Cell POJO's overhead as
+    // such AND data cells of Cells which are in on heap area.
+    long heapSize = DEFAULT_SIZE;
+
+    /**
+     * Fields keep their default values.
+     */
+    ProgressFields() {
+    }
+
+    ProgressFields(int batch, long size, long heapSize) {
+      setFields(batch, size, heapSize);
+    }
+
+    /**
+     * Set all fields together.
+     */
+    void setFields(int batch, long dataSize, long heapSize) {
+      setBatch(batch);
+      setDataSize(dataSize);
+      setHeapSize(heapSize);
+    }
+
+    int getBatch() {
+      return this.batch;
+    }
+
+    void setBatch(int batch) {
+      this.batch = batch;
+    }
+
+    long getDataSize() {
+      return this.dataSize;
+    }
+
+    long getHeapSize() {
+      return this.heapSize;
+    }
+
+    void setDataSize(long dataSize) {
+      this.dataSize = dataSize;
+    }
+
+    void setHeapSize(long heapSize) {
+      this.heapSize = heapSize;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{");
+
+      sb.append("batch:");
+      sb.append(batch);
+
+      sb.append(", dataSize:");
+      sb.append(dataSize);
+
+      sb.append(", heapSize:");
+      sb.append(heapSize);
 
       sb.append("}");
       return sb.toString();
