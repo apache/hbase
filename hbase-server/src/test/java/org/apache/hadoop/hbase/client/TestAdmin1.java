@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,7 +58,9 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -1146,15 +1149,8 @@ public class TestAdmin1 {
     // regions.
     // Set up a table with 3 regions and replication set to 3
     TableName tableName = TableName.valueOf("testSplitAndMergeWithReplicaTable");
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.setRegionReplication(3);
     byte[] cf = "f".getBytes();
-    HColumnDescriptor hcd = new HColumnDescriptor(cf);
-    desc.addFamily(hcd);
-    byte[][] splitRows = new byte[2][];
-    splitRows[0] = new byte[]{(byte)'4'};
-    splitRows[1] = new byte[]{(byte)'7'};
-    TEST_UTIL.getHBaseAdmin().createTable(desc, splitRows);
+    createReplicaTable(tableName, cf);
     List<HRegion> oldRegions;
     do {
       oldRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
@@ -1240,6 +1236,96 @@ public class TestAdmin1 {
       gotException = true;
     }
     assertTrue(gotException);
+  }
+
+  /**
+   * Test case to validate whether parent's replica regions are cleared from AM's memory after
+   * SPLIT/MERGE.
+   */
+  @Test
+  public void testRegionStateCleanupFromAMMemoryAfterRegionSplitAndMerge() throws Exception {
+    final TableName tableName =
+        TableName.valueOf("testRegionStateCleanupFromAMMemoryAfterRegionSplitAndMerge");
+    createReplicaTable(tableName, "f".getBytes());
+    final int regionReplication = admin.getTableDescriptor(tableName).getRegionReplication();
+
+    List<Pair<HRegionInfo, ServerName>> regions = MetaTableAccessor.getTableRegionsAndLocations(
+      TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConnection(), tableName);
+    assertEquals(9, regions.size());
+    final int primaryRegionCount = regions.size() / regionReplication;
+
+    final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    List<HRegionInfo> splitRegions =
+        am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.SPLIT);
+    assertEquals(0, splitRegions.size());
+
+    // Validate region split
+    byte[] regionName = regions.get(0).getFirst().getRegionName();
+    try {
+      TEST_UTIL.getHBaseAdmin().split(regionName, Bytes.toBytes('2'));
+    } catch (IllegalArgumentException ex) {
+      fail("Exception occured during region split" + ex);
+    }
+
+    // Wait for replica region to become online
+    TEST_UTIL.waitFor(60000, 500, new Waiter.Predicate<IOException>() {
+      @Override
+      public boolean evaluate() throws IOException {
+        return am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.OPEN)
+            .size() == (primaryRegionCount + 1) * regionReplication;
+      }
+    });
+
+    regions = MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getZooKeeperWatcher(),
+      TEST_UTIL.getConnection(), tableName);
+    assertEquals(12, regions.size());
+    final int primaryRegionCountAfterSplit = regions.size() / regionReplication;
+
+    // Split region after region split
+    splitRegions =
+        am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.SPLIT);
+    // Parent's replica region should be removed from AM's memory.
+    assertEquals(1, splitRegions.size());
+
+    // Validate region merge
+    HRegionInfo regionA = regions.get(3).getFirst();
+    HRegionInfo regionB = regions.get(6).getFirst();
+    try {
+      TEST_UTIL.getHBaseAdmin().mergeRegions(regionA.getRegionName(), regionB.getRegionName(),
+        true);
+    } catch (IllegalArgumentException ex) {
+      fail("Exception occured during region merge" + ex);
+    }
+
+    // Wait for replica regions to become online
+    TEST_UTIL.waitFor(60000, 500, new Waiter.Predicate<IOException>() {
+      @Override
+      public boolean evaluate() throws IOException {
+        return am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.OPEN)
+            .size() == (primaryRegionCountAfterSplit - 1) * regionReplication;
+      }
+    });
+
+    regions = MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getZooKeeperWatcher(),
+      TEST_UTIL.getConnection(), tableName);
+    assertEquals(9, regions.size());
+    // Offline region after region merge
+    List<HRegionInfo> offlineRegions =
+        am.getRegionStates().getRegionByStateOfTable(tableName).get(RegionState.State.OFFLINE);
+    // Parent's replica region should be removed from AM's memory.
+    assertEquals(0, offlineRegions.size());
+  }
+
+  private byte[] createReplicaTable(TableName tableName, byte[] cf) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setRegionReplication(3);
+    HColumnDescriptor hcd = new HColumnDescriptor(cf);
+    desc.addFamily(hcd);
+    byte[][] splitRows = new byte[2][];
+    splitRows[0] = new byte[] { (byte) '4' };
+    splitRows[1] = new byte[] { (byte) '7' };
+    TEST_UTIL.getHBaseAdmin().createTable(desc, splitRows);
+    return cf;
   }
 
   /**
