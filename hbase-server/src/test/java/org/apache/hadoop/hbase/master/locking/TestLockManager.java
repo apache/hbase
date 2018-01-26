@@ -55,7 +55,7 @@ public class TestLockManager {
   // crank this up if this test turns out to be flaky.
   private static final int LOCAL_LOCKS_TIMEOUT = 1000;
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestLockProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLockManager.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static MasterServices masterServices;
 
