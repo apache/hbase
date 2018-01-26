@@ -45,7 +45,8 @@ public class TestResettingCounters {
 
   @Test
   public void testResettingCounters() throws Exception {
-    HBaseTestingUtility htu = HBaseTestingUtility.createLocalHTU();
+
+    HBaseTestingUtility htu = new HBaseTestingUtility();
     Configuration conf = htu.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     byte [] table = Bytes.toBytes(name.getMethodName());

@@ -59,7 +59,7 @@ public class TestInvocationRecordFilter {
   private static final String QUALIFIER_PREFIX = "qualifier";
   private static final String VALUE_PREFIX = "value";
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private HRegion region;
 
   @Before

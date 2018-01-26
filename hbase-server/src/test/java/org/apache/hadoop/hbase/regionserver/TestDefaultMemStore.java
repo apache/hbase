@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -91,9 +92,6 @@ public class TestDefaultMemStore {
     return this.name.getMethodName();
   }
 
-  private HBaseTestingUtility util;
-  private Configuration conf;
-
   @Before
   public void setUp() throws Exception {
     internalSetUp();
@@ -109,8 +107,6 @@ public class TestDefaultMemStore {
   }
 
   protected void internalSetUp() throws Exception {
-    this.util = HBaseTestingUtility.createLocalHTU();
-    this.conf = util.getConfiguration();
     this.mvcc = new MultiVersionConcurrencyControl();
   }
 
@@ -166,6 +162,7 @@ public class TestDefaultMemStore {
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners(0);
     Scan scan = new Scan();
     List<Cell> result = new ArrayList<>();
+    Configuration conf = HBaseConfiguration.create();
     ScanInfo scanInfo = new ScanInfo(conf, null, 0, 1, HConstants.LATEST_TIMESTAMP,
         KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, this.memstore.getComparator(), false);
     int count = 0;
@@ -539,7 +536,7 @@ public class TestDefaultMemStore {
 
   @Test
   public void testMultipleVersionsSimple() throws Exception {
-    DefaultMemStore m = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
+    DefaultMemStore m = new DefaultMemStore(new Configuration(), CellComparatorImpl.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -585,6 +582,7 @@ public class TestDefaultMemStore {
       }
     }
     //starting from each row, validate results should contain the starting row
+    Configuration conf = HBaseConfiguration.create();
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
       ScanInfo scanInfo =
           new ScanInfo(conf, FAMILY, 0, 1, Integer.MAX_VALUE, KeepDeletedCells.FALSE,
@@ -820,6 +818,7 @@ public class TestDefaultMemStore {
    */
   @Test
   public void testUpsertMemstoreSize() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
     memstore = new DefaultMemStore(conf, CellComparatorImpl.COMPARATOR);
     MemStoreSize oldSize = memstore.size();
 
@@ -902,6 +901,7 @@ public class TestDefaultMemStore {
    */
   @Test
   public void testShouldFlush() throws Exception {
+    Configuration conf = new Configuration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 1000);
     checkShouldFlush(conf, true);
     // test disable flush
@@ -913,8 +913,10 @@ public class TestDefaultMemStore {
     try {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
+      HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
       String cf = "foo";
-      HRegion region = util.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
+      HRegion region =
+          hbaseUtility.createTestRegion("foobar", ColumnFamilyDescriptorBuilder.of(cf));
 
       edge.setCurrentTimeMillis(1234);
       Put p = new Put(Bytes.toBytes("r"));
@@ -935,8 +937,10 @@ public class TestDefaultMemStore {
     // write an edit in the META and ensure the shouldFlush (that the periodic memstore
     // flusher invokes) returns true after SYSTEM_CACHE_FLUSH_INTERVAL (even though
     // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
+    Configuration conf = new Configuration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
-    Path testDir = util.getDataTestDir();
+    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    Path testDir = hbaseUtility.getDataTestDir();
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);

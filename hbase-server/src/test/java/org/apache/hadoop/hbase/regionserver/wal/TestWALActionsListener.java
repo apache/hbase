@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
 public class TestWALActionsListener {
 
   private final static HBaseTestingUtility TEST_UTIL =
-      HBaseTestingUtility.createLocalHTU();
+      new HBaseTestingUtility();
 
   private final static byte[] SOME_BYTES =  Bytes.toBytes("t");
   private static Configuration conf;

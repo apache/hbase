@@ -91,7 +91,7 @@ public class TestRegionInfoBuilder {
 
   @Test
   public void testReadAndWriteRegionInfoFile() throws IOException, InterruptedException {
-    HBaseTestingUtility htu = HBaseTestingUtility.createLocalHTU();
+    HBaseTestingUtility htu = new HBaseTestingUtility();
     RegionInfo ri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.

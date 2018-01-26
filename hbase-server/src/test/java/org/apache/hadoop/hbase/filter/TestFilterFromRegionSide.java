@@ -50,7 +50,7 @@ import java.util.List;
 @Category(SmallTests.class)
 public class TestFilterFromRegionSide {
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static HRegion REGION;
 
   private static TableName TABLE_NAME = TableName.valueOf("TestFilterFromRegionSide");

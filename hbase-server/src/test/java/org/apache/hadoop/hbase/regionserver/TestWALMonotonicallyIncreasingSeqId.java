@@ -77,7 +77,7 @@ import org.slf4j.LoggerFactory;
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestWALMonotonicallyIncreasingSeqId {
   private final Logger LOG = LoggerFactory.getLogger(getClass());
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Path testDir = TEST_UTIL.getDataTestDir("TestWALMonotonicallyIncreasingSeqId");
   private WALFactory wals;
   private FileSystem fileSystem;

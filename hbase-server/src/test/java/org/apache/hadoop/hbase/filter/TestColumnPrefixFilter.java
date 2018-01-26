@@ -51,7 +51,8 @@ import org.junit.rules.TestName;
 @Category({FilterTests.class, SmallTests.class})
 public class TestColumnPrefixFilter {
 
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new
+      HBaseTestingUtility();
 
   @Rule
   public TestName name = new TestName();

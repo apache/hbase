@@ -71,7 +71,7 @@ public class TestDependentColumnFilter {
     Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
   };
   private static final byte[] MATCH_VAL = Bytes.toBytes("match");
-  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   List<KeyValue> testVals;
   private HRegion region;

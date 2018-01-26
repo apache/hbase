@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.util.CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -299,18 +298,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final Collection<Object[]> BLOOM_AND_COMPRESSION_COMBINATIONS =
       bloomAndCompressionCombinations();
 
-  /**
-   * Creates a new HBaseTestingUtility for starting a mini-cluster.
-   * If you are not using the startMini* methods, consider {@link #createLocalHTU()} instead.
-   */
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
   }
 
-  /**
-   * Creates a new HBaseTestingUtility for starting a mini-cluster.
-   * If you are not using the startMini* methods, consider {@link #createLocalHTU()} instead.
-   */
   public HBaseTestingUtility(Configuration conf) {
     super(conf);
 
@@ -356,7 +347,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     htu.getConfiguration().set("fs.defaultFS","file:///");
     htu.getConfiguration().set(HConstants.HBASE_DIR, "file://" + dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
-    htu.getConfiguration().setBoolean(UNSAFE_STREAM_CAPABILITY_ENFORCE,false);
     htu.localMode = true;
     return htu;
   }

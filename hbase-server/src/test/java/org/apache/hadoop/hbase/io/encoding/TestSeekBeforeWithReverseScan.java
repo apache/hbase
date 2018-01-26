@@ -46,7 +46,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestSeekBeforeWithReverseScan {
-  private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
+  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   private HRegion region;
 

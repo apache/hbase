@@ -55,7 +55,7 @@ public class TestBlocksScanned extends HBaseTestCase {
   public void setUp() throws Exception {
     super.setUp();
 
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
+    TEST_UTIL = new HBaseTestingUtility();
   }
 
   @Test
