@@ -31,16 +31,15 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestFullRestore extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestFullRestore.class);
 
   /**
-   * Verify that a single table is restored to a new table
-   * @throws Exception
+   * Verify that a single table is restored to a new table.
+   *
+   * @throws Exception if doing the backup, restoring it or an operation on the tables fails
    */
   @Test
   public void testFullRestoreSingle() throws Exception {
-
     LOG.info("test full restore on a single table empty table");
 
     List<TableName> tables = Lists.newArrayList(table1);
@@ -60,11 +59,8 @@ public class TestFullRestore extends TestBackupBase {
     hba.close();
   }
 
-
-
   @Test
   public void testFullRestoreSingleCommand() throws Exception {
-
     LOG.info("test full restore on a single table empty table: command-line");
 
     List<TableName> tables = Lists.newArrayList(table1);
@@ -87,7 +83,6 @@ public class TestFullRestore extends TestBackupBase {
 
   @Test
   public void testFullRestoreCheckCommand() throws Exception {
-
     LOG.info("test full restore on a single table: command-line, check only");
 
     List<TableName> tables = Lists.newArrayList(table1);
@@ -108,7 +103,8 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup, restoring it or an operation on the tables fails
    */
   @Test
   public void testFullRestoreMultiple() throws Exception {
@@ -132,7 +128,8 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup, restoring it or an operation on the tables fails
    */
   @Test
   public void testFullRestoreMultipleCommand() throws Exception {
@@ -161,12 +158,12 @@ public class TestFullRestore extends TestBackupBase {
   }
 
   /**
-   * Verify that a single table is restored using overwrite
-   * @throws Exception
+   * Verify that a single table is restored using overwrite.
+   *
+   * @throws Exception if doing the backup or restoring it fails
    */
   @Test
   public void testFullRestoreSingleOverwrite() throws Exception {
-
     LOG.info("test full restore on a single table empty table");
     List<TableName> tables = Lists.newArrayList(table1);
     String backupId = fullTableBackup(tables);
@@ -181,12 +178,12 @@ public class TestFullRestore extends TestBackupBase {
   }
 
   /**
-   * Verify that a single table is restored using overwrite
-   * @throws Exception
+   * Verify that a single table is restored using overwrite.
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testFullRestoreSingleOverwriteCommand() throws Exception {
-
     LOG.info("test full restore on a single table empty table: command-line");
     List<TableName> tables = Lists.newArrayList(table1);
     String backupId = fullTableBackup(tables);
@@ -203,12 +200,12 @@ public class TestFullRestore extends TestBackupBase {
     HBaseAdmin hba = TEST_UTIL.getHBaseAdmin();
     assertTrue(hba.tableExists(table1));
     hba.close();
-
   }
 
   /**
    * Verify that multiple tables are restored to new tables using overwrite.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or restoring it fails
    */
   @Test
   public void testFullRestoreMultipleOverwrite() throws Exception {
@@ -226,7 +223,8 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables using overwrite.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testFullRestoreMultipleOverwriteCommand() throws Exception {
@@ -253,11 +251,11 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that restore fails on a single table that does not exist.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or restoring it fails
    */
   @Test(expected = IOException.class)
   public void testFullRestoreSingleDNE() throws Exception {
-
     LOG.info("test restore fails on a single table that does not exist");
     List<TableName> tables = Lists.newArrayList(table1);
     String backupId = fullTableBackup(tables);
@@ -274,11 +272,11 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that restore fails on a single table that does not exist.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or restoring it fails
    */
   @Test
   public void testFullRestoreSingleDNECommand() throws Exception {
-
     LOG.info("test restore fails on a single table that does not exist: command-line");
     List<TableName> tables = Lists.newArrayList(table1);
     String backupId = fullTableBackup(tables);
@@ -294,16 +292,15 @@ public class TestFullRestore extends TestBackupBase {
     // Run restore
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret != 0);
-
   }
 
   /**
    * Verify that restore fails on multiple tables that do not exist.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or restoring it fails
    */
   @Test(expected = IOException.class)
   public void testFullRestoreMultipleDNE() throws Exception {
-
     LOG.info("test restore fails on multiple tables that do not exist");
 
     List<TableName> tables = Lists.newArrayList(table2, table3);
@@ -320,11 +317,11 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that restore fails on multiple tables that do not exist.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or restoring it fails
    */
   @Test
   public void testFullRestoreMultipleDNECommand() throws Exception {
-
     LOG.info("test restore fails on multiple tables that do not exist: command-line");
 
     List<TableName> tables = Lists.newArrayList(table2, table3);

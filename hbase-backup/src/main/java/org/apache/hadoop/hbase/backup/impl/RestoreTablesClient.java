@@ -63,7 +63,7 @@ public class RestoreTablesClient {
   private String targetRootDir;
   private boolean isOverwrite;
 
-  public RestoreTablesClient(Connection conn, RestoreRequest request) throws IOException {
+  public RestoreTablesClient(Connection conn, RestoreRequest request) {
     this.targetRootDir = request.getBackupRootDir();
     this.backupId = request.getBackupId();
     this.sTableArray = request.getFromTables();
@@ -74,13 +74,11 @@ public class RestoreTablesClient {
     this.isOverwrite = request.isOverwrite();
     this.conn = conn;
     this.conf = conn.getConfiguration();
-
   }
 
   /**
-   * Validate target tables
-   * @param conn connection
-   * @param mgr table state manager
+   * Validate target tables.
+   *
    * @param tTableArray: target tables
    * @param isOverwrite overwrite existing table
    * @throws IOException exception
@@ -125,8 +123,8 @@ public class RestoreTablesClient {
   }
 
   /**
-   * Restore operation handle each backupImage in array
-   * @param svc: master services
+   * Restore operation handle each backupImage in array.
+   *
    * @param images: array BackupImage
    * @param sTable: table to be restored
    * @param tTable: table to be restored to
@@ -136,7 +134,6 @@ public class RestoreTablesClient {
 
   private void restoreImages(BackupImage[] images, TableName sTable, TableName tTable,
       boolean truncateIfExists) throws IOException {
-
     // First image MUST be image of a FULL backup
     BackupImage image = images[0];
     String rootDir = image.getRootDir();
@@ -163,7 +160,7 @@ public class RestoreTablesClient {
       return;
     }
 
-    List<Path> dirList = new ArrayList<Path>();
+    List<Path> dirList = new ArrayList<>();
     // add full backup path
     // full backup path comes first
     for (int i = 1; i < images.length; i++) {
@@ -188,7 +185,7 @@ public class RestoreTablesClient {
   private List<Path> getFilesRecursively(String fileBackupDir)
       throws IllegalArgumentException, IOException {
     FileSystem fs = FileSystem.get((new Path(fileBackupDir)).toUri(), new Configuration());
-    List<Path> list = new ArrayList<Path>();
+    List<Path> list = new ArrayList<>();
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(fileBackupDir), true);
     while (it.hasNext()) {
       Path p = it.next().getPath();
@@ -204,13 +201,11 @@ public class RestoreTablesClient {
    * @param backupManifestMap : tableName, Manifest
    * @param sTableArray The array of tables to be restored
    * @param tTableArray The array of mapping tables to restore to
-   * @return set of BackupImages restored
    * @throws IOException exception
    */
   private void restore(HashMap<TableName, BackupManifest> backupManifestMap,
       TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
-    TreeSet<BackupImage> restoreImageSet = new TreeSet<BackupImage>();
-    boolean truncateIfExists = isOverwrite;
+    TreeSet<BackupImage> restoreImageSet = new TreeSet<>();
     Set<String> backupIdSet = new HashSet<>();
 
     for (int i = 0; i < sTableArray.length; i++) {
@@ -219,20 +214,21 @@ public class RestoreTablesClient {
       BackupManifest manifest = backupManifestMap.get(table);
       // Get the image list of this backup for restore in time order from old
       // to new.
-      List<BackupImage> list = new ArrayList<BackupImage>();
+      List<BackupImage> list = new ArrayList<>();
       list.add(manifest.getBackupImage());
-      TreeSet<BackupImage> set = new TreeSet<BackupImage>(list);
+      TreeSet<BackupImage> set = new TreeSet<>(list);
       List<BackupImage> depList = manifest.getDependentListByTable(table);
       set.addAll(depList);
       BackupImage[] arr = new BackupImage[set.size()];
       set.toArray(arr);
-      restoreImages(arr, table, tTableArray[i], truncateIfExists);
+      restoreImages(arr, table, tTableArray[i], isOverwrite);
       restoreImageSet.addAll(list);
       if (restoreImageSet != null && !restoreImageSet.isEmpty()) {
         LOG.info("Restore includes the following image(s):");
         for (BackupImage image : restoreImageSet) {
           LOG.info("Backup: " + image.getBackupId() + " "
-              + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(), table));
+              + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(),
+                  table));
           if (image.getType() == BackupType.INCREMENTAL) {
             backupIdSet.add(image.getBackupId());
             LOG.debug("adding " + image.getBackupId() + " for bulk load");
@@ -251,14 +247,10 @@ public class RestoreTablesClient {
   }
 
   static boolean withinRange(long a, long lower, long upper) {
-    if (a < lower || a > upper) {
-      return false;
-    }
-    return true;
+    return a >= lower && a <= upper;
   }
 
   public void execute() throws IOException {
-
     // case VALIDATION:
     // check the target tables
     checkTargetTables(tTableArray, isOverwrite);
@@ -272,5 +264,4 @@ public class RestoreTablesClient {
 
     restore(backupManifestMap, sTableArray, tTableArray, isOverwrite);
   }
-
 }

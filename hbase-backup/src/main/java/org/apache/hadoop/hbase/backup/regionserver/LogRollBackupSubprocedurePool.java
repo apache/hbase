@@ -32,10 +32,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.errorhandling.ForeignException;
 
 /**
  * Handle running each of the individual tasks for completing a backup procedure on a region
@@ -52,7 +52,7 @@ public class LogRollBackupSubprocedurePool implements Closeable, Abortable {
   private final ExecutorCompletionService<Void> taskPool;
   private final ThreadPoolExecutor executor;
   private volatile boolean aborted;
-  private final List<Future<Void>> futures = new ArrayList<Future<Void>>();
+  private final List<Future<Void>> futures = new ArrayList<>();
   private final String name;
 
   public LogRollBackupSubprocedurePool(String name, Configuration conf) {
@@ -64,9 +64,9 @@ public class LogRollBackupSubprocedurePool implements Closeable, Abortable {
     this.name = name;
     executor =
         new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<Runnable>(), new DaemonThreadFactory("rs(" + name
+            new LinkedBlockingQueue<>(), new DaemonThreadFactory("rs(" + name
                 + ")-backup-pool"));
-    taskPool = new ExecutorCompletionService<Void>(executor);
+    taskPool = new ExecutorCompletionService<>(executor);
   }
 
   /**

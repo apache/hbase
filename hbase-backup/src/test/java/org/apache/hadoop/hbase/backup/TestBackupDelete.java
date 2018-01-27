@@ -38,13 +38,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupDelete extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDelete.class);
 
   /**
    * Verify that full backup is created on a single table with data correctly. Verify that history
-   * works as expected
-   * @throws Exception
+   * works as expected.
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testBackupDelete() throws Exception {
@@ -70,8 +70,9 @@ public class TestBackupDelete extends TestBackupBase {
 
   /**
    * Verify that full backup is created on a single table with data correctly. Verify that history
-   * works as expected
-   * @throws Exception
+   * works as expected.
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testBackupDeleteCommand() throws Exception {
@@ -97,5 +98,4 @@ public class TestBackupDelete extends TestBackupBase {
     LOG.info(baos.toString());
     assertTrue(output.indexOf("Deleted 1 backups") >= 0);
   }
-
 }

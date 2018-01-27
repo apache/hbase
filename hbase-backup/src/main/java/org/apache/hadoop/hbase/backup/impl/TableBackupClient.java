@@ -35,13 +35,13 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -80,8 +80,7 @@ public abstract class TableBackupClient {
   }
 
   public void init(final Connection conn, final String backupId, BackupRequest request)
-      throws IOException
-  {
+      throws IOException {
     if (request.getBackupType() == BackupType.FULL) {
       backupManager = new BackupManager(conn, conn.getConfiguration());
     } else {
@@ -137,10 +136,10 @@ public abstract class TableBackupClient {
   /**
    * Delete HBase snapshot for backup.
    * @param backupInfo backup info
-   * @throws Exception exception
+   * @throws IOException exception
    */
-  protected static void deleteSnapshots(final Connection conn, BackupInfo backupInfo, Configuration conf)
-      throws IOException {
+  protected static void deleteSnapshots(final Connection conn, BackupInfo backupInfo,
+      Configuration conf) throws IOException {
     LOG.debug("Trying to delete snapshot for full backup.");
     for (String snapshotName : backupInfo.getSnapshotNames()) {
       if (snapshotName == null) {
@@ -228,11 +227,10 @@ public abstract class TableBackupClient {
    * Fail the overall backup.
    * @param backupInfo backup info
    * @param e exception
-   * @throws Exception exception
+   * @throws IOException exception
    */
   protected void failBackup(Connection conn, BackupInfo backupInfo, BackupManager backupManager,
       Exception e, String msg, BackupType type, Configuration conf) throws IOException {
-
     try {
       LOG.error(msg + getMessage(e), e);
       // If this is a cancel exception, then we've already cleaned.
@@ -277,16 +275,13 @@ public abstract class TableBackupClient {
     cleanupTargetDir(backupInfo, conf);
   }
 
-
-
   /**
    * Add manifest for the current backup. The manifest is stored within the table backup directory.
    * @param backupInfo The current backup info
    * @throws IOException exception
-   * @throws BackupException exception
    */
   protected void addManifest(BackupInfo backupInfo, BackupManager backupManager, BackupType type,
-      Configuration conf) throws IOException, BackupException {
+      Configuration conf) throws IOException {
     // set the overall backup phase : store manifest
     backupInfo.setPhase(BackupPhase.STORE_MANIFEST);
 
@@ -303,8 +298,7 @@ public abstract class TableBackupClient {
 
       if (type == BackupType.INCREMENTAL) {
         // We'll store the log timestamps for this table only in its manifest.
-        HashMap<TableName, HashMap<String, Long>> tableTimestampMap =
-            new HashMap<TableName, HashMap<String, Long>>();
+        HashMap<TableName, HashMap<String, Long>> tableTimestampMap = new HashMap<>();
         tableTimestampMap.put(table, backupInfo.getIncrTimestampMap().get(table));
         manifest.setIncrTimestampMap(tableTimestampMap);
         ArrayList<BackupImage> ancestorss = backupManager.getAncestors(backupInfo);
@@ -371,7 +365,7 @@ public abstract class TableBackupClient {
   /**
    * Complete the overall backup.
    * @param backupInfo backup info
-   * @throws Exception exception
+   * @throws IOException exception
    */
   protected void completeBackup(final Connection conn, BackupInfo backupInfo,
       BackupManager backupManager, BackupType type, Configuration conf) throws IOException {
@@ -412,8 +406,9 @@ public abstract class TableBackupClient {
   }
 
   /**
-   * Backup request execution
-   * @throws IOException
+   * Backup request execution.
+   *
+   * @throws IOException if the execution of the backup fails
    */
   public abstract void execute() throws IOException;
 
@@ -430,7 +425,7 @@ public abstract class TableBackupClient {
     }
   }
 
-  public static enum Stage {
+  public enum Stage {
     stage_0, stage_1, stage_2, stage_3, stage_4
   }
 }

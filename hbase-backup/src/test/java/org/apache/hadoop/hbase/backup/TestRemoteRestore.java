@@ -24,23 +24,21 @@ import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestRemoteRestore extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteRestore.class);
 
   @Override
-  public void setUp () throws Exception {
+  public void setUp() throws Exception {
     useSecondCluster = true;
     super.setUp();
   }
 
-
   /**
    * Verify that a remote restore on a single table is successful.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testFullRestoreRemote() throws Exception {
-
     LOG.info("test remote full backup on a single table");
     String backupId =
         backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR);
@@ -55,5 +53,4 @@ public class TestRemoteRestore extends TestBackupBase {
     TEST_UTIL.deleteTable(table1_restore);
     hba.close();
   }
-
 }

@@ -38,20 +38,19 @@ import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * MapReduce implementation of {@link BackupMergeJob}
  * Must be initialized with configuration of a backup destination cluster
  *
  */
-
 @InterfaceAudience.Private
 public class MapReduceBackupMergeJob implements BackupMergeJob {
   public static final Logger LOG = LoggerFactory.getLogger(MapReduceBackupMergeJob.class);
@@ -87,7 +86,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       LOG.debug("Merge backup images " + bids);
     }
 
-    List<Pair<TableName, Path>> processedTableList = new ArrayList<Pair<TableName, Path>>();
+    List<Pair<TableName, Path>> processedTableList = new ArrayList<>();
     boolean finishedTables = false;
     Connection conn = ConnectionFactory.createConnection(getConf());
     BackupSystemTable table = new BackupSystemTable(conn);
@@ -104,17 +103,14 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       String mergedBackupId = findMostRecentBackupId(backupIds);
 
       TableName[] tableNames = getTableNamesInBackupImages(backupIds);
-      String backupRoot = null;
 
       BackupInfo bInfo = table.readBackupInfo(backupIds[0]);
-      backupRoot = bInfo.getBackupRootDir();
+      String backupRoot = bInfo.getBackupRootDir();
 
       for (int i = 0; i < tableNames.length; i++) {
-
         LOG.info("Merge backup images for " + tableNames[i]);
 
         // Find input directories for table
-
         Path[] dirPaths = findInputDirectories(fs, backupRoot, tableNames[i], backupIds);
         String dirs = StringUtils.join(dirPaths, ",");
         Path bulkOutputPath =
@@ -130,16 +126,14 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         conf.set(bulkOutputConfKey, bulkOutputPath.toString());
         String[] playerArgs = { dirs, tableNames[i].getNameAsString() };
 
-        int result = 0;
-
         player.setConf(getConf());
-        result = player.run(playerArgs);
+        int result = player.run(playerArgs);
         if (!succeeded(result)) {
           throw new IOException("Can not merge backup images for " + dirs
               + " (check Hadoop/MR and HBase logs). Player return code =" + result);
         }
         // Add to processed table list
-        processedTableList.add(new Pair<TableName, Path>(tableNames[i], bulkOutputPath));
+        processedTableList.add(new Pair<>(tableNames[i], bulkOutputPath));
         LOG.debug("Merge Job finished:" + result);
       }
       List<TableName> tableList = toTableNameList(processedTableList);
@@ -184,7 +178,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected List<Path> toPathList(List<Pair<TableName, Path>> processedTableList) {
-    ArrayList<Path> list = new ArrayList<Path>();
+    ArrayList<Path> list = new ArrayList<>();
     for (Pair<TableName, Path> p : processedTableList) {
       list.add(p.getSecond());
     }
@@ -192,7 +186,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected List<TableName> toTableNameList(List<Pair<TableName, Path>> processedTableList) {
-    ArrayList<TableName> list = new ArrayList<TableName>();
+    ArrayList<TableName> list = new ArrayList<>();
     for (Pair<TableName, Path> p : processedTableList) {
       list.add(p.getFirst());
     }
@@ -201,7 +195,6 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
   protected void cleanupBulkLoadDirs(FileSystem fs, List<Path> pathList) throws IOException {
     for (Path path : pathList) {
-
       if (!fs.delete(path, true)) {
         LOG.warn("Can't delete " + path);
       }
@@ -210,18 +203,15 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
   protected void updateBackupManifest(String backupRoot, String mergedBackupId,
       List<String> backupsToDelete) throws IllegalArgumentException, IOException {
-
     BackupManifest manifest =
         HBackupFileSystem.getManifest(conf, new Path(backupRoot), mergedBackupId);
     manifest.getBackupImage().removeAncestors(backupsToDelete);
     // save back
     manifest.store(conf);
-
   }
 
   protected void deleteBackupImages(List<String> backupIds, Connection conn, FileSystem fs,
       String backupRoot) throws IOException {
-
     // Delete from backup system table
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
@@ -240,7 +230,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected List<String> getBackupIdsToDelete(String[] backupIds, String mergedBackupId) {
-    List<String> list = new ArrayList<String>();
+    List<String> list = new ArrayList<>();
     for (String id : backupIds) {
       if (id.equals(mergedBackupId)) {
         continue;
@@ -250,9 +240,8 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     return list;
   }
 
-  protected void moveData(FileSystem fs, String backupRoot, Path bulkOutputPath, TableName tableName,
-      String mergedBackupId) throws IllegalArgumentException, IOException {
-
+  protected void moveData(FileSystem fs, String backupRoot, Path bulkOutputPath,
+          TableName tableName, String mergedBackupId) throws IllegalArgumentException, IOException {
     Path dest =
         new Path(HBackupFileSystem.getTableBackupDataDir(backupRoot, mergedBackupId, tableName));
 
@@ -267,7 +256,6 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         fs.rename(fst.getPath().getParent(), dest);
       }
     }
-
   }
 
   protected String findMostRecentBackupId(String[] backupIds) {
@@ -282,8 +270,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected TableName[] getTableNamesInBackupImages(String[] backupIds) throws IOException {
-
-    Set<TableName> allSet = new HashSet<TableName>();
+    Set<TableName> allSet = new HashSet<>();
 
     try (Connection conn = ConnectionFactory.createConnection(conf);
         BackupSystemTable table = new BackupSystemTable(conn)) {
@@ -300,8 +287,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
   protected Path[] findInputDirectories(FileSystem fs, String backupRoot, TableName tableName,
       String[] backupIds) throws IOException {
-
-    List<Path> dirs = new ArrayList<Path>();
+    List<Path> dirs = new ArrayList<>();
 
     for (String backupId : backupIds) {
       Path fileBackupDirPath =
@@ -317,5 +303,4 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     Path[] ret = new Path[dirs.size()];
     return dirs.toArray(ret);
   }
-
 }

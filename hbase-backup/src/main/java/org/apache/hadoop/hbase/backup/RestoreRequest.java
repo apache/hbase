@@ -24,8 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * POJO class for restore request
  */
 @InterfaceAudience.Private
-public class RestoreRequest {
-
+public final class RestoreRequest {
   public static class Builder {
     RestoreRequest request;
 
@@ -62,7 +61,6 @@ public class RestoreRequest {
       request.setOverwrite(overwrite);
       return this;
     }
-
 
     public RestoreRequest build() {
       return request;

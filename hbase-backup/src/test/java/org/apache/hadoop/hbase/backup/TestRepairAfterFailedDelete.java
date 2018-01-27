@@ -38,7 +38,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestRepairAfterFailedDelete extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRepairAfterFailedDelete.class);
 
   @Test
@@ -83,10 +82,8 @@ public class TestRepairAfterFailedDelete extends TestBackupBase {
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
     assertTrue(ret == 0);
     // Verify that history length == 0
-    assertTrue (table.getBackupHistory().size() == 0);
+    assertTrue(table.getBackupHistory().size() == 0);
     table.close();
     admin.close();
   }
-
-
 }

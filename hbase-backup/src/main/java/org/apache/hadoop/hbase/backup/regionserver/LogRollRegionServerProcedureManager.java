@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class LogRollRegionServerProcedureManager extends RegionServerProcedureManager {
-
   private static final Logger LOG =
       LoggerFactory.getLogger(LogRollRegionServerProcedureManager.class);
 
@@ -120,7 +119,6 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
    * @return Subprocedure to submit to the ProcedureMemeber.
    */
   public Subprocedure buildSubprocedure(byte[] data) {
-
     // don't run a backup if the parent is stop(ping)
     if (rss.isStopping() || rss.isStopped()) {
       throw new IllegalStateException("Can't start backup procedure on RS: " + rss.getServerName()
@@ -138,14 +136,12 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
         new LogRollBackupSubprocedurePool(rss.getServerName().toString(), conf);
     return new LogRollBackupSubprocedure(rss, member, errorDispatcher, wakeMillis, timeoutMillis,
         taskManager, data);
-
   }
 
   /**
    * Build the actual backup procedure runner that will do all the 'hard' work
    */
   public class BackupSubprocedureBuilder implements SubprocedureFactory {
-
     @Override
     public Subprocedure buildSubprocedure(String name, byte[] data) {
       return LogRollRegionServerProcedureManager.this.buildSubprocedure(data);
@@ -178,5 +174,4 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
   public String getProcedureSignature() {
     return "backup-proc";
   }
-
 }

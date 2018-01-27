@@ -30,14 +30,14 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of a log cleaner that checks if a log is still scheduled for incremental backup
@@ -83,7 +83,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
       return files;
     }
 
-    List<FileStatus> list = new ArrayList<FileStatus>();
+    List<FileStatus> list = new ArrayList<>();
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       // If we do not have recorded backup sessions
       try {
@@ -116,7 +116,7 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     } catch (IOException e) {
       LOG.error("Failed to get backup system table table, therefore will keep all files", e);
       // nothing to delete
-      return new ArrayList<FileStatus>();
+      return new ArrayList<>();
     }
   }
 
@@ -143,5 +143,4 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
   public boolean isStopped() {
     return this.stopped;
   }
-
 }

@@ -32,14 +32,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface RestoreJob extends Configurable {
-
   /**
    * Run restore operation
    * @param dirPaths path array of WAL log directories
    * @param fromTables from tables
    * @param toTables to tables
    * @param fullBackupRestore full backup restore
-   * @throws IOException
+   * @throws IOException if running the job fails
    */
   void run(Path[] dirPaths, TableName[] fromTables, TableName[] toTables,
       boolean fullBackupRestore) throws IOException;

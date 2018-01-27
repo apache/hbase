@@ -28,16 +28,15 @@ import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestSystemTableSnapshot extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestSystemTableSnapshot.class);
 
   /**
-   * Verify backup system table snapshot
-   * @throws Exception
+   * Verify backup system table snapshot.
+   *
+   * @throws Exception if an operation on the table fails
    */
  // @Test
   public void _testBackupRestoreSystemTable() throws Exception {
-
     LOG.info("test snapshot system table");
 
     TableName backupSystem = BackupSystemTable.getTableName(conf1);
@@ -51,5 +50,4 @@ public class TestSystemTableSnapshot extends TestBackupBase {
     hba.enableTable(backupSystem);
     hba.close();
   }
-
 }

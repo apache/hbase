@@ -39,16 +39,15 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupDescribe extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDescribe.class);
 
   /**
-   * Verify that describe works as expected if incorrect backup Id is supplied
-   * @throws Exception
+   * Verify that describe works as expected if incorrect backup Id is supplied.
+   *
+   * @throws Exception if creating the {@link BackupDriver} fails
    */
   @Test
   public void testBackupDescribe() throws Exception {
-
     LOG.info("test backup describe on a single table with data");
 
     String[] args = new String[] { "describe", "backup_2" };
@@ -75,7 +74,6 @@ public class TestBackupDescribe extends TestBackupBase {
 
   @Test
   public void testBackupDescribeCommand() throws Exception {
-
     LOG.info("test backup describe on a single table with data: command-line");
 
     List<TableName> tableList = Lists.newArrayList(table1);
@@ -103,7 +101,5 @@ public class TestBackupDescribe extends TestBackupBase {
     String desc = status.getShortDescription();
     table.close();
     assertTrue(response.indexOf(desc) >= 0);
-
   }
-
 }

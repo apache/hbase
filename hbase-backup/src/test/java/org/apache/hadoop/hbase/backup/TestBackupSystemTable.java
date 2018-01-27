@@ -60,7 +60,6 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestBackupSystemTable {
-
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static Configuration conf = UTIL.getConfiguration();
   protected static MiniHBaseCluster cluster;
@@ -152,9 +151,7 @@ public class TestBackupSystemTable {
 
   @Test
   public void testBackupDelete() throws IOException {
-
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
-
       int n = 10;
       List<BackupInfo> list = createBackupInfoList(n);
 
@@ -259,7 +256,7 @@ public class TestBackupSystemTable {
     tables.add(TableName.valueOf("t2"));
     tables.add(TableName.valueOf("t3"));
 
-    HashMap<String, Long> rsTimestampMap = new HashMap<String, Long>();
+    HashMap<String, Long> rsTimestampMap = new HashMap<>();
 
     rsTimestampMap.put("rs1:100", 100L);
     rsTimestampMap.put("rs2:100", 101L);
@@ -285,7 +282,7 @@ public class TestBackupSystemTable {
     tables1.add(TableName.valueOf("t4"));
     tables1.add(TableName.valueOf("t5"));
 
-    HashMap<String, Long> rsTimestampMap1 = new HashMap<String, Long>();
+    HashMap<String, Long> rsTimestampMap1 = new HashMap<>();
 
     rsTimestampMap1.put("rs1:100", 200L);
     rsTimestampMap1.put("rs2:100", 201L);
@@ -460,7 +457,7 @@ public class TestBackupSystemTable {
       String[] removeTables = new String[] { "table4", "table3" };
       table.removeFromBackupSet(setName, removeTables);
 
-     Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2"));
+      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -514,7 +511,6 @@ public class TestBackupSystemTable {
   }
 
   private BackupInfo createBackupInfo() {
-
     BackupInfo ctxt =
         new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
             TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
@@ -525,7 +521,7 @@ public class TestBackupSystemTable {
   }
 
   private List<BackupInfo> createBackupInfoList(int size) {
-    List<BackupInfo> list = new ArrayList<BackupInfo>();
+    List<BackupInfo> list = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       list.add(createBackupInfo());
       try {
@@ -539,6 +535,8 @@ public class TestBackupSystemTable {
 
   @AfterClass
   public static void tearDown() throws IOException {
-    if (cluster != null) cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 }

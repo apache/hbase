@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility class for disabling Zk and client logging
@@ -28,7 +28,6 @@ import org.apache.log4j.Logger;
  */
 @InterfaceAudience.Private
 final class LogUtils {
-
   private LogUtils() {
   }
 

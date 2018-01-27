@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.TestLoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -46,6 +45,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * 1. Create table t1
@@ -63,13 +64,14 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     secure = true;
-    List<Object[]> params = new ArrayList<Object[]>();
+    List<Object[]> params = new ArrayList<>();
     params.add(new Object[] {Boolean.TRUE});
     return params;
   }
 
   public TestIncrementalBackupWithBulkLoad(Boolean b) {
   }
+
   // implement all test cases in 1 test since incremental backup/restore has dependencies
   @Test
   public void TestIncBackupDeleteTable() throws Exception {
@@ -78,9 +80,8 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     LOG.info("create full backup image for all tables");
 
     List<TableName> tables = Lists.newArrayList(table1);
-    HBaseAdmin admin = null;
     Connection conn = ConnectionFactory.createConnection(conf1);
-    admin = (HBaseAdmin) conn.getAdmin();
+    HBaseAdmin admin = (HBaseAdmin) conn.getAdmin();
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
@@ -104,9 +105,9 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     LOG.debug("bulk loading into " + testName);
     int actual = TestLoadIncrementalHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
         qualName, false, null, new byte[][][] {
-      new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
-      new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
-    }, true, false, true, NB_ROWS_IN_BATCH*2, NB_ROWS2);
+          new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
+          new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
+        }, true, false, true, NB_ROWS_IN_BATCH*2, NB_ROWS2);
 
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
@@ -118,7 +119,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     int actual1 = TestLoadIncrementalHFiles.loadHFiles(testName, table1Desc, TEST_UTIL, famName,
       qualName, false, null,
       new byte[][][] { new byte[][] { Bytes.toBytes("ppp"), Bytes.toBytes("qqq") },
-          new byte[][] { Bytes.toBytes("rrr"), Bytes.toBytes("sss") }, },
+        new byte[][] { Bytes.toBytes("rrr"), Bytes.toBytes("sss") }, },
       true, false, true, NB_ROWS_IN_BATCH * 2 + actual, NB_ROWS2);
 
     // #5 - incremental backup for table1
@@ -144,7 +145,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     backupIdFull = client.backupTables(request);
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair
-      = table.readBulkloadRows(tables);
+        = table.readBulkloadRows(tables);
       assertTrue("map still has " + pair.getSecond().size() + " entries",
           pair.getSecond().isEmpty());
     }
@@ -154,5 +155,4 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     admin.close();
     conn.close();
   }
-
 }

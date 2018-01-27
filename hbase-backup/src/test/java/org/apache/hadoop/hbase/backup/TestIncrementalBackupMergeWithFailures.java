@@ -55,13 +55,13 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestIncrementalBackupMergeWithFailures.class);
 
-  static enum FailurePhase {
+  enum FailurePhase {
     PHASE1, PHASE2, PHASE3, PHASE4
   }
+
   public final static String FAILURE_PHASE_KEY = "failurePhase";
 
   static class BackupMergeJobWithFailures extends MapReduceBackupMergeJob {
-
     FailurePhase failurePhase;
 
     @Override
@@ -74,7 +74,6 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         Assert.fail("Failure phase is not set");
       }
     }
-
 
     /**
      * This is the exact copy of parent's run() with injections
@@ -95,14 +94,13 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         LOG.debug("Merge backup images " + bids);
       }
 
-      List<Pair<TableName, Path>> processedTableList = new ArrayList<Pair<TableName, Path>>();
+      List<Pair<TableName, Path>> processedTableList = new ArrayList<>();
       boolean finishedTables = false;
       Connection conn = ConnectionFactory.createConnection(getConf());
       BackupSystemTable table = new BackupSystemTable(conn);
       FileSystem fs = FileSystem.get(getConf());
 
       try {
-
         // Start backup exclusive operation
         table.startBackupExclusiveOperation();
         // Start merge operation
@@ -112,19 +110,16 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         String mergedBackupId = findMostRecentBackupId(backupIds);
 
         TableName[] tableNames = getTableNamesInBackupImages(backupIds);
-        String backupRoot = null;
 
         BackupInfo bInfo = table.readBackupInfo(backupIds[0]);
-        backupRoot = bInfo.getBackupRootDir();
+        String backupRoot = bInfo.getBackupRootDir();
         // PHASE 1
         checkFailure(FailurePhase.PHASE1);
 
         for (int i = 0; i < tableNames.length; i++) {
-
           LOG.info("Merge backup images for " + tableNames[i]);
 
           // Find input directories for table
-
           Path[] dirPaths = findInputDirectories(fs, backupRoot, tableNames[i], backupIds);
           String dirs = StringUtils.join(dirPaths, ",");
           Path bulkOutputPath =
@@ -140,14 +135,13 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           conf.set(bulkOutputConfKey, bulkOutputPath.toString());
           String[] playerArgs = { dirs, tableNames[i].getNameAsString() };
 
-          int result = 0;
           // PHASE 2
           checkFailure(FailurePhase.PHASE2);
           player.setConf(getConf());
-          result = player.run(playerArgs);
+          int result = player.run(playerArgs);
           if (succeeded(result)) {
             // Add to processed table list
-            processedTableList.add(new Pair<TableName, Path>(tableNames[i], bulkOutputPath));
+            processedTableList.add(new Pair<>(tableNames[i], bulkOutputPath));
           } else {
             throw new IOException("Can not merge backup images for " + dirs
                 + " (check Hadoop/MR and HBase logs). Player return code =" + result);
@@ -193,21 +187,17 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         table.close();
         conn.close();
       }
-
     }
 
     private void checkFailure(FailurePhase phase) throws IOException {
-      if ( failurePhase != null && failurePhase == phase) {
-        throw new IOException (phase.toString());
+      if (failurePhase != null && failurePhase == phase) {
+        throw new IOException(phase.toString());
       }
     }
-
   }
-
 
   @Test
   public void TestIncBackupMergeRestore() throws Exception {
-
     int ADD_ROWS = 99;
     // #1 - create full backup for all tables
     LOG.info("create full backup image for all tables");
@@ -219,8 +209,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
     Connection conn = ConnectionFactory.createConnection(conf1);
 
-    HBaseAdmin admin = null;
-    admin = (HBaseAdmin) conn.getAdmin();
+    HBaseAdmin admin = (HBaseAdmin) conn.getAdmin();
     BackupAdminImpl client = new BackupAdminImpl(conn);
 
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
@@ -262,7 +251,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
     // #4 Merge backup images with failures
 
-    for ( FailurePhase phase : FailurePhase.values()) {
+    for (FailurePhase phase : FailurePhase.values()) {
       Configuration conf = conn.getConfiguration();
 
       conf.set(FAILURE_PHASE_KEY, phase.toString());
@@ -329,7 +318,5 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
     admin.close();
     conn.close();
-
   }
-
 }

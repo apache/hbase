@@ -32,7 +32,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface BackupCopyJob extends Configurable {
-
   /**
    * Copy backup data to destination
    * @param backupInfo context object
@@ -49,7 +48,7 @@ public interface BackupCopyJob extends Configurable {
   /**
    * Cancel copy job
    * @param jobHandler backup copy job handler
-   * @throws IOException
+   * @throws IOException if cancelling the jobs fails
    */
   void cancel(String jobHandler) throws IOException;
 }

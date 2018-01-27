@@ -81,7 +81,6 @@ public class BackupManager implements Closeable {
     this.conf = conf;
     this.conn = conn;
     this.systemTable = new BackupSystemTable(conn);
-
   }
 
   /**
@@ -113,14 +112,14 @@ public class BackupManager implements Closeable {
     if (classes == null) {
       conf.set(ProcedureManagerHost.MASTER_PROCEDURE_CONF_KEY, masterProcedureClass);
     } else if (!classes.contains(masterProcedureClass)) {
-      conf.set(ProcedureManagerHost.MASTER_PROCEDURE_CONF_KEY, classes + "," + masterProcedureClass);
+      conf.set(ProcedureManagerHost.MASTER_PROCEDURE_CONF_KEY, classes + ","
+              + masterProcedureClass);
     }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Added log cleaner: " + cleanerClass + "\n" + "Added master procedure manager: "
           + masterProcedureClass);
     }
-
   }
 
   /**
@@ -170,7 +169,6 @@ public class BackupManager implements Closeable {
    */
   @Override
   public void close() {
-
     if (systemTable != null) {
       try {
         systemTable.close();
@@ -200,7 +198,6 @@ public class BackupManager implements Closeable {
     if (type == BackupType.FULL && (tableList == null || tableList.isEmpty())) {
       // If table list is null for full backup, which means backup all tables. Then fill the table
       // list with all user tables from meta. It no table available, throw the request exception.
-
       HTableDescriptor[] htds = null;
       try (Admin admin = conn.getAdmin()) {
         htds = admin.listTables();
@@ -242,7 +239,6 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   private String getOngoingBackupId() throws IOException {
-
     ArrayList<BackupInfo> sessions = systemTable.getBackupInfos(BackupState.RUNNING);
     if (sessions.size() == 0) {
       return null;
@@ -272,13 +268,11 @@ public class BackupManager implements Closeable {
    * @param backupInfo The backup info for the current backup
    * @return The ancestors for the current backup
    * @throws IOException exception
-   * @throws BackupException exception
    */
-  public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo) throws IOException,
-      BackupException {
+  public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo) throws IOException  {
     LOG.debug("Getting the direct ancestors of the current backup " + backupInfo.getBackupId());
 
-    ArrayList<BackupImage> ancestors = new ArrayList<BackupImage>();
+    ArrayList<BackupImage> ancestors = new ArrayList<>();
 
     // full backup does not have ancestor
     if (backupInfo.getType() == BackupType.FULL) {
@@ -287,7 +281,6 @@ public class BackupManager implements Closeable {
     }
 
     // get all backup history list in descending order
-
     ArrayList<BackupInfo> allHistoryList = getBackupHistory(true);
     for (BackupInfo backup : allHistoryList) {
 
@@ -327,7 +320,8 @@ public class BackupManager implements Closeable {
           ancestors.add(lastIncrImage);
 
           LOG.debug("Last dependent incremental backup image: " + "{BackupID="
-              + lastIncrImage.getBackupId() + "," + "BackupDir=" + lastIncrImage.getRootDir() + "}");
+                  + lastIncrImage.getBackupId() + "," + "BackupDir=" + lastIncrImage.getRootDir()
+                  + "}");
         }
       }
     }
@@ -340,13 +334,12 @@ public class BackupManager implements Closeable {
    * @param backupInfo backup info
    * @param table table
    * @return backupImages on the dependency list
-   * @throws BackupException exception
    * @throws IOException exception
    */
   public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo, TableName table)
-      throws BackupException, IOException {
+      throws IOException {
     ArrayList<BackupImage> ancestors = getAncestors(backupInfo);
-    ArrayList<BackupImage> tableAncestors = new ArrayList<BackupImage>();
+    ArrayList<BackupImage> tableAncestors = new ArrayList<>();
     for (BackupImage image : ancestors) {
       if (image.hasTable(table)) {
         tableAncestors.add(image);
@@ -489,9 +482,10 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Get WAL files iterator
+   * Get WAL files iterator.
+   *
    * @return WAL files iterator from backup system table
-   * @throws IOException
+   * @throws IOException if getting the WAL files iterator fails
    */
   public Iterator<BackupSystemTable.WALItem> getWALFilesFromBackupSystem() throws IOException {
     return systemTable.getWALFilesIterator(backupInfo.getBackupRootDir());

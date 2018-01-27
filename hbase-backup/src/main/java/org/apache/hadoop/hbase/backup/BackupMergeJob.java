@@ -30,11 +30,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface BackupMergeJob extends Configurable {
-
   /**
-   * Run backup merge operation
+   * Run backup merge operation.
+   *
    * @param backupIds backup image ids
-   * @throws IOException
+   * @throws IOException if the backup merge operation fails
    */
   void run(String[] backupIds) throws IOException;
 }

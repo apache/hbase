@@ -38,18 +38,18 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestRemoteBackup extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteBackup.class);
 
   @Override
-  public void setUp () throws Exception {
+  public void setUp() throws Exception {
     useSecondCluster = true;
     super.setUp();
   }
 
   /**
    * Verify that a remote full backup is created on a single table with data correctly.
-   * @throws Exception
+   *
+   * @throws Exception if an operation on the table fails
    */
   @Test
   public void testFullBackupRemote() throws Exception {
@@ -59,28 +59,25 @@ public class TestRemoteBackup extends TestBackupBase {
     final byte[] fam3Name = Bytes.toBytes("f3");
     final byte[] fam2Name = Bytes.toBytes("f2");
     final Connection conn = ConnectionFactory.createConnection(conf1);
-    Thread t = new Thread() {
-      @Override
-      public void run() {
-        try {
-          latch.await();
-        } catch (InterruptedException ie) {
-        }
-        try {
-          HTable t1 = (HTable) conn.getTable(table1);
-          Put p1;
-          for (int i = 0; i < NB_ROWS_IN_FAM3; i++) {
-            p1 = new Put(Bytes.toBytes("row-t1" + i));
-            p1.addColumn(fam3Name, qualName, Bytes.toBytes("val" + i));
-            t1.put(p1);
-          }
-          LOG.debug("Wrote " + NB_ROWS_IN_FAM3 + " rows into family3");
-          t1.close();
-        } catch (IOException ioe) {
-          throw new RuntimeException(ioe);
-        }
+    Thread t = new Thread(() -> {
+      try {
+        latch.await();
+      } catch (InterruptedException ie) {
       }
-    };
+      try {
+        HTable t1 = (HTable) conn.getTable(table1);
+        Put p1;
+        for (int i = 0; i < NB_ROWS_IN_FAM3; i++) {
+          p1 = new Put(Bytes.toBytes("row-t1" + i));
+          p1.addColumn(fam3Name, qualName, Bytes.toBytes("val" + i));
+          t1.put(p1);
+        }
+        LOG.debug("Wrote " + NB_ROWS_IN_FAM3 + " rows into family3");
+        t1.close();
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    });
     t.start();
 
     table1Desc.addFamily(new HColumnDescriptor(fam3Name));

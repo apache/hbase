@@ -36,16 +36,15 @@ import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestFullBackupSet extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestFullBackupSet.class);
 
   /**
    * Verify that full backup is created on a single table with data correctly.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testFullBackupSetExist() throws Exception {
-
     LOG.info("Test full backup, backup set exists");
 
     // Create set
@@ -83,21 +82,16 @@ public class TestFullBackupSet extends TestBackupBase {
       TEST_UTIL.deleteTable(table1_restore);
       LOG.info("restore into other table is complete");
       hba.close();
-
     }
-
   }
 
   @Test
   public void testFullBackupSetDoesNotExist() throws Exception {
-
     LOG.info("test full backup, backup set does not exist");
     String name = "name1";
     String[] args = new String[] { "create", "full", BACKUP_ROOT_DIR, "-s", name };
     // Run backup
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
     assertTrue(ret != 0);
-
   }
-
 }

@@ -36,16 +36,15 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupStatusProgress extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupStatusProgress.class);
 
   /**
    * Verify that full backup is created on a single table with data correctly.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testBackupStatusProgress() throws Exception {
-
     LOG.info("test backup status/progress on a single table with data");
 
     List<TableName> tableList = Lists.newArrayList(table1);
@@ -63,7 +62,6 @@ public class TestBackupStatusProgress extends TestBackupBase {
 
   @Test
   public void testBackupStatusProgressCommand() throws Exception {
-
     LOG.info("test backup status/progress on a single table with data: command-line");
 
     List<TableName> tableList = Lists.newArrayList(table1);
@@ -90,6 +88,5 @@ public class TestBackupStatusProgress extends TestBackupBase {
     assertTrue(responce.indexOf(backupId) >= 0);
     assertTrue(responce.indexOf("progress") > 0);
     assertTrue(responce.indexOf("100") > 0);
-
   }
 }

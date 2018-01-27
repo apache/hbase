@@ -21,8 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupMergeJob;
 import org.apache.hadoop.hbase.backup.mapreduce.MapReduceRestoreJob;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Factory implementation for backup/restore related jobs
@@ -30,7 +30,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public final class BackupRestoreFactory {
-
   public final static String HBASE_INCR_RESTORE_IMPL_CLASS = "hbase.incremental.restore.class";
   public final static String HBASE_BACKUP_COPY_IMPL_CLASS = "hbase.backup.copy.class";
   public final static String HBASE_BACKUP_MERGE_IMPL_CLASS = "hbase.backup.merge.class";

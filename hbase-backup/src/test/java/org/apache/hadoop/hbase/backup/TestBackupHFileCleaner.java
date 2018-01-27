@@ -57,7 +57,7 @@ public class TestBackupHFileCleaner {
   Path root;
 
   /**
-   * @throws java.lang.Exception
+   * @throws Exception if starting the mini cluster or getting the filesystem fails
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -68,7 +68,7 @@ public class TestBackupHFileCleaner {
   }
 
   /**
-   * @throws java.lang.Exception
+   * @throws Exception if closing the filesystem or shutting down the mini cluster fails
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
@@ -110,7 +110,9 @@ public class TestBackupHFileCleaner {
     deletable = cleaner.getDeletableFiles(stats);
     boolean found = false;
     for (FileStatus stat1 : deletable) {
-      if (stat.equals(stat1)) found = true;
+      if (stat.equals(stat1)) {
+        found = true;
+      }
     }
     assertTrue("Cleaner should allow to delete this file as there is no hfile reference "
         + "for it.", found);
@@ -133,7 +135,9 @@ public class TestBackupHFileCleaner {
     deletable = cleaner.getDeletableFiles(stats);
     found = false;
     for (FileStatus stat1 : deletable) {
-      if (stat.equals(stat1)) found = true;
+      if (stat.equals(stat1)) {
+        found = true;
+      }
     }
     assertFalse("Cleaner should not allow to delete this file as there is a hfile reference "
         + "for it.", found);

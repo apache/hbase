@@ -28,11 +28,12 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class BackupClientFactory {
+public final class BackupClientFactory {
+  private BackupClientFactory() {
+  }
 
-  public static TableBackupClient create (Connection conn, String backupId, BackupRequest request)
-    throws IOException
-  {
+  public static TableBackupClient create(Connection conn, String backupId, BackupRequest request)
+    throws IOException {
     Configuration conf = conn.getConfiguration();
     try {
       String clsName = conf.get(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS);

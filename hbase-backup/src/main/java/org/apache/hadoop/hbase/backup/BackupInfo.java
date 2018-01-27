@@ -32,14 +32,14 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.BackupInfo.Builder;
-import org.apache.hadoop.hbase.util.Bytes;
-
 
 /**
  * An object to encapsulate the information for each backup session
@@ -48,20 +48,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class BackupInfo implements Comparable<BackupInfo> {
   private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
 
-  public static interface Filter {
-
+  public interface Filter {
     /**
      * Filter interface
      * @param info backup info
      * @return true if info passes filter, false otherwise
      */
-    public boolean apply(BackupInfo info);
+    boolean apply(BackupInfo info);
   }
 
   /**
    * Backup session states
    */
-  public static enum BackupState {
+  public enum BackupState {
     RUNNING, COMPLETE, FAILED, ANY
   }
 
@@ -69,7 +68,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * BackupPhase - phases of an ACTIVE backup session (running), when state of a backup session is
    * BackupState.RUNNING
    */
-  public static enum BackupPhase {
+  public enum BackupPhase {
     REQUEST, SNAPSHOT, PREPARE_INCREMENTAL, SNAPSHOTCOPY, INCREMENTAL_COPY, STORE_MANIFEST
   }
 
@@ -155,7 +154,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private long bandwidth = -1;
 
   public BackupInfo() {
-    backupTableInfoMap = new HashMap<TableName, BackupTableInfo>();
+    backupTableInfoMap = new HashMap<>();
   }
 
   public BackupInfo(String backupId, BackupType type, TableName[] tables, String targetRootDir) {
@@ -196,7 +195,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public void setTableSetTimestampMap(HashMap<TableName,
-                                      HashMap<String, Long>> tableSetTimestampMap) {
+          HashMap<String, Long>> tableSetTimestampMap) {
     this.tableSetTimestampMap = tableSetTimestampMap;
   }
 
@@ -216,7 +215,6 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * Set progress (0-100%)
    * @param p progress value
    */
-
   public void setProgress(int p) {
     this.progress = p;
   }
@@ -297,7 +295,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public List<String> getSnapshotNames() {
-    List<String> snapshotNames = new ArrayList<String>();
+    List<String> snapshotNames = new ArrayList<>();
     for (BackupTableInfo backupStatus : this.backupTableInfoMap.values()) {
       snapshotNames.add(backupStatus.getSnapshotName());
     }
@@ -309,7 +307,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public List<TableName> getTableNames() {
-    return new ArrayList<TableName>(backupTableInfoMap.keySet());
+    return new ArrayList<>(backupTableInfoMap.keySet());
   }
 
   public void addTables(TableName[] tables) {
@@ -355,8 +353,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
    * Set the new region server log timestamps after distributed log roll
    * @param newTableSetTimestampMap table timestamp map
    */
-  public void
-      setIncrTimestampMap(HashMap<TableName, HashMap<String, Long>> newTableSetTimestampMap) {
+  public void setIncrTimestampMap(HashMap<TableName,
+          HashMap<String, Long>> newTableSetTimestampMap) {
     this.tableSetTimestampMap = newTableSetTimestampMap;
   }
 
@@ -546,5 +544,4 @@ public class BackupInfo implements Comparable<BackupInfo> {
     Long otherTS = Long.valueOf(o.getBackupId().substring(o.getBackupId().lastIndexOf("_") + 1));
     return thisTS.compareTo(otherTS);
   }
-
 }

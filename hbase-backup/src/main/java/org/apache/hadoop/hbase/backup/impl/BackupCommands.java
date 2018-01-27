@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_BANDWIDTH_DESC;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PATH;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_PATH_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_RECORD_NUMBER;
@@ -34,8 +36,6 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG;
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_DEBUG_DESC;
 
 import java.io.IOException;
 import java.net.URI;
@@ -62,17 +62,16 @@ import org.apache.hadoop.hbase.backup.util.BackupSet;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * General backup commands, options and usage messages
  */
-
 @InterfaceAudience.Private
 public final class BackupCommands {
-
   public final static String INCORRECT_USAGE = "Incorrect usage";
 
   public final static String TOP_LEVEL_NOT_ALLOWED =
@@ -173,7 +172,6 @@ public final class BackupCommands {
             System.err.println("Backup system recovery is required.");
             throw new IOException("Failed backup MERGE found, aborted command execution");
           }
-
         }
       }
     }
@@ -209,47 +207,49 @@ public final class BackupCommands {
   }
 
   public static Command createCommand(Configuration conf, BackupCommand type, CommandLine cmdline) {
-    Command cmd = null;
+    Command cmd;
     switch (type) {
-    case CREATE:
-      cmd = new CreateCommand(conf, cmdline);
-      break;
-    case DESCRIBE:
-      cmd = new DescribeCommand(conf, cmdline);
-      break;
-    case PROGRESS:
-      cmd = new ProgressCommand(conf, cmdline);
-      break;
-    case DELETE:
-      cmd = new DeleteCommand(conf, cmdline);
-      break;
-    case HISTORY:
-      cmd = new HistoryCommand(conf, cmdline);
-      break;
-    case SET:
-      cmd = new BackupSetCommand(conf, cmdline);
-      break;
-    case REPAIR:
-      cmd = new RepairCommand(conf, cmdline);
-      break;
-    case MERGE:
-      cmd = new MergeCommand(conf, cmdline);
-      break;
-    case HELP:
-    default:
-      cmd = new HelpCommand(conf, cmdline);
-      break;
+      case CREATE:
+        cmd = new CreateCommand(conf, cmdline);
+        break;
+      case DESCRIBE:
+        cmd = new DescribeCommand(conf, cmdline);
+        break;
+      case PROGRESS:
+        cmd = new ProgressCommand(conf, cmdline);
+        break;
+      case DELETE:
+        cmd = new DeleteCommand(conf, cmdline);
+        break;
+      case HISTORY:
+        cmd = new HistoryCommand(conf, cmdline);
+        break;
+      case SET:
+        cmd = new BackupSetCommand(conf, cmdline);
+        break;
+      case REPAIR:
+        cmd = new RepairCommand(conf, cmdline);
+        break;
+      case MERGE:
+        cmd = new MergeCommand(conf, cmdline);
+        break;
+      case HELP:
+      default:
+        cmd = new HelpCommand(conf, cmdline);
+        break;
     }
     return cmd;
   }
 
   static int numOfArgs(String[] args) {
-    if (args == null) return 0;
+    if (args == null) {
+      return 0;
+    }
+
     return args.length;
   }
 
   public static class CreateCommand extends Command {
-
     CreateCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -293,7 +293,7 @@ public final class BackupCommands {
       if (isRootFolder(targetBackupDir)) {
         throw new IOException(TOP_LEVEL_NOT_ALLOWED);
       }
-      String tables = null;
+      String tables;
 
       // Check if we have both: backup set and list of tables
       if (cmdline.hasOption(OPTION_TABLE) && cmdline.hasOption(OPTION_SET)) {
@@ -359,7 +359,11 @@ public final class BackupCommands {
         Path p = new Path(path);
         Configuration conf = getConf() != null ? getConf() : HBaseConfiguration.create();
         URI uri = p.toUri();
-        if (uri.getScheme() == null) return false;
+
+        if (uri.getScheme() == null) {
+          return false;
+        }
+
         FileSystem.get(uri, conf);
         return true;
       } catch (Exception e) {
@@ -370,7 +374,11 @@ public final class BackupCommands {
     private String getTablesForSet(String name, Configuration conf) throws IOException {
       try (final BackupSystemTable table = new BackupSystemTable(conn)) {
         List<TableName> tables = table.describeBackupSet(name);
-        if (tables == null) return null;
+
+        if (tables == null) {
+          return null;
+        }
+
         return StringUtils.join(tables, BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND);
       }
     }
@@ -392,12 +400,10 @@ public final class BackupCommands {
       helpFormatter.setWidth(100);
       helpFormatter.setSyntaxPrefix("Options:");
       helpFormatter.printHelp(" ", null, options, USAGE_FOOTER);
-
     }
   }
 
   private static class HelpCommand extends Command {
-
     HelpCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -449,7 +455,6 @@ public final class BackupCommands {
   }
 
   private static class DescribeCommand extends Command {
-
     DescribeCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -488,7 +493,6 @@ public final class BackupCommands {
   }
 
   private static class ProgressCommand extends Command {
-
     ProgressCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -522,7 +526,6 @@ public final class BackupCommands {
             info = infos.get(0);
             backupId = info.getBackupId();
             System.out.println("Found ongoing session with backupId=" + backupId);
-          } else {
           }
         }
         int progress = info == null ? -1 : info.getProgress();
@@ -545,7 +548,6 @@ public final class BackupCommands {
   }
 
   private static class DeleteCommand extends Command {
-
     DeleteCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -572,11 +574,10 @@ public final class BackupCommands {
         int deleted = admin.deleteBackups(backupIds);
         System.out.println("Deleted " + deleted + " backups. Total requested: " + (args.length -1));
       } catch (IOException e) {
-        System.err
-            .println("Delete command FAILED. Please run backup repair tool to restore backup system integrity");
+        System.err.println("Delete command FAILED. Please run backup repair tool to restore backup "
+                + "system integrity");
         throw e;
       }
-
     }
 
     @Override
@@ -586,7 +587,6 @@ public final class BackupCommands {
   }
 
   private static class RepairCommand extends Command {
-
     RepairCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -637,7 +637,6 @@ public final class BackupCommands {
         sysTable.updateBackupInfo(backupInfo);
         sysTable.finishBackupExclusiveOperation();
         System.out.println("REPAIR status: finished repair failed session:\n " + backupInfo);
-
       }
     }
 
@@ -660,7 +659,6 @@ public final class BackupCommands {
         admin.deleteBackups(backupIds);
       }
       System.out.println("DELETE operation finished OK: " + StringUtils.join(backupIds));
-
     }
 
     private void repairFailedBackupMergeIfAny(Connection conn, BackupSystemTable sysTable)
@@ -684,7 +682,6 @@ public final class BackupCommands {
         admin.mergeBackups(backupIds);
       }
       System.out.println("MERGE operation finished OK: " + StringUtils.join(backupIds));
-
     }
 
     @Override
@@ -694,7 +691,6 @@ public final class BackupCommands {
   }
 
   private static class MergeCommand extends Command {
-
     MergeCommand(Configuration conf, CommandLine cmdline) {
       super(conf);
       this.cmdline = cmdline;
@@ -744,7 +740,6 @@ public final class BackupCommands {
   }
 
   private static class HistoryCommand extends Command {
-
     private final static int DEFAULT_HISTORY_LENGTH = 10;
 
     HistoryCommand(Configuration conf, CommandLine cmdline) {
@@ -754,14 +749,16 @@ public final class BackupCommands {
 
     @Override
     public void execute() throws IOException {
-
       int n = parseHistoryLength();
       final TableName tableName = getTableName();
       final String setName = getTableSetName();
       BackupInfo.Filter tableNameFilter = new BackupInfo.Filter() {
         @Override
         public boolean apply(BackupInfo info) {
-          if (tableName == null) return true;
+          if (tableName == null) {
+            return true;
+          }
+
           List<TableName> names = info.getTableNames();
           return names.contains(tableName);
         }
@@ -769,13 +766,16 @@ public final class BackupCommands {
       BackupInfo.Filter tableSetFilter = new BackupInfo.Filter() {
         @Override
         public boolean apply(BackupInfo info) {
-          if (setName == null) return true;
+          if (setName == null) {
+            return true;
+          }
+
           String backupId = info.getBackupId();
           return backupId.startsWith(setName);
         }
       };
       Path backupRootPath = getBackupRootPath();
-      List<BackupInfo> history = null;
+      List<BackupInfo> history;
       if (backupRootPath == null) {
         // Load from backup system table
         super.execute();
@@ -796,7 +796,11 @@ public final class BackupCommands {
       String value = null;
       try {
         value = cmdline.getOptionValue(OPTION_PATH);
-        if (value == null) return null;
+
+        if (value == null) {
+          return null;
+        }
+
         return new Path(value);
       } catch (IllegalArgumentException e) {
         System.out.println("ERROR: Illegal argument for backup root path: " + value);
@@ -807,7 +811,11 @@ public final class BackupCommands {
 
     private TableName getTableName() throws IOException {
       String value = cmdline.getOptionValue(OPTION_TABLE);
-      if (value == null) return null;
+
+      if (value == null) {
+        return null;
+      }
+
       try {
         return TableName.valueOf(value);
       } catch (IllegalArgumentException e) {
@@ -817,15 +825,17 @@ public final class BackupCommands {
       }
     }
 
-    private String getTableSetName() throws IOException {
-      String value = cmdline.getOptionValue(OPTION_SET);
-      return value;
+    private String getTableSetName() {
+      return cmdline.getOptionValue(OPTION_SET);
     }
 
     private int parseHistoryLength() throws IOException {
       String value = cmdline.getOptionValue(OPTION_RECORD_NUMBER);
       try {
-        if (value == null) return DEFAULT_HISTORY_LENGTH;
+        if (value == null) {
+          return DEFAULT_HISTORY_LENGTH;
+        }
+
         return Integer.parseInt(value);
       } catch (NumberFormatException e) {
         System.out.println("Illegal argument for history length: " + value);
@@ -877,24 +887,23 @@ public final class BackupCommands {
       BackupCommand cmd = getCommand(cmdStr);
 
       switch (cmd) {
-      case SET_ADD:
-        processSetAdd(args);
-        break;
-      case SET_REMOVE:
-        processSetRemove(args);
-        break;
-      case SET_DELETE:
-        processSetDelete(args);
-        break;
-      case SET_DESCRIBE:
-        processSetDescribe(args);
-        break;
-      case SET_LIST:
-        processSetList(args);
-        break;
-      default:
-        break;
-
+        case SET_ADD:
+          processSetAdd(args);
+          break;
+        case SET_REMOVE:
+          processSetRemove(args);
+          break;
+        case SET_DELETE:
+          processSetDelete(args);
+          break;
+        case SET_DESCRIBE:
+          processSetDescribe(args);
+          break;
+        case SET_LIST:
+          processSetList(args);
+          break;
+        default:
+          break;
       }
     }
 
@@ -991,20 +1000,21 @@ public final class BackupCommands {
     }
 
     private BackupCommand getCommand(String cmdStr) throws IOException {
-      if (cmdStr.equals(SET_ADD_CMD)) {
-        return BackupCommand.SET_ADD;
-      } else if (cmdStr.equals(SET_REMOVE_CMD)) {
-        return BackupCommand.SET_REMOVE;
-      } else if (cmdStr.equals(SET_DELETE_CMD)) {
-        return BackupCommand.SET_DELETE;
-      } else if (cmdStr.equals(SET_DESCRIBE_CMD)) {
-        return BackupCommand.SET_DESCRIBE;
-      } else if (cmdStr.equals(SET_LIST_CMD)) {
-        return BackupCommand.SET_LIST;
-      } else {
-        System.out.println("ERROR: Unknown command for 'set' :" + cmdStr);
-        printUsage();
-        throw new IOException(INCORRECT_USAGE);
+      switch (cmdStr) {
+        case SET_ADD_CMD:
+          return BackupCommand.SET_ADD;
+        case SET_REMOVE_CMD:
+          return BackupCommand.SET_REMOVE;
+        case SET_DELETE_CMD:
+          return BackupCommand.SET_DELETE;
+        case SET_DESCRIBE_CMD:
+          return BackupCommand.SET_DESCRIBE;
+        case SET_LIST_CMD:
+          return BackupCommand.SET_LIST;
+        default:
+          System.out.println("ERROR: Unknown command for 'set' :" + cmdStr);
+          printUsage();
+          throw new IOException(INCORRECT_USAGE);
       }
     }
 
@@ -1012,6 +1022,5 @@ public final class BackupCommands {
     protected void printUsage() {
       System.out.println(SET_CMD_USAGE);
     }
-
   }
 }

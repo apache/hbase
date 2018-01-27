@@ -52,7 +52,6 @@ public class LogRollBackupSubprocedure extends Subprocedure {
   public LogRollBackupSubprocedure(RegionServerServices rss, ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
       LogRollBackupSubprocedurePool taskManager, byte[] data) {
-
     super(member, LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_NAME, errorListener,
         wakeFrequency, timeout);
     LOG.info("Constructing a LogRollBackupSubprocedure.");
@@ -82,7 +81,10 @@ public class LogRollBackupSubprocedure extends Subprocedure {
       List<WAL> wals = rss.getWALs();
       long highest = -1;
       for (WAL wal : wals) {
-        if (wal == null) continue;
+        if (wal == null) {
+          continue;
+        }
+
         if (((AbstractFSWAL<?>) wal).getFilenum() > highest) {
           highest = ((AbstractFSWAL<?>) wal).getFilenum();
         }
@@ -109,7 +111,8 @@ public class LogRollBackupSubprocedure extends Subprocedure {
         String server = host + ":" + port;
         Long sts = serverTimestampMap.get(host);
         if (sts != null && sts > highest) {
-          LOG.warn("Won't update server's last roll log result: current=" + sts + " new=" + highest);
+          LOG.warn("Won't update server's last roll log result: current=" + sts + " new="
+                  + highest);
           return null;
         }
         // write the log number to backup system table.
@@ -131,11 +134,10 @@ public class LogRollBackupSubprocedure extends Subprocedure {
     // wait for everything to complete.
     taskManager.waitForOutstandingTasks();
     monitor.rethrowException();
-
   }
 
   @Override
-  public void acquireBarrier() throws ForeignException {
+  public void acquireBarrier() {
     // do nothing, executing in inside barrier step.
   }
 
@@ -163,5 +165,4 @@ public class LogRollBackupSubprocedure extends Subprocedure {
   public void releaseBarrier() {
     // NO OP
   }
-
 }

@@ -33,12 +33,12 @@ import org.slf4j.LoggerFactory;
 
 @Category(LargeTests.class)
 public class TestRestoreBoundaryTests extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRestoreBoundaryTests.class);
 
   /**
-   * Verify that a single empty table is restored to a new table
-   * @throws Exception
+   * Verify that a single empty table is restored to a new table.
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testFullRestoreSingleEmpty() throws Exception {
@@ -57,7 +57,8 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testFullRestoreMultipleEmpty() throws Exception {

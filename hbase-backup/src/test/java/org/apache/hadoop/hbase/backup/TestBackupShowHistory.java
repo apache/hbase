@@ -37,7 +37,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(LargeTests.class)
 public class TestBackupShowHistory extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupShowHistory.class);
 
   private boolean findBackup(List<BackupInfo> history, String backupId) {
@@ -54,8 +53,9 @@ public class TestBackupShowHistory extends TestBackupBase {
 
   /**
    * Verify that full backup is created on a single table with data correctly. Verify that history
-   * works as expected
-   * @throws Exception
+   * works as expected.
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testBackupHistory() throws Exception {
@@ -69,12 +69,7 @@ public class TestBackupShowHistory extends TestBackupBase {
 
     List<BackupInfo> history = getBackupAdmin().getHistory(10);
     assertTrue(findBackup(history, backupId));
-    BackupInfo.Filter nullFilter = new BackupInfo.Filter() {
-      @Override
-      public boolean apply(BackupInfo info) {
-        return true;
-      }
-    };
+    BackupInfo.Filter nullFilter = info -> true;
     history = BackupUtils.getHistory(conf1, 10, new Path(BACKUP_ROOT_DIR), nullFilter);
     assertTrue(findBackup(history, backupId));
 
@@ -95,20 +90,17 @@ public class TestBackupShowHistory extends TestBackupBase {
     String backupId2 = fullTableBackup(tableList);
     assertTrue(checkSucceeded(backupId2));
     LOG.info("backup complete: " + table2);
-    BackupInfo.Filter tableNameFilter = new BackupInfo.Filter() {
-      @Override
-      public boolean apply(BackupInfo image) {
-        if (table1 == null) return true;
-        List<TableName> names = image.getTableNames();
-        return names.contains(table1);
+    BackupInfo.Filter tableNameFilter = image -> {
+      if (table1 == null) {
+        return true;
       }
+
+      List<TableName> names = image.getTableNames();
+      return names.contains(table1);
     };
-    BackupInfo.Filter tableSetFilter = new BackupInfo.Filter() {
-      @Override
-      public boolean apply(BackupInfo info) {
-        String backupId = info.getBackupId();
-        return backupId.startsWith("backup");
-      }
+    BackupInfo.Filter tableSetFilter = info -> {
+      String backupId1 = info.getBackupId();
+      return backupId1.startsWith("backup");
     };
 
     history = getBackupAdmin().getHistory(10, tableNameFilter, tableSetFilter);
@@ -143,5 +135,4 @@ public class TestBackupShowHistory extends TestBackupBase {
     assertTrue(ret == 0);
     LOG.info("show_history");
   }
-
 }

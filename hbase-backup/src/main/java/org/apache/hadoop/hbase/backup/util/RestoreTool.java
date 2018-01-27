@@ -36,9 +36,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupRestoreFactory;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreJob;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
@@ -46,26 +43,29 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.tool.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * A collection for methods used by multiple classes to restore HBase tables.
  */
 @InterfaceAudience.Private
 public class RestoreTool {
-
   public static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   private final static long TABLE_AVAILABILITY_WAIT_TIME = 180000;
 
   private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
-  protected Configuration conf = null;
+  protected Configuration conf;
   protected Path backupRootPath;
   protected String backupId;
   protected FileSystem fs;
@@ -89,7 +89,6 @@ public class RestoreTool {
    * @throws IOException exception
    */
   Path getTableArchivePath(TableName tableName) throws IOException {
-
     Path baseDir =
         new Path(HBackupFileSystem.getTableBackupPath(tableName, backupRootPath, backupId),
             HConstants.HFILE_ARCHIVE_DIRECTORY);
@@ -107,12 +106,11 @@ public class RestoreTool {
    * Gets region list
    * @param tableName table name
    * @return RegionList region list
-   * @throws FileNotFoundException exception
    * @throws IOException exception
    */
-  ArrayList<Path> getRegionList(TableName tableName) throws FileNotFoundException, IOException {
+  ArrayList<Path> getRegionList(TableName tableName) throws IOException {
     Path tableArchivePath = getTableArchivePath(tableName);
-    ArrayList<Path> regionDirList = new ArrayList<Path>();
+    ArrayList<Path> regionDirList = new ArrayList<>();
     FileStatus[] children = fs.listStatus(tableArchivePath);
     for (FileStatus childStatus : children) {
       // here child refer to each region(Name)
@@ -122,9 +120,7 @@ public class RestoreTool {
     return regionDirList;
   }
 
-
   void modifyTableSync(Connection conn, TableDescriptor desc) throws IOException {
-
     try (Admin admin = conn.getAdmin()) {
       admin.modifyTable(desc);
       int attempt = 0;
@@ -155,7 +151,6 @@ public class RestoreTool {
    */
   public void incrementalRestoreTable(Connection conn, Path tableBackupPath, Path[] logDirs,
       TableName[] tableNames, TableName[] newTableNames, String incrBackupId) throws IOException {
-
     try (Admin admin = conn.getAdmin()) {
       if (tableNames.length != newTableNames.length) {
         throw new IOException("Number of source tables and target tables does not match!");
@@ -228,15 +223,15 @@ public class RestoreTool {
 
   /**
    * Returns value represent path for:
-   * ""/$USER/SBACKUP_ROOT/backup_id/namespace/table/.hbase-snapshot/snapshot_1396650097621_namespace_table"
+   * ""/$USER/SBACKUP_ROOT/backup_id/namespace/table/.hbase-snapshot/
+   *    snapshot_1396650097621_namespace_table"
    * this path contains .snapshotinfo, .tabledesc (0.96 and 0.98) this path contains .snapshotinfo,
    * .data.manifest (trunk)
    * @param tableName table name
    * @return path to table info
-   * @throws FileNotFoundException exception
    * @throws IOException exception
    */
-  Path getTableInfoPath(TableName tableName) throws FileNotFoundException, IOException {
+  Path getTableInfoPath(TableName tableName) throws IOException {
     Path tableSnapShotPath = getTableSnapshotPath(backupRootPath, tableName, backupId);
     Path tableInfoPath = null;
 
@@ -257,15 +252,16 @@ public class RestoreTool {
    * @param tableName is the table backed up
    * @return {@link TableDescriptor} saved in backup image of the table
    */
-  TableDescriptor getTableDesc(TableName tableName) throws FileNotFoundException, IOException {
+  TableDescriptor getTableDesc(TableName tableName) throws IOException {
     Path tableInfoPath = this.getTableInfoPath(tableName);
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, tableInfoPath);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, tableInfoPath, desc);
     TableDescriptor tableDescriptor = manifest.getTableDescriptor();
     if (!tableDescriptor.getTableName().equals(tableName)) {
       LOG.error("couldn't find Table Desc for table: " + tableName + " under tableInfoPath: "
-          + tableInfoPath.toString());
-      LOG.error("tableDescriptor.getNameAsString() = " + tableDescriptor.getTableName().getNameAsString());
+              + tableInfoPath.toString());
+      LOG.error("tableDescriptor.getNameAsString() = "
+              + tableDescriptor.getTableName().getNameAsString());
       throw new FileNotFoundException("couldn't find Table Desc for table: " + tableName
           + " under tableInfoPath: " + tableInfoPath.toString());
     }
@@ -367,11 +363,10 @@ public class RestoreTool {
    * Gets region list
    * @param tableArchivePath table archive path
    * @return RegionList region list
-   * @throws FileNotFoundException exception
    * @throws IOException exception
    */
-  ArrayList<Path> getRegionList(Path tableArchivePath) throws FileNotFoundException, IOException {
-    ArrayList<Path> regionDirList = new ArrayList<Path>();
+  ArrayList<Path> getRegionList(Path tableArchivePath) throws IOException {
+    ArrayList<Path> regionDirList = new ArrayList<>();
     FileStatus[] children = fs.listStatus(tableArchivePath);
     for (FileStatus childStatus : children) {
       // here child refer to each region(Name)
@@ -386,9 +381,8 @@ public class RestoreTool {
    * @param regionDirList region dir list
    * @return a set of keys to store the boundaries
    */
-  byte[][] generateBoundaryKeys(ArrayList<Path> regionDirList) throws FileNotFoundException,
-      IOException {
-    TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+  byte[][] generateBoundaryKeys(ArrayList<Path> regionDirList) throws IOException {
+    TreeMap<byte[], Integer> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     // Build a set of keys to store the boundaries
     // calculate region boundaries and add all the column families to the table descriptor
     for (Path regionDir : regionDirList) {
@@ -490,7 +484,7 @@ public class RestoreTool {
       }
       if (createNew) {
         LOG.info("Creating target table '" + targetTableName + "'");
-        byte[][] keys = null;
+        byte[][] keys;
         if (regionDirList == null || regionDirList.size() == 0) {
           admin.createTable(htd, null);
         } else {
@@ -514,5 +508,4 @@ public class RestoreTool {
       }
     }
   }
-
 }

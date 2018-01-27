@@ -118,7 +118,7 @@ public class MapReduceHFileSplitterJob extends Configured implements Tool {
       try (Connection conn = ConnectionFactory.createConnection(conf);
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
-          HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
+        HFileOutputFormat2.configureIncrementalLoad(job, table.getDescriptor(), regionLocator);
       }
       LOG.debug("success configuring load incremental job");
 

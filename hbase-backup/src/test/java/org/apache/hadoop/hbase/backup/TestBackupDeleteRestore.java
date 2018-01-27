@@ -30,17 +30,16 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category(MediumTests.class)
 public class TestBackupDeleteRestore extends TestBackupBase {
-
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDeleteRestore.class);
 
   /**
    * Verify that load data- backup - delete some data - restore works as expected - deleted data get
    * restored.
-   * @throws Exception
+   *
+   * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
   public void testBackupDeleteRestore() throws Exception {
-
     LOG.info("test full restore on a single table empty table");
 
     List<TableName> tables = Lists.newArrayList(table1);

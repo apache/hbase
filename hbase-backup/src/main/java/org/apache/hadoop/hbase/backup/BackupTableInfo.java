@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 
 @InterfaceAudience.Private
 public class BackupTableInfo  {
-
   /*
    *  Table name for backup
    */
@@ -39,11 +38,9 @@ public class BackupTableInfo  {
   /*
    *  Snapshot name for offline/online snapshot
    */
-
   private String snapshotName = null;
 
   public BackupTableInfo() {
-
   }
 
   public BackupTableInfo(TableName table, String targetRootDir, String backupId) {
@@ -76,7 +73,7 @@ public class BackupTableInfo  {
     if (snapshotName != null) {
       builder.setSnapshotName(snapshotName);
     }
-    builder.setTableName(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toProtoTableName(table));
+    builder.setTableName(ProtobufUtil.toProtoTableName(table));
     return builder.build();
   }
 }

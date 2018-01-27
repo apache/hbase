@@ -24,12 +24,11 @@ import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -39,11 +38,12 @@ import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.zookeeper.KeeperException;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 
 /**
  * Master procedure manager for coordinated cluster-wide WAL roll operation, which is run during
@@ -57,7 +57,8 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
   public static final String ROLLLOG_PROCEDURE_NAME = "rolllog";
   public static final String BACKUP_WAKE_MILLIS_KEY = "hbase.backup.logroll.wake.millis";
   public static final String BACKUP_TIMEOUT_MILLIS_KEY = "hbase.backup.logroll.timeout.millis";
-  public static final String BACKUP_POOL_THREAD_NUMBER_KEY = "hbase.backup.logroll.pool.thread.number";
+  public static final String BACKUP_POOL_THREAD_NUMBER_KEY =
+          "hbase.backup.logroll.pool.thread.number";
 
   public static final int BACKUP_WAKE_MILLIS_DEFAULT = 500;
   public static final int BACKUP_TIMEOUT_MILLIS_DEFAULT = 180000;
@@ -78,7 +79,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
 
   @Override
   public void initialize(MasterServices master, MetricsMaster metricsMaster)
-      throws KeeperException, IOException, UnsupportedOperationException {
+      throws IOException, UnsupportedOperationException {
     this.master = master;
     this.done = false;
 
@@ -118,7 +119,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
     // start the process on the RS
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getInstance());
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
-    List<String> servers = new ArrayList<String>();
+    List<String> servers = new ArrayList<>();
     for (ServerName sn : serverNames) {
       servers.add(sn.toString());
     }
@@ -161,8 +162,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
   }
 
   @Override
-  public boolean isProcedureDone(ProcedureDescription desc) throws IOException {
+  public boolean isProcedureDone(ProcedureDescription desc) {
     return done;
   }
-
 }

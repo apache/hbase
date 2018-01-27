@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 @InterfaceAudience.Private
 public class BackupManifest {
-
   private static final Logger LOG = LoggerFactory.getLogger(BackupManifest.class);
 
   // manifest file name
@@ -66,9 +65,7 @@ public class BackupManifest {
    * Backup image, the dependency graph is made up by series of backup images BackupImage contains
    * all the relevant information to restore the backup and is used during restore operation
    */
-
   public static class BackupImage implements Comparable<BackupImage> {
-
     static class Builder {
       BackupImage image;
 
@@ -145,7 +142,7 @@ public class BackupManifest {
       long startTs = im.getStartTs();
       long completeTs = im.getCompleteTs();
       List<HBaseProtos.TableName> tableListList = im.getTableListList();
-      List<TableName> tableList = new ArrayList<TableName>();
+      List<TableName> tableList = new ArrayList<>();
       for (HBaseProtos.TableName tn : tableListList) {
         tableList.add(ProtobufUtil.toTableName(tn));
       }
@@ -194,14 +191,17 @@ public class BackupManifest {
         BackupProtos.BackupImage proto) {
       List<BackupProtos.TableServerTimestamp> list = proto.getTstMapList();
 
-      HashMap<TableName, HashMap<String, Long>> incrTimeRanges =
-          new HashMap<TableName, HashMap<String, Long>>();
-      if (list == null || list.size() == 0) return incrTimeRanges;
+      HashMap<TableName, HashMap<String, Long>> incrTimeRanges = new HashMap<>();
+
+      if (list == null || list.size() == 0) {
+        return incrTimeRanges;
+      }
+
       for (BackupProtos.TableServerTimestamp tst : list) {
         TableName tn = ProtobufUtil.toTableName(tst.getTableName());
         HashMap<String, Long> map = incrTimeRanges.get(tn);
         if (map == null) {
-          map = new HashMap<String, Long>();
+          map = new HashMap<>();
           incrTimeRanges.put(tn, map);
         }
         List<BackupProtos.ServerTimestamp> listSt = tst.getServerTimestampList();
@@ -290,13 +290,13 @@ public class BackupManifest {
 
     public ArrayList<BackupImage> getAncestors() {
       if (this.ancestors == null) {
-        this.ancestors = new ArrayList<BackupImage>();
+        this.ancestors = new ArrayList<>();
       }
       return this.ancestors;
     }
 
     public void removeAncestors(List<String> backupIds) {
-      List<BackupImage> toRemove = new ArrayList<BackupImage>();
+      List<BackupImage> toRemove = new ArrayList<>();
       for (BackupImage im : this.ancestors) {
         if (backupIds.contains(im.getBackupId())) {
           toRemove.add(im);
@@ -377,7 +377,6 @@ public class BackupManifest {
    * @param backup The ongoing backup info
    */
   public BackupManifest(BackupInfo backup) {
-
     BackupImage.Builder builder = BackupImage.newBuilder();
     this.backupImage =
         builder.withBackupId(backup.getBackupId()).withType(backup.getType())
@@ -402,11 +401,11 @@ public class BackupManifest {
 
   /**
    * Construct manifest from a backup directory.
+   *
    * @param conf configuration
    * @param backupPath backup path
-   * @throws IOException
+   * @throws IOException if constructing the manifest from the backup directory fails
    */
-
   public BackupManifest(Configuration conf, Path backupPath) throws IOException {
     this(backupPath.getFileSystem(conf), backupPath);
   }
@@ -417,7 +416,6 @@ public class BackupManifest {
    * @param backupPath backup path
    * @throws BackupException exception
    */
-
   public BackupManifest(FileSystem fs, Path backupPath) throws BackupException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Loading manifest from: " + backupPath.toString());
@@ -427,7 +425,6 @@ public class BackupManifest {
     // This variable's purpose is to keep the correct and original location so
     // that we can store/persist it.
     try {
-
       FileStatus[] subFiles = BackupUtils.listStatus(fs, backupPath, null);
       if (subFiles == null) {
         String errorMsg = backupPath.toString() + " does not exist";
@@ -436,7 +433,6 @@ public class BackupManifest {
       }
       for (FileStatus subFile : subFiles) {
         if (subFile.getPath().getName().equals(MANIFEST_FILE_NAME)) {
-
           // load and set manifest field from file content
           FSDataInputStream in = fs.open(subFile.getPath());
           long len = subFile.getLen();
@@ -456,7 +452,6 @@ public class BackupManifest {
       }
       String errorMsg = "No manifest file found in: " + backupPath.toString();
       throw new IOException(errorMsg);
-
     } catch (IOException e) {
       throw new BackupException(e.getMessage());
     }
@@ -478,7 +473,6 @@ public class BackupManifest {
    * TODO: fix it. Persist the manifest file.
    * @throws IOException IOException when storing the manifest file.
    */
-
   public void store(Configuration conf) throws BackupException {
     byte[] data = backupImage.toProto().toByteArray();
     // write the file, overwrite if already exist
@@ -529,12 +523,12 @@ public class BackupManifest {
    * @return the backup image list for restore in time order
    */
   public ArrayList<BackupImage> getRestoreDependentList(boolean reverse) {
-    TreeMap<Long, BackupImage> restoreImages = new TreeMap<Long, BackupImage>();
+    TreeMap<Long, BackupImage> restoreImages = new TreeMap<>();
     restoreImages.put(backupImage.startTs, backupImage);
     for (BackupImage image : backupImage.getAncestors()) {
       restoreImages.put(Long.valueOf(image.startTs), image);
     }
-    return new ArrayList<BackupImage>(reverse ? (restoreImages.descendingMap().values())
+    return new ArrayList<>(reverse ? (restoreImages.descendingMap().values())
         : (restoreImages.values()));
   }
 
@@ -545,7 +539,7 @@ public class BackupManifest {
    * @return the backup image list for a table in time order
    */
   public ArrayList<BackupImage> getDependentListByTable(TableName table) {
-    ArrayList<BackupImage> tableImageList = new ArrayList<BackupImage>();
+    ArrayList<BackupImage> tableImageList = new ArrayList<>();
     ArrayList<BackupImage> imageList = getRestoreDependentList(true);
     for (BackupImage image : imageList) {
       if (image.hasTable(table)) {
@@ -567,7 +561,7 @@ public class BackupManifest {
    *         dependency of this image
    */
   public ArrayList<BackupImage> getAllDependentListByTable(TableName table) {
-    ArrayList<BackupImage> tableImageList = new ArrayList<BackupImage>();
+    ArrayList<BackupImage> tableImageList = new ArrayList<>();
     ArrayList<BackupImage> imageList = getRestoreDependentList(false);
     for (BackupImage image : imageList) {
       if (image.hasTable(table)) {
@@ -596,7 +590,7 @@ public class BackupManifest {
     }
     List<TableName> image1TableList = image1.getTableNames();
     List<TableName> image2TableList = image2.getTableNames();
-    boolean found = false;
+    boolean found;
     for (int i = 0; i < image2TableList.size(); i++) {
       found = false;
       for (int j = 0; j < image1TableList.size(); j++) {
@@ -634,14 +628,14 @@ public class BackupManifest {
       }
     }
 
-    ArrayList<String> image1TableList = new ArrayList<String>();
+    ArrayList<String> image1TableList = new ArrayList<>();
     for (BackupImage image1 : fullImages) {
       List<TableName> tableList = image1.getTableNames();
       for (TableName table : tableList) {
         image1TableList.add(table.getNameAsString());
       }
     }
-    ArrayList<String> image2TableList = new ArrayList<String>();
+    ArrayList<String> image2TableList = new ArrayList<>();
     List<TableName> tableList = image.getTableNames();
     for (TableName table : tableList) {
       image2TableList.add(table.getNameAsString());
