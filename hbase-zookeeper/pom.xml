@@ -43,6 +43,12 @@
         </includes>
         <filtering>true</filtering>
       </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
     </testResources>
     <plugins>
       <plugin>
@@ -96,9 +102,6 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <additionalClasspathElements>
-            <additionalClasspathElement>src/test/resources</additionalClasspathElement>
-          </additionalClasspathElements>
           <properties>
             <property>
               <name>listener</name>
