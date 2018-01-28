@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -25,14 +24,12 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Locale;
-
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +46,13 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestIPv6NIOServerSocketChannel {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestIPv6NIOServerSocketChannel.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestIPv6NIOServerSocketChannel.class);
 
-  @Rule
-  public final TestRule timeout = CategoryBasedTimeout.builder().
-    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   /**
    * Creates and binds a regular ServerSocket.
    */

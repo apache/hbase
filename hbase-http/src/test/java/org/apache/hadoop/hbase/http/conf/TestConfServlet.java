@@ -22,16 +22,15 @@ import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.w3c.dom.Document;
@@ -46,6 +45,11 @@ import org.xml.sax.InputSource;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestConfServlet extends TestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestConfServlet.class);
+
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";
 

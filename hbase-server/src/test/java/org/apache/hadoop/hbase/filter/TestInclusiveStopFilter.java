@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,22 +17,29 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 /**
  * Tests the inclusive stop row filter
  */
 @Category({FilterTests.class, SmallTests.class})
 public class TestInclusiveStopFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestInclusiveStopFilter.class);
+
   private final byte [] STOP_ROW = Bytes.toBytes("stop_row");
   private final byte [] GOOD_ROW = Bytes.toBytes("good_row");
   private final byte [] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");

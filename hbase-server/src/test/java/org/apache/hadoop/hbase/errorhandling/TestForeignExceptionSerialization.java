@@ -23,9 +23,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -34,11 +35,15 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestForeignExceptionSerialization {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestForeignExceptionSerialization.class);
+
   private static final String srcName = "someNode";
 
   /**
    * Verify that we get back similar stack trace information before an after serialization.
-   * @throws IOException 
    */
   @Test
   public void testSimpleException() throws IOException {
@@ -61,7 +66,6 @@ public class TestForeignExceptionSerialization {
   /**
    * Compare that a generic exception's stack trace has the same stack trace elements after
    * serialization and deserialization
-   * @throws IOException 
    */
   @Test
   public void testRemoteFromLocal() throws IOException {

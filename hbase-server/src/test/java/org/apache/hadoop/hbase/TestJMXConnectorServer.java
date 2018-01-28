@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +18,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.naming.ServiceUnavailableException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -39,6 +36,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -49,6 +47,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({ MiscTests.class, MediumTests.class })
 public class TestJMXConnectorServer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

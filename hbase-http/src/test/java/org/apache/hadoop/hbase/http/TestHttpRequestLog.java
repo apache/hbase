@@ -17,21 +17,26 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.log4j.Logger;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import org.eclipse.jetty.server.RequestLog;
-import org.eclipse.jetty.server.NCSARequestLog;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.log4j.Logger;
+import org.eclipse.jetty.server.NCSARequestLog;
+import org.eclipse.jetty.server.RequestLog;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpRequestLog {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHttpRequestLog.class);
 
   @Test
   public void testAppenderUndefined() {

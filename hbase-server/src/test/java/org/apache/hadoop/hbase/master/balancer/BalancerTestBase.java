@@ -38,7 +38,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -51,8 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,9 +64,6 @@ public class BalancerTestBase {
   static int regionId = 0;
   protected static Configuration conf;
   protected static StochasticLoadBalancer loadBalancer;
-
-  @Rule
-  public final TestRule timeout = CategoryBasedTimeout.forClass(getClass());
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {

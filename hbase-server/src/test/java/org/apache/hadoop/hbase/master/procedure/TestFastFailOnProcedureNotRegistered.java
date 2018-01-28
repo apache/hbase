@@ -15,22 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestFastFailOnProcedureNotRegistered extends TestTableDDLProcedureBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFastFailOnProcedureNotRegistered.class);
 
   @Test(expected=DoNotRetryIOException.class, timeout = 3000)
   public void testFastFailOnProcedureNotRegistered() throws IOException {

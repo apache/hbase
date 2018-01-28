@@ -18,14 +18,19 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.ForkJoinPool;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncResultScannerCursor extends AbstractTestResultScannerCursor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncResultScannerCursor.class);
 
   private static AsyncConnection CONN;
 

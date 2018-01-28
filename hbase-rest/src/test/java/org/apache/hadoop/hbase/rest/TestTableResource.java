@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import static org.junit.Assert.assertEquals;
@@ -28,11 +26,10 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -60,6 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -67,6 +65,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestTableResource {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableResource.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestTableResource.class);
 
   private static TableName TABLE = TableName.valueOf("TestTableResource");
@@ -115,12 +118,12 @@ public class TestTableResource {
       }
     }
     Connection connection = TEST_UTIL.getConnection();
-    
+
     Table table =  connection.getTable(TABLE);
     table.put(puts);
     table.close();
     // get the initial layout (should just be one region)
-    
+
     RegionLocator regionLocator = connection.getRegionLocator(TABLE);
     List<HRegionLocation> m = regionLocator.getAllRegionLocations();
     assertEquals(1, m.size());

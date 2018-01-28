@@ -674,6 +674,12 @@
               -->
               <exclude>${test.exclude.pattern}</exclude>
             </excludes>
+            <properties>
+              <property>
+                <name>listener</name>
+                <value>org.apache.hadoop.hbase.HBaseClassTestRuleChecker,org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
+              </property>
+            </properties>
           </configuration>
           <executions>
             <execution>

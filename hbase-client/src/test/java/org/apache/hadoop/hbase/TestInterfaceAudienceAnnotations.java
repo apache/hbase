@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -27,18 +26,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.ClassFinder.And;
 import org.apache.hadoop.hbase.ClassFinder.FileNameFilter;
 import org.apache.hadoop.hbase.ClassFinder.Not;
 import org.apache.hadoop.hbase.ClassTestFinder.TestClassFilter;
 import org.apache.hadoop.hbase.ClassTestFinder.TestFileNameFilter;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -71,6 +70,10 @@ import org.slf4j.LoggerFactory;
  */
 @Category(SmallTests.class)
 public class TestInterfaceAudienceAnnotations {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestInterfaceAudienceAnnotations.class);
 
   private static final String HBASE_PROTOBUF = "org.apache.hadoop.hbase.protobuf.generated";
   private static final Logger LOG = LoggerFactory.getLogger(TestInterfaceAudienceAnnotations.class);

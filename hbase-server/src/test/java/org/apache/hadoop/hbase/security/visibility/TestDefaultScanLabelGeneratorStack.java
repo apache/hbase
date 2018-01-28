@@ -23,10 +23,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -50,6 +51,10 @@ import org.junit.rules.TestName;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestDefaultScanLabelGeneratorStack {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultScanLabelGeneratorStack.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -245,7 +250,7 @@ public class TestDefaultScanLabelGeneratorStack {
     });
 
   }
- 
+
   private static Result [] getResult(Table table, Scan scan) throws IOException {
     ResultScanner scanner = table.getScanner(scan);
     Result[] next = scanner.next(1);

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -31,8 +30,8 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,10 +39,13 @@ import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-
 @Category({MiscTests.class, MediumTests.class})
 public class TestJMXListener {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestJMXListener.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXListener.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static int connectorPort = UTIL.randomFreePort();

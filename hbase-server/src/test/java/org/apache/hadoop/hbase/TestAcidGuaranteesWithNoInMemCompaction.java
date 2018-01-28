@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,10 +33,9 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -48,11 +46,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @Category({ MediumTests.class })
 public class TestAcidGuaranteesWithNoInMemCompaction {
-  @Rule
-  public final TestRule timeout = CategoryBasedTimeout.builder()
-          .withTimeout(this.getClass())
-          .withLookingForStuckThread(true)
-          .build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAcidGuaranteesWithNoInMemCompaction.class);
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private AcidGuaranteesTestTool tool = new AcidGuaranteesTestTool();

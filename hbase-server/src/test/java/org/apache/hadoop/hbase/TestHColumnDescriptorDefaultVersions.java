@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -35,11 +33,11 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
 
 /**
  * Verify that the HColumnDescriptor version is set correctly by default, hbase-site.xml, and user
@@ -47,6 +45,10 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestHColumnDescriptorDefaultVersions {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHColumnDescriptorDefaultVersions.class);
 
   @Rule
   public TestName name = new TestName();

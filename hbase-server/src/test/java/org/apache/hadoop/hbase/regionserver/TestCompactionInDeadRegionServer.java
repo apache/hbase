@@ -23,8 +23,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -61,6 +62,11 @@ import org.slf4j.LoggerFactory;
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestCompactionInDeadRegionServer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactionInDeadRegionServer.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionInDeadRegionServer.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

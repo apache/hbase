@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,10 +28,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,12 +51,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({ MediumTests.class, RegionServerTests.class })
 public class TestCompactedHFilesDischarger {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactedHFilesDischarger.class);
+
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private HRegion region;
   private final static byte[] fam = Bytes.toBytes("cf_1");
@@ -153,7 +159,7 @@ public class TestCompactedHFilesDischarger {
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     assertTrue(compactedfiles.isEmpty());
-    
+
   }
 
   @Test

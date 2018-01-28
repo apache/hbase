@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.metrics.impl;
 
 import com.codahale.metrics.Meter;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -30,6 +31,10 @@ import org.mockito.Mockito;
  */
 @Category(SmallTests.class)
 public class TestDropwizardMeter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDropwizardMeter.class);
 
   private Meter meter;
 

@@ -23,7 +23,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
@@ -31,11 +31,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityLabels {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLabelsWithCustomVisLabService.class);
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {

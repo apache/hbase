@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.*;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -26,12 +29,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -48,20 +50,20 @@ import org.apache.hadoop.hbase.rest.model.TestNamespacesInstanceModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-
 @Category({RestTests.class, MediumTests.class})
 public class TestNamespacesInstanceResource {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNamespacesInstanceResource.class);
+
   private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
   private static Map<String,String> NAMESPACE1_PROPS = new HashMap<>();
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
@@ -131,7 +133,7 @@ public class TestNamespacesInstanceResource {
     checkNamespaceProperties(nd.getConfiguration(), testProps);
   }
 
-  private void checkNamespaceProperties(Map<String,String> namespaceProps, 
+  private void checkNamespaceProperties(Map<String,String> namespaceProps,
       Map<String,String> testProps){
     assertTrue(namespaceProps.size() == testProps.size());
     for(String key: testProps.keySet()){
@@ -176,7 +178,7 @@ public class TestNamespacesInstanceResource {
 
     // Create namespace via admin.
     NamespaceDescriptor.Builder nsBuilder = NamespaceDescriptor.create(nsName);
-    NamespaceDescriptor nsd = nsBuilder.build(); 
+    NamespaceDescriptor nsd = nsBuilder.build();
     nsd.setConfiguration("key1", "value1");
     admin.createNamespace(nsd);
 
@@ -415,7 +417,7 @@ public class TestNamespacesInstanceResource {
     // Check cannot post tables that already exist.
     response = client.post(namespacePath3, Constants.MIMETYPE_BINARY, new byte[]{});
     assertEquals(403, response.getCode());
-    response = client.post(namespacePath4, Constants.MIMETYPE_PROTOBUF, 
+    response = client.post(namespacePath4, Constants.MIMETYPE_PROTOBUF,
       model4.createProtobufOutput());
     assertEquals(403, response.getCode());
 

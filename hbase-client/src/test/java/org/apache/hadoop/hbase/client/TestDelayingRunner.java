@@ -21,17 +21,22 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.atomic.AtomicLong;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestDelayingRunner {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDelayingRunner.class);
 
   private static final TableName DUMMY_TABLE =
       TableName.valueOf("DUMMY_TABLE");
@@ -52,7 +57,7 @@ public class TestDelayingRunner {
       @Override
       public void run() {
         endTime.set(EnvironmentEdgeManager.currentTime());
-      }      
+      }
     });
     long startTime = EnvironmentEdgeManager.currentTime();
     runner.run();

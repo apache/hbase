@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,17 +25,16 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.NavigableSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-// imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,6 +42,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -52,6 +51,11 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWALMethods {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALMethods.class);
+
   private static final byte[] TEST_REGION = Bytes.toBytes("test_region");
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
@@ -60,14 +64,17 @@ public class TestWALMethods {
 
   @Test
   public void testServerNameFromWAL() throws Exception {
-    Path walPath = new Path("/hbase/WALs/regionserver-2.example.com,22101,1487767381290", "regionserver-2.example.com%2C22101%2C1487767381290.null0.1487785392316");
+    Path walPath = new Path("/hbase/WALs/regionserver-2.example.com,22101,1487767381290",
+        "regionserver-2.example.com%2C22101%2C1487767381290.null0.1487785392316");
     ServerName name = AbstractFSWALProvider.getServerNameFromWALDirectoryName(walPath);
     assertEquals(ServerName.valueOf("regionserver-2.example.com", 22101, 1487767381290L), name);
   }
 
   @Test
   public void testServerNameFromTestWAL() throws Exception {
-    Path walPath = new Path("/user/example/test-data/12ff1404-68c6-4715-a4b9-775e763842bc/WALs/TestWALRecordReader", "TestWALRecordReader.default.1487787939118");
+    Path walPath = new Path(
+        "/user/example/test-data/12ff1404-68c6-4715-a4b9-775e763842bc/WALs/TestWALRecordReader",
+        "TestWALRecordReader.default.1487787939118");
     ServerName name = AbstractFSWALProvider.getServerNameFromWALDirectoryName(walPath);
     assertNull(name);
   }

@@ -20,15 +20,21 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestLruCachedBlock {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestLruCachedBlock.class);
 
   LruCachedBlock block;
   LruCachedBlock blockEqual;
@@ -38,10 +44,10 @@ public class TestLruCachedBlock {
   public void setUp() throws Exception {
     BlockCacheKey cacheKey = new BlockCacheKey("name", 0);
     BlockCacheKey otherKey = new BlockCacheKey("name2", 1);
-    
+
     Cacheable cacheable = Mockito.mock(Cacheable.class);
     Cacheable otheCacheable = Mockito.mock(Cacheable.class);
-    
+
     block = new LruCachedBlock(cacheKey, cacheable, 0);
     blockEqual = new LruCachedBlock(otherKey, otheCacheable, 0);
     blockNotEqual = new LruCachedBlock(cacheKey, cacheable, 1);
@@ -51,7 +57,7 @@ public class TestLruCachedBlock {
   public void testEquality() {
     assertEquals(block.hashCode(), blockEqual.hashCode());
     assertNotEquals(block.hashCode(), blockNotEqual.hashCode());
-    
+
     assertEquals(block, blockEqual);
     assertNotEquals(block, blockNotEqual);
   }

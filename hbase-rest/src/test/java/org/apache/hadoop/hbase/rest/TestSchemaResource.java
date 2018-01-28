@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,11 +25,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Collection;
-
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -49,6 +47,7 @@ import org.apache.http.message.BasicHeader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -59,6 +58,11 @@ import org.slf4j.LoggerFactory;
 @Category({RestTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestSchemaResource {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSchemaResource.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSchemaResource.class);
 
   private static String TABLE1 = "TestSchemaResource1";
@@ -72,7 +76,7 @@ public class TestSchemaResource {
   private static Configuration conf;
   private static TestTableSchemaModel testTableSchemaModel;
   private static Header extraHdr = null;
-  
+
   private static boolean csrfEnabled = true;
 
   @Parameterized.Parameters

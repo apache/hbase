@@ -17,19 +17,26 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import java.io.FileNotFoundException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.FileNotFoundException;
 
 /**
  * Test webapp loading
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServerWebapps extends HttpServerFunctionalTest {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHttpServerWebapps.class);
+
   private static final Logger log = LoggerFactory.getLogger(TestHttpServerWebapps.class);
 
   /**

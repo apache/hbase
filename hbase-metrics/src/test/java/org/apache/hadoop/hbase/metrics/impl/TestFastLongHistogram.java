@@ -21,10 +21,11 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import java.util.Random;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -33,6 +34,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestFastLongHistogram {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFastLongHistogram.class);
 
   private static void doTestUniform(FastLongHistogram hist) {
     long[] VALUES = { 0, 10, 20, 30, 40, 50 };

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.fail;
@@ -26,11 +24,11 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -43,6 +41,7 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -51,6 +50,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionFavoredNodes {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionFavoredNodes.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Table table;
@@ -148,7 +151,7 @@ public class TestRegionFavoredNodes {
         for (String file : files) {
           FileStatus status = TEST_UTIL.getDFSCluster().getFileSystem().
               getFileStatus(new Path(new URI(file).getPath()));
-          BlockLocation[] lbks = 
+          BlockLocation[] lbks =
               ((DistributedFileSystem)TEST_UTIL.getDFSCluster().getFileSystem())
               .getFileBlockLocations(status, 0, Long.MAX_VALUE);
           for (BlockLocation lbk : lbks) {

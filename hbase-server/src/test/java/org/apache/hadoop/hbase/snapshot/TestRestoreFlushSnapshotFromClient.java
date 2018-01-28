@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -35,6 +35,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -48,6 +49,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRestoreFlushSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRestoreFlushSnapshotFromClient.class);
+
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRestoreFlushSnapshotFromClient.class);
 

@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -32,6 +33,10 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRawAsyncTableScan.class);
 
   @Parameter(0)
   public String scanType;

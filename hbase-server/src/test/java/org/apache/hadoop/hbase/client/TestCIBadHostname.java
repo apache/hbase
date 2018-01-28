@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.fail;
 
+import java.net.UnknownHostException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -26,10 +28,9 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.net.UnknownHostException;
 
 /**
  * Tests that we fail fast when hostname resolution is not working and do not cache
@@ -37,6 +38,11 @@ import java.net.UnknownHostException;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestCIBadHostname {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCIBadHostname.class);
+
   private static HBaseTestingUtility testUtil;
   private static ConnectionImplementation conn;
 

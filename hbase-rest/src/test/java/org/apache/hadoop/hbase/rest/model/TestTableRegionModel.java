@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,23 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableRegionModel.class);
+
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
   private static final byte[] END_KEY = Bytes.toBytes("zzyzx");
@@ -67,7 +71,7 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
     assertTrue(Bytes.equals(model.getEndKey(), END_KEY));
     assertEquals(ID, model.getId());
     assertEquals(LOCATION, model.getLocation());
-    assertEquals(model.getName(), 
+    assertEquals(model.getName(),
       TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID) +
       ".ad9860f031282c46ed431d7af8f94aca.");
   }

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -58,6 +58,11 @@ import org.slf4j.LoggerFactory;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Ignore
 public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStochasticBalancerJmxMetrics.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestStochasticBalancerJmxMetrics.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static int connectorPort = 61120;

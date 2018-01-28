@@ -19,18 +19,23 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.Set;
 import java.util.TreeSet;
-
 import junit.framework.TestCase;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
 @Category({FilterTests.class, SmallTests.class})
 public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFirstKeyValueMatchingQualifiersFilter.class);
+
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
   private static final byte[] COLUMN_QUALIFIER_1 = Bytes.toBytes("foo");
@@ -41,7 +46,7 @@ public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
   /**
    * Test the functionality of
    * {@link FirstKeyValueMatchingQualifiersFilter#filterCell(org.apache.hadoop.hbase.Cell)}
-   * 
+   *
    * @throws Exception
    */
   public void testFirstKeyMatchingQualifierFilter() throws Exception {

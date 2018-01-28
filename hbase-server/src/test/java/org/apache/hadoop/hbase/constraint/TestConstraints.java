@@ -23,16 +23,17 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.constraint.TestConstraint.CheckWasRunConstraint;
 import org.apache.hadoop.hbase.constraint.WorksConstraint.NameConstraint;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -43,6 +44,11 @@ import org.junit.rules.TestName;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestConstraints {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestConstraints.class);
+
   @Rule
   public TestName name = new TestName();
 
@@ -99,7 +105,7 @@ public class TestConstraints {
 
   /**
    * Test that Constraints are properly enabled, disabled, and removed
-   * 
+   *
    * @throws Exception
    */
   @SuppressWarnings("unchecked")
@@ -135,7 +141,7 @@ public class TestConstraints {
 
   /**
    * Test that when we update a constraint the ordering is not modified.
-   * 
+   *
    * @throws Exception
    */
   @SuppressWarnings("unchecked")
@@ -161,7 +167,7 @@ public class TestConstraints {
   /**
    * Test that if a constraint hasn't been set that there are no problems with
    * attempting to remove it.
-   * 
+   *
    * @throws Throwable
    *           on failure.
    */

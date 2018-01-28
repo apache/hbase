@@ -18,15 +18,16 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * Test create/using/deleting snapshots from the client
@@ -35,6 +36,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobSnapshotFromClient.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestMobSnapshotFromClient.class);
 
   /**
