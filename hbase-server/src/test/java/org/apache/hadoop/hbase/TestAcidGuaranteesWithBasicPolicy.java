@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class })
-public class TestAcidGuaranteesWithBasicPolicy extends TestAcidGuaranteesWithNoInMemCompaction {
+@Category(LargeTests.class)
+public class TestAcidGuaranteesWithBasicPolicy extends AcidGuaranteesTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
