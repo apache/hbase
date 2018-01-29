@@ -311,12 +311,14 @@ public final class ReadOnlyZKClient implements Closeable {
       if (task == CLOSE) {
         break;
       }
-      if (task == null && pendingRequests == 0) {
-        LOG.debug(
-          "{} to {} no activities for {} ms, close active connection. " +
-            "Will reconnect next time when there are new requests",
-          getId(), connectString, keepAliveTimeMs);
-        closeZk();
+      if (task == null) {
+        if (pendingRequests == 0) {
+          LOG.debug(
+            "{} to {} no activities for {} ms, close active connection. " +
+              "Will reconnect next time when there are new requests",
+            getId(), connectString, keepAliveTimeMs);
+          closeZk();
+        }
         continue;
       }
       if (!task.needZk()) {
