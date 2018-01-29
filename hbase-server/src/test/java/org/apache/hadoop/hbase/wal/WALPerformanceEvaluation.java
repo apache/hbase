@@ -197,8 +197,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             latencyHistogram.update(System.nanoTime() - now);
           }
         }
-        long totalTime = (System.currentTimeMillis() - startTime);
-        logBenchmarkResult(Thread.currentThread().getName(), numIterations, totalTime);
       } catch (Exception e) {
         LOG.error(getClass().getSimpleName() + " Thread failed", e);
       }

@@ -394,7 +394,13 @@ public abstract class CommonFSUtils {
 
   public static FileSystem getWALFileSystem(final Configuration c) throws IOException {
     Path p = getWALRootDir(c);
-    return p.getFileSystem(c);
+    FileSystem fs = p.getFileSystem(c);
+    // hadoop-core does fs caching, so need to propogate this if set
+    String enforceStreamCapability = c.get(UNSAFE_STREAM_CAPABILITY_ENFORCE);
+    if (enforceStreamCapability != null) {
+      fs.getConf().set(UNSAFE_STREAM_CAPABILITY_ENFORCE, enforceStreamCapability);
+    }
+    return fs;
   }
 
   private static boolean isValidWALRootDir(Path walDir, final Configuration c) throws IOException {

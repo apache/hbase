@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -209,7 +208,8 @@ public class TestRegionObserverScannerOpenHook {
     byte[] A = Bytes.toBytes("A");
     byte[][] FAMILIES = new byte[][] { A };
 
-    Configuration conf = HBaseConfiguration.create();
+    // Use new HTU to not overlap with the DFS cluster started in #CompactionStacking
+    Configuration conf = new HBaseTestingUtility().getConfiguration();
     HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromScan.class, Coprocessor.PRIORITY_HIGHEST, conf);
@@ -234,7 +234,8 @@ public class TestRegionObserverScannerOpenHook {
     byte[] A = Bytes.toBytes("A");
     byte[][] FAMILIES = new byte[][] { A };
 
-    Configuration conf = HBaseConfiguration.create();
+    // Use new HTU to not overlap with the DFS cluster started in #CompactionStacking
+    Configuration conf = new HBaseTestingUtility().getConfiguration();
     HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromFlush.class, Coprocessor.PRIORITY_HIGHEST, conf);

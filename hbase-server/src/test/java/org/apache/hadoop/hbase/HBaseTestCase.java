@@ -72,7 +72,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  public volatile Configuration conf = HBaseConfiguration.create();
+  public volatile Configuration conf = testUtil.getConfiguration();
   public final FSTableDescriptors fsTableDescriptors;
   {
     try {

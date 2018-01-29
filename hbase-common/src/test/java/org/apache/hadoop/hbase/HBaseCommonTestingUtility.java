@@ -63,11 +63,11 @@ public class HBaseCommonTestingUtility {
   protected Configuration conf;
 
   public HBaseCommonTestingUtility() {
-    this(HBaseConfiguration.create());
+    this(null);
   }
 
   public HBaseCommonTestingUtility(Configuration conf) {
-    this.conf = conf;
+    this.conf = (conf == null ? HBaseConfiguration.create() : conf);
   }
 
   /**
