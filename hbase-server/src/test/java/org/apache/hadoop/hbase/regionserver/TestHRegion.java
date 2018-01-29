@@ -2206,8 +2206,7 @@ public class TestHRegion {
       } catch (Exception e) {
         ok = true;
       }
-      assertEquals("Family " + new String(family, StandardCharsets.UTF_8) + " does exist",
-          true, ok);
+      assertTrue("Family " + new String(family, StandardCharsets.UTF_8) + " does exist", ok);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
