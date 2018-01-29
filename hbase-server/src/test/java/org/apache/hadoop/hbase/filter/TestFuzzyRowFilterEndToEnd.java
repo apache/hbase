@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -57,9 +57,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- */
-@Category({ FilterTests.class, MediumTests.class })
+@Category({ FilterTests.class, LargeTests.class })
 public class TestFuzzyRowFilterEndToEnd {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte fuzzyValue = (byte) 63;
