@@ -18,11 +18,12 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils.SnapshotMock;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category(SmallTests.class)
 public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobRestoreSnapshotHelper.class);
+
   final Logger LOG = LoggerFactory.getLogger(getClass());
 
   @Override

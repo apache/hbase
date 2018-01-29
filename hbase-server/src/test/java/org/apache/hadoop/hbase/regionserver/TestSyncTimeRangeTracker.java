@@ -20,14 +20,19 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.ThreadLocalRandom;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSyncTimeRangeTracker.class);
 
   private static final int NUM_KEYS = 10000000;
   private static final int NUM_OF_THREADS = 20;

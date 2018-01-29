@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -40,6 +42,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterFileSystem {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMasterFileSystem.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFileSystem.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

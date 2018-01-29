@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Collection;
+import static org.junit.Assert.assertEquals;
 
+import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -32,16 +34,19 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
-
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-
 @Category(MediumTests.class)
 public class TestCompactSplitThread {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactSplitThread.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactSplitThread.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());

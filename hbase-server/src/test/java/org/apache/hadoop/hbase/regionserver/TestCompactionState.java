@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -25,9 +24,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,6 +47,11 @@ import org.slf4j.LoggerFactory;
 /** Unit tests to test retrieving table/region compaction state*/
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestCompactionState {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompactionState.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Random random = new Random();
@@ -235,5 +240,5 @@ public class TestCompactionState {
       TEST_UTIL.flush();
       puts.clear();
     }
-  } 
+  }
 }

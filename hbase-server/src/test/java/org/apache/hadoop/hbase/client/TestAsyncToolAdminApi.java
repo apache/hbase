@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -32,6 +34,10 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncToolAdminApi extends TestAsyncAdminBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncToolAdminApi.class);
 
   @Test
   public void testBalancer() throws Exception {

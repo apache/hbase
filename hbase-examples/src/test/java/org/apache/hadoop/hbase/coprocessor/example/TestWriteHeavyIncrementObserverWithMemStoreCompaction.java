@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -27,12 +28,17 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestWriteHeavyIncrementObserverWithMemStoreCompaction
     extends WriteHeavyIncrementObserverTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWriteHeavyIncrementObserverWithMemStoreCompaction.class);
 
   @BeforeClass
   public static void setUp() throws Exception {

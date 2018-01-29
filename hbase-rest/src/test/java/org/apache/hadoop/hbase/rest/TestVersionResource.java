@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,14 +23,12 @@ import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-
 import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -43,6 +40,7 @@ import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -50,10 +48,15 @@ import org.slf4j.LoggerFactory;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestVersionResource {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVersionResource.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestVersionResource.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
@@ -62,7 +65,7 @@ public class TestVersionResource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost", 
+    client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(
       VersionModel.class,
@@ -79,7 +82,7 @@ public class TestVersionResource {
     assertNotNull(model);
     assertNotNull(model.getRESTVersion());
     assertEquals(RESTServlet.VERSION_STRING, model.getRESTVersion());
-    String osVersion = model.getOSVersion(); 
+    String osVersion = model.getOSVersion();
     assertNotNull(osVersion);
     assertTrue(osVersion.contains(System.getProperty("os.name")));
     assertTrue(osVersion.contains(System.getProperty("os.version")));
@@ -168,7 +171,7 @@ public class TestVersionResource {
     Response response = client.get("/version/cluster",Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    StorageClusterVersionModel clusterVersionModel = 
+    StorageClusterVersionModel clusterVersionModel =
       (StorageClusterVersionModel)
         context.createUnmarshaller().unmarshal(
           new ByteArrayInputStream(response.getBody()));

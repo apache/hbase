@@ -25,14 +25,19 @@ import static org.junit.Assert.fail;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestOrderedBytes {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestOrderedBytes.class);
 
   // integer constants for testing Numeric code paths
   static final Long[] I_VALS =

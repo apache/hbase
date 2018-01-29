@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,11 +23,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -57,6 +57,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestActiveMasterManager {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestActiveMasterManager.class);
+
   private final static Logger LOG = LoggerFactory.getLogger(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

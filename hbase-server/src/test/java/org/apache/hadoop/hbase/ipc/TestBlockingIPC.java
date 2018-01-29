@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,18 +21,23 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ RPCTests.class, SmallTests.class })
 public class TestBlockingIPC extends AbstractTestIPC {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlockingIPC.class);
 
   @Override protected RpcServer createRpcServer(Server server, String name,
       List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,

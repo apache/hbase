@@ -1,32 +1,34 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,13 +41,18 @@ import org.junit.experimental.categories.Category;
  * the configured chunk size, and split it into a number of intermediate index blocks that should
  * really be leaf-level blocks. If more keys were added, we would flush the leaf-level block, add
  * another entry to the root-level block, and that would prevent us from upgrading the leaf-level
- * chunk to the root chunk, thus not triggering the bug. 
+ * chunk to the root chunk, thus not triggering the bug.
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestHFileInlineToRootChunkConversion {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileInlineToRootChunkConversion.class);
+
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final Configuration conf = testUtil.getConfiguration();
-  
+
   @Test
   public void testWriteHFile() throws Exception {
     Path hfPath = new Path(testUtil.getDataTestDir(),
@@ -53,7 +60,7 @@ public class TestHFileInlineToRootChunkConversion {
     int maxChunkSize = 1024;
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
-    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize); 
+    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
     HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
     HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf)
             .withFileContext(context)

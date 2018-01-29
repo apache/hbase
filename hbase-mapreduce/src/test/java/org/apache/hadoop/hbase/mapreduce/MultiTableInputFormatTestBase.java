@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,11 +28,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
@@ -47,9 +45,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +55,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Base set of tests and setup for input formats touching multiple tables.
  */
 public abstract class MultiTableInputFormatTestBase {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   static final Logger LOG = LoggerFactory.getLogger(TestMultiTableInputFormat.class);
   public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final String TABLE_NAME = "scantest";

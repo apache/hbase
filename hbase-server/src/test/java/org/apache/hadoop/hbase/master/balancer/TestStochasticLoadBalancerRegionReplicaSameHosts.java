@@ -21,15 +21,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerRegionReplicaSameHosts extends BalancerTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaSameHosts.class);
 
   @Test // Test is flakey. TODO: Fix!
   public void testRegionReplicationOnMidClusterSameHosts() {

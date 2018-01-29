@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,9 +19,11 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Map;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -38,16 +39,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
 import org.junit.rules.TestName;
 
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorTableEndpoint {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorTableEndpoint.class);
 
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
@@ -85,7 +88,7 @@ public class TestCoprocessorTableEndpoint {
   }
 
   @Test
-  public void testDynamicCoprocessorTableEndpoint() throws Throwable {    
+  public void testDynamicCoprocessorTableEndpoint() throws Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -142,7 +145,7 @@ public class TestCoprocessorTableEndpoint {
         table.put(put);
       }
     } finally {
-      table.close();    
+      table.close();
     }
   }
 

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.fs;
 
 import java.io.FileNotFoundException;
@@ -27,7 +26,6 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -35,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -65,6 +64,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -77,6 +77,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestBlockReorder {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlockReorder.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockReorder.class);
 
   private Configuration conf;

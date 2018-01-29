@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -31,12 +29,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -56,6 +54,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -67,6 +66,10 @@ import org.slf4j.LoggerFactory;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestCompoundBloomFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCompoundBloomFilter.class);
 
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -121,7 +124,9 @@ public class TestCompoundBloomFilter {
   private FileSystem fs;
   private BlockCache blockCache;
 
-  /** A message of the form "in test#<number>:" to include in logging. */
+  /**
+   * A message of the form <code>in test#&lt;number&gt;</code>" to include in logging.
+   */
   private String testIdMsg;
 
   private static final int GENERATION_SEED = 2319;

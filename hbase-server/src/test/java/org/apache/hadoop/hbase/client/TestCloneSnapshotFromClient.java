@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -34,6 +34,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,6 +47,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestCloneSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCloneSnapshotFromClient.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestCloneSnapshotFromClient.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

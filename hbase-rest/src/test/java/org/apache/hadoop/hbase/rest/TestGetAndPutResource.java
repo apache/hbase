@@ -26,11 +26,9 @@ import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
-
 import javax.xml.bind.JAXBException;
-
-import org.apache.http.Header;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
@@ -41,11 +39,17 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.http.Header;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestGetAndPutResource extends RowResourceBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGetAndPutResource.class);
 
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -110,7 +114,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   public void testSingleCellGetPutPB() throws IOException, JAXBException {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
-    
+
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -523,7 +527,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = deleteRow(TABLE, ROW_2);
     assertEquals(200, response.getCode());
   }
-  
+
   @Test
   public void testMetrics() throws IOException, JAXBException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
@@ -550,7 +554,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     METRICS_ASSERT.assertCounterGt("successfulDelete", 0l,
       RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
   }
-  
+
   @Test
   public void testMultiColumnGetXML() throws Exception {
     String path = "/" + TABLE + "/fakerow";

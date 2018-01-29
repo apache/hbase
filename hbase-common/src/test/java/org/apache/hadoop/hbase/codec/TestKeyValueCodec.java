@@ -26,11 +26,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,6 +40,11 @@ import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestKeyValueCodec {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestKeyValueCodec.class);
+
   @Test
   public void testEmptyWorks() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

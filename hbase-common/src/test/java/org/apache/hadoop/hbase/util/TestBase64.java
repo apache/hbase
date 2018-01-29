@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
-
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -33,6 +32,11 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestBase64 extends TestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBase64.class);
+
   // Note: uris is sorted. We need to prove that the ordered Base64
   // preserves that ordering
   private String[] uris = {

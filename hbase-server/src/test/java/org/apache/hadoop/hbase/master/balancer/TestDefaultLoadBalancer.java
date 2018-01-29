@@ -24,8 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -49,6 +50,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestDefaultLoadBalancer extends BalancerTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDefaultLoadBalancer.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestDefaultLoadBalancer.class);
 
   private static LoadBalancer loadBalancer;

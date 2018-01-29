@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,6 +48,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -58,6 +58,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, LargeTests.class})
 public class TestZooKeeper {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZooKeeper.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestZooKeeper.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

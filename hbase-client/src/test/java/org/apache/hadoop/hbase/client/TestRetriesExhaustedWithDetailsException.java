@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,34 +17,28 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.avro.generic.GenericData;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.assertTrue;
 
 @Category({SmallTests.class})
 public class TestRetriesExhaustedWithDetailsException {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRetriesExhaustedWithDetailsException.class);
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRetriesExhaustedWithDetailsException.class);
+
   @Rule public TestName name = new TestName();
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).
-      withLookingForStuckThread(true).
-      build();
 
   /**
    * Assert that a RetriesExhaustedException that has RegionTooBusyException outputs region name.

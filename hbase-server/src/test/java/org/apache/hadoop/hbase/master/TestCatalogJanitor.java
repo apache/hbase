@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,12 +32,11 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,19 +63,22 @@ import org.apache.hadoop.hbase.util.Triple;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestCatalogJanitor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCatalogJanitor.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitor.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-     withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   @Rule public final TestName name = new TestName();
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private MockMasterServices masterServices;

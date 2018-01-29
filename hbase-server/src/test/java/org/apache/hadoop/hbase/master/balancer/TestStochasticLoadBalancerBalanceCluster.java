@@ -21,11 +21,13 @@ import static org.junit.Assert.assertNull;
 
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -33,6 +35,10 @@ import org.slf4j.LoggerFactory;
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerBalanceCluster extends BalancerTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStochasticLoadBalancerBalanceCluster.class);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStochasticLoadBalancerBalanceCluster.class);

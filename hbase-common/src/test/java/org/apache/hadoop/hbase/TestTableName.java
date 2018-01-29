@@ -25,10 +25,10 @@ import static org.junit.Assert.fail;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestWatcher;
@@ -39,6 +39,11 @@ import org.junit.runner.Description;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestTableName extends TestWatcher {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableName.class);
+
   private TableName tableName;
 
   /**

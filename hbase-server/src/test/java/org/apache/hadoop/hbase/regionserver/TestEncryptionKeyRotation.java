@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,11 +26,10 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -60,6 +60,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestEncryptionKeyRotation {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestEncryptionKeyRotation.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestEncryptionKeyRotation.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();

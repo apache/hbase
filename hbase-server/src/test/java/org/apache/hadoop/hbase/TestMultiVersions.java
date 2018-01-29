@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -27,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-
 import org.apache.hadoop.hbase.TimestampTestBase.FlushCache;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
@@ -43,6 +41,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,10 +55,15 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestMultiVersions {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultiVersions.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Admin admin;
-  
+
   private static final int NUM_SLAVES = 3;
 
   @Rule
@@ -85,7 +89,7 @@ public class TestMultiVersions {
   * Tests user specifiable time stamps putting, getting and scanning.  Also
    * tests same in presence of deletes.  Test cores are written so can be
    * run against an HRegion and against an HTable: i.e. both local and remote.
-   * 
+   *
    * <p>Port of old TestTimestamp test to here so can better utilize the spun
    * up cluster running more than a single test per spin up.  Keep old tests'
    * crazyness.
@@ -186,7 +190,7 @@ public class TestMultiVersions {
    * Port of old TestScanMultipleVersions test here so can better utilize the
    * spun up cluster running more than just a single test.  Keep old tests
    * crazyness.
-   * 
+   *
    * <p>Tests five cases of scans and timestamps.
    * @throws Exception
    */

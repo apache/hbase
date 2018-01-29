@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,9 +25,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -37,12 +36,13 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.DecimalStringSplit;
+import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,6 +56,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestRegionSplitter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionSplitter.class);
+
     private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
     private final static String CF_NAME = "SPLIT_TEST_CF";
@@ -418,7 +423,7 @@ public class TestRegionSplitter {
     }
 
     /**
-     * List.indexOf() doesn't really work for a List<byte[]>, because byte[]
+     * List.indexOf() doesn't really work for a List &lt;byte[]&gt;, because byte[]
      * doesn't override equals(). This method checks whether a list contains
      * a given element by checking each element using the byte array
      * comparator.

@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Optional;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -51,6 +52,10 @@ import org.junit.rules.TestName;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClient.class);
 
   private static boolean delayFlush = false;
 

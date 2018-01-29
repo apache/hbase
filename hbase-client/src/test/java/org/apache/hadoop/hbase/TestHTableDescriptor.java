@@ -25,13 +25,13 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,6 +45,11 @@ import org.slf4j.LoggerFactory;
 @Category({MiscTests.class, SmallTests.class})
 @Deprecated
 public class TestHTableDescriptor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHTableDescriptor.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableDescriptor.class);
 
   @Rule

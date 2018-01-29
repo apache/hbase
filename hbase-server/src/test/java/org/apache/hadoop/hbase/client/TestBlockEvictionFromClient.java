@@ -33,9 +33,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -64,6 +64,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -74,6 +75,11 @@ import org.slf4j.LoggerFactory;
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
 public class TestBlockEvictionFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBlockEvictionFromClient.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockEvictionFromClient.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static byte[][] ROWS = new byte[2][];

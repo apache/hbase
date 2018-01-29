@@ -31,10 +31,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -46,12 +46,15 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
@@ -59,6 +62,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestSnapshotFileCache {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

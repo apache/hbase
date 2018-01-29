@@ -28,17 +28,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestBytes extends TestCase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestBytes.class);
+
   public void testNullHashCode() {
     byte [] b = null;
     Exception ee = null;

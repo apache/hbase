@@ -1,12 +1,13 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,11 +24,10 @@ import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Set;
-
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -57,6 +57,7 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -68,6 +69,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSpnegoHttpServer.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
   private static final String CLIENT_PRINCIPAL = "client";

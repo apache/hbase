@@ -25,10 +25,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.security.auth.login.AppConfigurationEntry;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,6 +41,7 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -49,6 +49,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZooKeeperACL {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZooKeeperACL.class);
+
   private final static Logger LOG = LoggerFactory.getLogger(TestZooKeeperACL.class);
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();

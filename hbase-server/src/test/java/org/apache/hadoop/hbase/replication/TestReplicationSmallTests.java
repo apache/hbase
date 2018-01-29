@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -62,6 +64,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationSmallTests extends TestReplicationBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationSmallTests.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSmallTests.class);
   private static final String PEER_ID = "2";

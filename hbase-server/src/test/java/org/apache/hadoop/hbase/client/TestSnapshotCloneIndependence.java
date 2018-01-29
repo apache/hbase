@@ -15,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.List;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,7 +46,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,11 +54,12 @@ import org.slf4j.LoggerFactory;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotCloneIndependence {
-  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCloneIndependence.class);
 
   @ClassRule
-  public static final TestRule timeout =
-      CategoryBasedTimeout.forClass(TestSnapshotCloneIndependence.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSnapshotCloneIndependence.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCloneIndependence.class);
 
   @Rule
   public TestName testName = new TestName();

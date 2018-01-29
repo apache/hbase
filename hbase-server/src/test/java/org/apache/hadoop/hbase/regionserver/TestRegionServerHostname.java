@@ -26,8 +26,8 @@ import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -47,6 +48,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRegionServerHostname {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionServerHostname.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerHostname.class);
 
   private HBaseTestingUtility TEST_UTIL;

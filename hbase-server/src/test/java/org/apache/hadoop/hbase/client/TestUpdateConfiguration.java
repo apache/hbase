@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,12 +24,13 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -38,9 +38,14 @@ import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class})
 public class TestUpdateConfiguration {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestUpdateConfiguration.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestUpdateConfiguration.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  
+
   @BeforeClass
   public static void setup() throws Exception {
     TEST_UTIL.startMiniCluster(2, 1);

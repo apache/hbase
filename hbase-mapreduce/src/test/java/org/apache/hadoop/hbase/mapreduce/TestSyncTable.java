@@ -21,12 +21,11 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,13 +40,14 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
@@ -55,8 +55,11 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
  */
 @Category(LargeTests.class)
 public class TestSyncTable {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSyncTable.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSyncTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

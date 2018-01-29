@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -105,6 +106,7 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -120,6 +122,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestHStore {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHStore.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestHStore.class);
   @Rule
   public TestName name = new TestName();

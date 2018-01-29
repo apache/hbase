@@ -32,7 +32,6 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -44,9 +43,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.HttpServer.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -61,6 +60,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -70,6 +70,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHttpServer.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer server;
   private static URL baseUrl;

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -32,10 +32,9 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 
 /**
  * Test to confirm that we will not hang when stop a backup master which is trying to become the
@@ -43,8 +42,10 @@ import org.junit.rules.TestRule;
  */
 @Category({ MasterTests.class, MediumTests.class })
 public class TestShutdownBackupMaster {
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
-          withLookingForStuckThread(true).build();
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestShutdownBackupMaster.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +18,10 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -31,6 +31,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestTableInputFormatScan2 extends TestTableInputFormatScanBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestTableInputFormatScan2.class);
 
   /**
    * Tests a MR scan using specific start and stop rows.

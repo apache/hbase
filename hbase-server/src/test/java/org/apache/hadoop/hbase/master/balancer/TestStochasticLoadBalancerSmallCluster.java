@@ -17,13 +17,19 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancerSmallCluster extends BalancerTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStochasticLoadBalancerSmallCluster.class);
 
   @Test
   public void testSmallCluster() {

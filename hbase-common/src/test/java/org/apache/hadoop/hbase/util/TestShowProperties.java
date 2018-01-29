@@ -15,18 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.util.Properties;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * This test is there to dump the properties. It allows to detect possible env issues when
@@ -34,6 +33,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestShowProperties {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestShowProperties.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestShowProperties.class);
 
   @Test

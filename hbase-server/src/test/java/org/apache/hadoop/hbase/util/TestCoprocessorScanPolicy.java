@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.junit.ClassRule;
+
 // this is deliberately not in the o.a.h.h.regionserver package
 
 // in order to make sure all required classes/method are available
@@ -71,6 +75,11 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({ MiscTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestCoprocessorScanPolicy {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCoprocessorScanPolicy.class);
+
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] F = Bytes.toBytes("fam");
   private static final byte[] Q = Bytes.toBytes("qual");

@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.client.ClientScanner;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -50,6 +49,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -69,6 +69,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category(MediumTests.class)
 public class TestPartialResultsFromClientSide {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestPartialResultsFromClientSide.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestPartialResultsFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

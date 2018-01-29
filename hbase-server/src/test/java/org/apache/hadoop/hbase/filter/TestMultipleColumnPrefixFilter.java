@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +26,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -50,6 +51,10 @@ import org.junit.rules.TestName;
 
 @Category({FilterTests.class, SmallTests.class})
 public class TestMultipleColumnPrefixFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new
       HBaseTestingUtility();
@@ -108,7 +113,7 @@ public class TestMultipleColumnPrefixFilter {
     byte [][] filter_prefix = new byte [2][];
     filter_prefix[0] = new byte [] {'p'};
     filter_prefix[1] = new byte [] {'q'};
-    
+
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
     List<Cell> results = new ArrayList<>();
@@ -156,12 +161,11 @@ public class TestMultipleColumnPrefixFilter {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           double rand = Math.random();
           Cell kv;
-          if (rand < 0.5) 
-            kv = KeyValueTestUtil.create(row, family1, column, timestamp,
-                valueString);
-          else 
-            kv = KeyValueTestUtil.create(row, family2, column, timestamp,
-                valueString);
+          if (rand < 0.5) {
+            kv = KeyValueTestUtil.create(row, family1, column, timestamp, valueString);
+          } else {
+            kv = KeyValueTestUtil.create(row, family2, column, timestamp, valueString);
+          }
           p.add(kv);
           kvList.add(kv);
           for (String s: prefixMap.keySet()) {
@@ -180,7 +184,7 @@ public class TestMultipleColumnPrefixFilter {
     byte [][] filter_prefix = new byte [2][];
     filter_prefix[0] = new byte [] {'p'};
     filter_prefix[1] = new byte [] {'q'};
-    
+
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
     List<Cell> results = new ArrayList<>();
@@ -191,7 +195,7 @@ public class TestMultipleColumnPrefixFilter {
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
-  
+
   @Test
   public void testMultipleColumnPrefixFilterWithColumnPrefixFilter() throws IOException {
     String family = "Family";
@@ -225,30 +229,30 @@ public class TestMultipleColumnPrefixFilter {
     scan1.setMaxVersions();
     byte [][] filter_prefix = new byte [1][];
     filter_prefix[0] = new byte [] {'p'};
- 
+
     multiplePrefixFilter = new MultipleColumnPrefixFilter(filter_prefix);
     scan1.setFilter(multiplePrefixFilter);
     List<Cell> results1 = new ArrayList<>();
     InternalScanner scanner1 = region.getScanner(scan1);
     while (scanner1.next(results1))
       ;
-    
+
     ColumnPrefixFilter singlePrefixFilter;
     Scan scan2 = new Scan();
     scan2.setMaxVersions();
     singlePrefixFilter = new ColumnPrefixFilter(Bytes.toBytes("p"));
- 
+
     scan2.setFilter(singlePrefixFilter);
     List<Cell> results2 = new ArrayList<>();
     InternalScanner scanner2 = region.getScanner(scan1);
     while (scanner2.next(results2))
       ;
-    
+
     assertEquals(results1.size(), results2.size());
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
-  
+
   List<String> generateRandomWords(int numberOfWords, String suffix) {
     Set<String> wordSet = new HashSet<>();
     for (int i = 0; i < numberOfWords; i++) {

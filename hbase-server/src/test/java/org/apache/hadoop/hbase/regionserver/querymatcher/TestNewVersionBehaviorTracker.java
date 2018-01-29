@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,23 +17,28 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
-
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestNewVersionBehaviorTracker {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNewVersionBehaviorTracker.class);
 
   private final byte[] col1 = Bytes.toBytes("col1");
   private final byte[] col2 = Bytes.toBytes("col2");

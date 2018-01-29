@@ -32,14 +32,15 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadPoolExecutor;
-
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.TimeoutException;
 import org.apache.hadoop.hbase.procedure.Subprocedure.SubprocedureImpl;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.InOrder;
@@ -52,6 +53,11 @@ import org.mockito.stubbing.Answer;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureMember {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestProcedureMember.class);
+
   private static final long WAKE_FREQUENCY = 100;
   private static final long TIMEOUT = 100000;
   private static final long POOL_KEEP_ALIVE = 1;

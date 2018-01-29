@@ -19,16 +19,22 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerRegionReplicaWithRacks extends BalancerTestBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaWithRacks.class);
 
   private static class ForTestRackManager extends RackManager {
     int numRacks;

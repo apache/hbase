@@ -24,7 +24,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Set;
 import java.util.TreeSet;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -32,11 +31,12 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -44,6 +44,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestGlobalFilter extends HttpServerFunctionalTest {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestGlobalFilter.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   static final Set<String> RECORDS = new TreeSet<>();
 

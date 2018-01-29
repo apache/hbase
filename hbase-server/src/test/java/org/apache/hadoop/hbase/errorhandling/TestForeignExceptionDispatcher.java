@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.errorhandling;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -34,6 +36,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MasterTests.class, SmallTests.class})
 public class TestForeignExceptionDispatcher {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestForeignExceptionDispatcher.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestForeignExceptionDispatcher.class);
 
   /**

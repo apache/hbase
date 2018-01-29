@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,11 +24,17 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHRegionLocation {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionLocation.class);
+
   /**
    * HRegionLocations are equal if they have the same 'location' -- i.e. host and
    * port -- even if they are carrying different regions.  Verify that is indeed

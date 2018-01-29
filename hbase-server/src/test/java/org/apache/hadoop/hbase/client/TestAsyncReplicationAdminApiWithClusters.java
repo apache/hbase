@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -53,6 +54,10 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 @Category({LargeTests.class, ClientTests.class})
 public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncReplicationAdminApiWithClusters.class);
 
   private final static String ID_SECOND = "2";
 

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
@@ -33,12 +31,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -64,6 +62,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -71,6 +70,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
@@ -80,6 +80,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @RunWith(Parameterized.class)
 @Category({IOTests.class, MediumTests.class})
 public class TestCacheOnWrite {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCacheOnWrite.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWrite.class);
 
@@ -421,7 +425,7 @@ public class TestCacheOnWrite {
     long ts = EnvironmentEdgeManager.currentTime();
     for (int iFile = 0; iFile < 5; ++iFile) {
       for (int iRow = 0; iRow < 500; ++iRow) {
-        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + 
+        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" +
             iRow;
         Put p = new Put(Bytes.toBytes(rowStr));
         ++rowIdx;

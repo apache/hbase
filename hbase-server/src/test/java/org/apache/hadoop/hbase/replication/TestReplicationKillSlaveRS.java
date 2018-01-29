@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -31,6 +33,10 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestReplicationKillSlaveRS.class);
 
   @Test(timeout=300000)
   public void killOneSlaveRS() throws Exception {

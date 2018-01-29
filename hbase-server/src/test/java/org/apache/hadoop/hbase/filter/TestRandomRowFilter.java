@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.*;
+
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
 @Category({FilterTests.class, SmallTests.class})
 public class TestRandomRowFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRandomRowFilter.class);
+
   protected RandomRowFilter quarterChanceFilter;
 
   @Before
@@ -40,7 +45,7 @@ public class TestRandomRowFilter {
 
   /**
    * Tests basics
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -62,7 +67,7 @@ public class TestRandomRowFilter {
 
   /**
    * Tests serialization
-   * 
+   *
    * @throws Exception
    */
   @Test

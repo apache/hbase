@@ -43,11 +43,17 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestClientClusterMetrics {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestClientClusterMetrics.class);
+
   private static HBaseTestingUtility UTIL;
   private static Admin ADMIN;
   private final static int SLAVES = 5;

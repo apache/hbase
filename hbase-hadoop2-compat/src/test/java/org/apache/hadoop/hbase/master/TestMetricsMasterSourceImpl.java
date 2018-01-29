@@ -15,23 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
-
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.MetricsTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  *  Test for MetricsMasterSourceImpl
  */
 @Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsMasterSourceImpl {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMetricsMasterSourceImpl.class);
 
   @Test
   public void testGetInstance() throws Exception {

@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,11 +28,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.http.Header;
-import org.apache.http.message.BasicHeader;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -50,15 +47,22 @@ import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestRemoteTable {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRemoteTable.class);
 
   // Verify that invalid URL characters and arbitrary bytes are escaped when
   // constructing REST URLs per HBASE-7621. RemoteHTable should support row keys
@@ -96,7 +100,7 @@ public class TestRemoteTable {
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private RemoteHTable remoteTable;
 
@@ -129,16 +133,16 @@ public class TestRemoteTable {
       table.put(put);
     }
     remoteTable = new RemoteHTable(
-      new Client(new Cluster().add("localhost", 
+      new Client(new Cluster().add("localhost",
           REST_TEST_UTIL.getServletPort())),
         TEST_UTIL.getConfiguration(), TABLE.toBytes());
   }
-  
+
   @After
   public void after() throws Exception {
     remoteTable.close();
   }
-  
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
@@ -340,7 +344,7 @@ public class TestRemoteTable {
     value = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNotNull(value);
     assertTrue(Bytes.equals(VALUE_2, value));
-    
+
     assertTrue(Bytes.equals(Bytes.toBytes("TestRemoteTable" + VALID_TABLE_NAME_CHARS), remoteTable.getTableName()));
   }
 
@@ -402,9 +406,9 @@ public class TestRemoteTable {
     assertNull(value1);
     assertNull(value2);
   }
-  
+
   /**
-   * Test RemoteHTable.Scanner 
+   * Test RemoteHTable.Scanner
    */
   @Test
   public void testScanner() throws IOException {
@@ -443,7 +447,7 @@ public class TestRemoteTable {
     results = scanner.next(1);
     assertNull(results);
     scanner.close();
-    
+
     scanner = remoteTable.getScanner(COLUMN_1);
     results = scanner.next(4);
     assertNotNull(results);
@@ -454,7 +458,7 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(ROW_4, results[3].getRow()));
 
     scanner.close();
-    
+
     scanner = remoteTable.getScanner(COLUMN_1,QUALIFIER_1);
     results = scanner.next(4);
     assertNotNull(results);
@@ -467,7 +471,7 @@ public class TestRemoteTable {
     assertTrue(remoteTable.isAutoFlush());
 
   }
-  
+
   @Test
   public void testCheckAndDelete() throws IOException {
     Get get = new Get(ROW_1);
@@ -494,9 +498,9 @@ public class TestRemoteTable {
     assertFalse(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
         .ifEquals(VALUE_2).thenPut(put));
   }
-  
+
   /**
-   * Test RemoteHable.Scanner.iterator method  
+   * Test RemoteHable.Scanner.iterator method
    */
   @Test
   public void testIteratorScaner() throws IOException {
@@ -525,7 +529,7 @@ public class TestRemoteTable {
     }
     assertEquals(4, counter);
   }
-  
+
   /**
    * Test a some methods of class Response.
    */
@@ -547,8 +551,8 @@ public class TestRemoteTable {
     response.setHeaders(headers);
     assertEquals("value1.1", response.getHeader("header1"));
     response.setBody(Bytes.toBytes("body"));
-    assertTrue(response.hasBody());    
+    assertTrue(response.hasBody());
   }
-  
+
 }
 

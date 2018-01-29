@@ -19,24 +19,30 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.io.IOException;
 
 /**
  * Test that the utility works as expected
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestHFileArchiveUtil {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHFileArchiveUtil.class);
+
   private Path rootDir = new Path("./");
 
   @Rule
@@ -54,14 +60,14 @@ public class TestHFileArchiveUtil {
     FSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getArchivePath(conf));
   }
-  
+
   @Test
   public void testRegionArchiveDir() {
     Path regionDir = new Path("region");
     assertNotNull(HFileArchiveUtil.getRegionArchiveDir(rootDir,
         TableName.valueOf(name.getMethodName()), regionDir));
   }
-  
+
   @Test
   public void testGetStoreArchivePath() throws IOException {
       byte[] family = Bytes.toBytes("Family");

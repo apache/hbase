@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertFalse;
+
+import java.io.IOException;
+import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -39,21 +42,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertFalse;
-
-import java.io.IOException;
-import java.util.Arrays;
-
 public abstract class TableSnapshotInputFormatTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotInputFormatTestBase.class);
-  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
-      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   protected final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   protected static final int NUM_REGION_SERVERS = 2;
   protected static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};

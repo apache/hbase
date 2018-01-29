@@ -15,17 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-
 
 @Category(MediumTests.class)
 public class TestWALReplayBoundedLogWriterCreation extends TestWALReplay {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALReplayBoundedLogWriterCreation.class);
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestWALReplay.setUpBeforeClass();

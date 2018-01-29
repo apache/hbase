@@ -26,10 +26,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -66,6 +67,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAvoidCellReferencesIntoShippedBlocks {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAvoidCellReferencesIntoShippedBlocks.class);
+
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static byte[][] ROWS = new byte[2][];
   private static byte[] ROW = Bytes.toBytes("testRow");

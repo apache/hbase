@@ -129,17 +129,6 @@
                 </execution>
             </executions>
         </plugin>
-        <plugin>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <properties>
-                <property>
-                  <name>listener</name>
-                  <value>org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
-                </property>
-              </properties>
-            </configuration>
-          </plugin>
         <!-- Make a jar and put the sources in the jar -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

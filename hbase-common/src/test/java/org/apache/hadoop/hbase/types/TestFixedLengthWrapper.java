@@ -20,17 +20,23 @@ package org.apache.hadoop.hbase.types;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestFixedLengthWrapper {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFixedLengthWrapper.class);
 
   static final byte[][] VALUES = new byte[][] {
     Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
@@ -55,7 +61,7 @@ public class TestFixedLengthWrapper {
           assertEquals(limit, type.encode(buff, val));
           buff.setPosition(0);
           byte[] actual = type.decode(buff);
-          assertTrue("Decoding output differs from expected", 
+          assertTrue("Decoding output differs from expected",
             Bytes.equals(val, 0, val.length, actual, 0, val.length));
           buff.setPosition(0);
           assertEquals(limit, type.skip(buff));

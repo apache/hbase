@@ -22,9 +22,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.JVM;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,10 +46,13 @@ import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-
 @RunWith(Parameterized.class)
 @Category({ RPCTests.class, SmallTests.class })
 public class TestNettyIPC extends AbstractTestIPC {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestNettyIPC.class);
 
   @Parameters(name = "{index}: EventLoop={0}")
   public static Collection<Object[]> parameters() {

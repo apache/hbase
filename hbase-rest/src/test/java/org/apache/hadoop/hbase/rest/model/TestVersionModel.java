@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +19,27 @@ package org.apache.hadoop.hbase.rest.model;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
 public class TestVersionModel extends TestModelBase<VersionModel> {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVersionModel.class);
+
   private static final String REST_VERSION = "0.0.1";
-  private static final String OS_VERSION = 
+  private static final String OS_VERSION =
     "Linux 2.6.18-128.1.6.el5.centos.plusxen amd64";
   private static final String JVM_VERSION =
     "Sun Microsystems Inc. 1.6.0_13-11.3-b02";
   private static final String JETTY_VERSION = "6.1.14";
   private static final String JERSEY_VERSION = "1.1.0-ea";
-  
+
   public TestVersionModel() throws Exception {
     super(VersionModel.class);
     AS_XML =

@@ -20,12 +20,15 @@ package org.apache.hadoop.hbase.trace;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.htrace.core.POJOSpanReceiver;
@@ -34,17 +37,20 @@ import org.apache.htrace.core.Span;
 import org.apache.htrace.core.TraceScope;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestHTraceHooks {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHTraceHooks.class);
 
   private static final byte[] FAMILY_BYTES = "family".getBytes();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

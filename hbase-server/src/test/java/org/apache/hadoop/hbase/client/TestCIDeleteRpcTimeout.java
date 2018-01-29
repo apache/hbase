@@ -18,12 +18,18 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestCIDeleteRpcTimeout extends AbstractTestCIRpcTimeout {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestCIDeleteRpcTimeout.class);
 
   @Override
   protected void execute(Table table) throws IOException {

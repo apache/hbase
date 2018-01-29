@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -26,12 +27,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 @Category({MediumTests.class})
 public class TestChangeSplitPolicyAction extends Action {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestChangeSplitPolicyAction.class);
+
   private final static IntegrationTestingUtility TEST_UTIL = new IntegrationTestingUtility();
   private static ChangeSplitPolicyAction action;
   private Admin admin;

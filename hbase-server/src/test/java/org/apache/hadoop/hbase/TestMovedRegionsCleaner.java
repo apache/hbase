@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,26 +17,26 @@
  */
 package org.apache.hadoop.hbase;
 
-
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-
 
 /**
  * Test whether background cleanup of MovedRegion entries is happening
  */
-@Category({ MiscTests.class, MediumTests.class }) public class TestMovedRegionsCleaner {
+@Category({ MiscTests.class, MediumTests.class })
+public class TestMovedRegionsCleaner {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionRebalancing.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMovedRegionsCleaner.class);
+
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   public static int numCalls = 0;

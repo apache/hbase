@@ -22,16 +22,17 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.Properties;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -40,6 +41,11 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ ZKTests.class, MediumTests.class })
 public class TestHQuorumPeer {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHQuorumPeer.class);
+
   private static final HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
   private static int PORT_NO = 21818;
   private Path dataDir;

@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -35,6 +36,10 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ClientTests.class, LargeTests.class})
 public class TestMobRestoreSnapshotFromClient extends TestRestoreSnapshotFromClient {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClient.class);
 
   @BeforeClass
   public static void setupCluster() throws Exception {

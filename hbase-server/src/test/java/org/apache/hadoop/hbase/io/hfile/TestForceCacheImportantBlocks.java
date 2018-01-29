@@ -1,18 +1,19 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
 
@@ -22,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.Get;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -46,7 +48,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Make sure we always cache important block types, such as index blocks, as
  * long as we have a block cache, even though block caching might be disabled
  * for the column family.
- * 
+ *
  * <p>TODO: This test writes a lot of data and only tests the most basic of metrics.  Cache stats
  * need to reveal more about what is being cached whether DATA or INDEX blocks and then we could
  * do more verification in this test.
@@ -54,6 +56,11 @@ import org.junit.runners.Parameterized.Parameters;
 @Category({IOTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestForceCacheImportantBlocks {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestForceCacheImportantBlocks.class);
+
   private final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   private static final String TABLE = "myTable";
@@ -69,7 +76,7 @@ public class TestForceCacheImportantBlocks {
 
   /** Extremely small block size, so that we can get some index blocks */
   private static final int BLOCK_SIZE = 256;
-  
+
   private static final Algorithm COMPRESSION_ALGORITHM =
       Compression.Algorithm.GZ;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;

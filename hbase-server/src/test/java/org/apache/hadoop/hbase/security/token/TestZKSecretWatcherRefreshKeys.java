@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -41,6 +42,11 @@ import org.slf4j.LoggerFactory;
  */
 @Category({ SecurityTests.class, SmallTests.class })
 public class TestZKSecretWatcherRefreshKeys {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZKSecretWatcherRefreshKeys.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcherRefreshKeys.class);
   private static HBaseTestingUtility TEST_UTIL;
 

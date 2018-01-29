@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,6 +42,10 @@ import org.slf4j.LoggerFactory;
  */
 @Category({ MediumTests.class, FilterTests.class })
 public class TestFilterListOnMini {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFilterListOnMini.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterListOnMini.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

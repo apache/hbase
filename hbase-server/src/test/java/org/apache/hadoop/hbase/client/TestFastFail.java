@@ -31,8 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -51,9 +51,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
@@ -61,6 +62,11 @@ import org.slf4j.LoggerFactory;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestFastFail {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestFastFail.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestFastFail.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -289,7 +295,7 @@ public class TestFastFail {
             + "numPreemptiveFastFailExceptions: "
             + numPreemptiveFastFailExceptions.get(),
         numPreemptiveFastFailExceptions.get() > 0);
-    
+
     assertTrue(
         "Only few thread should ideally be waiting for the dead "
             + "regionserver to be coming back. numBlockedWorkers:"

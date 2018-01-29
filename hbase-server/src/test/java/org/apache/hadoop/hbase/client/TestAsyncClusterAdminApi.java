@@ -34,6 +34,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -58,6 +60,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, MediumTests.class })
 public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
 
   private final Path cnfPath = FileSystems.getDefault().getPath("target/test-classes/hbase-site.xml");
   private final Path cnf2Path = FileSystems.getDefault().getPath("target/test-classes/hbase-site2.xml");

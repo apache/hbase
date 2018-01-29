@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,20 +26,25 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.UUID;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.ClassRule;
 import org.junit.Test;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ComparisonChain;
-import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
-
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ComparisonChain;
+import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
+
 @Category({MiscTests.class, SmallTests.class})
 public class TestRegionSplitCalculator {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionSplitCalculator.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplitCalculator.class);
 
   /**

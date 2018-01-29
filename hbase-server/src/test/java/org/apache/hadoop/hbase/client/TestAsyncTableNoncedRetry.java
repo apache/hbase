@@ -22,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
-
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,6 +41,11 @@ import org.junit.rules.TestName;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableNoncedRetry {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestAsyncTableNoncedRetry.class);
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");

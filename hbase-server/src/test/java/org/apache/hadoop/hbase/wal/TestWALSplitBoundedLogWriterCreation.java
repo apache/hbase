@@ -15,17 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.wal;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestWALSplitBoundedLogWriterCreation extends TestWALSplit{
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestWALSplitBoundedLogWriterCreation.class);
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestWALSplit.setUpBeforeClass();

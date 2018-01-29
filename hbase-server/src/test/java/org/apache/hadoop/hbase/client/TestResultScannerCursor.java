@@ -18,13 +18,18 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestResultScannerCursor extends AbstractTestResultScannerCursor {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestResultScannerCursor.class);
 
   @Override
   protected ResultScanner getScanner(Scan scan) throws IOException {

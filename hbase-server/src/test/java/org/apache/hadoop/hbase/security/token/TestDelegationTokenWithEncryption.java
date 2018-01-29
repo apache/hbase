@@ -21,7 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 
 import java.util.Arrays;
 import java.util.Collection;
-
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -43,6 +43,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,6 +56,10 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestDelegationTokenWithEncryption extends SecureTestCluster {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestDelegationTokenWithEncryption.class);
 
   @BeforeClass
   public static void setUp() throws Exception {

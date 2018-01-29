@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +17,23 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
-
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter
@@ -42,6 +43,11 @@ import java.util.ArrayList;
  */
 @Category({FilterTests.class, SmallTests.class})
 public class TestSingleColumnValueExcludeFilter {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestSingleColumnValueExcludeFilter.class);
+
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
   private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("foo");

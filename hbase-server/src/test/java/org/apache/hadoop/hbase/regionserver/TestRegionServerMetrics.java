@@ -24,10 +24,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -69,19 +68,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRegionServerMetrics {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRegionServerMetrics.class);
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerMetrics.class);
 
   @Rule
   public TestName testName = new TestName();
-
-  @ClassRule
-  public static TestRule timeout = CategoryBasedTimeout.forClass(TestRegionServerMetrics.class);
 
   private static MetricsAssertHelper metricsHelper;
   private static MiniHBaseCluster cluster;
