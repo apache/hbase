@@ -162,6 +162,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
           </div>
         </%if>
+        <%if master.isInMaintenanceMode() %>
+          <div class="alert alert-warning">
+          Your Master is in maintenance mode. This may be because of HBCK aborting while
+          running in repair mode. Please re-run HBCK in repair mode.
+          </div>
+        </%if>
         <%if !master.isBalancerOn() %>
           <div class="alert alert-warning">
             The Load Balancer is not enabled which will eventually cause performance degradation
