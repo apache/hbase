@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -213,8 +214,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   private volatile Connection connection;
 
-  private boolean localMode = false;
-
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String FS_URI;
 
@@ -298,57 +297,82 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final Collection<Object[]> BLOOM_AND_COMPRESSION_COMBINATIONS =
       bloomAndCompressionCombinations();
 
+
+  /**
+   * <p>Create an HBaseTestingUtility using a default configuration.
+   *
+   * <p>Initially, all tmp files are written to a local test data directory.
+   * Once {@link #startMiniDFSCluster} is called, either directly or via
+   * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
+   *
+   * <p>Previously, there was a distinction between the type of utility returned by
+   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
+   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
+   * at which point they will switch to using mini DFS for storage.
+   */
   public HBaseTestingUtility() {
     this(HBaseConfiguration.create());
   }
 
-  public HBaseTestingUtility(Configuration conf) {
+  /**
+   * <p>Create an HBaseTestingUtility using a given configuration.
+   *
+   * <p>Initially, all tmp files are written to a local test data directory.
+   * Once {@link #startMiniDFSCluster} is called, either directly or via
+   * {@link #startMiniCluster()}, tmp data will be written to the DFS directory instead.
+   *
+   * <p>Previously, there was a distinction between the type of utility returned by
+   * {@link #createLocalHTU()} and this constructor; this is no longer the case. All
+   * HBaseTestingUtility objects will behave as local until a DFS cluster is started,
+   * at which point they will switch to using mini DFS for storage.
+   *
+   * @param conf The configuration to use for further operations
+   */
+  public HBaseTestingUtility(@Nullable Configuration conf) {
     super(conf);
 
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
 
-    // prevent contention for ports if other hbase thread(s) already running
+    // if conf is provided, prevent contention for ports if other hbase thread(s) are running
     if (conf != null) {
       if (conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
               == HConstants.DEFAULT_MASTER_INFOPORT) {
         conf.setInt(HConstants.MASTER_INFO_PORT, -1);
-        LOG.debug("Config property " + HConstants.MASTER_INFO_PORT + " changed to -1");
+        LOG.debug("Config property {} changed to -1", HConstants.MASTER_INFO_PORT);
       }
       if (conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
               == HConstants.DEFAULT_REGIONSERVER_PORT) {
         conf.setInt(HConstants.REGIONSERVER_PORT, -1);
-        LOG.debug("Config property " + HConstants.REGIONSERVER_PORT + " changed to -1");
+        LOG.debug("Config property {} changed to -1", HConstants.REGIONSERVER_PORT);
       }
     }
+
+    // Every cluster is a local cluster until we start DFS
+    // Note that conf could be null, but this.conf will not be
+    String dataTestDir = getDataTestDir().toString();
+    this.conf.set("fs.defaultFS","file:///");
+    this.conf.set(HConstants.HBASE_DIR, "file://" + dataTestDir);
+    LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
+    this.conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE,false);
   }
 
   /**
-   * Create an HBaseTestingUtility where all tmp files are written to the local test data dir.
-   * It is needed to properly base FSUtil.getRootDirs so that they drop temp files in the proper
-   * test dir.  Use this when you aren't using an Mini HDFS cluster.
-   * @return HBaseTestingUtility that use local fs for temp files.
+   * @deprecated use {@link HBaseTestingUtility#HBaseTestingUtility()} instead
+   * @return a normal HBaseTestingUtility
    */
+  @Deprecated
   public static HBaseTestingUtility createLocalHTU() {
-    Configuration c = HBaseConfiguration.create();
-    return createLocalHTU(c);
+    return new HBaseTestingUtility();
   }
 
   /**
-   * Create an HBaseTestingUtility where all tmp files are written to the local test data dir.
-   * It is needed to properly base FSUtil.getRootDirs so that they drop temp files in the proper
-   * test dir.  Use this when you aren't using an Mini HDFS cluster.
-   * @param c Configuration (will be modified)
-   * @return HBaseTestingUtility that use local fs for temp files.
+   * @deprecated use {@link HBaseTestingUtility#HBaseTestingUtility(Configuration)} instead
+   * @return a normal HBaseTestingUtility
    */
+  @Deprecated
   public static HBaseTestingUtility createLocalHTU(Configuration c) {
-    HBaseTestingUtility htu = new HBaseTestingUtility(c);
-    String dataTestDir = htu.getDataTestDir().toString();
-    htu.getConfiguration().set("fs.defaultFS","file:///");
-    htu.getConfiguration().set(HConstants.HBASE_DIR, "file://" + dataTestDir);
-    LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
-    htu.localMode = true;
-    return htu;
+    return new HBaseTestingUtility(c);
   }
 
   /**
@@ -612,6 +636,23 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public MiniDFSCluster startMiniDFSCluster(int servers, final String hosts[])
   throws Exception {
+    return startMiniDFSCluster(servers, null, hosts);
+  }
+
+  private void setFs() throws IOException {
+    if(this.dfsCluster == null){
+      LOG.info("Skipping setting fs because dfsCluster is null");
+      return;
+    }
+    FileSystem fs = this.dfsCluster.getFileSystem();
+    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+
+    // re-enable this check with dfs
+    conf.unset(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
+  }
+
+  public MiniDFSCluster startMiniDFSCluster(int servers, final  String racks[], String hosts[])
+      throws Exception {
     createDirsAndSetProperties();
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
@@ -624,7 +665,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     TraceUtil.initTracer(conf);
 
     this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
-      true, null, null, hosts, null);
+        true, null, racks, hosts, null);
 
     // Set this just-started cluster as our filesystem.
     setFs();
@@ -634,34 +675,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
     //reset the test directory for test file system
     dataTestDirOnTestFS = null;
-
-    return this.dfsCluster;
-  }
-
-  private void setFs() throws IOException {
-    if(this.dfsCluster == null){
-      LOG.info("Skipping setting fs because dfsCluster is null");
-      return;
-    }
-    FileSystem fs = this.dfsCluster.getFileSystem();
-    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
-  }
-
-  public MiniDFSCluster startMiniDFSCluster(int servers, final  String racks[], String hosts[])
-      throws Exception {
-    createDirsAndSetProperties();
-    this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
-        true, null, racks, hosts, null);
-
-    // Set this just-started cluster as our filesystem.
-    FileSystem fs = this.dfsCluster.getFileSystem();
-    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
-
-    // Wait for the cluster to be totally up
-    this.dfsCluster.waitClusterUp();
-
-    //reset the test directory for test file system
-    dataTestDirOnTestFS = null;
+    String dataTestDir = getDataTestDir().toString();
+    conf.set(HConstants.HBASE_DIR, dataTestDir);
+    LOG.debug("Setting {} to {}", HConstants.HBASE_DIR, dataTestDir);
 
     return this.dfsCluster;
   }
@@ -957,7 +973,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    if(this.dfsCluster == null && !localMode) {
+    if(this.dfsCluster == null) {
       LOG.info("STARTING DFS");
       dfsCluster = startMiniDFSCluster(numDataNodes, dataNodeHosts);
     } else LOG.info("NOT STARTING DFS");

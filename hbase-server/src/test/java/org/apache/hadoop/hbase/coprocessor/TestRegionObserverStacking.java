@@ -24,12 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -146,7 +144,7 @@ public class TestRegionObserverStacking extends TestCase {
     byte[] A = Bytes.toBytes("A");
     byte[][] FAMILIES = new byte[][] { A } ;
 
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = TEST_UTIL.getConfiguration();
     HRegion region = initHRegion(TABLE, getClass().getName(),
       conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
