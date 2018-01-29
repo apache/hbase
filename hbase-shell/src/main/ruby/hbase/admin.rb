@@ -224,6 +224,13 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Query the current state of master in maintenance mode.
+    # Returns the state of maintenance mode (true is on).
+    def in_maintenance_mode?
+      @admin.isMasterInMaintenanceMode
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Request a scan of the catalog table (for garbage collection)
     # Returns an int signifying the number of entries cleaned
     def catalogjanitor_run
