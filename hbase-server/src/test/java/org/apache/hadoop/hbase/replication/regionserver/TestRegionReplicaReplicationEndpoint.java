@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,7 +49,7 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -68,7 +71,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Tests RegionReplicaReplicationEndpoint class by setting up region replicas and verifying
  * async wal replication replays the edits to the secondary region in various scenarios.
  */
-@Category({FlakeyTests.class, MediumTests.class})
+@Category({FlakeyTests.class, LargeTests.class})
 public class TestRegionReplicaReplicationEndpoint {
 
   @ClassRule
