@@ -18,11 +18,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class })
-public class TestAcidGuaranteesWithEagerPolicy extends TestAcidGuaranteesWithNoInMemCompaction {
+@Category(LargeTests.class)
+public class TestAcidGuaranteesWithEagerPolicy extends AcidGuaranteesTestBase {
+
   @Override
   protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
     return MemoryCompactionPolicy.EAGER;

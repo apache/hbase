@@ -18,129 +18,13 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.FAMILIES;
-import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.TABLE_NAME;
-
-import java.util.List;
-import java.util.stream.Stream;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
-import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
-import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-
-/**
- * Test case that uses multiple threads to read and write multifamily rows into a table, verifying
- * that reads never see partially-complete writes. This can run as a junit test, or with a main()
- * function which runs against a real cluster (eg for testing with failures, region movement, etc)
- */
-@Category({ MediumTests.class })
-public class TestAcidGuaranteesWithNoInMemCompaction {
-  @Rule
-  public final TestRule timeout = CategoryBasedTimeout.builder()
-          .withTimeout(this.getClass())
-          .withLookingForStuckThread(true)
-          .build();
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private AcidGuaranteesTestTool tool = new AcidGuaranteesTestTool();
+@Category(LargeTests.class)
+public class TestAcidGuaranteesWithNoInMemCompaction extends AcidGuaranteesTestBase {
 
   protected MemoryCompactionPolicy getMemoryCompactionPolicy() {
     return MemoryCompactionPolicy.NONE;
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    // Set small flush size for minicluster so we exercise reseeking scanners
-    Configuration conf = UTIL.getConfiguration();
-    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128 * 1024));
-    // prevent aggressive region split
-    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-      ConstantSizeRegionSplitPolicy.class.getName());
-    conf.setInt("hfile.format.version", 3); // for mob tests
-    UTIL.startMiniCluster(1);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    MemoryCompactionPolicy policy = getMemoryCompactionPolicy();
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, policy.name());
-    if (policy == MemoryCompactionPolicy.EAGER) {
-      builder.setValue(MemStoreLAB.USEMSLAB_KEY, "false");
-      builder.setValue(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, "0.9");
-    }
-    Stream.of(FAMILIES).map(ColumnFamilyDescriptorBuilder::of)
-        .forEachOrdered(builder::addColumnFamily);
-    UTIL.getAdmin().createTable(builder.build());
-    tool.setConf(UTIL.getConfiguration());
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    UTIL.deleteTable(TABLE_NAME);
-  }
-
-  private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-      int numUniqueRows) throws Exception {
-    runTestAtomicity(millisToRun, numWriters, numGetters, numScanners, numUniqueRows, false);
-  }
-
-  private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-      int numUniqueRows, boolean useMob) throws Exception {
-    List<String> args = Lists.newArrayList("-millis", String.valueOf(millisToRun), "-numWriters",
-      String.valueOf(numWriters), "-numGetters", String.valueOf(numGetters), "-numScanners",
-      String.valueOf(numScanners), "-numUniqueRows", String.valueOf(numUniqueRows), "-crazyFlush");
-    if (useMob) {
-      args.add("-useMob");
-    }
-    tool.run(args.toArray(new String[0]));
-  }
-
-  @Test
-  public void testGetAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 5, 0, 3);
-  }
-
-  @Test
-  public void testScanAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 0, 5, 3);
-  }
-
-  @Test
-  public void testMixedAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 2, 2, 3);
-  }
-
-  @Test
-  public void testMobGetAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 5, 0, 3, true);
-  }
-
-  @Test
-  public void testMobScanAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 0, 5, 3, true);
-  }
-
-  @Test
-  public void testMobMixedAtomicity() throws Exception {
-    runTestAtomicity(20000, 5, 2, 2, 3, true);
   }
 }
