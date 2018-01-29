@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -286,7 +287,7 @@ public class TestZooKeeperACL {
         saslConfFile.getAbsolutePath());
 
     testJaasConfig = ZKUtil.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
-    assertEquals(false, testJaasConfig);
+    assertFalse(testJaasConfig);
     saslConfFile.delete();
   }
 
@@ -300,13 +301,13 @@ public class TestZooKeeperACL {
 
     Configuration config = new Configuration(HBaseConfiguration.create());
     boolean testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(false, testJaasConfig);
+    assertFalse(testJaasConfig);
 
     // Now set authentication scheme to Kerberos still it should return false
     // because no configuration set
     config.set("hbase.security.authentication", "kerberos");
     testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(false, testJaasConfig);
+    assertFalse(testJaasConfig);
 
     // Now set programmatic options related to security
     config.set(HConstants.ZK_CLIENT_KEYTAB_FILE, "/dummy/file");
@@ -314,7 +315,7 @@ public class TestZooKeeperACL {
     config.set(HConstants.ZK_SERVER_KEYTAB_FILE, "/dummy/file");
     config.set(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, "dummy");
     testJaasConfig = ZKUtil.isSecureZooKeeper(config);
-    assertEquals(true, testJaasConfig);
+    assertTrue(testJaasConfig);
   }
 
   private static class DummySecurityConfiguration extends javax.security.auth.login.Configuration {
