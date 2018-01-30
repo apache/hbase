@@ -27,8 +27,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
-
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -38,11 +38,17 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestZKReplicationQueueStorage {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZKReplicationQueueStorage.class);
+
   private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
 
   private static ZKReplicationQueueStorage STORAGE;
