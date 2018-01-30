@@ -98,18 +98,6 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
-      <!-- Testing plugins -->
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
-            </property>
-          </properties>
-        </configuration>
-      </plugin>
     </plugins>
     <!-- General Resources -->
     <pluginManagement>

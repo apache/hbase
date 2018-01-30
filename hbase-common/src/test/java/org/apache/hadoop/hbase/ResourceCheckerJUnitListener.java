@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,25 +18,24 @@
 
 package org.apache.hadoop.hbase;
 
-
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.hbase.ResourceChecker.Phase;
 import org.apache.hadoop.hbase.util.JVM;
 import org.junit.runner.notification.RunListener;
 
 /**
  * Listen to the test progress and check the usage of:
- * - threads
- * - open file descriptor
- * - max open file descriptor
- * <p/>
+ * <ul>
+ * <li>threads</li>
+ * <li>open file descriptor</li>
+ * <li>max open file descriptor</li>
+ * </ul>
+ * <p>
  * When surefire forkMode=once/always/perthread, this code is executed on the forked process.
  */
 public class ResourceCheckerJUnitListener extends RunListener {
@@ -91,7 +89,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
         return 0;
       }
       JVM jvm = new JVM();
-      return (int)jvm.getOpenFileDescriptorCount();
+      return (int) jvm.getOpenFileDescriptorCount();
     }
 
     @Override
@@ -107,7 +105,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
         return 0;
       }
       JVM jvm = new JVM();
-      return (int)jvm.getMaxFileDescriptorCount();
+      return (int) jvm.getMaxFileDescriptorCount();
     }
   }
 
@@ -117,7 +115,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
       if (!JVM.isUnix()) {
         return 0;
       }
-      return (int)(new JVM().getSystemLoadAverage()*100);
+      return (int) (new JVM().getSystemLoadAverage() * 100);
     }
   }
 
@@ -193,4 +191,3 @@ public class ResourceCheckerJUnitListener extends RunListener {
     end(descriptionToShortTestName(description));
   }
 }
-
