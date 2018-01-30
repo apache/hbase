@@ -103,7 +103,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
         CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         whitelistedPaths);
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
     UTIL.createTable(TEST_TABLE, new byte[][] { TEST_FAMILY });
     UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
@@ -137,7 +137,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   private static void negativeTestCase(String[] whitelistedPaths,
       String coprocessorPath) throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         CoprocessorWhitelistMasterObserver.class.getName());
@@ -269,7 +269,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         new String[]{});
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
@@ -314,7 +314,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         new String[]{});
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
