@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -50,9 +50,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Performs coprocessor loads for variuos paths and malformed strings
+ * Performs coprocessor loads for various paths and malformed strings
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({SecurityTests.class, LargeTests.class})
 public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   @ClassRule
