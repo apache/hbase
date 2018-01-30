@@ -36,7 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -821,7 +820,8 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
 
-      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<>(3);
+      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<>(3,
+          Comparator.comparingLong(BucketEntryGroup::overflow));
 
       bucketQueue.add(bucketSingle);
       bucketQueue.add(bucketMulti);
@@ -1350,7 +1350,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * the eviction algorithm takes the appropriate number of elements out of each
    * according to configuration parameters and their relative sizes.
    */
-  private class BucketEntryGroup implements Comparable<BucketEntryGroup> {
+  private class BucketEntryGroup {
 
     private CachedEntryQueue queue;
     private long totalSize = 0;
@@ -1389,29 +1389,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
     public long totalSize() {
       return totalSize;
-    }
-
-    @Override
-    public int compareTo(BucketEntryGroup that) {
-      return Long.compare(this.overflow(), that.overflow());
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      BucketEntryGroup that = (BucketEntryGroup) o;
-      return totalSize == that.totalSize && bucketSize == that.bucketSize
-          && Objects.equals(queue, that.queue);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(queue, totalSize, bucketSize);
     }
   }
 
