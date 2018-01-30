@@ -33,7 +33,7 @@ pipeline {
     TOOLS = "${env.WORKSPACE}/tools"
     // where we check out to across stages
     BASEDIR = "${env.WORKSPACE}/component"
-    YETUS_RELEASE = '0.6.0'
+    YETUS_RELEASE = '0.7.0'
     PROJECT = 'hbase'
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
