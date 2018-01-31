@@ -64,6 +64,11 @@ function personality_globals
 
   # Override the maven options
   MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
+
+  # Yetus 0.7.0 enforces limits.
+  # Default proclimit is 1000. Up it.
+  # We seem to use close to 3k.
+  PROCLIMIT=5000
 }
 
 ## @description  Parse extra arguments required by personalities, if any.
