@@ -1451,7 +1451,9 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().addCompactionResults(compactedFiles, result);
-      filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock();
+      synchronized (filesCompacting) {
+        filesCompacting.removeAll(compactedFiles);
+      }
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -2306,7 +2308,11 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
 
   @Override
   public boolean needsCompaction() {
-    return this.storeEngine.needsCompaction(this.filesCompacting);
+    List<HStoreFile> filesCompactingClone = null;
+    synchronized (filesCompacting) {
+      filesCompactingClone = Lists.newArrayList(filesCompacting);
+    }
+    return this.storeEngine.needsCompaction(filesCompactingClone);
   }
 
   /**
