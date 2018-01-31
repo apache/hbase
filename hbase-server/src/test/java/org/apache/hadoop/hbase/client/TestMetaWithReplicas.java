@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -113,11 +114,20 @@ public class TestMetaWithReplicas {
     // Fun. All meta region replicas have ended up on the one server. This will cause this test
     // to fail ... sometimes.
     if (sns.size() == 1) {
+      int count = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size();
+      assertTrue("count=" + count, count == REGIONSERVERS_COUNT);
       LOG.warn("All hbase:meta replicas are on the one server; moving hbase:meta");
       int metaServerIndex = TEST_UTIL.getHBaseCluster().getServerWithMeta();
-      int newServerIndex = (metaServerIndex + 1) % REGIONSERVERS_COUNT;
+      int newServerIndex = metaServerIndex;
+      while (newServerIndex == metaServerIndex) {
+        newServerIndex = (newServerIndex + 1) % REGIONSERVERS_COUNT;
+      }
+      assertNotEquals(metaServerIndex, newServerIndex);
       ServerName destinationServerName =
           TEST_UTIL.getHBaseCluster().getRegionServer(newServerIndex).getServerName();
+      ServerName metaServerName =
+          TEST_UTIL.getHBaseCluster().getRegionServer(metaServerIndex).getServerName();
+      assertNotEquals(destinationServerName, metaServerName);
       TEST_UTIL.getAdmin().move(RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
           Bytes.toBytes(destinationServerName.toString()));
     }
