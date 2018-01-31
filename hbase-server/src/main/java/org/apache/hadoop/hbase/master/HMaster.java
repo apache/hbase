@@ -869,6 +869,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Make sure meta assigned before proceeding.
     status.setStatus("Recovering  Meta Region");
 
+    // Check if master is shutting down because issue initializing regionservers or balancer.
+    if (isStopped()) {
+      return;
+    }
+
     // we recover hbase:meta region servers inside master initialization and
     // handle other failed servers in SSH in order to start up master node ASAP
     MasterMetaBootstrap metaBootstrap = createMetaBootstrap(this, status);

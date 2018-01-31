@@ -1895,8 +1895,16 @@ public class AssignmentManager implements ServerListener {
         .getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
             RegionInfo.DEFAULT_REPLICA_ID);
     RegionState regionStateNode = getRegionStates().getRegionState(hri);
-    if (!regionStateNode.getServerName().equals(serverName)) {
+    if (regionStateNode == null) {
+      LOG.warn("RegionStateNode is null for " + hri);
       return;
+    }
+    ServerName rsnServerName = regionStateNode.getServerName();
+    if (rsnServerName != null && !rsnServerName.equals(serverName)) {
+      return;
+    } else if (rsnServerName == null) {
+      LOG.warn("Empty ServerName in RegionStateNode; proceeding anyways in case latched " +
+          "RecoverMetaProcedure so meta latch gets cleaned up.");
     }
     // meta has been assigned to crashed server.
     LOG.info("Meta assigned to crashed " + serverName + "; reassigning...");
