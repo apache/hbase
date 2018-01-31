@@ -22,8 +22,8 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiReque
  * Basic test that qos function is sort of working; i.e. a change in method naming style
  * over in pb doesn't break it.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestQosFunction extends QosTestHelper {
 
   @ClassRule
