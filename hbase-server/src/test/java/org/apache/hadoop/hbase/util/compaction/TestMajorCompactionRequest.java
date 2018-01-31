@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.compaction;
 
 import java.io.IOException;
@@ -28,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -46,6 +46,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,7 +59,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @Category({SmallTests.class})
-public class MajorCompactionRequestTest {
+public class TestMajorCompactionRequest {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestMajorCompactionRequest.class);
 
   private static final HBaseTestingUtility UTILITY = new HBaseTestingUtility();
   private static final String FAMILY = "a";
@@ -66,7 +70,7 @@ public class MajorCompactionRequestTest {
   private Path regionStoreDir;
 
   @Before public void setUp() throws Exception {
-    rootRegionDir = UTILITY.getDataTestDirOnTestFS("MajorCompactionRequestTest");
+    rootRegionDir = UTILITY.getDataTestDirOnTestFS("TestMajorCompactionRequest");
     regionStoreDir = new Path(rootRegionDir, FAMILY);
   }
 
@@ -88,7 +92,7 @@ public class MajorCompactionRequestTest {
   @Test public void testIfWeHaveNewReferenceFilesButOldStoreFiles() throws Exception {
     // this tests that reference files that are new, but have older timestamps for the files
     // they reference still will get compacted.
-    TableName table = TableName.valueOf("MajorCompactorTest");
+    TableName table = TableName.valueOf("TestMajorCompactor");
     TableDescriptor htd = UTILITY.createTableDescriptor(table, Bytes.toBytes(FAMILY));
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     HRegion region =
