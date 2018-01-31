@@ -1326,7 +1326,9 @@ public class HStore implements Store {
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().addCompactionResults(compactedFiles, result);
-      filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock();
+      synchronized (filesCompacting) {
+        filesCompacting.removeAll(compactedFiles);
+      }
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -2364,7 +2366,11 @@ public class HStore implements Store {
 
   @Override
   public boolean needsCompaction() {
-    return this.storeEngine.needsCompaction(this.filesCompacting);
+    List<StoreFile> filesCompactingClone = null;
+    synchronized (filesCompacting) {
+      filesCompactingClone = Lists.newArrayList(filesCompacting);
+    }
+    return this.storeEngine.needsCompaction(filesCompactingClone);
   }
 
   @Override
