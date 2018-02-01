@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -452,10 +453,9 @@ public class TestFromClientSide3 {
       byte [][] QUALIFIERS = new byte [][] {
         Bytes.toBytes("a"), Bytes.toBytes("b")
       };
-      RowMutations arm = new RowMutations(ROW);
-      Put p = new Put(ROW);
-      p.addColumn(FAMILY, QUALIFIERS[0], VALUE);
-      arm.add(p);
+
+      RowMutations arm = RowMutations.of(Collections.singletonList(
+        new Put(ROW).addColumn(FAMILY, QUALIFIERS[0], VALUE)));
       Object[] batchResult = new Object[1];
       t.batch(Arrays.asList(arm), batchResult);
 
@@ -463,13 +463,9 @@ public class TestFromClientSide3 {
       Result r = t.get(g);
       assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
 
-      arm = new RowMutations(ROW);
-      p = new Put(ROW);
-      p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
-      arm.add(p);
-      Delete d = new Delete(ROW);
-      d.addColumns(FAMILY, QUALIFIERS[0]);
-      arm.add(d);
+      arm = RowMutations.of(Arrays.asList(
+        new Put(ROW).addColumn(FAMILY, QUALIFIERS[1], VALUE),
+        new Delete(ROW).addColumns(FAMILY, QUALIFIERS[0])));
       t.batch(Arrays.asList(arm), batchResult);
       r = t.get(g);
       assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
@@ -477,10 +473,8 @@ public class TestFromClientSide3 {
 
       // Test that we get the correct remote exception for RowMutations from batch()
       try {
-        arm = new RowMutations(ROW);
-        p = new Put(ROW);
-        p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
-        arm.add(p);
+        arm = RowMutations.of(Collections.singletonList(
+          new Put(ROW).addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE)));
         t.batch(Arrays.asList(arm), batchResult);
         fail("Expected RetriesExhaustedWithDetailsException with NoSuchColumnFamilyException");
       } catch(RetriesExhaustedWithDetailsException e) {
