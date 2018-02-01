@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.SharedConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -41,7 +41,7 @@ import org.junit.rules.TestName;
  * Ensure Coprocessors get ShortCircuit Connections when they get a Connection from their
  * CoprocessorEnvironment.
  */
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorShortCircuitRPC {
 
   @ClassRule
