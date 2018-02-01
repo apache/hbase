@@ -619,7 +619,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           resultOrExceptionOrBuilder.build());
     }
     return region.checkAndRowMutate(row, family, qualifier, op,
-        comparator, rm, Boolean.TRUE);
+        comparator, rm);
   }
 
   /**
