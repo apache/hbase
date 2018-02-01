@@ -1679,6 +1679,13 @@ public class MetaTableAccessor {
               .setValue(RegionInfo.toByteArray(regionB))
               .build());
 
+      // Set initial state to CLOSED
+      // NOTE: If initial state is not set to CLOSED then merged region gets added with the
+      // default OFFLINE state. If Master gets restarted after this step, start up sequence of
+      // master tries to assign this offline region. This is followed by re-assignments of the
+      // merged region from resumed {@link MergeTableRegionsProcedure}
+      addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
+
       // Deletes for merging regions
       Delete deleteA = makeDeleteFromRegionInfo(regionA, time);
       Delete deleteB = makeDeleteFromRegionInfo(regionB, time);
@@ -1742,6 +1749,14 @@ public class MetaTableAccessor {
       //Puts for daughters
       Put putA = makePutFromRegionInfo(splitA);
       Put putB = makePutFromRegionInfo(splitB);
+
+      // Set initial state to CLOSED
+      // NOTE: If initial state is not set to CLOSED then daughter regions get added with the
+      // default OFFLINE state. If Master gets restarted after this step, start up sequence of
+      // master tries to assign these offline regions. This is followed by re-assignments of the
+      // daughter regions from resumed {@link SplitTableRegionProcedure}
+      addRegionStateToPut(putA, RegionState.State.CLOSED);
+      addRegionStateToPut(putA, RegionState.State.CLOSED);
 
       addSequenceNum(putA, 1, -1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
       addSequenceNum(putB, 1, -1, splitB.getReplicaId());
