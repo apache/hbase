@@ -3919,16 +3919,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   throws IOException{
     checkMutationType(mutation, row);
     return doCheckAndRowMutate(row, family, qualifier, op, comparator, null,
-      mutation, writeToWAL);
+      mutation);
   }
 
   @Override
   public boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier,
-                                   CompareOperator op, ByteArrayComparable comparator, RowMutations rm,
-                                   boolean writeToWAL)
+    CompareOperator op, ByteArrayComparable comparator, RowMutations rm)
   throws IOException {
-    return doCheckAndRowMutate(row, family, qualifier, op, comparator, rm, null,
-      writeToWAL);
+    return doCheckAndRowMutate(row, family, qualifier, op, comparator, rm, null);
   }
 
   /**
@@ -3937,7 +3935,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private boolean doCheckAndRowMutate(byte [] row, byte [] family, byte [] qualifier,
                                       CompareOperator op, ByteArrayComparable comparator, RowMutations rowMutations,
-                                      Mutation mutation, boolean writeToWAL)
+                                      Mutation mutation)
   throws IOException {
     // Could do the below checks but seems wacky with two callers only. Just comment out for now.
     // One caller passes a Mutation, the other passes RowMutation. Presume all good so we don't

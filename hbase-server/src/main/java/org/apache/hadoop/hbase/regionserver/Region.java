@@ -309,12 +309,11 @@ public interface Region extends ConfigurationObserver {
    * @param op the comparison operator
    * @param comparator
    * @param mutations
-   * @param writeToWAL
    * @return true if mutations were applied, false otherwise
    * @throws IOException
    */
   boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, RowMutations mutations, boolean writeToWAL)
+      ByteArrayComparable comparator, RowMutations mutations)
       throws IOException;
 
   /**

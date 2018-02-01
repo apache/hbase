@@ -6387,7 +6387,7 @@ public class TestHRegion {
     RowMutations rm = new RowMutations(row);
     rm.add(p);
     assertTrue(region.checkAndRowMutate(row, fam1, qual1, CompareOperator.EQUAL,
-        new BinaryComparator(qual1), rm, false));
+        new BinaryComparator(qual1), rm));
     result = region.get(new Get(row));
     c = result.getColumnLatestCell(fam1, qual1);
     assertEquals(10L, c.getTimestamp());
