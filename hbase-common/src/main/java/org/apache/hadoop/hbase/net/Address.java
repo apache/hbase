@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.net;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
@@ -56,6 +57,24 @@ public class Address implements Comparable<Address> {
   @Override
   public String toString() {
     return this.hostAndPort.toString();
+  }
+
+  /**
+   * If hostname is a.b.c and the port is 123, return a:123 instead of a.b.c:123.
+   * @return if host looks like it is resolved -- not an IP -- then strip the domain portion
+   * otherwise returns same as {@link #toString()}}
+   */
+  public String toStringWithoutDomain() {
+    String hostname = getHostname();
+    String [] parts = hostname.split("\\.");
+    if (parts.length > 1) {
+      for (String part: parts) {
+        if (!StringUtils.isNumeric(part)) {
+          return Address.fromParts(parts[0], getPort()).toString();
+        }
+      }
+    }
+    return toString();
   }
 
   @Override

@@ -251,9 +251,7 @@ class NettyRpcConnection extends RpcConnection {
   }
 
   private void connect() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to " + remoteId.address);
-    }
+    LOG.debug("Connecting to {}", remoteId.address);
 
     this.channel = new Bootstrap().group(rpcClient.group).channel(rpcClient.channelClass)
         .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())

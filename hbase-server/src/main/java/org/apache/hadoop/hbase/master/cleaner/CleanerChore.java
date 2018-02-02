@@ -63,7 +63,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * while latter will use only 1 thread for chore to scan dir.
    */
   public static final String CHORE_POOL_SIZE = "hbase.cleaner.scan.dir.concurrent.size";
-  private static final String DEFAULT_CHORE_POOL_SIZE = "0.5";
+  private static final String DEFAULT_CHORE_POOL_SIZE = "0.25";
 
   // It may be waste resources for each cleaner chore own its pool,
   // so let's make pool for all cleaner chores.
@@ -220,9 +220,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected void chore() {
     if (getEnabled()) {
       if (runCleaner()) {
-        LOG.debug("Cleaned old files/dirs under {} successfully",  oldFileDir);
+        LOG.debug("Cleaned all WALs under {}",  oldFileDir);
       } else {
-        LOG.warn("Failed to fully clean old files/dirs under {}", oldFileDir);
+        LOG.warn("WALs outstanding under {}", oldFileDir);
       }
       // After each clean chore, checks if receives reconfigure notification while cleaning
       if (reconfig.compareAndSet(true, false)) {
@@ -382,8 +382,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     return this.enabled.getAndSet(enabled);
   }
 
-  public boolean getEnabled() {
-    return this.enabled.get();
+  public boolean getEnabled() { return this.enabled.get();
   }
 
   private interface Action<T> {
@@ -405,11 +404,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
     @Override
     protected Boolean compute() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("CleanerTask " + Thread.currentThread().getId() +
-          " starts cleaning dirs and files under " + dir + " and itself.");
-      }
-
+      LOG.debug("Cleaning under {}", dir);
       List<FileStatus> subDirs;
       List<FileStatus> files;
       try {
@@ -470,13 +465,11 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
      */
     private boolean deleteAction(Action<Boolean> deletion, String type) {
       boolean deleted;
-      String errorMsg = null;
       try {
         LOG.trace("Start deleting {} under {}", type, dir);
         deleted = deletion.act();
       } catch (IOException ioe) {
-        errorMsg = ioe.getMessage();
-        LOG.warn("Could not delete {} under {}; {}", type, dir, errorMsg);
+        LOG.warn("Could not delete {} under {}; {}", type, dir, ioe);
         deleted = false;
       }
       LOG.trace("Finish deleting {} under {}, deleted=", type, dir, deleted);

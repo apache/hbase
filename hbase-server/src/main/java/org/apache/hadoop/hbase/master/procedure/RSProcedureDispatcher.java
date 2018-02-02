@@ -107,9 +107,8 @@ public class RSProcedureDispatcher
       final Set<RemoteProcedure> remoteProcedures) {
     final int rsVersion = master.getAssignmentManager().getServerVersion(serverName);
     if (rsVersion >= RS_VERSION_WITH_EXEC_PROCS) {
-      LOG.info(String.format(
-        "Using procedure batch rpc execution for serverName=%s version=%s",
-        serverName, rsVersion));
+      LOG.trace("Using procedure batch rpc execution for serverName={} version={}",
+        serverName, rsVersion);
       submitTask(new ExecuteProceduresRemoteCall(serverName, remoteProcedures));
     } else {
       LOG.info(String.format(

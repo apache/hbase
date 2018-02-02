@@ -269,8 +269,7 @@ public abstract class ZKProcedureUtil
   }
 
   public void clearChildZNodes() throws KeeperException {
-    LOG.info("Clearing all procedure znodes: " + acquiredZnode + " " + reachedZnode + " "
-        + abortZnode);
+    LOG.debug("Clearing all znodes {}, {}, {}", acquiredZnode, reachedZnode, abortZnode);
 
     // If the coordinator was shutdown mid-procedure, then we are going to lose
     // an procedure that was previously started by cleaning out all the previous state. Its much

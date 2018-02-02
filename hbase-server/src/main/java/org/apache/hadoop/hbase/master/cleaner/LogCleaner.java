@@ -119,7 +119,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
   }
 
   private List<Thread> createOldWalsCleaner(int size) {
-    LOG.info("Creating OldWALs cleaners with size: " + size);
+    LOG.info("Creating OldWALs cleaners with size=" + size);
 
     List<Thread> oldWALsCleaner = new ArrayList<>(size);
     for (int i = 0; i < size; i++) {

@@ -757,7 +757,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
     authorizationEnabled = AccessChecker.isAuthorizationSupported(conf);
     if (!authorizationEnabled) {
-      LOG.warn("The AccessController has been loaded with authorization checks disabled.");
+      LOG.warn("AccessController has been loaded with authorization checks DISABLED!");
     }
 
     shouldCheckExecPermission = conf.getBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY,

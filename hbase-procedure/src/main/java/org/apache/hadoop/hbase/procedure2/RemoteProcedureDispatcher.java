@@ -94,7 +94,7 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
       return false;
     }
 
-    LOG.info("Starting procedure remote dispatcher; threads=" + this.corePoolSize +
+    LOG.info("Started, threads=" + this.corePoolSize +
       ", queueMaxSize=" + this.queueMaxSize + ", operationDelay=" + this.operationDelay);
 
     // Create the timeout executor

@@ -204,7 +204,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
       large.setDaemon(true);
       large.setName(n + "-HFileCleaner.large." + i + "-" + System.currentTimeMillis());
       large.start();
-      LOG.debug("Starting hfile cleaner for large files: {}", large);
+      LOG.debug("Starting for large file={}", large);
       threads.add(large);
     }
 
@@ -219,7 +219,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate> {
       small.setDaemon(true);
       small.setName(n + "-HFileCleaner.small." + i + "-" + System.currentTimeMillis());
       small.start();
-      LOG.debug("Starting hfile cleaner for small files: {}", small);
+      LOG.debug("Starting for small files={}", small);
       threads.add(small);
     }
   }

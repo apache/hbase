@@ -358,7 +358,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   public void recoverLease() throws IOException {
     lock.lock();
     try {
-      LOG.info("Starting WAL Procedure Store lease recovery");
+      LOG.trace("Starting WAL Procedure Store lease recovery");
       FileStatus[] oldLogs = getLogFiles();
       while (isRunning()) {
         // Get Log-MaxID and recover lease on old logs
@@ -387,7 +387,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
           continue;
         }
 
-        LOG.info("Lease acquired for flushLogId: " + flushLogId);
+        LOG.trace("Lease acquired for flushLogId={}", flushLogId);
         break;
       }
     } finally {
@@ -405,9 +405,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
       // Nothing to do, If we have only the current log.
       if (logs.size() == 1) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("No state logs to replay.");
-        }
+        LOG.trace("No state logs to replay.");
         loader.setMaxProcId(0);
         return;
       }

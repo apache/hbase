@@ -230,9 +230,7 @@ public class ProcedureExecutor<TEnvironment> {
             nonceKeysToProcIdsMap.remove(nonceKey);
           }
           it.remove();
-          if (debugEnabled) {
-            LOG.debug("Evict completed " + proc);
-          }
+          LOG.trace("Evict completed {}", proc);
         }
       }
       if (batchCount > 0) {
@@ -316,7 +314,6 @@ public class ProcedureExecutor<TEnvironment> {
       @Override
       public void setMaxProcId(long maxProcId) {
         assert lastProcId.get() < 0 : "expected only one call to setMaxProcId()";
-        LOG.debug("Load max pid=" + maxProcId);
         lastProcId.set(maxProcId);
       }
 
@@ -512,10 +509,10 @@ public class ProcedureExecutor<TEnvironment> {
     // We have numThreads executor + one timer thread used for timing out
     // procedures and triggering periodic procedures.
     this.corePoolSize = numThreads;
-    LOG.info("Starting ProcedureExecutor Worker threads (ProcedureExecutorWorker)=" + corePoolSize);
+    LOG.info("Starting {} Workers (bigger of cpus/4 or 16)", corePoolSize);
 
     // Create the Thread Group for the executors
-    threadGroup = new ThreadGroup("ProcedureExecutorWorkerGroup");
+    threadGroup = new ThreadGroup("PEWorkerGroup");
 
     // Create the timeout executor
     timeoutExecutor = new TimeoutExecutorThread(threadGroup);
@@ -533,7 +530,7 @@ public class ProcedureExecutor<TEnvironment> {
     st = EnvironmentEdgeManager.currentTime();
     store.recoverLease();
     et = EnvironmentEdgeManager.currentTime();
-    LOG.info(String.format("Recover store (%s) lease: %s",
+    LOG.info(String.format("Recovered %s lease in %s",
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // start the procedure scheduler
@@ -547,7 +544,7 @@ public class ProcedureExecutor<TEnvironment> {
     st = EnvironmentEdgeManager.currentTime();
     load(abortOnCorruption);
     et = EnvironmentEdgeManager.currentTime();
-    LOG.info(String.format("Load store (%s): %s",
+    LOG.info(String.format("Loaded %s in %s, um pid=",
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // Start the executors. Here we must have the lastProcId set.
@@ -1612,7 +1609,6 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // If this procedure is the last child awake the parent procedure
-    LOG.info("Finish suprocedure " + procedure);
     if (parent.tryRunnable()) {
       // If we succeeded in making the parent runnable -- i.e. all of its
       // children have completed, move parent to front of the queue.
@@ -1711,7 +1707,7 @@ public class ProcedureExecutor<TEnvironment> {
     private Procedure activeProcedure;
 
     public WorkerThread(final ThreadGroup group) {
-      super(group, "ProcedureExecutorWorker-" + workerId.incrementAndGet());
+      super(group, "PEWorker-" + workerId.incrementAndGet());
       setDaemon(true);
     }
 

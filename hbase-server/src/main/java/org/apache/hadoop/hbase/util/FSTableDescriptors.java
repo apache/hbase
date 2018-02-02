@@ -289,7 +289,7 @@ public class FSTableDescriptors implements TableDescriptors {
       // add hbase:meta to the response
       tds.put(this.metaTableDescriptor.getTableName().getNameAsString(), metaTableDescriptor);
     } else {
-      LOG.debug("Fetching table descriptors from the filesystem.");
+      LOG.trace("Fetching table descriptors from the filesystem.");
       boolean allvisited = true;
       for (Path d : FSUtils.getTableDirs(fs, rootdir)) {
         TableDescriptor htd = null;
@@ -659,9 +659,9 @@ public class FSTableDescriptors implements TableDescriptors {
       if (sequenceId <= maxSequenceId) {
         boolean success = FSUtils.delete(fs, path, false);
         if (success) {
-          LOG.debug("Deleted table descriptor at " + path);
+          LOG.debug("Deleted " + path);
         } else {
-          LOG.error("Failed to delete descriptor at " + path);
+          LOG.error("Failed to delete table descriptor at " + path);
         }
       }
     }
@@ -713,7 +713,7 @@ public class FSTableDescriptors implements TableDescriptors {
         if (!fs.rename(tempPath, tableInfoDirPath)) {
           throw new IOException("Failed rename of " + tempPath + " to " + tableInfoDirPath);
         }
-        LOG.debug("Wrote descriptor into: " + tableInfoDirPath);
+        LOG.debug("Wrote into " + tableInfoDirPath);
       } catch (IOException ioe) {
         // Presume clash of names or something; go around again.
         LOG.debug("Failed write and/or rename; retrying", ioe);
@@ -784,11 +784,11 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     FileStatus status = getTableInfoPath(fs, tableDir);
     if (status != null) {
-      LOG.debug("Current tableInfoPath = " + status.getPath());
+      LOG.debug("Current path=" + status.getPath());
       if (!forceCreation) {
         if (fs.exists(status.getPath()) && status.getLen() > 0) {
           if (readTableDescriptor(fs, status).equals(htd)) {
-            LOG.debug("TableInfo already exists.. Skipping creation");
+            LOG.trace("TableInfo already exists.. Skipping creation");
             return false;
           }
         }

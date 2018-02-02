@@ -157,8 +157,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
         E env = checkAndLoadInstance(implClass, priority, conf);
         if (env != null) {
           this.coprocEnvironments.add(env);
-          LOG.info(
-              "System coprocessor " + className + " was loaded " + "successfully with priority (" + priority + ").");
+          LOG.info("System coprocessor {} loaded, priority={}.", className, priority);
           ++priority;
         }
       } catch (Throwable t) {

@@ -151,7 +151,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     }
     Task task = findOrCreateOrphanTask(path);
     if (task.isOrphan() && (task.incarnation.get() == 0)) {
-      LOG.info("resubmitting unassigned orphan task " + path);
+      LOG.info("Resubmitting unassigned orphan task " + path);
       // ignore failure to resubmit. The timeout-monitor will handle it later
       // albeit in a more crude fashion
       resubmitTask(path, task, FORCE);
@@ -202,7 +202,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       SplitLogCounters.tot_mgr_resubmit_force.increment();
       version = -1;
     }
-    LOG.info("resubmitting task " + path);
+    LOG.info("Resubmitting task " + path);
     task.incarnation.incrementAndGet();
     boolean result = resubmit(path, version);
     if (!result) {
@@ -280,7 +280,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
         SplitLogCounters.tot_mgr_rescan_deleted.increment();
       }
       SplitLogCounters.tot_mgr_missing_state_in_delete.increment();
-      LOG.debug("deleted task without in memory state " + path);
+      LOG.debug("Deleted task without in memory state " + path);
       return;
     }
     synchronized (task) {
@@ -328,13 +328,13 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   }
 
   private void createNodeSuccess(String path) {
-    LOG.debug("put up splitlog task at znode " + path);
+    LOG.debug("Put up splitlog task at znode " + path);
     getDataSetWatch(path, zkretries);
   }
 
   private void createNodeFailure(String path) {
     // TODO the Manager should split the log locally instead of giving up
-    LOG.warn("failed to create task node" + path);
+    LOG.warn("Failed to create task node " + path);
     setDone(path, FAILURE);
   }
 
@@ -360,15 +360,15 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     data = ZKMetadata.removeMetaData(data);
     SplitLogTask slt = SplitLogTask.parseFrom(data);
     if (slt.isUnassigned()) {
-      LOG.debug("task not yet acquired " + path + " ver = " + version);
+      LOG.debug("Task not yet acquired " + path + ", ver=" + version);
       handleUnassignedTask(path);
     } else if (slt.isOwned()) {
       heartbeat(path, version, slt.getServerName());
     } else if (slt.isResigned()) {
-      LOG.info("task " + path + " entered state: " + slt.toString());
+      LOG.info("Task " + path + " entered state=" + slt.toString());
       resubmitOrFail(path, FORCE);
     } else if (slt.isDone()) {
-      LOG.info("task " + path + " entered state: " + slt.toString());
+      LOG.info("Task " + path + " entered state=" + slt.toString());
       if (taskFinisher != null && !ZKSplitLog.isRescanNode(watcher, path)) {
         if (taskFinisher.finish(slt.getServerName(), ZKSplitLog.getFileName(path)) == Status.DONE) {
           setDone(path, SUCCESS);
@@ -379,7 +379,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
         setDone(path, SUCCESS);
       }
     } else if (slt.isErr()) {
-      LOG.info("task " + path + " entered state: " + slt.toString());
+      LOG.info("Task " + path + " entered state=" + slt.toString());
       resubmitOrFail(path, CHECK);
     } else {
       LOG.error(HBaseMarkers.FATAL, "logic error - unexpected zk state for path = "
@@ -395,7 +395,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
   }
 
   private void getDataSetWatchFailure(String path) {
-    LOG.warn("failed to set data watch " + path);
+    LOG.warn("Failed to set data watch " + path);
     setDone(path, FAILURE);
   }
 
@@ -404,7 +404,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     if (task == null) {
       if (!ZKSplitLog.isRescanNode(watcher, path)) {
         SplitLogCounters.tot_mgr_unacquired_orphan_done.increment();
-        LOG.debug("unacquired orphan task is done " + path);
+        LOG.debug("Unacquired orphan task is done " + path);
       }
     } else {
       synchronized (task) {
@@ -441,7 +441,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
 
   private Task findOrCreateOrphanTask(String path) {
     return computeIfAbsent(details.getTasks(), path, Task::new, () -> {
-      LOG.info("creating orphan task " + path);
+      LOG.info("Creating orphan task " + path);
       SplitLogCounters.tot_mgr_orphan_task_acquired.increment();
     });
   }
@@ -450,7 +450,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     Task task = findOrCreateOrphanTask(path);
     if (new_version != task.last_version) {
       if (task.isUnassigned()) {
-        LOG.info("task " + path + " acquired by " + workerName);
+        LOG.info("Task " + path + " acquired by " + workerName);
       }
       task.heartbeat(EnvironmentEdgeManager.currentTime(), new_version, workerName);
       SplitLogCounters.tot_mgr_heartbeat.increment();
@@ -468,11 +468,11 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
     try {
       orphans = ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.znodePaths.splitLogZNode);
       if (orphans == null) {
-        LOG.warn("could not get children of " + this.watcher.znodePaths.splitLogZNode);
+        LOG.warn("Could not get children of " + this.watcher.znodePaths.splitLogZNode);
         return;
       }
     } catch (KeeperException e) {
-      LOG.warn("could not get children of " + this.watcher.znodePaths.splitLogZNode + " "
+      LOG.warn("Could not get children of " + this.watcher.znodePaths.splitLogZNode + " "
           + StringUtils.stringifyException(e));
       return;
     }
@@ -483,9 +483,9 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       String nodepath = ZNodePaths.joinZNode(watcher.znodePaths.splitLogZNode, path);
       if (ZKSplitLog.isRescanNode(watcher, nodepath)) {
         rescan_nodes++;
-        LOG.debug("found orphan rescan node " + path);
+        LOG.debug("Found orphan rescan node " + path);
       } else {
-        LOG.info("found orphan task " + path);
+        LOG.info("Found orphan task " + path);
       }
       getDataSetWatch(nodepath, zkretries);
     }
@@ -511,11 +511,11 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       SplitLogTask slt =
           new SplitLogTask.Unassigned(this.details.getServerName());
       if (ZKUtil.setData(this.watcher, path, slt.toByteArray(), version) == false) {
-        LOG.debug("failed to resubmit task " + path + " version changed");
+        LOG.debug("Failed to resubmit task " + path + " version changed");
         return false;
       }
     } catch (NoNodeException e) {
-      LOG.warn("failed to resubmit because znode doesn't exist " + path
+      LOG.warn("Failed to resubmit because znode doesn't exist " + path
           + " task done (or forced done by removing the znode)");
       try {
         getDataSetWatchSuccess(path, null, Integer.MIN_VALUE);
@@ -525,11 +525,11 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       }
       return false;
     } catch (KeeperException.BadVersionException e) {
-      LOG.debug("failed to resubmit task " + path + " version changed");
+      LOG.debug("Failed to resubmit task " + path + " version changed");
       return false;
     } catch (KeeperException e) {
       SplitLogCounters.tot_mgr_resubmit_failed.increment();
-      LOG.warn("failed to resubmit " + path, e);
+      LOG.warn("Failed to resubmit " + path, e);
       return false;
     }
     return true;
@@ -590,11 +590,11 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
           // this manager are get-znode-data, task-finisher and delete-znode.
           // And all code pieces correctly handle the case of suddenly
           // disappearing task-znode.
-          LOG.debug("found pre-existing znode " + path);
+          LOG.debug("Found pre-existing znode " + path);
           SplitLogCounters.tot_mgr_node_already_exists.increment();
         } else {
           Long retry_count = (Long) ctx;
-          LOG.warn("create rc =" + KeeperException.Code.get(rc) + " for " + path
+          LOG.warn("Create rc=" + KeeperException.Code.get(rc) + " for " + path
               + " remaining retries=" + retry_count);
           if (retry_count == 0) {
             SplitLogCounters.tot_mgr_node_create_err.increment();
@@ -625,7 +625,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
         }
         if (rc == KeeperException.Code.NONODE.intValue()) {
           SplitLogCounters.tot_mgr_get_data_nonode.increment();
-          LOG.warn("task znode " + path + " vanished or not created yet.");
+          LOG.warn("Task znode " + path + " vanished or not created yet.");
           // ignore since we should not end up in a case where there is in-memory task,
           // but no znode. The only case is between the time task is created in-memory
           // and the znode is created. See HBASE-11217.
@@ -634,11 +634,11 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
         Long retry_count = (Long) ctx;
 
         if (retry_count < 0) {
-          LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " + path
+          LOG.warn("Getdata rc=" + KeeperException.Code.get(rc) + " " + path
               + ". Ignoring error. No error handling. No retrying.");
           return;
         }
-        LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " + path
+        LOG.warn("Getdata rc=" + KeeperException.Code.get(rc) + " " + path
             + " remaining retries=" + retry_count);
         if (retry_count == 0) {
           SplitLogCounters.tot_mgr_get_data_err.increment();
@@ -675,10 +675,10 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
         if (rc != KeeperException.Code.NONODE.intValue()) {
           SplitLogCounters.tot_mgr_node_delete_err.increment();
           Long retry_count = (Long) ctx;
-          LOG.warn("delete rc=" + KeeperException.Code.get(rc) + " for " + path
+          LOG.warn("Delete rc=" + KeeperException.Code.get(rc) + " for " + path
               + " remaining retries=" + retry_count);
           if (retry_count == 0) {
-            LOG.warn("delete failed " + path);
+            LOG.warn("Delete failed " + path);
             details.getFailedDeletions().add(path);
             deleteNodeFailure(path);
           } else {
@@ -691,7 +691,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
               + " in earlier retry rounds. zkretries = " + ctx);
         }
       } else {
-        LOG.debug("deleted " + path);
+        LOG.debug("Deleted " + path);
       }
       deleteNodeSuccess(path);
     }
