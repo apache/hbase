@@ -1,0 +1,9 @@
+diff a/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RSRpcServices.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RSRpcServices.java	(rejected hunks)
+@@ -100,6 +100,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+ import org.apache.hadoop.hbase.ipc.ServerRpcController;
+ import org.apache.hadoop.hbase.log.HBaseMarkers;
+ import org.apache.hadoop.hbase.master.MasterRpcServices;
++import org.apache.hadoop.hbase.net.Address;
+ import org.apache.hadoop.hbase.quotas.ActivePolicyEnforcement;
+ import org.apache.hadoop.hbase.quotas.OperationQuota;
+ import org.apache.hadoop.hbase.quotas.QuotaUtil;
