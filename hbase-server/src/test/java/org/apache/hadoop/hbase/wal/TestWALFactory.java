@@ -536,7 +536,7 @@ public class TestWALFactory {
         WALKey key = entry.getKey();
         WALEdit val = entry.getEdit();
         assertTrue(Bytes.equals(info.getEncodedNameAsBytes(), key.getEncodedRegionName()));
-        assertTrue(htd.getTableName().equals(key.getTablename()));
+        assertTrue(htd.getTableName().equals(key.getTableName()));
         Cell cell = val.getCells().get(0);
         assertTrue(Bytes.equals(row, 0, row.length, cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength()));
@@ -592,7 +592,7 @@ public class TestWALFactory {
       for (Cell val : entry.getEdit().getCells()) {
         assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
           entry.getKey().getEncodedRegionName()));
-        assertTrue(htd.getTableName().equals(entry.getKey().getTablename()));
+        assertTrue(htd.getTableName().equals(entry.getKey().getTableName()));
         assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
           val.getRowLength()));
         assertEquals((byte) (idx + '0'), CellUtil.cloneValue(val)[0]);

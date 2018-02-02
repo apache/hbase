@@ -258,7 +258,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       ArrayList<Entry> thisList = new ArrayList<Entry>(entries.size());
       entryLists.add(thisList);
       for (Entry e : entries) {
-        if (!e.getKey().getTablename().equals(table)) {
+        if (!e.getKey().getTableName().equals(table)) {
           thisList.add(e);
         }
       }

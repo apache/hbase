@@ -178,7 +178,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
         assertNotNull(entry);
         assertEquals(columnCount, entry.getEdit().size());
         assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
-        assertEquals(tableName, entry.getKey().getTablename());
+        assertEquals(tableName, entry.getKey().getTableName());
         int idx = 0;
         for (Cell val : entry.getEdit().getCells()) {
           assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),

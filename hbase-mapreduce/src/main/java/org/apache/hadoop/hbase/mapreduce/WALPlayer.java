@@ -109,7 +109,7 @@ public class WALPlayer extends Configured implements Tool {
     throws IOException {
       try {
         // skip all other tables
-        if (Bytes.equals(table, key.getTablename().getName())) {
+        if (Bytes.equals(table, key.getTableName().getName())) {
           for (Cell cell : value.getCells()) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             if (WALEdit.isMetaEditFamily(kv)) {
@@ -150,7 +150,7 @@ public class WALPlayer extends Configured implements Tool {
     throws IOException {
       try {
         // skip all other tables
-        if (Bytes.equals(table, key.getTablename().getName())) {
+        if (Bytes.equals(table, key.getTableName().getName())) {
           for (Cell cell : value.getCells()) {
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
@@ -190,10 +190,10 @@ public class WALPlayer extends Configured implements Tool {
     public void map(WALKey key, WALEdit value, Context context)
     throws IOException {
       try {
-        if (tables.isEmpty() || tables.containsKey(key.getTablename())) {
+        if (tables.isEmpty() || tables.containsKey(key.getTableName())) {
           TableName targetTable = tables.isEmpty() ?
-                key.getTablename() :
-                tables.get(key.getTablename());
+                key.getTableName() :
+                tables.get(key.getTableName());
           ImmutableBytesWritable tableOut = new ImmutableBytesWritable(targetTable.getName());
           Put put = null;
           Delete del = null;

@@ -167,7 +167,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
                              RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
       // only keep primary region's edits
-      if (logKey.getTablename().equals(tableName) && info.getReplicaId() == 0) {
+      if (logKey.getTableName().equals(tableName) && info.getReplicaId() == 0) {
         // Presume type is a WALKeyImpl
         entries.add(new Entry((WALKeyImpl)logKey, logEdit));
       }

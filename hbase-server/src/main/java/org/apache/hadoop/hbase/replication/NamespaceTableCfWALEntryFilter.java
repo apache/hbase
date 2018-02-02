@@ -57,7 +57,7 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
 
   @Override
   public Entry filter(Entry entry) {
-    TableName tabName = entry.getKey().getTablename();
+    TableName tabName = entry.getKey().getTableName();
     String namespace = tabName.getNamespaceAsString();
     ReplicationPeerConfig peerConfig = this.peer.getPeerConfig();
 
@@ -110,10 +110,10 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
 
       if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
         cell = bulkLoadFilter.filterCell(cell,
-          fam -> filterByExcludeTableCfs(entry.getKey().getTablename(), Bytes.toString(fam),
+          fam -> filterByExcludeTableCfs(entry.getKey().getTableName(), Bytes.toString(fam),
             excludeTableCfs));
       } else {
-        if (filterByExcludeTableCfs(entry.getKey().getTablename(),
+        if (filterByExcludeTableCfs(entry.getKey().getTableName(),
           Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()),
           excludeTableCfs)) {
           return null;
@@ -130,9 +130,9 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
 
       if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
         cell = bulkLoadFilter.filterCell(cell,
-          fam -> filterByTableCfs(entry.getKey().getTablename(), Bytes.toString(fam), tableCfs));
+          fam -> filterByTableCfs(entry.getKey().getTableName(), Bytes.toString(fam), tableCfs));
       } else {
-        if (filterByTableCfs(entry.getKey().getTablename(),
+        if (filterByTableCfs(entry.getKey().getTableName(),
           Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()),
           tableCfs)) {
           return null;

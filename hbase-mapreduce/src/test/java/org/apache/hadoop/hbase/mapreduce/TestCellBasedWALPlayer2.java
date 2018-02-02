@@ -173,7 +173,7 @@ public class TestCellBasedWALPlayer2 {
     configuration.set(tableConfigKey, "table");
     WALCellMapper mapper = new WALCellMapper();
     WALKey key = mock(WALKey.class);
-    when(key.getTablename()).thenReturn(TableName.valueOf("table"));
+    when(key.getTableName()).thenReturn(TableName.valueOf("table"));
     @SuppressWarnings("unchecked")
     Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell>.Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(configuration);

@@ -469,7 +469,7 @@ public class WALSplitter {
   static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir, String fileNameBeingSplit)
   throws IOException {
-    Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTablename());
+    Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTableName());
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
     Path regiondir = HRegion.getRegionDir(tableDir, encodedRegionName);
     Path dir = getRegionDirRecoveredEditsDir(regiondir);
@@ -876,7 +876,7 @@ public class WALSplitter {
       synchronized (this) {
         buffer = buffers.get(key.getEncodedRegionName());
         if (buffer == null) {
-          buffer = new RegionEntryBuffer(key.getTablename(), key.getEncodedRegionName());
+          buffer = new RegionEntryBuffer(key.getTableName(), key.getEncodedRegionName());
           buffers.put(key.getEncodedRegionName(), buffer);
         }
         incrHeap= buffer.appendEntry(entry);
