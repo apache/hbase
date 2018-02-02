@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -114,7 +114,7 @@ public class TestLogsCleaner {
     conf.setLong("hbase.master.logcleaner.ttl", ttlWAL);
     conf.setLong("hbase.master.procedurewalcleaner.ttl", ttlProcedureWAL);
 
-    Replication.decorateMasterConfiguration(conf);
+    HMaster.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
     ReplicationQueueStorage queueStorage =
         ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);

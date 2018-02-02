@@ -23,11 +23,11 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -130,20 +130,18 @@ public class RegionGroupingProvider implements WALProvider {
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
-  private RegionGroupingStrategy strategy = null;
-  private WALFactory factory = null;
-  private List<WALActionsListener> listeners = null;
-  private String providerId = null;
+  private RegionGroupingStrategy strategy;
+  private WALFactory factory;
+  private List<WALActionsListener> listeners = new ArrayList<>();
+  private String providerId;
   private Class<? extends WALProvider> providerClass;
 
   @Override
-  public void init(final WALFactory factory, final Configuration conf,
-      final List<WALActionsListener> listeners, final String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
     if (null != strategy) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.factory = factory;
-    this.listeners = null == listeners ? null : Collections.unmodifiableList(listeners);
     StringBuilder sb = new StringBuilder().append(factory.factoryId);
     if (providerId != null) {
       if (providerId.startsWith(WAL_FILE_NAME_DELIMITER)) {
@@ -159,19 +157,15 @@ public class RegionGroupingProvider implements WALProvider {
 
   private WALProvider createProvider(String group) throws IOException {
     if (META_WAL_PROVIDER_ID.equals(providerId)) {
-      return factory.createProvider(providerClass, listeners, META_WAL_PROVIDER_ID);
+      return factory.createProvider(providerClass, META_WAL_PROVIDER_ID);
     } else {
-      return factory.createProvider(providerClass, listeners, group);
+      return factory.createProvider(providerClass, group);
     }
   }
 
   @Override
   public List<WAL> getWALs() {
-    List<WAL> wals = new ArrayList<>();
-    for (WALProvider provider : cached.values()) {
-      wals.addAll(provider.getWALs());
-    }
-    return wals;
+    return cached.values().stream().flatMap(p -> p.getWALs().stream()).collect(Collectors.toList());
   }
 
   private WAL getWAL(String group) throws IOException {
@@ -182,6 +176,7 @@ public class RegionGroupingProvider implements WALProvider {
         provider = cached.get(group);
         if (provider == null) {
           provider = createProvider(group);
+          listeners.forEach(provider::addWALActionsListener);
           cached.put(group, provider);
         }
       } finally {
@@ -276,5 +271,15 @@ public class RegionGroupingProvider implements WALProvider {
       logFileSize += provider.getLogFileSize();
     }
     return logFileSize;
+  }
+
+  @Override
+  public void addWALActionsListener(WALActionsListener listener) {
+    // Notice that there is an assumption that this method must be called before the getWAL above,
+    // so we can make sure there is no sub WALProvider yet, so we only add the listener to our
+    // listeners list without calling addWALActionListener for each WALProvider. Although it is no
+    // hurt to execute an extra loop to call addWALActionListener for each WALProvider, but if the
+    // extra code actually works, then we will have other big problems. So leave it as is.
+    listeners.add(listener);
   }
 }

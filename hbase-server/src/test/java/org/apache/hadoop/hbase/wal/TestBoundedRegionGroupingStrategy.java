@@ -185,7 +185,7 @@ public class TestBoundedRegionGroupingStrategy {
       // Set HDFS root directory for storing WAL
       FSUtils.setRootDir(CONF, TEST_UTIL.getDataTestDirOnTestFS());
 
-      wals = new WALFactory(CONF, null, "setMembershipDedups");
+      wals = new WALFactory(CONF, "setMembershipDedups");
       Set<WAL> seen = new HashSet<>(temp * 4);
       int count = 0;
       // we know that this should see one of the wals more than once

@@ -26,7 +26,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -71,7 +70,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
   public void setUp() throws Exception {
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
     dir = new Path(TEST_UTIL.createRootDir(), currentTest.getMethodName());
-    wals = new WALFactory(TEST_UTIL.getConfiguration(), null, currentTest.getMethodName());
+    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest.getMethodName());
   }
 
   @After

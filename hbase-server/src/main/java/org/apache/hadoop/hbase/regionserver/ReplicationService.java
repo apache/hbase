@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +18,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
-import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
+import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Gateway to Cluster Replication. Used by
@@ -37,14 +35,14 @@ public interface ReplicationService {
 
   /**
    * Initializes the replication service object.
-   * @throws IOException
+   * @param walProvider can be null if not initialized inside a live region server environment, for
+   *          example, {@code ReplicationSyncUp}.
    */
-  void initialize(Server rs, FileSystem fs, Path logdir, Path oldLogDir,
-      WALFileLengthProvider walFileLengthProvider) throws IOException;
+  void initialize(Server rs, FileSystem fs, Path logdir, Path oldLogDir, WALProvider walProvider)
+      throws IOException;
 
   /**
    * Start replication services.
-   * @throws IOException
    */
   void startReplicationService() throws IOException;
 

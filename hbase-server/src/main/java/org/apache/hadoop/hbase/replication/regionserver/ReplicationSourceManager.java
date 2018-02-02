@@ -43,6 +43,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
@@ -57,15 +59,21 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 /**
  * This class is responsible to manage all the replication sources. There are two classes of
@@ -86,14 +94,15 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * operations.</li>
  * <li>Need synchronized on {@link #walsById}. There are four methods which modify it,
  * {@link #addPeer(String)}, {@link #removePeer(String)},
- * {@link #cleanOldLogs(SortedSet, String, String)} and {@link #preLogRoll(Path)}. {@link #walsById}
- * is a ConcurrentHashMap and there is a Lock for peer id in {@link PeerProcedureHandlerImpl}. So
- * there is no race between {@link #addPeer(String)} and {@link #removePeer(String)}.
- * {@link #cleanOldLogs(SortedSet, String, String)} is called by {@link ReplicationSourceInterface}.
- * So no race with {@link #addPeer(String)}. {@link #removePeer(String)} will terminate the
- * {@link ReplicationSourceInterface} firstly, then remove the wals from {@link #walsById}. So no
- * race with {@link #removePeer(String)}. The only case need synchronized is
- * {@link #cleanOldLogs(SortedSet, String, String)} and {@link #preLogRoll(Path)}.</li>
+ * {@link #cleanOldLogs(SortedSet, String, String)} and {@link #preLogRoll(Path)}.
+ * {@link #walsById} is a ConcurrentHashMap and there is a Lock for peer id in
+ * {@link PeerProcedureHandlerImpl}. So there is no race between {@link #addPeer(String)} and
+ * {@link #removePeer(String)}. {@link #cleanOldLogs(SortedSet, String, String)} is called by
+ * {@link ReplicationSourceInterface}. So no race with {@link #addPeer(String)}.
+ * {@link #removePeer(String)} will terminate the {@link ReplicationSourceInterface} firstly, then
+ * remove the wals from {@link #walsById}. So no race with {@link #removePeer(String)}. The only
+ * case need synchronized is {@link #cleanOldLogs(SortedSet, String, String)} and
+ * {@link #preLogRoll(Path)}.</li>
  * <li>No need synchronized on {@link #walsByIdRecoveredQueues}. There are three methods which
  * modify it, {@link #removePeer(String)} , {@link #cleanOldLogs(SortedSet, String, String)} and
  * {@link ReplicationSourceManager.NodeFailoverWorker#run()}.
@@ -533,7 +542,9 @@ public class ReplicationSourceManager implements ReplicationListener {
     walSet.clear();
   }
 
-  void preLogRoll(Path newLog) throws IOException {
+  // public because of we call it in TestReplicationEmptyWALRecovery
+  @VisibleForTesting
+  public void preLogRoll(Path newLog) throws IOException {
     String logName = newLog.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
     // synchronized on latestPaths to avoid the new open source miss the new log
@@ -588,10 +599,49 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  void postLogRoll(Path newLog) throws IOException {
+  // public because of we call it in TestReplicationEmptyWALRecovery
+  @VisibleForTesting
+  public void postLogRoll(Path newLog) throws IOException {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.enqueueLog(newLog);
+    }
+  }
+
+  void scopeWALEdits(WALKey logKey, WALEdit logEdit) throws IOException {
+    scopeWALEdits(logKey, logEdit, this.conf);
+  }
+
+  /**
+   * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys from
+   * compaction WAL edits and if the scope is local.
+   * @param logKey Key that may get scoped according to its edits
+   * @param logEdit Edits used to lookup the scopes
+   * @throws IOException If failed to parse the WALEdit
+   */
+  @VisibleForTesting
+  static void scopeWALEdits(WALKey logKey, WALEdit logEdit, Configuration conf) throws IOException {
+    boolean replicationForBulkLoadEnabled =
+      ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf);
+    boolean foundOtherEdits = false;
+    for (Cell cell : logEdit.getCells()) {
+      if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+        foundOtherEdits = true;
+        break;
+      }
+    }
+
+    if (!foundOtherEdits && logEdit.getCells().size() > 0) {
+      WALProtos.RegionEventDescriptor maybeEvent =
+        WALEdit.getRegionEventDescriptor(logEdit.getCells().get(0));
+      if (maybeEvent != null &&
+        (maybeEvent.getEventType() == WALProtos.RegionEventDescriptor.EventType.REGION_CLOSE)) {
+        // In serially replication, we use scopes when reading close marker.
+        foundOtherEdits = true;
+      }
+    }
+    if ((!replicationForBulkLoadEnabled && !foundOtherEdits) || logEdit.isReplay()) {
+      ((WALKeyImpl) logKey).serializeReplicationScope(false);
     }
   }
 
@@ -886,7 +936,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   void waitUntilCanBePushed(byte[] encodedName, long seq, String peerId)
       throws IOException, InterruptedException {
-
     /**
      * There are barriers for this region and position for this peer. N barriers form N intervals,
      * (b1,b2) (b2,b3) ... (bn,max). Generally, there is no logs whose seq id is not greater than
@@ -974,5 +1023,4 @@ public class ReplicationSourceManager implements ReplicationListener {
       Thread.sleep(replicationWaitTime);
     }
   }
-
 }

@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
@@ -99,9 +97,8 @@ public class TestWALActionsListener {
   @Test
   public void testActionListener() throws Exception {
     DummyWALActionsListener observer = new DummyWALActionsListener();
-    List<WALActionsListener> list = new ArrayList<>(1);
-    list.add(observer);
-    final WALFactory wals = new WALFactory(conf, list, "testActionListener");
+    final WALFactory wals = new WALFactory(conf, "testActionListener");
+    wals.getWALProvider().addWALActionsListener(observer);
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(SOME_BYTES))
         .setStartKey(SOME_BYTES).setEndKey(SOME_BYTES).build();

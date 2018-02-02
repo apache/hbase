@@ -105,7 +105,7 @@ public class TestWALFactory {
     fs = cluster.getFileSystem();
     dir = new Path(hbaseDir, currentTest.getMethodName());
     this.currentServername = ServerName.valueOf(currentTest.getMethodName(), 16010, 1);
-    wals = new WALFactory(conf, null, this.currentServername.toString());
+    wals = new WALFactory(conf, this.currentServername.toString());
   }
 
   @After

@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,8 +80,15 @@ public class IOTestProvider implements WALProvider {
     none
   }
 
-  private FSHLog log = null;
+  private WALFactory factory;
 
+  private Configuration conf;
+
+  private volatile FSHLog log;
+
+  private String providerId;
+
+  private List<WALActionsListener> listeners = new ArrayList<>();
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
@@ -89,41 +97,60 @@ public class IOTestProvider implements WALProvider {
    *                   null
    */
   @Override
-  public void init(final WALFactory factory, final Configuration conf,
-      final List<WALActionsListener> listeners, String providerId) throws IOException {
-    if (null != log) {
+  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
+    if (factory != null) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
-    if (null == providerId) {
-      providerId = DEFAULT_PROVIDER_ID;
-    }
-    final String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
-    log = new IOTestWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
+    this.factory = factory;
+    this.conf = conf;
+    this.providerId = providerId != null ? providerId : DEFAULT_PROVIDER_ID;
+
+
+  }
+
+  @Override
+  public List<WAL> getWALs() {
+    return Collections.singletonList(log);
+  }
+
+  private FSHLog createWAL() throws IOException {
+    String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
+    return new IOTestWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
         AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
         HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
         META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
 
   @Override
-  public List<WAL> getWALs() {
-    List<WAL> wals = new ArrayList<>(1);
-    wals.add(log);
-    return wals;
-  }
-
-  @Override
   public WAL getWAL(RegionInfo region) throws IOException {
-   return log;
+    FSHLog log = this.log;
+    if (log != null) {
+      return log;
+    }
+    synchronized (this) {
+      log = this.log;
+      if (log == null) {
+        log = createWAL();
+        this.log = log;
+      }
+    }
+    return log;
   }
 
   @Override
   public void close() throws IOException {
-    log.close();
+    FSHLog log = this.log;
+    if (log != null) {
+      log.close();
+    }
   }
 
   @Override
   public void shutdown() throws IOException {
-    log.shutdown();
+    FSHLog log = this.log;
+    if (log != null) {
+      log.shutdown();
+    }
   }
 
   private static class IOTestWAL extends FSHLog {
@@ -254,5 +281,11 @@ public class IOTestProvider implements WALProvider {
   @Override
   public long getLogFileSize() {
     return this.log.getLogFileSize();
+  }
+
+  @Override
+  public void addWALActionsListener(WALActionsListener listener) {
+    // TODO Implement WALProvider.addWALActionLister
+
   }
 }

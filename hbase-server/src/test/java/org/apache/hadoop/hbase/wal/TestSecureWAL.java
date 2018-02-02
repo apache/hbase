@@ -119,7 +119,7 @@ public class TestSecureWAL {
     final byte[] value = Bytes.toBytes("Test value");
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     final WALFactory wals =
-        new WALFactory(TEST_UTIL.getConfiguration(), null, tableName.getNameAsString());
+        new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
 
     // Write the WAL
     final WAL wal = wals.getWAL(regionInfo);

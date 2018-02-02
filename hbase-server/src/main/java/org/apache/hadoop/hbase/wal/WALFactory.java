@@ -19,19 +19,14 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
-// imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
@@ -62,7 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesti
  * Alternatively, you may provide a custom implementation of {@link WALProvider} by class name.
  */
 @InterfaceAudience.Private
-public class WALFactory implements WALFileLengthProvider {
+public class WALFactory {
 
   private static final Logger LOG = LoggerFactory.getLogger(WALFactory.class);
 
@@ -135,12 +130,12 @@ public class WALFactory implements WALFileLengthProvider {
     }
   }
 
-  WALProvider createProvider(Class<? extends WALProvider> clazz,
-      List<WALActionsListener> listeners, String providerId) throws IOException {
+  WALProvider createProvider(Class<? extends WALProvider> clazz, String providerId)
+      throws IOException {
     LOG.info("Instantiating WALProvider of type " + clazz);
     try {
       final WALProvider result = clazz.getDeclaredConstructor().newInstance();
-      result.init(this, conf, listeners, providerId);
+      result.init(this, conf, providerId);
       return result;
     } catch (Exception e) {
       LOG.error("couldn't set up WALProvider, the configured class is " + clazz);
@@ -150,24 +145,23 @@ public class WALFactory implements WALFileLengthProvider {
   }
 
   /**
-   * instantiate a provider from a config property.
-   * requires conf to have already been set (as well as anything the provider might need to read).
+   * instantiate a provider from a config property. requires conf to have already been set (as well
+   * as anything the provider might need to read).
    */
-  WALProvider getProvider(final String key, final String defaultValue,
-      final List<WALActionsListener> listeners, final String providerId) throws IOException {
+  WALProvider getProvider(String key, String defaultValue, String providerId) throws IOException {
     Class<? extends WALProvider> clazz = getProviderClass(key, defaultValue);
-    return createProvider(clazz, listeners, providerId);
+    WALProvider provider = createProvider(clazz, providerId);
+    provider.addWALActionsListener(new MetricsWAL());
+    return provider;
   }
 
   /**
    * @param conf must not be null, will keep a reference to read params in later reader/writer
-   *     instances.
-   * @param listeners may be null. will be given to all created wals (and not meta-wals)
+   *          instances.
    * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
-   *     to make a directory
+   *          to make a directory
    */
-  public WALFactory(final Configuration conf, final List<WALActionsListener> listeners,
-      final String factoryId) throws IOException {
+  public WALFactory(Configuration conf, String factoryId) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
     timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
@@ -178,12 +172,12 @@ public class WALFactory implements WALFileLengthProvider {
     this.factoryId = factoryId;
     // end required early initialization
     if (conf.getBoolean("hbase.regionserver.hlog.enabled", true)) {
-      provider = getProvider(WAL_PROVIDER, DEFAULT_WAL_PROVIDER, listeners, null);
+      provider = getProvider(WAL_PROVIDER, DEFAULT_WAL_PROVIDER, null);
     } else {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
-      provider.init(this, conf, null, factoryId);
+      provider.init(this, conf, factoryId);
     }
   }
 
@@ -236,7 +230,6 @@ public class WALFactory implements WALFileLengthProvider {
         return provider;
       }
       provider = getProvider(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER,
-        Collections.<WALActionsListener> singletonList(new MetricsWAL()),
         AbstractFSWALProvider.META_WAL_PROVIDER_ID);
       if (metaProvider.compareAndSet(null, provider)) {
         return provider;
@@ -447,10 +440,5 @@ public class WALFactory implements WALFileLengthProvider {
 
   public final WALProvider getMetaWALProvider() {
     return this.metaProvider.get();
-  }
-
-  @Override
-  public OptionalLong getLogFileSizeIfBeingWritten(Path path) {
-    return getWALs().stream().map(w -> w.getLogFileSizeIfBeingWritten(path)).filter(o -> o.isPresent()).findAny().orElse(OptionalLong.empty());
   }
 }

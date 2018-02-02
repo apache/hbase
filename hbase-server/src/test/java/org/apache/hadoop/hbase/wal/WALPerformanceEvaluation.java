@@ -319,7 +319,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       cleanRegionRootDir(fs, rootRegionDir);
       FSUtils.setRootDir(getConf(), rootRegionDir);
-      final WALFactory wals = new WALFactory(getConf(), null, "wals");
+      final WALFactory wals = new WALFactory(getConf(), "wals");
       final HRegion[] regions = new HRegion[numRegions];
       final Runnable[] benchmarks = new Runnable[numRegions];
       final MockRegionServerServices mockServices = new MockRegionServerServices(getConf());

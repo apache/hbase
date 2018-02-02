@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -80,6 +82,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -100,6 +103,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 
 /**
@@ -179,8 +183,8 @@ public abstract class TestReplicationSourceManager {
         HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
-    replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
-
+    replication = new Replication();
+    replication.initialize(new DummyServer(), fs, logDir, oldLogDir, null);
     managerOfCluster = getManagerFromCluster();
     if (managerOfCluster != null) {
       // After replication procedure, we need to add peer by hand (other than by receiving
@@ -269,10 +273,26 @@ public abstract class TestReplicationSourceManager {
     WALEdit edit = new WALEdit();
     edit.add(kv);
 
-    List<WALActionsListener> listeners = new ArrayList<>(1);
-    listeners.add(replication);
-    final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
-        URLEncoder.encode("regionserver:60020", "UTF8"));
+    WALFactory wals =
+      new WALFactory(utility.getConfiguration(), URLEncoder.encode("regionserver:60020", "UTF8"));
+    ReplicationSourceManager replicationManager = replication.getReplicationManager();
+    wals.getWALProvider().addWALActionsListener(new WALActionsListener() {
+
+      @Override
+      public void preLogRoll(Path oldPath, Path newPath) throws IOException {
+        replicationManager.preLogRoll(newPath);
+      }
+
+      @Override
+      public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+        replicationManager.postLogRoll(newPath);
+      }
+
+      @Override
+      public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
+        replicationManager.scopeWALEdits(logKey, logEdit);
+      }
+    });
     final WAL wal = wals.getWAL(hri);
     manager.init();
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tableame"));
@@ -418,6 +438,21 @@ public abstract class TestReplicationSourceManager {
     }
   }
 
+  /**
+   * Test for HBASE-9038, Replication.scopeWALEdits would NPE if it wasn't filtering out the
+   * compaction WALEdit.
+   */
+  @Test
+  public void testCompactionWALEdits() throws Exception {
+    TableName tableName = TableName.valueOf("testCompactionWALEdits");
+    WALProtos.CompactionDescriptor compactionDescriptor =
+      WALProtos.CompactionDescriptor.getDefaultInstance();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(HConstants.EMPTY_START_ROW)
+        .setEndKey(HConstants.EMPTY_END_ROW).build();
+    WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
+    ReplicationSourceManager.scopeWALEdits(new WALKeyImpl(), edit, conf);
+  }
+
   @Test
   public void testBulkLoadWALEditsWithoutBulkLoadReplicationEnabled() throws Exception {
     NavigableMap<byte[], Integer> scope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -427,7 +462,7 @@ public abstract class TestReplicationSourceManager {
     WALKeyImpl logKey = new WALKeyImpl(scope);
 
     // 3. Get the scopes for the key
-    Replication.scopeWALEdits(logKey, logEdit, conf, manager);
+    ReplicationSourceManager.scopeWALEdits(logKey, logEdit, conf);
 
     // 4. Assert that no bulk load entry scopes are added if bulk load hfile replication is disabled
     assertNull("No bulk load entries scope should be added if bulk load replication is disabled.",
@@ -446,7 +481,7 @@ public abstract class TestReplicationSourceManager {
     bulkLoadConf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
 
     // 4. Get the scopes for the key
-    Replication.scopeWALEdits(logKey, logEdit, bulkLoadConf, manager);
+    ReplicationSourceManager.scopeWALEdits(logKey, logEdit, bulkLoadConf);
 
     NavigableMap<byte[], Integer> scopes = logKey.getReplicationScopes();
     // Assert family with replication scope global is present in the key scopes

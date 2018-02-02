@@ -131,10 +131,9 @@ import org.apache.hadoop.hbase.regionserver.handler.RSProcedureHandler;
 import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -158,6 +157,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -546,7 +546,7 @@ public class HRegionServer extends HasThread implements
       checkCodecs(this.conf);
       this.userProvider = UserProvider.instantiate(conf);
       FSUtils.setupShortCircuitRead(this.conf);
-      Replication.decorateRegionServerConfiguration(this.conf);
+      decorateRegionServerConfiguration(this.conf);
 
       // Disable usage of meta replicas in the regionserver
       this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
@@ -1781,52 +1781,26 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Setup WAL log and replication if enabled.
-   * Replication setup is done in here because it wants to be hooked up to WAL.
-   *
-   * @throws IOException
+   * Setup WAL log and replication if enabled. Replication setup is done in here because it wants to
+   * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
+    WALFactory factory = new WALFactory(conf, serverName.toString());
+
     // TODO Replication make assumptions here based on the default filesystem impl
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
 
     Path logDir = new Path(walRootDir, logName);
-    if (LOG.isDebugEnabled()) LOG.debug("logDir=" + logDir);
+    LOG.debug("logDir={}", logDir);
     if (this.walFs.exists(logDir)) {
-      throw new RegionServerRunningException("Region server has already " +
-          "created directory at " + this.serverName.toString());
+      throw new RegionServerRunningException(
+          "Region server has already created directory at " + this.serverName.toString());
     }
-
-    // Instantiate replication if replication enabled.  Pass it the log directories.
-    // In here we create the Replication instances. Later they are initialized and started up.
-    createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir);
-
-    // listeners the wal factory will add to wals it creates.
-    List<WALActionsListener> listeners = new ArrayList<>();
-    listeners.add(new MetricsWAL());
-    if (this.replicationSourceHandler != null &&
-        this.replicationSourceHandler.getWALActionsListener() != null) {
-      // Replication handler is an implementation of WALActionsListener.
-      listeners.add(this.replicationSourceHandler.getWALActionsListener());
-    }
-
-    // There is a cyclic dependency between ReplicationSourceHandler and WALFactory.
-    // We use WALActionsListener to get the newly rolled WALs, so we need to get the
-    // WALActionsListeners from ReplicationSourceHandler before constructing WALFactory. And then
-    // ReplicationSourceHandler need to use WALFactory get the length of the wal file being written.
-    // So we here we need to construct WALFactory first, and then pass it to the initialized method
-    // of ReplicationSourceHandler.
-    // TODO: I can't follow replication; it has initialize and then later on we start it!
-    WALFactory factory = new WALFactory(conf, listeners, serverName.toString());
+    // Instantiate replication if replication enabled. Pass it the log directories.
+    createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir,
+      factory.getWALProvider());
     this.walFactory = factory;
-    if (this.replicationSourceHandler != null) {
-      this.replicationSourceHandler.initialize(this, walFs, logDir, oldLogDir, factory);
-    }
-    if (this.replicationSinkHandler != null &&
-        this.replicationSinkHandler != this.replicationSourceHandler) {
-      this.replicationSinkHandler.initialize(this, walFs, logDir, oldLogDir, factory);
-    }
   }
 
   /**
@@ -2918,15 +2892,13 @@ public class HRegionServer extends HasThread implements
   //
   // Main program and support routines
   //
-
   /**
    * Load the replication executorService objects, if any
    */
   private static void createNewReplicationInstance(Configuration conf, HRegionServer server,
-      FileSystem walFs, Path walDir, Path oldWALDir) throws IOException {
-
-    if ((server instanceof HMaster) && (!LoadBalancer.isTablesOnMaster(conf) ||
-        LoadBalancer.isSystemTablesOnlyOnMaster(conf))) {
+      FileSystem walFs, Path walDir, Path oldWALDir, WALProvider walProvider) throws IOException {
+    if ((server instanceof HMaster) &&
+      (!LoadBalancer.isTablesOnMaster(conf) || LoadBalancer.isSystemTablesOnlyOnMaster(conf))) {
       return;
     }
 
@@ -2941,32 +2913,30 @@ public class HRegionServer extends HasThread implements
     // If both the sink and the source class names are the same, then instantiate
     // only one object.
     if (sourceClassname.equals(sinkClassname)) {
-      server.replicationSourceHandler =
-          (ReplicationSourceService) newReplicationInstance(sourceClassname, conf, server, walFs,
-            walDir, oldWALDir);
+      server.replicationSourceHandler = newReplicationInstance(sourceClassname,
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
       server.replicationSinkHandler = (ReplicationSinkService) server.replicationSourceHandler;
     } else {
-      server.replicationSourceHandler =
-          (ReplicationSourceService) newReplicationInstance(sourceClassname, conf, server, walFs,
-            walDir, oldWALDir);
-      server.replicationSinkHandler = (ReplicationSinkService) newReplicationInstance(sinkClassname,
-        conf, server, walFs, walDir, oldWALDir);
+      server.replicationSourceHandler = newReplicationInstance(sourceClassname,
+        ReplicationSourceService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
+      server.replicationSinkHandler = newReplicationInstance(sinkClassname,
+        ReplicationSinkService.class, conf, server, walFs, walDir, oldWALDir, walProvider);
     }
   }
 
-  private static ReplicationService newReplicationInstance(String classname, Configuration conf,
-      HRegionServer server, FileSystem walFs, Path logDir, Path oldLogDir) throws IOException {
-    Class<? extends ReplicationService> clazz = null;
+  private static <T extends ReplicationService> T newReplicationInstance(String classname,
+      Class<T> xface, Configuration conf, HRegionServer server, FileSystem walFs, Path logDir,
+      Path oldLogDir, WALProvider walProvider) throws IOException {
+    Class<? extends T> clazz = null;
     try {
       ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-      clazz = Class.forName(classname, true, classLoader).asSubclass(ReplicationService.class);
+      clazz = Class.forName(classname, true, classLoader).asSubclass(xface);
     } catch (java.lang.ClassNotFoundException nfe) {
       throw new IOException("Could not find class for " + classname);
     }
-
-    // create an instance of the replication object, but do not initialize it here as we need to use
-    // WALFactory when initializing.
-    return ReflectionUtils.newInstance(clazz, conf);
+    T service = ReflectionUtils.newInstance(clazz, conf);
+    service.initialize(server, walFs, logDir, oldLogDir, walProvider);
+    return service;
   }
 
   /**
@@ -3737,6 +3707,22 @@ public class HRegionServer extends HasThread implements
         rssStub = null;
       }
       throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * This method modifies the region server's configuration in order to inject replication-related
+   * features
+   * @param conf region server configurations
+   */
+  static void decorateRegionServerConfiguration(Configuration conf) {
+    if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
+      String plugins = conf.get(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, "");
+      String rsCoprocessorClass = ReplicationObserver.class.getCanonicalName();
+      if (!plugins.contains(rsCoprocessorClass)) {
+        conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+          plugins + "," + rsCoprocessorClass);
+      }
     }
   }
 }

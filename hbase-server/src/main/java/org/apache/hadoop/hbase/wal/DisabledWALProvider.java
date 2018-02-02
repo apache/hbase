@@ -55,8 +55,7 @@ class DisabledWALProvider implements WALProvider {
   WAL disabled;
 
   @Override
-  public void init(final WALFactory factory, final Configuration conf,
-      final List<WALActionsListener> listeners, String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
     if (null != disabled) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
@@ -249,5 +248,10 @@ class DisabledWALProvider implements WALProvider {
   @Override
   public long getLogFileSize() {
     return 0;
+  }
+
+  @Override
+  public void addWALActionsListener(WALActionsListener listener) {
+    disabled.registerWALActionsListener(listener);
   }
 }

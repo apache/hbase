@@ -123,7 +123,7 @@ public class TestDurability {
 
   @Test
   public void testDurability() throws Exception {
-    WALFactory wals = new WALFactory(CONF, null,
+    WALFactory wals = new WALFactory(CONF,
         ServerName.valueOf("TestDurability", 16010, System.currentTimeMillis()).toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
     WAL wal = region.getWAL();
@@ -187,7 +187,7 @@ public class TestDurability {
     byte[] col3 = Bytes.toBytes("col3");
 
     // Setting up region
-    WALFactory wals = new WALFactory(CONF, null,
+    WALFactory wals = new WALFactory(CONF,
         ServerName.valueOf("TestIncrement", 16010, System.currentTimeMillis()).toString());
     HRegion region = createHRegion(wals, Durability.USE_DEFAULT);
     WAL wal = region.getWAL();
@@ -253,7 +253,7 @@ public class TestDurability {
     byte[] col1 = Bytes.toBytes("col1");
 
     // Setting up region
-    WALFactory wals = new WALFactory(CONF, null,
+    WALFactory wals = new WALFactory(CONF,
         ServerName
             .valueOf("testIncrementWithReturnResultsSetToFalse", 16010, System.currentTimeMillis())
             .toString());

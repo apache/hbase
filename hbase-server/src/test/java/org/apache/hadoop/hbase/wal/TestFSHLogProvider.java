@@ -200,7 +200,7 @@ public class TestFSHLogProvider {
     }
     Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
-    WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
+    WALFactory wals = new WALFactory(localConf, currentTest.getMethodName());
     try {
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       RegionInfo hri2 = RegionInfoBuilder.newBuilder(htd2.getTableName()).build();
@@ -280,7 +280,7 @@ public class TestFSHLogProvider {
     }
     Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
-    WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
+    WALFactory wals = new WALFactory(localConf, currentTest.getMethodName());
     try {
       WAL wal = wals.getWAL(null);
       assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(wal));
@@ -354,7 +354,7 @@ public class TestFSHLogProvider {
   public void setMembershipDedups() throws IOException {
     Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
-    WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
+    WALFactory wals = new WALFactory(localConf, currentTest.getMethodName());
     try {
       final Set<WAL> seen = new HashSet<>(1);
       assertTrue("first attempt to add WAL from default provider should work.",
