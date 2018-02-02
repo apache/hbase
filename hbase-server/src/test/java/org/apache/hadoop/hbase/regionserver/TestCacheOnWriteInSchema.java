@@ -178,7 +178,7 @@ public class TestCacheOnWriteInSchema {
     fs.delete(logdir, true);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
-    walFactory = new WALFactory(conf, null, id);
+    walFactory = new WALFactory(conf, id);
 
     region = TEST_UTIL.createLocalHRegion(info, htd, walFactory.getWAL(info));
     store = new HStore(region, hcd, conf);

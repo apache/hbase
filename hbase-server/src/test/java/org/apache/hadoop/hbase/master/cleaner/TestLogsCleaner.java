@@ -30,10 +30,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,12 +47,12 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientZKImpl;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -70,6 +68,8 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestLogsCleaner {
@@ -119,7 +119,7 @@ public class TestLogsCleaner {
     conf.setLong("hbase.master.logcleaner.ttl", ttlWAL);
     conf.setLong("hbase.master.procedurewalcleaner.ttl", ttlProcedureWAL);
 
-    Replication.decorateMasterConfiguration(conf);
+    HMaster.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
     ReplicationQueues repQueues = ReplicationFactory.getReplicationQueues(
         new ReplicationQueuesArguments(conf, server, server.getZooKeeper()));

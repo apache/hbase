@@ -103,7 +103,8 @@ public class ReplicationSyncUp extends Configured implements Tool {
     logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
     System.out.println("Start Replication Server start");
-    replication = new Replication(new DummyServer(zkw), fs, logDir, oldLogDir);
+    replication = new Replication();
+    replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir, null);
     manager = replication.getReplicationManager();
     manager.init();
 

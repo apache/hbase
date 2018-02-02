@@ -196,7 +196,7 @@ public class TestCompactionArchiveIOException {
     HRegionFileSystem fs = new HRegionFileSystem(conf, errFS, tableDir, info);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
-    final WALFactory wals = new WALFactory(walConf, null, "log_" + info.getEncodedName());
+    final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
     HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
 
     region.initialize();

@@ -191,7 +191,7 @@ public class TestLogRollAbort {
     String logName = ServerName.valueOf("testLogRollAfterSplitStart",
         16010, System.currentTimeMillis()).toString();
     Path thisTestsDir = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(logName));
-    final WALFactory wals = new WALFactory(conf, null, logName);
+    final WALFactory wals = new WALFactory(conf, logName);
 
     try {
       // put some entries in an WAL

@@ -26,8 +26,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.OptionalLong;
@@ -119,10 +117,9 @@ public class TestWALEntryStream {
   @Before
   public void setUp() throws Exception {
     walQueue = new PriorityBlockingQueue<>();
-    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     pathWatcher = new PathWatcher();
-    listeners.add(pathWatcher);
-    final WALFactory wals = new WALFactory(conf, listeners, tn.getMethodName());
+    final WALFactory wals = new WALFactory(conf, tn.getMethodName());
+    wals.getWALProvider().addWALActionsListener(pathWatcher);
     log = wals.getWAL(info);
   }
 

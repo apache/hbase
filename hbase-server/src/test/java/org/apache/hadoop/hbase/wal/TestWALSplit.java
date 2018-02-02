@@ -194,7 +194,7 @@ public class TestWALSplit {
     REGIONS.clear();
     Collections.addAll(REGIONS, "bbb", "ccc");
     InstrumentedLogWriter.activateFailure = false;
-    wals = new WALFactory(conf, null, name.getMethodName());
+    wals = new WALFactory(conf, name.getMethodName());
     WALDIR = new Path(HBASELOGDIR,
         AbstractFSWALProvider.getWALDirectoryName(ServerName.valueOf(name.getMethodName(),
             16010, System.currentTimeMillis()).toString()));
@@ -629,7 +629,7 @@ public class TestWALSplit {
         LOG.debug("no previous CORRUPTDIR to clean.");
       }
       // change to the faulty reader
-      wals = new WALFactory(conf, null, name.getMethodName());
+      wals = new WALFactory(conf, name.getMethodName());
       generateWALs(-1);
       // Our reader will render all of these files corrupt.
       final Set<String> walDirContents = new HashSet<>();

@@ -152,7 +152,7 @@ public class TestWALReaderOnSecureWAL {
       WALProvider.AsyncWriter.class);
     conf.setBoolean(WAL_ENCRYPTION, true);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(conf, null, currentTest.getMethodName());
+    final WALFactory wals = new WALFactory(conf, currentTest.getMethodName());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), offheap);
 
     // Insure edits are not plaintext
@@ -195,9 +195,8 @@ public class TestWALReaderOnSecureWAL {
       WALProvider.Writer.class);
     conf.setBoolean(WAL_ENCRYPTION, false);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(conf, null,
-        ServerName.valueOf(currentTest.getMethodName(), 16010,
-            System.currentTimeMillis()).toString());
+    final WALFactory wals = new WALFactory(conf, ServerName
+        .valueOf(currentTest.getMethodName(), 16010, System.currentTimeMillis()).toString());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), false);
 
     // Ensure edits are plaintext

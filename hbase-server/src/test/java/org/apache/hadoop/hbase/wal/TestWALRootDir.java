@@ -90,7 +90,7 @@ public class TestWALRootDir {
   @Test
   public void testWALRootDir() throws Exception {
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
-    wals = new WALFactory(conf, null, "testWALRootDir");
+    wals = new WALFactory(conf, "testWALRootDir");
     WAL log = wals.getWAL(regionInfo);
 
     assertEquals(1, getWALFiles(walFs, walRootDir).size());

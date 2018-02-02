@@ -91,7 +91,7 @@ public class TestLogRollingNoCluster {
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
     FSUtils.setRootDir(conf, dir);
     conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
-    final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
+    final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(null);
 
     Appender [] appenders = null;

@@ -946,7 +946,7 @@ public class TestDefaultMemStore {
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
     EnvironmentEdgeManager.injectEdge(edge);
     edge.setCurrentTimeMillis(1234);
-    WALFactory wFactory = new WALFactory(conf, null, "1234");
+    WALFactory wFactory = new WALFactory(conf, "1234");
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir,
         conf, FSTableDescriptors.createMetaTableDescriptor(conf),
         wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));

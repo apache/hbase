@@ -76,13 +76,13 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   protected volatile T wal;
-  protected WALFactory factory = null;
-  protected Configuration conf = null;
-  protected List<WALActionsListener> listeners = null;
-  protected String providerId = null;
+  protected WALFactory factory;
+  protected Configuration conf;
+  protected List<WALActionsListener> listeners = new ArrayList<>();
+  protected String providerId;
   protected AtomicBoolean initialized = new AtomicBoolean(false);
   // for default wal provider, logPrefix won't change
-  protected String logPrefix = null;
+  protected String logPrefix;
 
   /**
    * we synchronized on walCreateLock to prevent wal recreation in different threads
@@ -92,19 +92,16 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
    * @param conf may not be null
-   * @param listeners may be null
    * @param providerId differentiate between providers from one factory, used for FS layout. may be
    *          null
    */
   @Override
-  public void init(WALFactory factory, Configuration conf, List<WALActionsListener> listeners,
-      String providerId) throws IOException {
+  public void init(WALFactory factory, Configuration conf, String providerId) throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.factory = factory;
     this.conf = conf;
-    this.listeners = listeners;
     this.providerId = providerId;
     // get log prefix
     StringBuilder sb = new StringBuilder().append(factory.factoryId);
@@ -249,8 +246,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * Pattern used to validate a WAL file name see {@link #validateWALFilename(String)} for
    * description.
    */
-  private static final Pattern pattern = Pattern
-      .compile(".*\\.\\d*(" + META_WAL_PROVIDER_ID + ")*");
+  private static final Pattern pattern =
+    Pattern.compile(".*\\.\\d*(" + META_WAL_PROVIDER_ID + ")*");
 
   /**
    * A WAL file name is of the format: &lt;wal-name&gt;{@link #WAL_FILE_NAME_DELIMITER}
@@ -264,8 +261,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Construct the directory name for all WALs on a given server. Dir names currently look like
-   * this for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
+   * Construct the directory name for all WALs on a given server. Dir names currently look like this
+   * for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name, e.g. <code>.logs/1.example.org,60030,12345</code> if
    *         <code>serverName</code> passed is <code>1.example.org,60030,12345</code>
@@ -278,9 +275,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Construct the directory name for all old WALs on a given server. The default old WALs dir
-   * looks like: <code>hbase/oldWALs</code>. If you config hbase.separate.oldlogdir.by.regionserver
-   * to true, it looks like <code>hbase//oldWALs/kalashnikov.att.net,61634,1486865297088</code>.
+   * Construct the directory name for all old WALs on a given server. The default old WALs dir looks
+   * like: <code>hbase/oldWALs</code>. If you config hbase.separate.oldlogdir.by.regionserver to
+   * true, it looks like <code>hbase//oldWALs/kalashnikov.att.net,61634,1486865297088</code>.
    * @param conf
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name
@@ -372,7 +369,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
     try {
       serverName = ServerName.parseServerName(logDirName);
-    } catch (IllegalArgumentException|IllegalStateException ex) {
+    } catch (IllegalArgumentException | IllegalStateException ex) {
       serverName = null;
       LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
     }
@@ -430,16 +427,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Opens WAL reader with retries and
-   * additional exception handling
+   * Opens WAL reader with retries and additional exception handling
    * @param path path to WAL file
    * @param conf configuration
    * @return WAL Reader instance
    * @throws IOException
    */
-  public static org.apache.hadoop.hbase.wal.WAL.Reader
-    openReader(Path path, Configuration conf)
-        throws IOException
+  public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
+      throws IOException
 
   {
     long retryInterval = 2000; // 2 sec
@@ -503,6 +498,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
   }
 
+  @Override
+  public void addWALActionsListener(WALActionsListener listener) {
+    listeners.add(listener);
+  }
 
   /**
    * Get prefix of the log from its name, assuming WAL name in format of

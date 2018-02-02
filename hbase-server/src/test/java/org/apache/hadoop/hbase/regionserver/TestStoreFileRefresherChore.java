@@ -117,7 +117,7 @@ public class TestStoreFileRefresherChore {
         new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
-    final WALFactory wals = new WALFactory(walConf, null, "log_" + replicaId);
+    final WALFactory wals = new WALFactory(walConf, "log_" + replicaId);
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     HRegion region =
         new HRegion(fs, wals.getWAL(info),

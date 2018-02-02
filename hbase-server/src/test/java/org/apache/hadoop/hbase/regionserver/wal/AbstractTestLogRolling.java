@@ -159,11 +159,11 @@ public abstract class AbstractTestLogRolling  {
   /**
    * Tests that log rolling doesn't hang when no data is written.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testLogRollOnNothingWritten() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
     final WALFactory wals =
-        new WALFactory(conf, null, ServerName.valueOf("test.com", 8080, 1).toString());
+      new WALFactory(conf, ServerName.valueOf("test.com", 8080, 1).toString());
     final WAL newLog = wals.getWAL(null);
     try {
       // Now roll the log before we write anything.
@@ -183,8 +183,6 @@ public abstract class AbstractTestLogRolling  {
 
   /**
    * Tests that logs are deleted
-   * @throws IOException
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    */
   @Test
   public void testLogRolling() throws Exception {

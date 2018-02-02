@@ -155,7 +155,7 @@ public class TestWALObserver {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseWALRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseWALRootDir, true);
     }
-    this.wals = new WALFactory(conf, null, serverName);
+    this.wals = new WALFactory(conf, serverName);
   }
 
   @After
@@ -353,8 +353,9 @@ public class TestWALObserver {
         Path p = runWALSplit(newConf);
         LOG.info("WALSplit path == " + p);
         // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf, null,
-            ServerName.valueOf(currentTest.getMethodName()+"2", 16010, System.currentTimeMillis()).toString());
+        final WALFactory wals2 = new WALFactory(conf,
+            ServerName.valueOf(currentTest.getMethodName() + "2", 16010, System.currentTimeMillis())
+                .toString());
         WAL wal2 = wals2.getWAL(null);
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
             hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
