@@ -568,7 +568,7 @@ public class RecoverableZooKeeper {
                   Bytes.toStringBinary(data));
               throw e;
             }
-            LOG.debug("Node " + path + " already exists");
+            LOG.trace("Node {} already exists", path);
             throw e;
 
           case CONNECTIONLOSS:

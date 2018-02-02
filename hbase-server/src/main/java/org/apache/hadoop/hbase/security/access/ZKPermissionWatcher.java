@@ -242,7 +242,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
 
   private void refreshAuthManager(String entry, byte[] nodeData) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Updating permissions cache from node "+entry+" with data: "+
+      LOG.debug("Updating permissions cache from {} with data {}", entry,
           Bytes.toStringBinary(nodeData));
     }
     if(AccessControlLists.isNamespaceEntry(entry)) {

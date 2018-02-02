@@ -125,7 +125,7 @@ public class ActiveMasterManager extends ZKListener {
       synchronized(clusterHasActiveMaster) {
         if (ZKUtil.watchAndCheckExists(watcher, watcher.znodePaths.masterAddressZNode)) {
           // A master node exists, there is an active master
-          LOG.debug("A master is now available");
+          LOG.trace("A master is now available");
           clusterHasActiveMaster.set(true);
         } else {
           // Node is no longer there, cluster does not have an active master
@@ -178,7 +178,7 @@ public class ActiveMasterManager extends ZKListener {
           // We are the master, return
           startupStatus.setStatus("Successfully registered as active master.");
           this.clusterHasActiveMaster.set(true);
-          LOG.info("Registered Active Master=" + this.sn);
+          LOG.info("Registered as active master=" + this.sn);
           return true;
         }
 

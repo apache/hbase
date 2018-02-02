@@ -222,10 +222,11 @@ public class TableStateManager {
     });
     for (Map.Entry<String, TableDescriptor> entry : allDescriptors.entrySet()) {
       String table = entry.getKey();
-      if (table.equals(TableName.META_TABLE_NAME.getNameAsString()))
+      if (table.equals(TableName.META_TABLE_NAME.getNameAsString())) {
         continue;
+      }
       if (!states.containsKey(table)) {
-        LOG.warn("Found table with no state, assuming ENABLED");
+        LOG.warn(table + " has no state, assuming ENABLED");
         MetaTableAccessor.updateTableState(connection, TableName.valueOf(table),
             TableState.State.ENABLED);
       }

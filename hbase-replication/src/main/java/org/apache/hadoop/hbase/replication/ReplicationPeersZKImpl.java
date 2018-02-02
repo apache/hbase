@@ -451,7 +451,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     ReplicationPeerZKImpl previous =
       ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).putIfAbsent(peerId, peer);
     if (previous == null) {
-      LOG.info("Added new peer cluster=" + peer.getPeerConfig().getClusterKey());
+      LOG.info("Added peer cluster=" + peer.getPeerConfig().getClusterKey());
     } else {
       LOG.info("Peer already present, " + previous.getPeerConfig().getClusterKey() +
         ", new cluster=" + peer.getPeerConfig().getClusterKey());

@@ -100,7 +100,7 @@ public class ReplicationPeerConfigUpgrader extends ReplicationStateZKBase {
         // We only need to copy data from tableCFs node to rpc Node the first time hmaster start.
         if (rpc.getTableCFsMap() == null || rpc.getTableCFsMap().isEmpty()) {
           // we copy TableCFs node into PeerNode
-          LOG.info("copy tableCFs into peerNode:" + peerId);
+          LOG.info("Copy table ColumnFamilies into peer=" + peerId);
           ReplicationProtos.TableCF[] tableCFs =
                   ReplicationPeerConfigUtil.parseTableCFs(
                           ZKUtil.getData(this.zookeeper, tableCFsNode));

@@ -247,7 +247,7 @@ public class ZKProcedureCoordinator implements ProcedureCoordinatorRpcs {
       return false;
     }
 
-    LOG.debug("Starting the controller for procedure member:" + coordName);
+    LOG.debug("Starting controller for procedure member=" + coordName);
     return true;
   }
 

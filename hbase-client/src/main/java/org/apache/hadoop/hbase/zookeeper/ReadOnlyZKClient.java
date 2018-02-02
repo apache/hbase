@@ -131,8 +131,8 @@ public final class ReadOnlyZKClient implements Closeable {
         conf.getInt(RECOVERY_RETRY_INTERVAL_MILLIS, DEFAULT_RECOVERY_RETRY_INTERVAL_MILLIS);
     this.keepAliveTimeMs = conf.getInt(KEEPALIVE_MILLIS, DEFAULT_KEEPALIVE_MILLIS);
     LOG.info(
-      "Start read only zookeeper connection {} to {}, " + "session timeout {} ms, retries {}, " +
-        "retry interval {} ms, keep alive {} ms",
+      "Connect {} to {} with session timeout={}ms, retries {}, " +
+        "retry interval {}ms, keepAlive={}ms",
       getId(), connectString, sessionTimeoutMs, maxRetries, retryIntervalMs, keepAliveTimeMs);
     Threads.setDaemonThreadRunning(new Thread(this::run),
       "ReadOnlyZKClient-" + connectString + "@" + getId());
@@ -313,9 +313,7 @@ public final class ReadOnlyZKClient implements Closeable {
       }
       if (task == null) {
         if (pendingRequests == 0) {
-          LOG.debug(
-            "{} to {} no activities for {} ms, close active connection. " +
-              "Will reconnect next time when there are new requests",
+          LOG.debug("{} to {} inactive for {}ms; closing (Will reconnect when new requests)",
             getId(), connectString, keepAliveTimeMs);
           closeZk();
         }

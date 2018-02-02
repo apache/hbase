@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureInMemoryChore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
@@ -216,7 +217,7 @@ public class AssignmentManager implements ServerListener {
       return;
     }
 
-    LOG.info("Starting assignment manager");
+    LOG.trace("Starting assignment manager");
 
     // Register Server Listener
     master.getServerManager().registerListener(this);
@@ -1182,8 +1183,7 @@ public class AssignmentManager implements ServerListener {
   // ============================================================================================
   public void joinCluster() throws IOException {
     final long startTime = System.currentTimeMillis();
-
-    LOG.info("Joining cluster...Loading hbase:meta content.");
+    LOG.debug("Joining cluster...");
 
     // Scan hbase:meta to build list of existing regions, servers, and assignment
     loadMeta();
@@ -1624,7 +1624,7 @@ public class AssignmentManager implements ServerListener {
   }
 
   private void startAssignmentThread() {
-    assignThread = new Thread("AssignmentThread") {
+    assignThread = new Thread(((HasThread)this.master).getName()) {
       @Override
       public void run() {
         while (isRunning()) {

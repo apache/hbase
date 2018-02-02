@@ -137,8 +137,8 @@ public class ChunkCreator {
       // the pool has run out of maxCount
       if (chunk == null) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("The chunk pool is full. Reached maxCount= " + this.pool.getMaxCount()
-              + ". Creating chunk onheap.");
+          LOG.trace("Chunk pool full (maxCount={}); creating chunk offheap.",
+              this.pool.getMaxCount());
         }
       }
     }
@@ -163,8 +163,8 @@ public class ChunkCreator {
    */
   Chunk getJumboChunk(CompactingMemStore.IndexType chunkIndexType, int jumboSize) {
     if (jumboSize <= chunkSize) {
-      LOG.warn("Jumbo chunk size " + jumboSize + " must be more than regular chunk size "
-          + chunkSize + ". Converting to regular chunk.");
+      LOG.warn("Jumbo chunk size=" + jumboSize + " must be more than regular chunk size="
+          + chunkSize + "; converting to regular chunk.");
       return getChunk(chunkIndexType,chunkSize);
     }
     // the size of the allocation includes
@@ -407,9 +407,9 @@ public class ChunkCreator {
           MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY + " must be between 0.0 and 1.0");
     }
     int initialCount = (int) (initialCountPercentage * maxCount);
-    LOG.info("Allocating MemStoreChunkPool with chunk size "
-        + StringUtils.byteDesc(getChunkSize()) + ", max count " + maxCount
-        + ", initial count " + initialCount);
+    LOG.info("Allocating MemStoreChunkPool with chunk size="
+        + StringUtils.byteDesc(getChunkSize()) + ", max count=" + maxCount
+        + ", initial count=" + initialCount);
     return new MemStoreChunkPool(maxCount, initialCount, poolSizePercentage);
   }
 
