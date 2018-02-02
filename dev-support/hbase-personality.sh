@@ -71,7 +71,7 @@ function personality_globals
 
   # Set docker container to run with 20g. Default is 4g in yetus.
   # See HBASE-19902 for how we arrived at 20g.
-  DOCKERMEMLIMIT=20g
+  # UNUSED AT MOMENT DOCKERMEMLIMIT=20g
 }
 
 ## @description  Parse extra arguments required by personalities, if any.
