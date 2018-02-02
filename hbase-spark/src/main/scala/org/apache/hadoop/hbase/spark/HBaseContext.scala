@@ -706,6 +706,7 @@ class HBaseContext(@transient sc: SparkContext,
         compactionExclude)
       rollOverRequested = false
     })
+    if(null != conn) conn.close()
   }
 
   /**
@@ -868,6 +869,7 @@ class HBaseContext(@transient sc: SparkContext,
         compactionExclude)
       rollOverRequested = false
     })
+    if(null != conn) conn.close()
   }
 
   /**
