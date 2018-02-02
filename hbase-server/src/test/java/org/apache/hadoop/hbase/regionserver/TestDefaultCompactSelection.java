@@ -170,7 +170,8 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
   public void testCompactionEmptyHFile() throws IOException {
     // Set TTL
     ScanInfo oldScanInfo = store.getScanInfo();
-    ScanInfo newScanInfo = oldScanInfo.customize(oldScanInfo.getMaxVersions(), 600);
+    ScanInfo newScanInfo = oldScanInfo.customize(oldScanInfo.getMaxVersions(), 600,
+        oldScanInfo.getKeepDeletedCells());
     store.setScanInfo(newScanInfo);
     // Do not compact empty store file
     List<HStoreFile> candidates = sfCreate(0);

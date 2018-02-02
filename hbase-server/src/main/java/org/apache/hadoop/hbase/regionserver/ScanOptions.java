@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -59,4 +60,8 @@ public interface ScanOptions {
   long getTTL();
 
   void setTTL(long ttl);
+
+  void setKeepDeletedCells(KeepDeletedCells keepDeletedCells);
+
+  KeepDeletedCells getKeepDeletedCells();
 }
