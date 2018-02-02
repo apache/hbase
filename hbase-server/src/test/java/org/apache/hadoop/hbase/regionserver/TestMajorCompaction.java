@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -134,36 +135,20 @@ public class TestMajorCompaction {
    * Test that on a major compaction, if all cells are expired or deleted, then
    * we'll end up with no product.  Make sure scanner over region returns
    * right answer in this case - and that it just basically works.
-   * @throws IOException
+   * @throws IOException exception encountered
    */
   @Test
   public void testMajorCompactingToNoOutput() throws IOException {
-    createStoreFile(r);
-    for (int i = 0; i < compactionThreshold; i++) {
-      createStoreFile(r);
-    }
-    // Now delete everything.
-    InternalScanner s = r.getScanner(new Scan());
-    do {
-      List<Cell> results = new ArrayList<>();
-      boolean result = s.next(results);
-      r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
-      if (!result) break;
-    } while(true);
-    s.close();
-    // Flush
-    r.flush(true);
-    // Major compact.
-    r.compact(true);
-    s = r.getScanner(new Scan());
-    int counter = 0;
-    do {
-      List<Cell> results = new ArrayList<>();
-      boolean result = s.next(results);
-      if (!result) break;
-      counter++;
-    } while(true);
-    assertEquals(0, counter);
+    testMajorCompactingWithDeletes(KeepDeletedCells.FALSE);
+  }
+
+  /**
+   * Test that on a major compaction,Deleted cells are retained if keep deleted cells is set to true
+   * @throws IOException exception encountered
+   */
+  @Test
+  public void testMajorCompactingWithKeepDeletedCells() throws IOException {
+    testMajorCompactingWithDeletes(KeepDeletedCells.TRUE);
   }
 
   /**
@@ -298,7 +283,7 @@ public class TestMajorCompaction {
     final int ttl = 1000;
     for (HStore store : r.getStores()) {
       ScanInfo old = store.getScanInfo();
-      ScanInfo si = old.customize(old.getMaxVersions(), ttl);
+      ScanInfo si = old.customize(old.getMaxVersions(), ttl, old.getKeepDeletedCells());
       store.setScanInfo(si);
     }
     Thread.sleep(1000);
@@ -471,7 +456,9 @@ public class TestMajorCompaction {
       boolean result = s.next(results);
       assertTrue(!results.isEmpty());
       r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
-      if (!result) break;
+      if (!result) {
+        break;
+      }
     } while (true);
     s.close();
     // Flush
@@ -485,10 +472,51 @@ public class TestMajorCompaction {
     do {
       List<Cell> results = new ArrayList<>();
       boolean result = s.next(results);
-      if (!result) break;
+      if (!result) {
+        break;
+      }
       counter++;
     } while (true);
     s.close();
     assertEquals(0, counter);
+  }
+
+  private void testMajorCompactingWithDeletes(KeepDeletedCells keepDeletedCells)
+      throws IOException {
+    createStoreFile(r);
+    for (int i = 0; i < compactionThreshold; i++) {
+      createStoreFile(r);
+    }
+    // Now delete everything.
+    InternalScanner s = r.getScanner(new Scan());
+    int originalCount = 0;
+    do {
+      List<Cell> results = new ArrayList<>();
+      boolean result = s.next(results);
+      r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
+      if (!result) break;
+      originalCount++;
+    } while (true);
+    s.close();
+    // Flush
+    r.flush(true);
+
+    for (HStore store : this.r.stores.values()) {
+      ScanInfo old = store.getScanInfo();
+      ScanInfo si = old.customize(old.getMaxVersions(), old.getTtl(), keepDeletedCells);
+      store.setScanInfo(si);
+    }
+    // Major compact.
+    r.compact(true);
+    s = r.getScanner(new Scan().setRaw(true));
+    int counter = 0;
+    do {
+      List<Cell> results = new ArrayList<>();
+      boolean result = s.next(results);
+      if (!result) break;
+      counter++;
+    } while (true);
+    assertEquals(keepDeletedCells == KeepDeletedCells.TRUE ? originalCount : 0, counter);
+
   }
 }

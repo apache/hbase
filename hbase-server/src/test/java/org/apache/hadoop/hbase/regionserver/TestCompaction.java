@@ -218,7 +218,7 @@ public class TestCompaction {
       final int ttl = 1000;
       for (HStore store : this.r.stores.values()) {
         ScanInfo old = store.getScanInfo();
-        ScanInfo si = old.customize(old.getMaxVersions(), ttl);
+        ScanInfo si = old.customize(old.getMaxVersions(), ttl, old.getKeepDeletedCells());
         store.setScanInfo(si);
       }
       Thread.sleep(ttl);

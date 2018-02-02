@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,6 +31,8 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
   private Integer maxVersions;
 
   private Long ttl;
+
+  private KeepDeletedCells keepDeletedCells = null;
 
   public CustomizedScanInfoBuilder(ScanInfo scanInfo) {
     this.scanInfo = scanInfo;
@@ -56,14 +59,25 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
   }
 
   public ScanInfo build() {
-    if (maxVersions == null && ttl == null) {
+    if (maxVersions == null && ttl == null && keepDeletedCells == null) {
       return scanInfo;
     }
-    return scanInfo.customize(getMaxVersions(), getTTL());
+    return scanInfo.customize(getMaxVersions(), getTTL(), getKeepDeletedCells());
   }
 
   @Override
   public String toString() {
     return "ScanOptions [maxVersions=" + getMaxVersions() + ", TTL=" + getTTL() + "]";
   }
+
+  @Override
+  public void setKeepDeletedCells(KeepDeletedCells keepDeletedCells) {
+    this.keepDeletedCells = keepDeletedCells;
+  }
+
+  @Override
+  public KeepDeletedCells getKeepDeletedCells() {
+    return keepDeletedCells != null ? keepDeletedCells : scanInfo.getKeepDeletedCells();
+  }
+
 }
