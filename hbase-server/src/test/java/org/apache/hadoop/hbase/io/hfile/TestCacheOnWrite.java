@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -78,7 +78,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * types: data blocks, non-root index blocks, and Bloom filter blocks.
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, MediumTests.class})
+@Category({IOTests.class, LargeTests.class})
 public class TestCacheOnWrite {
 
   @ClassRule
