@@ -64,6 +64,14 @@ function personality_globals
 
   # Override the maven options
   MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
+
+  # Yetus 0.7.0 enforces limits. Default proclimit is 1000.
+  # Up it. See HBASE-19902 for how we arrived at this number.
+  PROCLIMIT=10000
+
+  # Set docker container to run with 20g. Default is 4g in yetus.
+  # See HBASE-19902 for how we arrived at 20g.
+  DOCKERMEMLIMIT=20g
 }
 
 ## @description  Parse extra arguments required by personalities, if any.
