@@ -67,6 +67,9 @@ YETUS_ARGS=("--whitespace-tabs-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_A
 YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
+# Why are these not being picked up from hbase-personality?
+YETUS_ARGS=("--proclimit=10000" "${YETUS_ARGS[@]}")
+YETUS_ARGS=("--dockermemlimit=20g" "${YETUS_ARGS[@]}")
 
 # Currently, flaky list is calculated only for master branch.
 if [[ -n "${EXCLUDE_TESTS_URL}" && "${BRANCH_NAME}" == "master" ]]; then
