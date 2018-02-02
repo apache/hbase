@@ -67,7 +67,6 @@ YETUS_ARGS=("--whitespace-tabs-ignore-list=${WHITESPACE_IGNORE_LIST}" "${YETUS_A
 YETUS_ARGS=("--sentinel" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--branch=${BRANCH_NAME}" "${YETUS_ARGS[@]}")
 YETUS_ARGS=("--tests-filter=${TESTS_FILTER}" "${YETUS_ARGS[@]}")
-YETUS_ARGS=("--proclimit=${PROCLIMIT}" "${YETUS_ARGS[@]}")
 
 # Currently, flaky list is calculated only for master branch.
 UNDERSCORED_BRANCH_NAME=$(echo ${BRANCH_NAME} | tr '.-' '_')
