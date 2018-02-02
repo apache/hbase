@@ -912,7 +912,7 @@ public class TestHRegion {
       assertEquals(3, region.getStore(family).getStorefilesCount());
 
       // now find the compacted file, and manually add it to the recovered edits
-      Path tmpDir = region.getRegionFileSystem().getTempDir();
+      Path tmpDir = new Path(region.getRegionFileSystem().getTempDir(), Bytes.toString(family));
       FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
       String errorMsg = "Expected to find 1 file in the region temp directory "
           + "from the compaction, could not find any";

@@ -127,6 +127,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String DFS_REPLICATION = "DFS_REPLICATION";
   public static final short DEFAULT_DFS_REPLICATION = 0;
 
+  public static final String STORAGE_POLICY = "STORAGE_POLICY";
+
   /**
    * Default compression type.
    */
@@ -1565,6 +1567,26 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           "DFS replication factor cannot be less than 1 if explicitly set.");
     }
     setValue(DFS_REPLICATION, Short.toString(replication));
+    return this;
+  }
+
+  /**
+   * Return the storage policy in use by this family
+   * <p/>
+   * Not using {@code enum} here because HDFS is not using {@code enum} for storage policy, see
+   * org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite for more details
+   */
+  public String getStoragePolicy() {
+    return getValue(STORAGE_POLICY);
+  }
+
+  /**
+   * Set the storage policy for use with this family
+   * @param policy the policy to set, valid setting includes: <i>"LAZY_PERSIST"</i>,
+   *          <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>, <i>"COLD"</i>
+   */
+  public HColumnDescriptor setStoragePolicy(String policy) {
+    setValue(STORAGE_POLICY, policy);
     return this;
   }
 }

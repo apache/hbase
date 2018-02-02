@@ -179,6 +179,36 @@ public class HRegionFileSystem {
   }
 
   /**
+   * Set storage policy for a given column family.
+   * <p>
+   * If we're running on a version of HDFS that doesn't support the given storage policy
+   * (or storage policies at all), then we'll issue a log message and continue.
+   * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html
+   * for possible list e.g 'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
+   *
+   * @param familyName The name of column family.
+   * @param policyName The name of the storage policy
+   */
+  public void setStoragePolicy(String familyName, String policyName) {
+    FSUtils.setStoragePolicy(this.fs, getStoreDir(familyName), policyName);
+  }
+
+  /**
+   * Get the storage policy of the directory of CF.
+   * @param familyName The name of column family.
+   * @return Storage policy name, or {@code null} if not using {@link HFileSystem} or exception
+   *         thrown when trying to get policy
+   */
+  public String getStoragePolicyName(String familyName) {
+    if (this.fs instanceof HFileSystem) {
+      Path storeDir = getStoreDir(familyName);
+      return ((HFileSystem) this.fs).getStoragePolicyName(storeDir);
+    }
+
+    return null;
+  }
+
+  /**
    * Returns the store files available for the family.
    * This methods performs the filtering based on the valid store files.
    * @param familyName Column Family Name

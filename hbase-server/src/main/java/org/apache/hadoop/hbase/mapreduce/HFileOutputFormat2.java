@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -123,6 +124,9 @@ public class HFileOutputFormat2
   private static final boolean DEFAULT_LOCALITY_SENSITIVE = true;
   private static final String OUTPUT_TABLE_NAME_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.table.name";
+
+  public static final String STORAGE_POLICY_PROPERTY = HStore.BLOCK_STORAGE_POLICY_KEY;
+  public static final String STORAGE_POLICY_PROPERTY_CF_PREFIX = STORAGE_POLICY_PROPERTY + ".";
 
   @Override
   public RecordWriter<ImmutableBytesWritable, Cell> getRecordWriter(
@@ -190,7 +194,9 @@ public class HFileOutputFormat2
 
         // If this is a new column family, verify that the directory exists
         if (wl == null) {
-          fs.mkdirs(new Path(outputdir, Bytes.toString(family)));
+          Path cfPath = new Path(outputdir, Bytes.toString(family));
+          fs.mkdirs(cfPath);
+          configureStoragePolicy(conf, fs, family, cfPath);
         }
 
         // If any of the HFiles for the column families has reached
@@ -349,6 +355,21 @@ public class HFileOutputFormat2
         }
       }
     };
+  }
+
+  /**
+   * Configure block storage policy for CF after the directory is created.
+   */
+  static void configureStoragePolicy(final Configuration conf, final FileSystem fs,
+      byte[] family, Path cfPath) {
+    if (null == conf || null == fs || null == family || null == cfPath) {
+      return;
+    }
+    String policy =
+        conf.get(STORAGE_POLICY_PROPERTY_CF_PREFIX + Bytes.toString(family),
+          conf.get(STORAGE_POLICY_PROPERTY));
+
+    FSUtils.setStoragePolicy(fs, cfPath, policy);
   }
 
   /*

@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -725,6 +727,14 @@ public class StoreFile {
         // See HBASE-17710
         HRegionFileSystem.mkdirs(fs, conf, dir);
       }
+
+      // set block storage policy for temp path
+      String policyName = this.conf.get(HColumnDescriptor.STORAGE_POLICY);
+      if (null == policyName) {
+        policyName = this.conf.get(HStore.BLOCK_STORAGE_POLICY_KEY,
+          HStore.DEFAULT_BLOCK_STORAGE_POLICY);
+      }
+      FSUtils.setStoragePolicy(this.fs, dir, policyName);
 
       if (filePath == null) {
         filePath = getUniqueFile(fs, dir);
