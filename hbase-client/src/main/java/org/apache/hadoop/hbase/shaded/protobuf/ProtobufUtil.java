@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -200,11 +199,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Primitive type to class mapping.
-   */
-  private final static Map<String, Class<?>> PRIMITIVES = new HashMap<>();
-
-  /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
    *  we reuse them across calls.
    */
@@ -259,16 +253,6 @@ public final class ProtobufUtil {
     ClassLoader parent = ProtobufUtil.class.getClassLoader();
     Configuration conf = HBaseConfiguration.create();
     CLASS_LOADER = new DynamicClassLoader(conf, parent);
-
-    PRIMITIVES.put(Boolean.TYPE.getName(), Boolean.TYPE);
-    PRIMITIVES.put(Byte.TYPE.getName(), Byte.TYPE);
-    PRIMITIVES.put(Character.TYPE.getName(), Character.TYPE);
-    PRIMITIVES.put(Short.TYPE.getName(), Short.TYPE);
-    PRIMITIVES.put(Integer.TYPE.getName(), Integer.TYPE);
-    PRIMITIVES.put(Long.TYPE.getName(), Long.TYPE);
-    PRIMITIVES.put(Float.TYPE.getName(), Float.TYPE);
-    PRIMITIVES.put(Double.TYPE.getName(), Double.TYPE);
-    PRIMITIVES.put(Void.TYPE.getName(), Void.TYPE);
   }
 
   /**
