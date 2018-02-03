@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -66,7 +67,7 @@ public class TableStateManager {
   public void setTableState(TableName tableName, TableState.State newState) throws IOException {
     lock.writeLock().lock();
     try {
-      udpateMetaState(tableName, newState);
+      updateMetaState(tableName, newState);
     } finally {
       lock.writeLock().unlock();
     }
@@ -93,7 +94,7 @@ public class TableStateManager {
         throw new TableNotFoundException(tableName);
       }
       if (currentState.inStates(states)) {
-        udpateMetaState(tableName, newState);
+        updateMetaState(tableName, newState);
         return null;
       } else {
         return currentState.getState();
@@ -121,7 +122,7 @@ public class TableStateManager {
       throw new TableNotFoundException(tableName);
     }
     if (!currentState.inStates(states)) {
-      udpateMetaState(tableName, newState);
+      updateMetaState(tableName, newState);
       return true;
     } else {
       return false;
@@ -178,8 +179,16 @@ public class TableStateManager {
     return currentState.getState();
   }
 
-  protected void udpateMetaState(TableName tableName, TableState.State newState)
+  protected void updateMetaState(TableName tableName, TableState.State newState)
       throws IOException {
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      if (TableState.State.DISABLING.equals(newState) ||
+          TableState.State.DISABLED.equals(newState)) {
+        throw new IllegalArgumentIOException("Cannot disable the meta table; " + newState);
+      }
+      // Otherwise, just return; no need to set ENABLED on meta -- it is always ENABLED.
+      return;
+    }
     MetaTableAccessor.updateTableState(master.getConnection(), tableName, newState);
   }
 
