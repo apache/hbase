@@ -121,8 +121,12 @@ public class SplitLogManager {
       throws IOException {
     this.server = master;
     this.conf = conf;
+    // Get Server Thread name. Sometimes the Server is mocked so may not implement HasThread.
+    // For example, in tests.
+    String name = master instanceof HasThread? ((HasThread)master).getName():
+        master.getServerName().toShortString();
     this.choreService =
-        new ChoreService(((HasThread)master).getName() + ".splitLogManager.");
+        new ChoreService(name + ".splitLogManager.");
     if (server.getCoordinatedStateManager() != null) {
       SplitLogManagerCoordination coordination = getSplitLogManagerCoordination();
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
