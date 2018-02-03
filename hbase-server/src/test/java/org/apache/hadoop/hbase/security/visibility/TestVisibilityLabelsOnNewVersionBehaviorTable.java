@@ -19,12 +19,21 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 
+@Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsOnNewVersionBehaviorTable extends TestVisibilityLabelsWithDeletes {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestVisibilityLabelsOnNewVersionBehaviorTable.class);
 
   @Override
   protected Table createTable(HColumnDescriptor fam) throws IOException {
@@ -35,5 +44,4 @@ public class TestVisibilityLabelsOnNewVersionBehaviorTable extends TestVisibilit
     TEST_UTIL.getHBaseAdmin().createTable(table);
     return TEST_UTIL.getConnection().getTable(tableName);
   }
-
 }
