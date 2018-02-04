@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -42,8 +41,6 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -127,23 +124,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
         replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId,
         walProvider != null ? walProvider.getWALFileLengthProvider() : p -> OptionalLong.empty());
     if (walProvider != null) {
-      walProvider.addWALActionsListener(new WALActionsListener() {
-
-        @Override
-        public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-          replicationManager.preLogRoll(newPath);
-        }
-
-        @Override
-        public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-          replicationManager.postLogRoll(newPath);
-        }
-
-        @Override
-        public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
-          replicationManager.scopeWALEdits(logKey, logEdit);
-        }
-      });
+      walProvider
+        .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
     }
     this.statsThreadPeriod =
         this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);

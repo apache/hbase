@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -82,7 +81,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -276,23 +274,8 @@ public abstract class TestReplicationSourceManager {
     WALFactory wals =
       new WALFactory(utility.getConfiguration(), URLEncoder.encode("regionserver:60020", "UTF8"));
     ReplicationSourceManager replicationManager = replication.getReplicationManager();
-    wals.getWALProvider().addWALActionsListener(new WALActionsListener() {
-
-      @Override
-      public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-        replicationManager.preLogRoll(newPath);
-      }
-
-      @Override
-      public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-        replicationManager.postLogRoll(newPath);
-      }
-
-      @Override
-      public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {
-        replicationManager.scopeWALEdits(logKey, logEdit);
-      }
-    });
+    wals.getWALProvider()
+      .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
     final WAL wal = wals.getWAL(hri);
     manager.init();
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tableame"));
@@ -450,7 +433,7 @@ public abstract class TestReplicationSourceManager {
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(HConstants.EMPTY_START_ROW)
         .setEndKey(HConstants.EMPTY_END_ROW).build();
     WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
-    ReplicationSourceManager.scopeWALEdits(new WALKeyImpl(), edit, conf);
+    ReplicationSourceWALActionListener.scopeWALEdits(new WALKeyImpl(), edit, conf);
   }
 
   @Test
@@ -462,7 +445,7 @@ public abstract class TestReplicationSourceManager {
     WALKeyImpl logKey = new WALKeyImpl(scope);
 
     // 3. Get the scopes for the key
-    ReplicationSourceManager.scopeWALEdits(logKey, logEdit, conf);
+    ReplicationSourceWALActionListener.scopeWALEdits(logKey, logEdit, conf);
 
     // 4. Assert that no bulk load entry scopes are added if bulk load hfile replication is disabled
     assertNull("No bulk load entries scope should be added if bulk load replication is disabled.",
@@ -481,7 +464,7 @@ public abstract class TestReplicationSourceManager {
     bulkLoadConf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
 
     // 4. Get the scopes for the key
-    ReplicationSourceManager.scopeWALEdits(logKey, logEdit, bulkLoadConf);
+    ReplicationSourceWALActionListener.scopeWALEdits(logKey, logEdit, bulkLoadConf);
 
     NavigableMap<byte[], Integer> scopes = logKey.getReplicationScopes();
     // Assert family with replication scope global is present in the key scopes
