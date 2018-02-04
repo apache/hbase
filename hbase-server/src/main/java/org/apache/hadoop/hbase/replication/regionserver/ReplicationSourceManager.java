@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
@@ -745,6 +746,13 @@ public class ReplicationSourceManager implements ReplicationListener {
             LOG.warn("Skipping failover for peer:" + actualPeerId + " of node " + deadRS +
               ", peer is null");
             abortWhenFail(() -> queueStorage.removeQueue(server.getServerName(), queueId));
+            continue;
+          }
+          if (server instanceof ReplicationSyncUp.DummyServer
+              && peer.getPeerState().equals(PeerState.DISABLED)) {
+            LOG.warn("Peer {} is disbaled. ReplicationSyncUp tool will skip "
+                + "replicating data to this peer.",
+              actualPeerId);
             continue;
           }
           // track sources in walsByIdRecoveredQueues
