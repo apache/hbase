@@ -1805,6 +1805,11 @@ public class HBaseFsck extends Configured implements Closeable {
   private void loadTableStates()
   throws IOException {
     tableStates = MetaTableAccessor.getTableStates(connection);
+    // Add hbase:meta so this tool keeps working. In hbase2, meta is always enabled though it
+    // has no entry in the table states. HBCK doesn't work right w/ hbase2 but just do this in
+    // meantime.
+    this.tableStates.put(TableName.META_TABLE_NAME,
+        new TableState(TableName.META_TABLE_NAME, TableState.State.ENABLED));
   }
 
   /**

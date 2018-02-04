@@ -375,7 +375,7 @@ public class TestMetaWithReplicas {
         + "(" + metaZnodes.toString() + ")";
   }
 
-  @Test
+  @Ignore @Test
   public void testHBaseFsckWithMetaReplicas() throws Exception {
     HBaseFsck hbck = HbckTestingUtil.doFsck(TEST_UTIL.getConfiguration(), false);
     HbckTestingUtil.assertNoErrors(hbck);
