@@ -114,7 +114,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     SUPERUSER.runAs(action);
   }
 
-  @Test(timeout = 60 * 1000)
+  @Test
   public void testAddVisibilityLabelsOnRSRestart() throws Exception {
     List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
         .getRegionServerThreads();
@@ -227,7 +227,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     SUPERUSER.runAs(action);
   }
 
-  @Test(timeout = 60 * 1000)
+  @Test
   public void testVisibilityLabelsOnWALReplay() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     try (Table table = createTableAndWriteDataWithLabels(tableName,

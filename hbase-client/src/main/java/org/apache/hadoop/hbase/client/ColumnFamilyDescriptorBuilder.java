@@ -552,6 +552,11 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
+  public ColumnFamilyDescriptorBuilder setNewVersionBehavior(final boolean value) {
+    desc.setNewVersionBehavior(value);
+    return this;
+  }
+
   public ColumnFamilyDescriptorBuilder setValue(final Bytes key, final Bytes value) {
     desc.setValue(key, value);
     return this;
