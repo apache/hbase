@@ -94,7 +94,6 @@ public class SplitTableRegionProcedure
   private RegionInfo daughter_1_RI;
   private RegionInfo daughter_2_RI;
   private byte[] bestSplitRow;
-  private TableDescriptor htd;
   private RegionSplitPolicy splitPolicy;
 
   public SplitTableRegionProcedure() {
@@ -120,14 +119,14 @@ public class SplitTableRegionProcedure
         .setSplit(false)
         .setRegionId(rid)
         .build();
-    this.htd = env.getMasterServices().getTableDescriptors().get(getTableName());
-    if(this.htd.getRegionSplitPolicyClassName() != null) {
+    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
+    if(htd.getRegionSplitPolicyClassName() != null) {
       // Since we don't have region reference here, creating the split policy instance without it.
       // This can be used to invoke methods which don't require Region reference. This instantiation
       // of a class on Master-side though it only makes sense on the RegionServer-side is
       // for Phoenix Local Indexing. Refer HBASE-12583 for more information.
       Class<? extends RegionSplitPolicy> clazz =
-          RegionSplitPolicy.getSplitPolicyClass(this.htd, env.getMasterConfiguration());
+          RegionSplitPolicy.getSplitPolicyClass(htd, env.getMasterConfiguration());
       this.splitPolicy = ReflectionUtils.newInstance(clazz, env.getMasterConfiguration());
     }
   }
@@ -611,6 +610,7 @@ public class SplitTableRegionProcedure
       maxThreads, Threads.getNamedThreadFactory("StoreFileSplitter-%1$d"));
     final List<Future<Pair<Path,Path>>> futures = new ArrayList<Future<Pair<Path,Path>>>(nbFiles);
 
+    TableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
     // Split each store file.
     for (Map.Entry<String, Collection<StoreFileInfo>>e: files.entrySet()) {
       byte [] familyName = Bytes.toBytes(e.getKey());
