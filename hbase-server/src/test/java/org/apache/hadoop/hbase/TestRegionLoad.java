@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,6 +64,9 @@ public class TestRegionLoad {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    // Make servers report eagerly. This test is about looking at the cluster status reported.
+    // Make it so we don't have to wait around too long to see change.
+    UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 500);
     UTIL.startMiniCluster(4);
     admin = UTIL.getAdmin();
     admin.setBalancerRunning(false, true);
@@ -114,10 +117,11 @@ public class TestRegionLoad {
       }
       checkRegionsAndRegionLoads(tableRegions, regionLoads);
     }
+    int pause = UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3000);
 
     // Just wait here. If this fixes the test, come back and do a better job.
-    // Thought is that cluster status is stale.
-    Threads.sleep(10000);
+    // Would have to redo the below so can wait on cluster status changing.
+    Threads.sleep(2 * pause);
 
     // Check RegionLoad matches the regionLoad from ClusterStatus
     ClusterStatus clusterStatus
