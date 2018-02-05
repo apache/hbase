@@ -19,52 +19,30 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
-import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyPeerStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 
 /**
- * The base class for all replication peer related procedure.
+ * The base class for all replication peer related procedure except sync replication state
+ * transition.
  */
 @InterfaceAudience.Private
-public abstract class ModifyPeerProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, PeerModificationState>
-    implements PeerProcedureInterface {
+public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModificationState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ModifyPeerProcedure.class);
-
-  protected String peerId;
-
-  private volatile boolean locked;
-
-  // used to keep compatible with old client where we can only returns after updateStorage.
-  protected ProcedurePrepareLatch latch;
 
   protected ModifyPeerProcedure() {
   }
 
   protected ModifyPeerProcedure(String peerId) {
-    this.peerId = peerId;
-    this.latch = ProcedurePrepareLatch.createLatch(2, 0);
-  }
-
-  public ProcedurePrepareLatch getLatch() {
-    return latch;
-  }
-
-  @Override
-  public String getPeerId() {
-    return peerId;
+    super(peerId);
   }
 
   /**
@@ -150,31 +128,6 @@ public abstract class ModifyPeerProcedure
   }
 
   @Override
-  protected LockState acquireLock(MasterProcedureEnv env) {
-    if (env.getProcedureScheduler().waitPeerExclusiveLock(this, peerId)) {
-      return  LockState.LOCK_EVENT_WAIT;
-    }
-    locked = true;
-    return LockState.LOCK_ACQUIRED;
-  }
-
-  @Override
-  protected void releaseLock(MasterProcedureEnv env) {
-    locked = false;
-    env.getProcedureScheduler().wakePeerExclusiveLock(this, peerId);
-  }
-
-  @Override
-  protected boolean holdLock(MasterProcedureEnv env) {
-    return true;
-  }
-
-  @Override
-  protected boolean hasLock(MasterProcedureEnv env) {
-    return locked;
-  }
-
-  @Override
   protected void rollbackState(MasterProcedureEnv env, PeerModificationState state)
       throws IOException, InterruptedException {
     if (state == PeerModificationState.PRE_PEER_MODIFICATION) {
@@ -198,17 +151,5 @@ public abstract class ModifyPeerProcedure
   @Override
   protected PeerModificationState getInitialState() {
     return PeerModificationState.PRE_PEER_MODIFICATION;
-  }
-
-  @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    super.serializeStateData(serializer);
-    serializer.serialize(ModifyPeerStateData.newBuilder().setPeerId(peerId).build());
-  }
-
-  @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    super.deserializeStateData(serializer);
-    peerId = serializer.deserialize(ModifyPeerStateData.class).getPeerId();
   }
 }
