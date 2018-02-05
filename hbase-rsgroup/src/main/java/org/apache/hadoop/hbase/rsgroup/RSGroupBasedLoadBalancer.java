@@ -26,9 +26,9 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -299,16 +300,21 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
    *          List of servers which are online.
    * @return the list
    */
-  private List<ServerName> filterServers(Collection<Address> servers,
-      Collection<ServerName> onlineServers) {
-    ArrayList<ServerName> finalList = new ArrayList<ServerName>();
-    for (Address server : servers) {
-      for(ServerName curr: onlineServers) {
-        if(curr.getAddress().equals(server)) {
-          finalList.add(curr);
-        }
+  private List<ServerName> filterServers(Set<Address> servers,
+      List<ServerName> onlineServers) {
+    /**
+     * servers is actually a TreeSet (see {@link org.apache.hadoop.hbase.rsgroup.RSGroupInfo}),
+     * having its contains()'s time complexity as O(logn), which is good enough.
+     * TODO: consider using HashSet to pursue O(1) for contains() throughout the calling chain
+     * if needed.
+     */
+    ArrayList<ServerName> finalList = new ArrayList<>();
+    for (ServerName onlineServer : onlineServers) {
+      if (servers.contains(onlineServer.getAddress())) {
+        finalList.add(onlineServer);
       }
     }
+
     return finalList;
   }
 
