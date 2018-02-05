@@ -652,7 +652,9 @@ public class HRegionFileSystem {
    * @param f File to split.
    * @param splitRow Split Row
    * @param top True if we are referring to the top half of the hfile.
-   * @param splitPolicy
+   * @param splitPolicy A split policy instance; be careful! May not be full populated; e.g. if
+   *                    this method is invoked on the Master side, then the RegionSplitPolicy will
+   *                    NOT have a reference to a Region.
    * @return Path to created reference.
    * @throws IOException
    */
