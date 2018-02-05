@@ -98,14 +98,19 @@ public class TestMetaWithReplicas {
     TEST_UTIL.startMiniCluster(REGIONSERVERS_COUNT);
     AssignmentManager am = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager();
     Set<ServerName> sns = new HashSet<ServerName>();
-    for (int replicaId = 0; replicaId < 3; replicaId ++) {
+    ServerName hbaseMetaServerName =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getMetaTableLocator().
+            getMetaRegionLocation(TEST_UTIL.getZooKeeperWatcher());
+    LOG.info("HBASE:META DEPLOY: on " + hbaseMetaServerName);
+    sns.add(hbaseMetaServerName);
+    for (int replicaId = 1; replicaId < 3; replicaId ++) {
       RegionInfo h =
           RegionReplicaUtil.getRegionInfoForReplica(RegionInfoBuilder.FIRST_META_REGIONINFO,
               replicaId);
       try {
         am.waitForAssignment(h);
         ServerName sn = am.getRegionStates().getRegionServerOfRegion(h);
-        LOG.info(h.getRegionNameAsString() + " on " + sn);
+        LOG.info("HBASE:META DEPLOY: " + h.getRegionNameAsString() + " on " + sn);
         sns.add(sn);
       } catch (NoSuchProcedureException e) {
         LOG.info("Presume the procedure has been cleaned up so just proceed: " + e.toString());
@@ -116,7 +121,7 @@ public class TestMetaWithReplicas {
     if (sns.size() == 1) {
       int count = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size();
       assertTrue("count=" + count, count == REGIONSERVERS_COUNT);
-      LOG.warn("All hbase:meta replicas are on the one server; moving hbase:meta");
+      LOG.warn("All hbase:meta replicas are on the one server; moving hbase:meta: " + sns);
       int metaServerIndex = TEST_UTIL.getHBaseCluster().getServerWithMeta();
       int newServerIndex = metaServerIndex;
       while (newServerIndex == metaServerIndex) {
