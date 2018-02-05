@@ -398,7 +398,7 @@ message RefreshPeerParameter {
   required ServerName target_server = 3;
 }
 
-message ModifyPeerStateData {
+message PeerProcedureStateData {
   required string peer_id = 1;
 }
 
