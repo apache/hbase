@@ -990,7 +990,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  static class CustomSplitPolicy extends RegionSplitPolicy {
+  static class CustomSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
 
     @Override
     protected boolean shouldSplit() {
