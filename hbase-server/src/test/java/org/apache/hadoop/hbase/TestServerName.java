@@ -22,6 +22,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -37,6 +39,17 @@ public class TestServerName {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestServerName.class);
+
+  @Test
+  public void testHash() {
+    ServerName sn1 = ServerName.parseServerName("asf903.gq1.ygridcore.net,52690,1517835491385");
+    ServerName sn2 = ServerName.parseServerName("asf903.gq1.ygridcore.net,42231,1517835491329");
+    Set<ServerName> sns = new HashSet<ServerName>();
+    sns.add(sn2);
+    sns.add(sn1);
+    sns.add(sn1);
+    assertEquals(2, sns.size());
+  }
 
   @Test
   public void testGetHostNameMinusDomain() {
