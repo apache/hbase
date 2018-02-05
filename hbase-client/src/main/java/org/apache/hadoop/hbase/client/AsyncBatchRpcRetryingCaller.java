@@ -251,8 +251,8 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   @SuppressWarnings("unchecked")
   private void onComplete(Action action, RegionRequest regionReq, int tries, ServerName serverName,
-      RegionResult regionResult, List<Action> failedActions) {
-    Object result = regionResult.result.get(action.getOriginalIndex());
+      RegionResult regionResult, List<Action> failedActions, Throwable regionException) {
+    Object result = regionResult.result.getOrDefault(action.getOriginalIndex(), regionException);
     if (result == null) {
       LOG.error("Server " + serverName + " sent us neither result nor exception for row '"
           + Bytes.toStringBinary(action.getAction().getRow()) + "' of "
@@ -279,27 +279,28 @@ class AsyncBatchRpcRetryingCaller<T> {
     List<Action> failedActions = new ArrayList<>();
     actionsByRegion.forEach((rn, regionReq) -> {
       RegionResult regionResult = resp.getResults().get(rn);
+      Throwable regionException = resp.getException(rn);
       if (regionResult != null) {
         regionReq.actions.forEach(
-          action -> onComplete(action, regionReq, tries, serverName, regionResult, failedActions));
+          action -> onComplete(action, regionReq, tries, serverName, regionResult, failedActions,
+            regionException));
       } else {
-        Throwable t = resp.getException(rn);
         Throwable error;
-        if (t == null) {
+        if (regionException == null) {
           LOG.error(
             "Server sent us neither results nor exceptions for " + Bytes.toStringBinary(rn));
           error = new RuntimeException("Invalid response");
         } else {
-          error = translateException(t);
-          logException(tries, () -> Stream.of(regionReq), error, serverName);
-          conn.getLocator().updateCachedLocation(regionReq.loc, error);
-          if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
-            failAll(regionReq.actions.stream(), tries, error, serverName);
-            return;
-          }
-          addError(regionReq.actions, error, serverName);
-          failedActions.addAll(regionReq.actions);
+          error = translateException(regionException);
         }
+        logException(tries, () -> Stream.of(regionReq), error, serverName);
+        conn.getLocator().updateCachedLocation(regionReq.loc, error);
+        if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
+          failAll(regionReq.actions.stream(), tries, error, serverName);
+          return;
+        }
+        addError(regionReq.actions, error, serverName);
+        failedActions.addAll(regionReq.actions);
       }
     });
     if (!failedActions.isEmpty()) {
