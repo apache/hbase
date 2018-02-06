@@ -54,11 +54,11 @@ public class ReplicationPeerImpl implements ReplicationPeer {
     this.peerConfigListeners = new ArrayList<>();
   }
 
-  void setPeerState(boolean enabled) {
+  public void setPeerState(boolean enabled) {
     this.peerState = enabled ? PeerState.ENABLED : PeerState.DISABLED;
   }
 
-  void setPeerConfig(ReplicationPeerConfig peerConfig) {
+  public void setPeerConfig(ReplicationPeerConfig peerConfig) {
     this.peerConfig = peerConfig;
     peerConfigListeners.forEach(listener -> listener.peerConfigUpdated(peerConfig));
   }
