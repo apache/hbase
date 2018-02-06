@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -67,13 +68,13 @@ public class TestRestoreSnapshotFromClient {
   protected final byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
   protected TableName tableName;
-  private byte[] emptySnapshot;
-  private byte[] snapshotName0;
-  private byte[] snapshotName1;
-  private byte[] snapshotName2;
-  private int snapshot0Rows;
-  private int snapshot1Rows;
-  private Admin admin;
+  protected byte[] emptySnapshot;
+  protected byte[] snapshotName0;
+  protected byte[] snapshotName1;
+  protected byte[] snapshotName2;
+  protected int snapshot0Rows;
+  protected int snapshot1Rows;
+  protected Admin admin;
 
   @Rule
   public TestName name = new TestName();
@@ -320,5 +321,10 @@ public class TestRestoreSnapshotFromClient {
 
   protected int countRows(final Table table, final byte[]... families) throws IOException {
     return TEST_UTIL.countRows(table, families);
+  }
+
+  protected void splitRegion(final RegionInfo regionInfo) throws IOException {
+    byte[][] splitPoints = Bytes.split(regionInfo.getStartKey(), regionInfo.getEndKey(), 1);
+    admin.split(regionInfo.getTable(), splitPoints[1]);
   }
 }
