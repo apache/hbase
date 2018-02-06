@@ -57,14 +57,14 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Rule public TestName name = new TestName();
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleCreate() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = null;
     testSimpleCreate(tableName, splitKeys);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleCreateWithSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = new byte[][] {
@@ -79,7 +79,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCreateWithoutColumnFamily() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -101,7 +101,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
         cause instanceof DoNotRetryIOException);
   }
 
-  @Test(timeout=60000, expected=TableExistsException.class)
+  @Test(expected=TableExistsException.class)
   public void testCreateExisting() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -124,7 +124,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     latch2.await();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
@@ -144,13 +144,13 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
   }
 
-  @Test(timeout=90000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testRollbackAndDoubleExecution(TableDescriptorBuilder.newBuilder(MasterProcedureTestingUtility.createHTD(tableName, F1, F2)));
   }
 
-  @Test(timeout=90000)
+  @Test
   public void testRollbackAndDoubleExecutionOnMobTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
