@@ -145,9 +145,9 @@ public abstract class RpcExecutor {
       queueClass = LinkedBlockingQueue.class;
     }
 
-    LOG.info("RpcExecutor " + name + " using " + callQueueType
-        + " as call queue; numCallQueues=" + numCallQueues + "; maxQueueLength=" + maxQueueLength
-        + "; handlerCount=" + handlerCount);
+    LOG.info("RpcExecutor " + this.name + " using " + this.queueClass
+        + " as call queue; numCallQueues=" + this.numCallQueues + "; maxQueueLength="
+        + maxQueueLength + "; handlerCount=" + this.handlerCount);
   }
 
   protected int computeNumCallQueues(final int handlerCount, final float callQueuesHandlersFactor) {
