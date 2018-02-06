@@ -365,7 +365,7 @@ public abstract class TestVisibilityLabels {
     }
   }
 
-  @Test(timeout = 60 * 1000)
+  @Test
   public void testVisibilityLabelsOnRSRestart() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
