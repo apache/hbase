@@ -346,6 +346,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       }
     }
 
+    // Save this for when setting default file:// breaks things
+    this.conf.set("original.defaultFS", this.conf.get("fs.defaultFS"));
+
     // Every cluster is a local cluster until we start DFS
     // Note that conf could be null, but this.conf will not be
     String dataTestDir = getDataTestDir().toString();
