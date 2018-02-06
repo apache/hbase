@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -98,7 +99,8 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       // Take the offline regions as disabled
       for (Pair<RegionInfo, ServerName> region : regions) {
         RegionInfo regionInfo = region.getFirst();
-        if (regionInfo.isOffline() && (regionInfo.isSplit() || regionInfo.isSplitParent())) {
+        if (regionInfo.isOffline() && (regionInfo.isSplit() || regionInfo.isSplitParent()) &&
+            RegionReplicaUtil.isDefaultReplica(regionInfo)) {
           LOG.info("Take disabled snapshot of offline region=" + regionInfo);
           snapshotDisabledRegion(regionInfo);
         }
