@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -62,6 +63,8 @@ public class TestWalAndCompactingMemStoreFlush {
   public static final byte[] FAMILY1 = FAMILIES[0];
   public static final byte[] FAMILY2 = FAMILIES[1];
   public static final byte[] FAMILY3 = FAMILIES[2];
+
+  private Configuration conf;
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     int i=0;
@@ -131,16 +134,19 @@ public class TestWalAndCompactingMemStoreFlush {
       Arrays.equals(r.getFamilyMap(family).get(qf), val));
   }
 
-  @Test(timeout = 180000)
-  public void testSelectiveFlushWithEager() throws IOException {
-
-    // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
-    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
+  @Before
+  public void setup() {
+    conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
         FlushNonSloppyStoresFirstPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
+  }
+
+  @Test(timeout = 180000)
+  public void testSelectiveFlushWithEager() throws IOException {
+    // Set up the configuration
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     // set memstore to do data compaction
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.EAGER));
@@ -372,14 +378,10 @@ public class TestWalAndCompactingMemStoreFlush {
   /* Check the same as above but for index-compaction type of compacting memstore */
   @Test(timeout = 180000)
   public void testSelectiveFlushWithIndexCompaction() throws IOException {
-
     /*------------------------------------------------------------------------------*/
     /* SETUP */
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to index-compaction
@@ -633,12 +635,8 @@ public class TestWalAndCompactingMemStoreFlush {
   @Test(timeout = 180000)
   public void testSelectiveFlushAndWALinDataCompaction() throws IOException {
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
-    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.EAGER));
@@ -769,10 +767,7 @@ public class TestWalAndCompactingMemStoreFlush {
   @Test(timeout = 180000)
   public void testSelectiveFlushWithBasicAndMerge() throws IOException {
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.8);
     // set memstore to do index compaction with merge
@@ -915,13 +910,9 @@ public class TestWalAndCompactingMemStoreFlush {
   @Test(timeout = 300000)
   public void testStressFlushAndWALinIndexCompaction() throws IOException {
     // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 600 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
         200 * 1024);
-    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(MemoryCompactionPolicy.BASIC));
