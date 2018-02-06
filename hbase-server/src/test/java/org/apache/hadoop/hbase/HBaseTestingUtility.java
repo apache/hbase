@@ -2635,11 +2635,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Expire a region server's session
    * @param index which RS
    */
-  public HRegionServer expireRegionServerSession(int index) throws Exception {
+  public void expireRegionServerSession(int index) throws Exception {
     HRegionServer rs = getMiniHBaseCluster().getRegionServer(index);
     expireSession(rs.getZooKeeper(), false);
     decrementMinRegionServerCount();
-    return rs;
   }
 
   private void decrementMinRegionServerCount() {
