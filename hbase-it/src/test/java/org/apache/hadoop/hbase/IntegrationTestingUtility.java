@@ -132,6 +132,7 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
 
   public void createDistributedHBaseCluster() throws IOException {
     Configuration conf = getConfiguration();
+    conf.set("fs.defaultFS", conf.get("original.defaultFS"));
     Class<? extends ClusterManager> clusterManagerClass = conf.getClass(HBASE_CLUSTER_MANAGER_CLASS,
       DEFAULT_HBASE_CLUSTER_MANAGER_CLASS, ClusterManager.class);
     ClusterManager clusterManager = ReflectionUtils.newInstance(
