@@ -129,8 +129,8 @@ public class TestPerColumnFamilyFlush {
 
   @Test(timeout = 180000)
   public void testSelectiveFlushWhenEnabled() throws IOException {
-    // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
+    // Set up the configuration, use new one to not conflict with minicluster in other tests
+    Configuration conf = new HBaseTestingUtility().getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
@@ -271,8 +271,8 @@ public class TestPerColumnFamilyFlush {
 
   @Test(timeout = 180000)
   public void testSelectiveFlushWhenNotEnabled() throws IOException {
-    // Set up the configuration
-    Configuration conf = HBaseConfiguration.create();
+    // Set up the configuration, use new one to not conflict with minicluster in other tests
+    Configuration conf = new HBaseTestingUtility().getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllStoresPolicy.class.getName());
 
