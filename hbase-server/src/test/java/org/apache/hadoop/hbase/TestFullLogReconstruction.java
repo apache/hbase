@@ -22,10 +22,10 @@ import static org.junit.Assert.assertEquals;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -81,19 +81,20 @@ public class TestFullLogReconstruction {
     for (int i = 0; i < 4; i++) {
       TEST_UTIL.loadTable(table, FAMILY);
     }
-    HRegionServer rs = TEST_UTIL.expireRegionServerSession(0);
+    RegionServerThread rsThread = TEST_UTIL.getHBaseCluster().getRegionServerThreads().get(0);
+    TEST_UTIL.expireRegionServerSession(0);
     // make sure that the RS is fully down before reading, so that we will read the data from other
     // RSes.
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
 
       @Override
       public boolean evaluate() throws Exception {
-        return !rs.isAlive();
+        return !rsThread.isAlive();
       }
 
       @Override
       public String explainFailure() throws Exception {
-        return rs + " is still alive";
+        return rsThread.getRegionServer() + " is still alive";
       }
     });
 
