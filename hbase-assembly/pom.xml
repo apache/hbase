@@ -95,6 +95,7 @@
           <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
             <descriptor>${assembly.file}</descriptor>
+            <descriptor>src/main/assembly/client.xml</descriptor>
           </descriptors>
         </configuration>
       </plugin>
@@ -228,22 +229,22 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-hadoop-compat</artifactId>
-        <exclusions>
-          <exclusion>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-          </exclusion>
-        </exclusions>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>${compat.module}</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>${compat.module}</artifactId>
     </dependency>
     <dependency>
-       <groupId>org.apache.hbase</groupId>
-       <artifactId>hbase-shell</artifactId>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shell</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -322,6 +323,14 @@
     <dependency>
       <groupId>jline</groupId>
       <artifactId>jline</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-mapreduce</artifactId>
     </dependency>
   </dependencies>
   <profiles>
