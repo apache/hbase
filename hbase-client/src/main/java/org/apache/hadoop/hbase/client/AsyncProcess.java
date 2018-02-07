@@ -1357,6 +1357,10 @@ class AsyncProcess {
       }
     }
 
+    @VisibleForTesting
+    long getActionsInProgress() {
+      return actionsInProgress.get();
+    }
     /**
      * Called when we receive the result of a server query.
      *
@@ -1378,32 +1382,47 @@ class AsyncProcess {
       List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
       Throwable throwable = null;
       int failureCount = 0;
-      boolean canRetry = true;
+      Retry retry = null;
 
       Map<byte[], MultiResponse.RegionResult> results = responses.getResults();
       updateStats(server, results);
 
-      int failed = 0, stopped = 0;
+      int failed = 0;
+      int stopped = 0;
       // Go by original action.
       for (Map.Entry<byte[], List<Action<Row>>> regionEntry : multiAction.actions.entrySet()) {
         byte[] regionName = regionEntry.getKey();
-        Map<Integer, Object> regionResults = results.get(regionName) == null
-            ?  null : results.get(regionName).result;
-        if (regionResults == null) {
-          if (!responses.getExceptions().containsKey(regionName)) {
-            LOG.error("Server sent us neither results nor exceptions for "
-                + Bytes.toStringBinary(regionName));
-            responses.getExceptions().put(regionName, new RuntimeException("Invalid response"));
-          }
-          continue;
+        Throwable regionException = responses.getExceptions().get(regionName);
+        if (tableName == null && ClientExceptionsUtil.isMetaClearingException(regionException)) {
+          // For multi-actions, we don't have a table name, but we want to make sure to clear the
+          // cache in case there were location-related exceptions. We don't to clear the cache
+          // for every possible exception that comes through, however.
+          connection.clearCaches(server);
+        }
+        Map<Integer, Object> regionResults;
+        if (results.containsKey(regionName)) {
+          regionResults = results.get(regionName).result;
+        } else {
+          regionResults = Collections.emptyMap();
         }
         boolean regionFailureRegistered = false;
         for (Action<Row> sentAction : regionEntry.getValue()) {
           Object result = regionResults.get(sentAction.getOriginalIndex());
+          if (result == null) {
+            if (regionException == null) {
+              LOG.error("Server sent us neither results nor exceptions for " + Bytes
+                .toStringBinary(regionName) + ", numAttempt:" + numAttempt);
+              regionException = new RuntimeException("Invalid response");
+            }
+            // If the row operation encounters the region-lever error, the exception of action
+            // may be null.
+            result = regionException;
+          }
           // Failure: retry if it's make sense else update the errors lists
-          if (result == null || result instanceof Throwable) {
+          if (result instanceof Throwable) {
             Row row = sentAction.getAction();
-            throwable = ClientExceptionsUtil.findException(result);
+            throwable = regionException != null ? regionException
+              : ClientExceptionsUtil.findException(result);
             // Register corresponding failures once per server/once per region.
             if (!regionFailureRegistered) {
               regionFailureRegistered = true;
@@ -1416,20 +1435,24 @@ class AsyncProcess {
                 LOG.error("Couldn't update cached region locations: " + ex);
               }
             }
-            if (failureCount == 0) {
+            if (retry == null) {
               errorsByServer.reportServerError(server);
               // We determine canRetry only once for all calls, after reporting server failure.
-              canRetry = errorsByServer.canRetryMore(numAttempt);
+              retry =
+                errorsByServer.canRetryMore(numAttempt) ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED;
             }
             ++failureCount;
-            Retry retry = manageError(sentAction.getOriginalIndex(), row,
-                canRetry ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED, (Throwable) result, server);
-            if (retry == Retry.YES) {
-              toReplay.add(sentAction);
-            } else if (retry == Retry.NO_OTHER_SUCCEEDED) {
-              ++stopped;
-            } else {
-              ++failed;
+            switch (manageError(sentAction.getOriginalIndex(), row, retry, (Throwable) result,
+              server)) {
+              case YES:
+                toReplay.add(sentAction);
+                break;
+              case NO_OTHER_SUCCEEDED:
+                ++stopped;
+                break;
+              default:
+                ++failed;
+                break;
             }
           } else {
             if (callback != null) {
@@ -1443,52 +1466,6 @@ class AsyncProcess {
               }
             }
             setResult(sentAction, result);
-          }
-        }
-      }
-
-      // The failures global to a region. We will use for multiAction we sent previously to find the
-      //   actions to replay.
-      for (Map.Entry<byte[], Throwable> throwableEntry : responses.getExceptions().entrySet()) {
-        throwable = throwableEntry.getValue();
-        byte[] region = throwableEntry.getKey();
-        List<Action<Row>> actions = multiAction.actions.get(region);
-        if (actions == null || actions.isEmpty()) {
-          throw new IllegalStateException("Wrong response for the region: " +
-              HRegionInfo.encodeRegionName(region));
-        }
-
-        if (failureCount == 0) {
-          errorsByServer.reportServerError(server);
-          canRetry = errorsByServer.canRetryMore(numAttempt);
-        }
-        if (null == tableName && ClientExceptionsUtil.isMetaClearingException(throwable)) {
-          // For multi-actions, we don't have a table name, but we want to make sure to clear the
-          // cache in case there were location-related exceptions. We don't to clear the cache
-          // for every possible exception that comes through, however.
-          connection.clearCaches(server);
-        } else {
-          try {
-            connection.updateCachedLocations(
-              tableName, region, actions.get(0).getAction().getRow(), throwable, server);
-          } catch (Throwable ex) {
-            // That should never happen, but if it did, we want to make sure
-            // we still process errors
-            LOG.error("Couldn't update cached region locations: " + ex);
-          }
-        }
-        failureCount += actions.size();
-
-        for (Action<Row> action : actions) {
-          Row row = action.getAction();
-          Retry retry = manageError(action.getOriginalIndex(), row,
-              canRetry ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED, throwable, server);
-          if (retry == Retry.YES) {
-            toReplay.add(action);
-          } else if (retry == Retry.NO_OTHER_SUCCEEDED) {
-            ++stopped;
-          } else {
-            ++failed;
           }
         }
       }
