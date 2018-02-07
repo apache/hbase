@@ -132,6 +132,23 @@ public class LogRoller extends HasThread implements Closeable {
     }
   }
 
+  private void abort(String reason, Throwable cause) {
+    // close all WALs before calling abort on RS.
+    // This is because AsyncFSWAL replies on us for rolling a new writer to make progress, and if we
+    // failed, AsyncFSWAL may be stuck, so we need to close it to let the upper layer know that it
+    // is already broken.
+    for (WAL wal : walNeedsRoll.keySet()) {
+      // shutdown rather than close here since we are going to abort the RS and the wals need to be
+      // split when recovery
+      try {
+        wal.shutdown();
+      } catch (IOException e) {
+        LOG.warn("Failed to shutdown wal", e);
+      }
+    }
+    server.abort(reason, cause);
+  }
+
   @Override
   public void run() {
     while (running) {
@@ -153,10 +170,8 @@ public class LogRoller extends HasThread implements Closeable {
           continue;
         }
         // Time for periodic roll
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Wal roll period " + this.rollperiod + "ms elapsed");
-        }
-      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("Wal roll period {} ms elapsed", this.rollperiod);
+      } else {
         LOG.debug("WAL roll requested");
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
@@ -170,20 +185,22 @@ public class LogRoller extends HasThread implements Closeable {
               entry.getValue().booleanValue());
           walNeedsRoll.put(wal, Boolean.FALSE);
           if (regionsToFlush != null) {
-            for (byte [] r: regionsToFlush) scheduleFlush(r);
+            for (byte[] r : regionsToFlush) {
+              scheduleFlush(r);
+            }
           }
         }
       } catch (FailedLogCloseException e) {
-        server.abort("Failed log close in log roller", e);
+        abort("Failed log close in log roller", e);
       } catch (java.net.ConnectException e) {
-        server.abort("Failed log close in log roller", e);
+        abort("Failed log close in log roller", e);
       } catch (IOException ex) {
         // Abort if we get here.  We probably won't recover an IOE. HBASE-1132
-        server.abort("IOE in log roller",
+        abort("IOE in log roller",
           ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex);
       } catch (Exception ex) {
         LOG.error("Log rolling failed", ex);
-        server.abort("Log rolling failed", ex);
+        abort("Log rolling failed", ex);
       } finally {
         try {
           rollLog.set(false);
@@ -211,9 +228,8 @@ public class LogRoller extends HasThread implements Closeable {
       }
     }
     if (!scheduled) {
-      LOG.warn("Failed to schedule flush of " +
-        Bytes.toString(encodedRegionName) + ", region=" + r + ", requester=" +
-        requester);
+      LOG.warn("Failed to schedule flush of {}, region={}, requester={}",
+        Bytes.toString(encodedRegionName), r, requester);
     }
   }
 

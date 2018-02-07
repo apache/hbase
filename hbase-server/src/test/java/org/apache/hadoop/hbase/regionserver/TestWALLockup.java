@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -43,9 +42,9 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.DamagedWALException;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
-import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.Threads;
@@ -67,11 +66,12 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 /**
- * Testing for lock up of WAL subsystem.
- * Copied from TestHRegion.
+ * Testing for lock up of FSHLog.
  */
-@Category({MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestWALLockup {
 
   @ClassRule
@@ -79,14 +79,15 @@ public class TestWALLockup {
       HBaseClassTestRule.forClass(TestWALLockup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALLockup.class);
-  @Rule public TestName name = new TestName();
+
+  @Rule
+  public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte [] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
 
   HRegion region = null;
-  // Do not run unit tests in parallel (? Why not?  It don't work?  Why not?  St.Ack)
-  private static HBaseTestingUtility TEST_UTIL;
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration CONF ;
   private String dir;
 
@@ -95,7 +96,6 @@ public class TestWALLockup {
 
   @Before
   public void setup() throws IOException {
-    TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     CONF = TEST_UTIL.getConfiguration();
     // Disable block cache.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
@@ -110,8 +110,88 @@ public class TestWALLockup {
     TEST_UTIL.cleanupTestDir();
   }
 
-  String getName() {
+  private String getName() {
     return name.getMethodName();
+  }
+
+  // A WAL that we can have throw exceptions when a flag is set.
+  private static final class DodgyFSLog extends FSHLog {
+    // Set this when want the WAL to start throwing exceptions.
+    volatile boolean throwException = false;
+
+    // Latch to hold up processing until after another operation has had time to run.
+    CountDownLatch latch = new CountDownLatch(1);
+
+    public DodgyFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
+        throws IOException {
+      super(fs, root, logDir, conf);
+    }
+
+    @Override
+    protected void afterCreatingZigZagLatch() {
+      // If throwException set, then append will throw an exception causing the WAL to be
+      // rolled. We'll come in here. Hold up processing until a sync can get in before
+      // the zigzag has time to complete its setup and get its own sync in. This is what causes
+      // the lock up we've seen in production.
+      if (throwException) {
+        try {
+          LOG.info("LATCHED");
+          // So, timing can have it that the test can run and the bad flush below happens
+          // before we get here. In this case, we'll be stuck waiting on this latch but there
+          // is nothing in the WAL pipeline to get us to the below beforeWaitOnSafePoint...
+          // because all WALs have rolled. In this case, just give up on test.
+          if (!this.latch.await(5, TimeUnit.SECONDS)) {
+            LOG.warn("GIVE UP! Failed waiting on latch...Test is ABORTED!");
+          }
+        } catch (InterruptedException e) {
+        }
+      }
+    }
+
+    @Override
+    protected void beforeWaitOnSafePoint() {
+      if (throwException) {
+        LOG.info("COUNTDOWN");
+        // Don't countdown latch until someone waiting on it otherwise, the above
+        // afterCreatingZigZagLatch will get to the latch and no one will ever free it and we'll
+        // be stuck; test won't go down
+        while (this.latch.getCount() <= 0)
+          Threads.sleep(1);
+        this.latch.countDown();
+      }
+    }
+
+    @Override
+    protected Writer createWriterInstance(Path path) throws IOException {
+      final Writer w = super.createWriterInstance(path);
+      return new Writer() {
+        @Override
+        public void close() throws IOException {
+          w.close();
+        }
+
+        @Override
+        public void sync() throws IOException {
+          if (throwException) {
+            throw new IOException("FAKE! Failed to replace a bad datanode...SYNC");
+          }
+          w.sync();
+        }
+
+        @Override
+        public void append(Entry entry) throws IOException {
+          if (throwException) {
+            throw new IOException("FAKE! Failed to replace a bad datanode...APPEND");
+          }
+          w.append(entry);
+        }
+
+        @Override
+        public long getLength() {
+          return w.getLength();
+        }
+      };
+    }
   }
 
   /**
@@ -121,89 +201,8 @@ public class TestWALLockup {
    * <p>First I need to set up some mocks for Server and RegionServerServices. I also need to
    * set up a dodgy WAL that will throw an exception when we go to append to it.
    */
-  @Test (timeout=20000)
+  @Test
   public void testLockupWhenSyncInMiddleOfZigZagSetup() throws IOException {
-    // A WAL that we can have throw exceptions when a flag is set.
-    class DodgyFSLog extends FSHLog {
-      // Set this when want the WAL to start throwing exceptions.
-      volatile boolean throwException = false;
-
-      // Latch to hold up processing until after another operation has had time to run.
-      CountDownLatch latch = new CountDownLatch(1);
-
-      public DodgyFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
-      throws IOException {
-        super(fs, root, logDir, conf);
-      }
-
-      @Override
-      protected void afterCreatingZigZagLatch() {
-        // If throwException set, then append will throw an exception causing the WAL to be
-        // rolled. We'll come in here. Hold up processing until a sync can get in before
-        // the zigzag has time to complete its setup and get its own sync in. This is what causes
-        // the lock up we've seen in production.
-        if (throwException) {
-          try {
-            LOG.info("LATCHED");
-            // So, timing can have it that the test can run and the bad flush below happens
-            // before we get here. In this case, we'll be stuck waiting on this latch but there
-            // is nothing in the WAL pipeline to get us to the below beforeWaitOnSafePoint...
-            // because all WALs have rolled. In this case, just give up on test.
-            if (!this.latch.await(5, TimeUnit.SECONDS)) {
-              LOG.warn("GIVE UP! Failed waiting on latch...Test is ABORTED!");
-            }
-          } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-          }
-        }
-      }
-
-      @Override
-      protected void beforeWaitOnSafePoint() {
-        if (throwException) {
-          LOG.info("COUNTDOWN");
-          // Don't countdown latch until someone waiting on it otherwise, the above
-          // afterCreatingZigZagLatch will get to the latch and no one will ever free it and we'll
-          // be stuck; test won't go down
-          while (this.latch.getCount() <= 0) Threads.sleep(1);
-          this.latch.countDown();
-        }
-      }
-
-      @Override
-      protected Writer createWriterInstance(Path path) throws IOException {
-        final Writer w = super.createWriterInstance(path);
-        return new Writer() {
-          @Override
-          public void close() throws IOException {
-            w.close();
-          }
-
-          @Override
-          public void sync() throws IOException {
-            if (throwException) {
-              throw new IOException("FAKE! Failed to replace a bad datanode...SYNC");
-            }
-            w.sync();
-          }
-
-          @Override
-          public void append(Entry entry) throws IOException {
-            if (throwException) {
-              throw new IOException("FAKE! Failed to replace a bad datanode...APPEND");
-            }
-            w.append(entry);
-          }
-
-          @Override
-          public long getLength() {
-            return w.getLength();
-          }
-        };
-      }
-    }
-
     // Mocked up server and regionserver services. Needed below.
     Server server = Mockito.mock(Server.class);
     Mockito.when(server.getConfiguration()).thenReturn(CONF);
@@ -222,7 +221,6 @@ public class TestWALLockup {
     // There is no 'stop' once a logRoller is running.. it just dies.
     logRoller.start();
     // Now get a region and start adding in edits.
-    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL);
     byte [] bytes = Bytes.toBytes(getName());
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(
@@ -236,7 +234,7 @@ public class TestWALLockup {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKeyImpl key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
-          htd.getTableName(), System.currentTimeMillis(), mvcc, scopes);
+        TableName.META_TABLE_NAME, System.currentTimeMillis(), mvcc, scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -281,7 +279,9 @@ public class TestWALLockup {
       t.setDaemon(true);
       t.start();
       // Wait until
-      while (dodgyWAL.latch.getCount() > 0) Threads.sleep(1);
+      while (dodgyWAL.latch.getCount() > 0) {
+        Threads.sleep(1);
+      }
       // Now assert I got a new WAL file put in place even though loads of errors above.
       assertTrue(originalWAL != dodgyWAL.getCurrentFileName());
       // Can I append to it?
@@ -294,203 +294,13 @@ public class TestWALLockup {
     } finally {
       // To stop logRoller, its server has to say it is stopped.
       Mockito.when(server.isStopped()).thenReturn(true);
-      if (logRoller != null) logRoller.close();
-      try {
-        if (region != null) region.close();
-        if (dodgyWAL != null) dodgyWAL.close();
-      } catch (Exception e) {
-        LOG.info("On way out", e);
-      }
-    }
-  }
-
-  /**
-   * Reproduce locking up that happens when there's no further syncs after
-   * append fails, and causing an isolated sync then infinite wait. See
-   * HBASE-16960. If below is broken, we will see this test timeout because it
-   * is locked up.
-   * <p/>
-   * Steps for reproduce:<br/>
-   * 1. Trigger server abort through dodgyWAL1<br/>
-   * 2. Add a {@link DummyWALActionsListener} to dodgyWAL2 to cause ringbuffer
-   * event handler thread sleep for a while thus keeping {@code endOfBatch}
-   * false<br/>
-   * 3. Publish a sync then an append which will throw exception, check whether
-   * the sync could return
-   */
-  @Test(timeout = 20000)
-  public void testLockup16960() throws IOException {
-    // A WAL that we can have throw exceptions when a flag is set.
-    class DodgyFSLog extends FSHLog {
-      // Set this when want the WAL to start throwing exceptions.
-      volatile boolean throwException = false;
-
-      public DodgyFSLog(FileSystem fs, Path root, String logDir,
-          Configuration conf) throws IOException {
-        super(fs, root, logDir, conf);
-      }
-
-      @Override
-      protected Writer createWriterInstance(Path path) throws IOException {
-        final Writer w = super.createWriterInstance(path);
-        return new Writer() {
-          @Override
-          public void close() throws IOException {
-            w.close();
-          }
-
-          @Override
-          public void sync() throws IOException {
-            if (throwException) {
-              throw new IOException(
-                  "FAKE! Failed to replace a bad datanode...SYNC");
-            }
-            w.sync();
-          }
-
-          @Override
-          public void append(Entry entry) throws IOException {
-            if (throwException) {
-              throw new IOException(
-                  "FAKE! Failed to replace a bad datanode...APPEND");
-            }
-            w.append(entry);
-          }
-
-          @Override
-          public long getLength() {
-            return w.getLength();
-          }
-        };
-      }
-
-      @Override
-      protected long doReplaceWriter(Path oldPath, Path newPath,
-          Writer nextWriter) throws IOException {
-        if (throwException) {
-          throw new FailedLogCloseException("oldPath=" + oldPath + ", newPath="
-              + newPath);
-        }
-        long oldFileLen = 0L;
-        oldFileLen = super.doReplaceWriter(oldPath, newPath, nextWriter);
-        return oldFileLen;
-      }
-    }
-
-    // Mocked up server and regionserver services. Needed below.
-    Server server = new DummyServer(CONF, ServerName.valueOf(
-        "hostname1.example.org", 1234, 1L).toString());
-    RegionServerServices services = Mockito.mock(RegionServerServices.class);
-
-    CONF.setLong("hbase.regionserver.hlog.sync.timeout", 10000);
-
-    // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL,
-    // go ahead with test.
-    FileSystem fs = FileSystem.get(CONF);
-    Path rootDir = new Path(dir + getName());
-    DodgyFSLog dodgyWAL1 = new DodgyFSLog(fs, rootDir, getName(), CONF);
-
-    Path rootDir2 = new Path(dir + getName() + "2");
-    final DodgyFSLog dodgyWAL2 = new DodgyFSLog(fs, rootDir2, getName() + "2",
-        CONF);
-    // Add a listener to force ringbuffer event handler sleep for a while
-    dodgyWAL2.registerWALActionsListener(new DummyWALActionsListener());
-
-    // I need a log roller running.
-    LogRoller logRoller = new LogRoller(server, services);
-    logRoller.addWAL(dodgyWAL1);
-    logRoller.addWAL(dodgyWAL2);
-    // There is no 'stop' once a logRoller is running.. it just dies.
-    logRoller.start();
-    // Now get a region and start adding in edits.
-    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
-    final HRegion region = initHRegion(tableName, null, null, dodgyWAL1);
-    byte[] bytes = Bytes.toBytes(getName());
-    NavigableMap<byte[], Integer> scopes = new TreeMap<>(
-        Bytes.BYTES_COMPARATOR);
-    scopes.put(COLUMN_FAMILY_BYTES, 0);
-    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    try {
-      Put put = new Put(bytes);
-      put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
-      WALKeyImpl key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
-          htd.getTableName(), System.currentTimeMillis(), mvcc, scopes);
-      WALEdit edit = new WALEdit();
-      CellScanner CellScanner = put.cellScanner();
-      assertTrue(CellScanner.advance());
-      edit.add(CellScanner.current());
-
-      LOG.info("SET throwing of exception on append");
-      dodgyWAL1.throwException = true;
-      // This append provokes a WAL roll request
-      dodgyWAL1.append(region.getRegionInfo(), key, edit, true);
-      boolean exception = false;
-      try {
-        dodgyWAL1.sync();
-      } catch (Exception e) {
-        exception = true;
-      }
-      assertTrue("Did not get sync exception", exception);
-
-      // LogRoller call dodgyWAL1.rollWriter get FailedLogCloseException and
-      // cause server abort.
-      try {
-        // wait LogRoller exit.
-        Thread.sleep(50);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-
-      final CountDownLatch latch = new CountDownLatch(1);
-
-      // make RingBufferEventHandler sleep 1s, so the following sync
-      // endOfBatch=false
-      key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("sleep"), System.currentTimeMillis(), mvcc, scopes);
-      dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
-
-      Thread t = new Thread("Sync") {
-        @Override
-        public void run() {
-          try {
-            dodgyWAL2.sync();
-          } catch (IOException e) {
-            LOG.info("In sync", e);
-          }
-          latch.countDown();
-          LOG.info("Sync exiting");
-        }
-      };
-      t.setDaemon(true);
-      t.start();
-      try {
-        // make sure sync have published.
-        Thread.sleep(100);
-      } catch (InterruptedException e1) {
-        e1.printStackTrace();
-      }
-      // make append throw DamagedWALException
-      key = new WALKeyImpl(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("DamagedWALException"), System.currentTimeMillis(), mvcc, scopes);
-      dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
-
-      while (latch.getCount() > 0) {
-        Threads.sleep(100);
-      }
-      assertTrue(server.isAborted());
-    } finally {
-      if (logRoller != null) {
-        logRoller.close();
-      }
+      Closeables.close(logRoller, true);
       try {
         if (region != null) {
           region.close();
         }
-        if (dodgyWAL1 != null) {
-          dodgyWAL1.close();
-        }
-        if (dodgyWAL2 != null) {
-          dodgyWAL2.close();
+        if (dodgyWAL != null) {
+          dodgyWAL.close();
         }
       } catch (Exception e) {
         LOG.info("On way out", e);
@@ -606,11 +416,11 @@ public class TestWALLockup {
   }
 
   /**
-   * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   *         when done.
    */
-  public static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
-  throws IOException {
+  private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey, WAL wal)
+      throws IOException {
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null);
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, false, Durability.SYNC_WAL,
       wal, COLUMN_FAMILY_BYTES);
