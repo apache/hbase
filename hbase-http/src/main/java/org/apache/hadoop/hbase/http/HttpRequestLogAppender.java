@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.spi.LoggingEvent;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

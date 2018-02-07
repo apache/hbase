@@ -69,7 +69,6 @@ import org.slf4j.LoggerFactory;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestSpnegoHttpServer.class);
@@ -208,35 +207,35 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     final String principalName = clientPrincipals.iterator().next().getName();
 
     // Run this code, logged in as the subject (the client)
-    HttpResponse resp = Subject.doAs(clientSubject,
-        new PrivilegedExceptionAction<HttpResponse>() {
-      @Override
-      public HttpResponse run() throws Exception {
-        // Logs in with Kerberos via GSS
-        GSSManager gssManager = GSSManager.getInstance();
-        // jGSS Kerberos login constant
-        Oid oid = new Oid("1.2.840.113554.1.2.2");
-        GSSName gssClient = gssManager.createName(principalName, GSSName.NT_USER_NAME);
-        GSSCredential credential = gssManager.createCredential(gssClient,
-            GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+    HttpResponse resp = Subject.doAs(clientSubject, new PrivilegedExceptionAction<HttpResponse>() {
+        @Override
+        public HttpResponse run() throws Exception {
+          // Logs in with Kerberos via GSS
+          GSSManager gssManager = GSSManager.getInstance();
+          // jGSS Kerberos login constant
+          Oid oid = new Oid("1.2.840.113554.1.2.2");
+          GSSName gssClient = gssManager.createName(principalName, GSSName.NT_USER_NAME);
+          GSSCredential credential = gssManager.createCredential(gssClient,
+              GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-        HttpClientContext context = HttpClientContext.create();
-        Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-            .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-            .build();
+          HttpClientContext context = HttpClientContext.create();
+          Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
+              .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
+              .build();
 
-        HttpClient client = HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry).build();
-        BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
+          HttpClient client = HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
+                  .build();
+          BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+          credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-        URL url = new URL(getServerURL(server), "/echo?a=b");
-        context.setTargetHost(new HttpHost(url.getHost(), url.getPort()));
-        context.setCredentialsProvider(credentialsProvider);
-        context.setAuthSchemeRegistry(authRegistry);
+          URL url = new URL(getServerURL(server), "/echo?a=b");
+          context.setTargetHost(new HttpHost(url.getHost(), url.getPort()));
+          context.setCredentialsProvider(credentialsProvider);
+          context.setAuthSchemeRegistry(authRegistry);
 
-        HttpGet get = new HttpGet(url.toURI());
-        return client.execute(get, context);
-      }
+          HttpGet get = new HttpGet(url.toURI());
+          return client.execute(get, context);
+        }
     });
 
     assertNotNull(resp);

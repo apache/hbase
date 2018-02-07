@@ -44,13 +44,12 @@ import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestGlobalFilter extends HttpServerFunctionalTest {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestGlobalFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
-  static final Set<String> RECORDS = new TreeSet<>();
+  private static final Set<String> RECORDS = new TreeSet<>();
 
   /** A very simple filter that records accessed uri's */
   static public class RecordingFilter implements Filter {
@@ -67,10 +66,11 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
     }
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response,
-        FilterChain chain) throws IOException, ServletException {
-      if (filterConfig == null)
-         return;
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+      if (filterConfig == null) {
+        return;
+      }
 
       String uri = ((HttpServletRequest)request).getRequestURI();
       LOG.info("filtering " + uri);
@@ -89,21 +89,21 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
     }
   }
 
-
-  /** access a url, ignoring some IOException such as the page does not exist */
-  static void access(String urlstring) throws IOException {
+  /**
+   * access a url, ignoring some IOException such as the page does not exist
+   */
+  private static void access(String urlstring) throws IOException {
     LOG.warn("access " + urlstring);
     URL url = new URL(urlstring);
     URLConnection connection = url.openConnection();
     connection.connect();
 
     try {
-      BufferedReader in = new BufferedReader(new InputStreamReader(
-          connection.getInputStream()));
-      try {
-        for(; in.readLine() != null; );
-      } finally {
-        in.close();
+      try (BufferedReader in = new BufferedReader(
+              new InputStreamReader(connection.getInputStream(), "UTF-8"))) {
+        for (; in.readLine() != null; ) {
+          // Ignoring the content of the URLs. Only checking if something is there.
+        }
       }
     } catch(IOException ioe) {
       LOG.warn("urlstring=" + urlstring, ioe);
@@ -131,15 +131,17 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
     final String outURL = "/static/a.out";
     final String logURL = "/logs/a.log";
 
-    final String[] urls = {fsckURL, stacksURL, ajspURL, listPathsURL,
-        dataURL, streamFile, rootURL, allURL, outURL, logURL};
+    final String[] urls = {
+      fsckURL, stacksURL, ajspURL, listPathsURL, dataURL, streamFile, rootURL, allURL,
+      outURL, logURL
+    };
 
     //access the urls
     final String prefix = "http://"
         + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
-      for(int i = 0; i < urls.length; i++) {
-        access(prefix + urls[i]);
+      for (String url : urls) {
+        access(prefix + url);
       }
     } finally {
       http.stop();
@@ -148,8 +150,8 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
     LOG.info("RECORDS = " + RECORDS);
 
     //verify records
-    for(int i = 0; i < urls.length; i++) {
-      assertTrue(RECORDS.remove(urls[i]));
+    for (String url : urls) {
+      assertTrue(RECORDS.remove(url));
     }
     assertTrue(RECORDS.isEmpty());
   }

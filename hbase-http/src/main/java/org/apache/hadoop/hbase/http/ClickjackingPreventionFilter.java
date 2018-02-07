@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import java.io.IOException;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -24,32 +26,29 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ClickjackingPreventionFilter implements Filter {
+  private FilterConfig filterConfig;
 
-    private FilterConfig filterConfig;
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {
+    this.filterConfig = filterConfig;
+  }
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        this.filterConfig = filterConfig;
-    }
+  @Override
+  public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
+        throws IOException, ServletException {
+    HttpServletResponse httpRes = (HttpServletResponse) res;
+    httpRes.addHeader("X-Frame-Options", filterConfig.getInitParameter("xframeoptions"));
+    chain.doFilter(req, res);
+  }
 
-    @Override
-    public void doFilter(ServletRequest req, ServletResponse res,
-                         FilterChain chain)
-            throws IOException, ServletException {
-        HttpServletResponse httpRes = (HttpServletResponse) res;
-        httpRes.addHeader("X-Frame-Options", filterConfig.getInitParameter("xframeoptions"));
-        chain.doFilter(req, res);
-    }
-
-    @Override
-    public void destroy() {
-    }
-
+  @Override
+  public void destroy() {
+  }
 }

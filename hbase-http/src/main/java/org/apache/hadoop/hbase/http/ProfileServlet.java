@@ -31,10 +31,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hbase.util.ProcessUtils;
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Servlet that runs async-profiler as web-endpoint.
