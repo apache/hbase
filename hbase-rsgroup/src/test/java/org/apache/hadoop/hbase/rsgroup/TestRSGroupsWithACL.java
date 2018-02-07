@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.security.access.TableAuthManager;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -52,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * Performs authorization checks for rsgroup operations, according to different
  * levels of authorized users.
  */
-@Category({SecurityTests.class})
+@Category({SecurityTests.class, MediumTests.class})
 public class TestRSGroupsWithACL extends SecureTestUtil{
 
   @ClassRule
