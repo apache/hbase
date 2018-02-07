@@ -44,13 +44,12 @@ import org.slf4j.LoggerFactory;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestPathFilter extends HttpServerFunctionalTest {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestPathFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
-  static final Set<String> RECORDS = new TreeSet<>();
+  private static final Set<String> RECORDS = new TreeSet<>();
 
   /** A very simple filter that records accessed uri's */
   static public class RecordingFilter implements Filter {
@@ -69,8 +68,9 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response,
         FilterChain chain) throws IOException, ServletException {
-      if (filterConfig == null)
-         return;
+      if (filterConfig == null) {
+        return;
+      }
 
       String uri = ((HttpServletRequest)request).getRequestURI();
       LOG.info("filtering " + uri);
@@ -89,9 +89,10 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     }
   }
 
-
-  /** access a url, ignoring some IOException such as the page does not exist */
-  static void access(String urlstring) throws IOException {
+  /**
+   * access a url, ignoring some IOException such as the page does not exist
+   */
+  private static void access(String urlstring) throws IOException {
     LOG.warn("access " + urlstring);
     URL url = new URL(urlstring);
 
@@ -99,12 +100,11 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     connection.connect();
 
     try {
-      BufferedReader in = new BufferedReader(new InputStreamReader(
-          connection.getInputStream()));
-      try {
-        for(; in.readLine() != null; );
-      } finally {
-        in.close();
+      try (BufferedReader in = new BufferedReader(
+              new InputStreamReader(connection.getInputStream(), "UTF-8"))) {
+        for (; in.readLine() != null; ) {
+          // Ignoring the content of the URLs. Only checking if something is there.
+        }
       }
     } catch(IOException ioe) {
       LOG.warn("urlstring=" + urlstring, ioe);
@@ -130,8 +130,7 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     final String rootURL = "/";
     final String allURL = "/*";
 
-    final String[] filteredUrls = {baseURL, baseSlashURL, addedURL,
-        addedSlashURL, longURL};
+    final String[] filteredUrls = { baseURL, baseSlashURL, addedURL, addedSlashURL, longURL };
     final String[] notFilteredUrls = {rootURL, allURL};
 
     // access the urls and verify our paths specs got added to the
@@ -139,11 +138,11 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     final String prefix = "http://"
         + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
-      for(int i = 0; i < filteredUrls.length; i++) {
-        access(prefix + filteredUrls[i]);
+      for (String filteredUrl : filteredUrls) {
+        access(prefix + filteredUrl);
       }
-      for(int i = 0; i < notFilteredUrls.length; i++) {
-        access(prefix + notFilteredUrls[i]);
+      for (String notFilteredUrl : notFilteredUrls) {
+        access(prefix + notFilteredUrl);
       }
     } finally {
       http.stop();
@@ -152,8 +151,8 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     LOG.info("RECORDS = " + RECORDS);
 
     //verify records
-    for(int i = 0; i < filteredUrls.length; i++) {
-      assertTrue(RECORDS.remove(filteredUrls[i]));
+    for (String filteredUrl : filteredUrls) {
+      assertTrue(RECORDS.remove(filteredUrl));
     }
     assertTrue(RECORDS.isEmpty());
   }

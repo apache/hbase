@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.http.log;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
@@ -24,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URL;
+import java.util.Objects;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -40,12 +42,11 @@ import org.slf4j.impl.Log4jLoggerAdapter;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestLogLevel {
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestLogLevel.class);
 
-  static final PrintStream out = System.out;
+  private static final PrintStream out = System.out;
 
   @Test
   @SuppressWarnings("deprecation")
@@ -53,7 +54,7 @@ public class TestLogLevel {
     String logName = TestLogLevel.class.getName();
     org.slf4j.Logger testlog = LoggerFactory.getLogger(logName);
 
-    //only test Log4JLogger
+    // only test Log4JLogger
     if (testlog instanceof Log4jLoggerAdapter) {
       Logger log = LogManager.getLogger(logName);
       log.debug("log.debug1");
@@ -71,17 +72,17 @@ public class TestLogLevel {
         String authority = NetUtils.getHostPortString(server
             .getConnectorAddress(0));
 
-        //servlet
+        // servlet
         URL url =
             new URL("http://" + authority + "/logLevel?log=" + logName + "&level=" + Level.ERROR);
         out.println("*** Connecting to " + url);
         try (BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()))) {
-          for(String line; (line = in.readLine()) != null; out.println(line));
+          in.lines().filter(Objects::nonNull).forEach(out::println);
         }
         log.debug("log.debug2");
         log.info("log.info2");
         log.error("log.error2");
-        assertTrue(Level.ERROR.equals(log.getEffectiveLevel()));
+        assertEquals(Level.ERROR, log.getEffectiveLevel());
 
         //command line
         String[] args = {"-setlevel", authority, logName, Level.DEBUG.toString()};
@@ -89,14 +90,13 @@ public class TestLogLevel {
         log.debug("log.debug3");
         log.info("log.info3");
         log.error("log.error3");
-        assertTrue(Level.DEBUG.equals(log.getEffectiveLevel()));
+        assertEquals(Level.DEBUG, log.getEffectiveLevel());
       } finally {
         if (server != null) {
           server.stop();
         }
       }
-    }
-    else {
+    } else {
       out.println(testlog.getClass() + " not tested.");
     }
   }

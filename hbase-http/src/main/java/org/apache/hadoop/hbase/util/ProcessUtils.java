@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Process related utilities.

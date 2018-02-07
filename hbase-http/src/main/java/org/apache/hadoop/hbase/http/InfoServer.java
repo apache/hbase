@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
@@ -24,9 +22,9 @@ import java.net.URI;
 
 import javax.servlet.http.HttpServlet;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -38,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public class InfoServer {
-
   private static final String HBASE_APP_DIR = "hbase-webapps";
   private final org.apache.hadoop.hbase.http.HttpServer httpServer;
 
@@ -48,32 +45,33 @@ public class InfoServer {
    * @param name The name of the server
    * @param bindAddress address to bind to
    * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and
-   * increment by 1 until it finds a free port.
-   * @throws IOException e
+   * @param findPort whether the server should start at the given port and increment by 1 until it
+   *                 finds a free port.
+   * @param c the {@link Configuration} to build the server
+   * @throws IOException if getting one of the password fails or the server cannot be created
    */
   public InfoServer(String name, String bindAddress, int port, boolean findPort,
-      final Configuration c)
-  throws IOException {
+      final Configuration c) throws IOException {
     HttpConfig httpConfig = new HttpConfig(c);
     HttpServer.Builder builder =
       new org.apache.hadoop.hbase.http.HttpServer.Builder();
 
-      builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
-        bindAddress + ":" +
-        port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
-      String logDir = System.getProperty("hbase.log.dir");
-      if (logDir != null) {
-        builder.setLogDir(logDir);
-      }
+    builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
+      bindAddress + ":" +
+      port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
+    String logDir = System.getProperty("hbase.log.dir");
+    if (logDir != null) {
+      builder.setLogDir(logDir);
+    }
     if (httpConfig.isSecure()) {
-    builder.keyPassword(HBaseConfiguration.getPassword(c, "ssl.server.keystore.keypassword", null))
-      .keyStore(c.get("ssl.server.keystore.location"),
-        HBaseConfiguration.getPassword(c,"ssl.server.keystore.password", null),
-        c.get("ssl.server.keystore.type", "jks"))
-      .trustStore(c.get("ssl.server.truststore.location"),
-        HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
-        c.get("ssl.server.truststore.type", "jks"));
+      builder.keyPassword(HBaseConfiguration
+              .getPassword(c, "ssl.server.keystore.keypassword", null))
+        .keyStore(c.get("ssl.server.keystore.location"),
+                HBaseConfiguration.getPassword(c,"ssl.server.keystore.password", null),
+                c.get("ssl.server.keystore.type", "jks"))
+        .trustStore(c.get("ssl.server.truststore.location"),
+                HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
+                c.get("ssl.server.truststore.type", "jks"));
     }
     // Enable SPNEGO authentication
     if ("kerberos".equalsIgnoreCase(c.get(HttpServer.HTTP_UI_AUTHENTICATION, null))) {
@@ -89,7 +87,7 @@ public class InfoServer {
 
   public void addServlet(String name, String pathSpec,
           Class<? extends HttpServlet> clazz) {
-      this.httpServer.addServlet(name, pathSpec, clazz);
+    this.httpServer.addServlet(name, pathSpec, clazz);
   }
 
   public void setAttribute(String name, Object value) {
@@ -100,6 +98,10 @@ public class InfoServer {
     this.httpServer.start();
   }
 
+  /**
+   * @return the port of the info server
+   * @deprecated Since 0.99.0
+   */
   @Deprecated
   public int getPort() {
     return this.httpServer.getPort();
@@ -108,5 +110,4 @@ public class InfoServer {
   public void stop() throws Exception {
     this.httpServer.stop();
   }
-
 }

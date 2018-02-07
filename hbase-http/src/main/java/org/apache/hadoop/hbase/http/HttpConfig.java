@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import org.apache.hadoop.conf.Configuration;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Statics to get access to Http related configuration.
@@ -51,7 +52,7 @@ public class HttpConfig {
     }
   }
 
-   public HttpConfig(final Configuration conf) {
+  public HttpConfig(final Configuration conf) {
     boolean sslEnabled = conf.getBoolean(
       ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY,
       ServerConfigurationKeys.HBASE_SSL_ENABLED_DEFAULT);

@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.Assert;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.http.HttpServer.Builder;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URL;
-import java.net.MalformedURLException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.http.HttpServer.Builder;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.junit.Assert;
 
 /**
  * This is a base class for functional tests of the {@link HttpServer}.
@@ -114,9 +114,9 @@ public class HttpServerFunctionalTest extends Assert {
     File testWebappDir = new File(webapps +
         File.separatorChar + TEST);
     try {
-    if (!testWebappDir.exists()) {
-      fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
-    }
+      if (!testWebappDir.exists()) {
+        fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
+      }
     }
     catch (IOException e) {
     }
@@ -158,8 +158,8 @@ public class HttpServerFunctionalTest extends Assert {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).build();
   }
 
-  public static HttpServer createServer(String webapp, Configuration conf, AccessControlList adminsAcl)
-      throws IOException {
+  public static HttpServer createServer(String webapp, Configuration conf,
+      AccessControlList adminsAcl) throws IOException {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
   }
 
@@ -178,7 +178,8 @@ public class HttpServerFunctionalTest extends Assert {
    */
   public static HttpServer createServer(String webapp, Configuration conf,
       String[] pathSpecs) throws IOException {
-    return localServerBuilder(webapp).setFindPort(true).setConf(conf).setPathSpec(pathSpecs).build();
+    return localServerBuilder(webapp).setFindPort(true).setConf(conf).setPathSpec(pathSpecs)
+            .build();
   }
 
   /**
