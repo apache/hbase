@@ -78,7 +78,7 @@ public class TestHBaseTestingUtility {
    * that what we insert in one place doesn't end up in the other.
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Test
   public void testMultiClusters() throws Exception {
     // Create three clusters
 

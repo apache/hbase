@@ -254,7 +254,7 @@ public class TestHRegionReplayEvents {
    * Tests a case where we replay only a flush start marker, then the region is closed. This region
    * should not block indefinitely
    */
-  @Test (timeout = 60000)
+  @Test
   public void testOnlyReplayingFlushStartDoesNotHoldUpRegionClose() throws IOException {
     // load some data to primary and flush
     int start = 0;

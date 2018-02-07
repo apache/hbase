@@ -64,7 +64,7 @@ public class TestMasterBalanceThrottling {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testThrottlingByBalanceInterval() throws Exception {
     // Use default config and start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
@@ -88,7 +88,7 @@ public class TestMasterBalanceThrottling {
     TEST_UTIL.deleteTable(tableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testThrottlingByMaxRitPercent() throws Exception {
     // Set max balancing time to 500 ms and max percent of regions in transition to 0.05
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_MAX_BALANCING, 500);

@@ -99,7 +99,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testQualifierAccess() throws Exception {
     final Table table = createTable(TEST_UTIL, TABLE, new byte[][] { FAMILY });
     try {

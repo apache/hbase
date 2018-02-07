@@ -178,7 +178,7 @@ public class TestMultiParallel {
    * @throws NoSuchFieldException
    * @throws SecurityException
    */
-  @Test(timeout=300000)
+  @Test
   public void testActiveThreadsCount() throws Exception {
     UTIL.getConfiguration().setLong("hbase.htable.threads.coresize", slaves + 1);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration())) {
@@ -202,7 +202,7 @@ public class TestMultiParallel {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testBatchWithGet() throws Exception {
     LOG.info("test=testBatchWithGet");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
@@ -271,7 +271,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testFlushCommitsNoAbort() throws Exception {
     LOG.info("test=testFlushCommitsNoAbort");
     doTestFlushCommits(false);
@@ -283,7 +283,7 @@ public class TestMultiParallel {
    *
    * @throws Exception
    */
-  @Test (timeout=360000)
+  @Test
   public void testFlushCommitsWithAbort() throws Exception {
     LOG.info("test=testFlushCommitsWithAbort");
     doTestFlushCommits(true);
@@ -354,7 +354,7 @@ public class TestMultiParallel {
     LOG.info("done");
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
     Table table = CONNECTION.getTable(TEST_TABLE);
@@ -387,7 +387,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testBatchWithDelete() throws Exception {
     LOG.info("test=testBatchWithDelete");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
@@ -418,7 +418,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testHTableDeleteWithList() throws Exception {
     LOG.info("test=testHTableDeleteWithList");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
@@ -448,7 +448,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
@@ -487,7 +487,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testBatchWithIncrementAndAppend() throws Exception {
     LOG.info("test=testBatchWithIncrementAndAppend");
     final byte[] QUAL1 = Bytes.toBytes("qual1");
@@ -522,7 +522,7 @@ public class TestMultiParallel {
     table.close();
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testNonceCollision() throws Exception {
     LOG.info("test=testNonceCollision");
     final Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
@@ -622,7 +622,7 @@ public class TestMultiParallel {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
     Table table = UTIL.getConnection().getTable(TEST_TABLE);

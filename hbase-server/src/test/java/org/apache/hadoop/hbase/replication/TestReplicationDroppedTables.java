@@ -96,7 +96,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test
   public void testEditsStuckBehindDroppedTable() throws Exception {
     // Sanity check
     // Make sure by default edits for dropped tables stall the replication queue, even when the
@@ -104,14 +104,14 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     testEditsBehindDroppedTable(false, "test_dropped");
   }
 
-  @Test(timeout = 600000)
+  @Test
   public void testEditsDroppedWithDroppedTable() throws Exception {
     // Make sure by default edits for dropped tables are themselves dropped when the
     // table(s) in question have been deleted on both ends.
     testEditsBehindDroppedTable(true, "test_dropped");
   }
 
-  @Test(timeout = 600000)
+  @Test
   public void testEditsDroppedWithDroppedTableNS() throws Exception {
     // also try with a namespace
     Connection connection1 = ConnectionFactory.createConnection(conf1);
@@ -192,7 +192,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     conf1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
   }
 
-  @Test(timeout = 600000)
+  @Test
   public void testEditsBehindDroppedTableTiming() throws Exception {
     conf1.setBoolean(HConstants.REPLICATION_DROP_ON_DELETED_TABLE_KEY, true);
     conf1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);

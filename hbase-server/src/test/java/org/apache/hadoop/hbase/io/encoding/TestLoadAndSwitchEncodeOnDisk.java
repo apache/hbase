@@ -73,7 +73,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
   }
 
   @Override
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void loadTest() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 

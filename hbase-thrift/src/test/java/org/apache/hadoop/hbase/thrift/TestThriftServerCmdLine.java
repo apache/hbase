@@ -154,7 +154,7 @@ public class TestThriftServerCmdLine {
     cmdLineThread.start();
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testRunThriftServer() throws Exception {
     List<String> args = new ArrayList<>();
     if (implType != null) {

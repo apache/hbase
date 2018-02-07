@@ -134,7 +134,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals(0, rt.getListOfRegionServers().size());
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testRegionServerRemovedEvent() throws Exception {
     ZKUtil.createAndWatch(zkw,
       ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"),
@@ -150,7 +150,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("hostname2.example.org:1234", rsRemovedData);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testPeerNameControl() throws Exception {
     int exists = 0;
     rp.getPeerStorage().addPeer("6",

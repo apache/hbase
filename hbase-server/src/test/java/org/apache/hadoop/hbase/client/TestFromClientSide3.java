@@ -269,7 +269,7 @@ public class TestFromClientSide3 {
   }
 
   // override the config settings at the CF level and ensure priority
-  @Test(timeout = 60000)
+  @Test
   public void testAdvancedConfigOverride() throws Exception {
     /*
      * Overall idea: (1) create 3 store files and issue a compaction. config's
@@ -681,7 +681,7 @@ public class TestFromClientSide3 {
     assertTrue(con.hasCellBlockSupport());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testPutWithPreBatchMutate() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testPreBatchMutate(tableName, () -> {
@@ -696,7 +696,7 @@ public class TestFromClientSide3 {
     });
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRowMutationsWithPreBatchMutate() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     testPreBatchMutate(tableName, () -> {
@@ -743,7 +743,7 @@ public class TestFromClientSide3 {
     TEST_UTIL.deleteTable(tableName);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testLockLeakWithDelta() throws Exception, Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -796,7 +796,7 @@ public class TestFromClientSide3 {
     assertEquals(0, readLockCount);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testMultiRowMutations() throws Exception, Throwable {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);

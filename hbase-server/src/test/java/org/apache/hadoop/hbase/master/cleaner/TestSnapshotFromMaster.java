@@ -168,7 +168,7 @@ public class TestSnapshotFromMaster {
    * <li>If asking about a snapshot has hasn't occurred, you should get an error.</li>
    * </ol>
    */
-  @Test(timeout = 300000)
+  @Test
   public void testIsDoneContract() throws Exception {
 
     IsSnapshotDoneRequest.Builder builder = IsSnapshotDoneRequest.newBuilder();
@@ -222,7 +222,7 @@ public class TestSnapshotFromMaster {
     assertTrue("Completed, on-disk snapshot not found", response.getDone());
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testGetCompletedSnapshots() throws Exception {
     // first check when there are no snapshots
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
@@ -253,7 +253,7 @@ public class TestSnapshotFromMaster {
     assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDeleteSnapshot() throws Exception {
 
     String snapshotName = "completed";
@@ -280,7 +280,7 @@ public class TestSnapshotFromMaster {
    * should be retained, while those that are not in a snapshot should be deleted.
    * @throws Exception on failure
    */
-  @Test(timeout = 300000)
+  @Test
   public void testSnapshotHFileArchiving() throws Exception {
     Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots

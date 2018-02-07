@@ -157,7 +157,7 @@ public class TestRegionReplicaReplicationEndpoint {
     admin.close();
   }
 
-  @Test (timeout=240000)
+  @Test
   public void testRegionReplicaReplicationPeerIsCreatedForModifyTable() throws Exception {
     // modify a table by adding region replicas. Check whether the replication peer is created
     // and replication started.
@@ -280,22 +280,22 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test(timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationWith2Replicas() throws Exception {
     testRegionReplicaReplication(2);
   }
 
-  @Test(timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationWith3Replicas() throws Exception {
     testRegionReplicaReplication(3);
   }
 
-  @Test(timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationWith10Replicas() throws Exception {
     testRegionReplicaReplication(10);
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
     int regionReplication = 3;
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -327,7 +327,7 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationForFlushAndCompaction() throws Exception {
     // Tests a table with region replication 3. Writes some data, and causes flushes and
     // compactions. Verifies that the data is readable from the replicas. Note that this
@@ -362,12 +362,12 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationIgnoresDisabledTables() throws Exception {
     testRegionReplicaReplicationIgnoresDisabledTables(false);
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationIgnoresDroppedTables() throws Exception {
     testRegionReplicaReplicationIgnoresDisabledTables(true);
   }

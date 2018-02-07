@@ -66,7 +66,7 @@ public class TestRestartCluster {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testClusterRestart() throws Exception {
     UTIL.startMiniCluster(3);
     while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
@@ -112,7 +112,7 @@ public class TestRestartCluster {
   /**
    * This tests retaining assignments on a cluster restart
    */
-  @Test (timeout=300000)
+  @Test
   public void testRetainAssignmentOnRestart() throws Exception {
     UTIL.startMiniCluster(2);
     while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {

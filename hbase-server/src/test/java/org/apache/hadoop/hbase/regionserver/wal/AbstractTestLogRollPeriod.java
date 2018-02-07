@@ -85,7 +85,7 @@ public abstract class AbstractTestLogRollPeriod {
   /**
    * Tests that the LogRoller perform the roll with some data in the log
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithEdits() throws Exception {
     final TableName tableName = TableName.valueOf("TestLogRollPeriodWithEdits");
     final String family = "cf";

@@ -71,7 +71,7 @@ public class TestRegionServerHostname {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=30000)
+  @Test
   public void testInvalidRegionServerHostnameAbortsServer() throws Exception {
     String invalidHostname = "hostAddr.invalid";
     TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, invalidHostname);
@@ -86,7 +86,7 @@ public class TestRegionServerHostname {
     assertNull("Failed to validate against invalid hostname", hrs);
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testRegionServerHostname() throws Exception {
     Enumeration<NetworkInterface> netInterfaceList = NetworkInterface.getNetworkInterfaces();
     while (netInterfaceList.hasMoreElements()) {
@@ -122,7 +122,7 @@ public class TestRegionServerHostname {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testConflictRegionServerHostnameConfigurationsAbortServer() throws Exception {
     Enumeration<NetworkInterface> netInterfaceList = NetworkInterface.getNetworkInterfaces();
     while (netInterfaceList.hasMoreElements()) {
@@ -159,7 +159,7 @@ public class TestRegionServerHostname {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testRegionServerHostnameReportedToMaster() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY,
     true);

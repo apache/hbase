@@ -288,7 +288,7 @@ public class TestNamespace {
     admin.deleteTable(desc.getTableName());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testNamespaceOperations() throws IOException {
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns1").build());
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns2").build());

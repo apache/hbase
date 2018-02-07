@@ -148,7 +148,7 @@ public class TestCellACLs extends SecureTestUtil {
     Threads.sleep(1000);
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testCellPermissions() throws Exception {
     // store two sets of values, one store with a cell level ACL, and one without
     verifyAllowed(new AccessTestAction() {
@@ -375,7 +375,7 @@ public class TestCellACLs extends SecureTestUtil {
    * Insure we are not granting access in the absence of any cells found
    * when scanning for covered cells.
    */
-  @Test (timeout=120000)
+  @Test
   public void testCoveringCheck() throws Exception {
     // Grant read access to USER_OTHER
     grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(), TEST_FAMILY,

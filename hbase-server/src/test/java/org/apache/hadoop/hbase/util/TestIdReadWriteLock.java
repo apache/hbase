@@ -115,7 +115,7 @@ public class TestIdReadWriteLock {
 
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMultipleClients() throws Exception {
     ExecutorService exec = Executors.newFixedThreadPool(NUM_THREADS);
     try {

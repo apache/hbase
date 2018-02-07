@@ -69,22 +69,22 @@ public class TestCompactionState {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMajorCompaction() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 8, CompactionState.MAJOR, false);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMinorCompaction() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 15, CompactionState.MINOR, false);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMajorCompactionOnFamily() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 8, CompactionState.MAJOR, true);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testMinorCompactionOnFamily() throws IOException, InterruptedException {
     compaction(name.getMethodName(), 15, CompactionState.MINOR, true);
   }

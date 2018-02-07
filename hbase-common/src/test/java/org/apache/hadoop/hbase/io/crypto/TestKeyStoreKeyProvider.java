@@ -88,7 +88,7 @@ public class TestKeyStoreKeyProvider {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKeyStoreKeyProviderWithPassword() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
     provider.init("jceks://" + storeFile.toURI().getPath() + "?password=" + PASSWORD);
@@ -101,7 +101,7 @@ public class TestKeyStoreKeyProvider {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKeyStoreKeyProviderWithPasswordFile() throws Exception {
     KeyProvider provider = new KeyStoreKeyProvider();
     provider.init("jceks://" + storeFile.toURI().getPath() + "?passwordFile=" +

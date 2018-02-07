@@ -48,7 +48,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestDeleteTableProcedure.class);
   @Rule public TestName name = new TestName();
 
-  @Test(timeout=60000, expected=TableNotFoundException.class)
+  @Test(expected=TableNotFoundException.class)
   public void testDeleteNotExistentTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
@@ -59,7 +59,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     latch.await();
   }
 
-  @Test(timeout=60000, expected=TableNotDisabledException.class)
+  @Test(expected=TableNotDisabledException.class)
   public void testDeleteNotDisabledTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
@@ -72,7 +72,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     latch.await();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testDeleteDeletedTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -103,14 +103,14 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleDelete() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = null;
     testSimpleDelete(tableName, splitKeys);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleDeleteWithSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = new byte[][] {
@@ -132,7 +132,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 

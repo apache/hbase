@@ -133,7 +133,7 @@ public class TestProcedureExecution {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testBadSubprocList() {
     List<String> state = new ArrayList<>();
     Procedure subProc2 = new TestSequentialProcedure("subProc2", state);
@@ -155,7 +155,7 @@ public class TestProcedureExecution {
     assertEquals("rootProc-rollback", state.get(3));
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testSingleSequentialProc() {
     List<String> state = new ArrayList<>();
     Procedure subProc2 = new TestSequentialProcedure("subProc2", state);
@@ -170,7 +170,7 @@ public class TestProcedureExecution {
     assertEquals(state.toString(), 3, state.size());
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testSingleSequentialProcRollback() {
     List<String> state = new ArrayList<>();
     Procedure subProc2 = new TestSequentialProcedure("subProc2", state,
@@ -221,7 +221,7 @@ public class TestProcedureExecution {
     protected boolean abort(Void env) { return false; }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testRollbackRetriableFailure() {
     long procId = ProcedureTestingUtility.submitAndWait(procExecutor, new TestFaultyRollback());
 
@@ -298,7 +298,7 @@ public class TestProcedureExecution {
     }
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testAbortTimeout() {
     final int PROC_TIMEOUT_MSEC = 2500;
     List<String> state = new ArrayList<>();
@@ -317,7 +317,7 @@ public class TestProcedureExecution {
     assertEquals("wproc-rollback", state.get(1));
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testAbortTimeoutWithChildren() {
     List<String> state = new ArrayList<>();
     Procedure proc = new TestWaitingProcedure("wproc", state, true);

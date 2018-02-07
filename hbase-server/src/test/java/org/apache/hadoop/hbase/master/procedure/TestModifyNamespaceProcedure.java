@@ -88,7 +88,7 @@ public class TestModifyNamespaceProcedure {
   }
 
 
-  @Test(timeout = 60000)
+  @Test
   public void testModifyNamespace() throws Exception {
     final NamespaceDescriptor nsd = NamespaceDescriptor.create("testModifyNamespace").build();
     final String nsKey1 = "hbase.namespace.quota.maxregions";
@@ -124,7 +124,7 @@ public class TestModifyNamespaceProcedure {
     assertEquals(nsValue2, currentNsDescriptor.getConfigurationValue(nsKey2));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyNonExistNamespace() throws Exception {
     final String namespaceName = "testModifyNonExistNamespace";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -152,7 +152,7 @@ public class TestModifyNamespaceProcedure {
       ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyNamespaceWithInvalidRegionCount() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testModifyNamespaceWithInvalidRegionCount").build();
@@ -175,7 +175,7 @@ public class TestModifyNamespaceProcedure {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyNamespaceWithInvalidTableCount() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testModifyNamespaceWithInvalidTableCount").build();
@@ -198,7 +198,7 @@ public class TestModifyNamespaceProcedure {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testRecoveryAndDoubleExecution").build();
@@ -227,7 +227,7 @@ public class TestModifyNamespaceProcedure {
     assertEquals(nsValue, currentNsDescriptor.getConfigurationValue(nsKey));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testRollbackAndDoubleExecution").build();

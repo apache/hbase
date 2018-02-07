@@ -59,12 +59,12 @@ public class TestProcedureSchedulerConcurrency {
     procSched.stop();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testConcurrentWaitWake() throws Exception {
     testConcurrentWaitWake(false);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testConcurrentWaitWakeBatch() throws Exception {
     testConcurrentWaitWake(true);
   }

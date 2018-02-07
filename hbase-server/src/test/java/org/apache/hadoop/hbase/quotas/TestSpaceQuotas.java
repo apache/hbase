@@ -239,7 +239,7 @@ public class TestSpaceQuotas {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testNoBulkLoadsWithNoWrites() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(
@@ -259,7 +259,7 @@ public class TestSpaceQuotas {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testAtomicBulkLoadUnderQuota() throws Exception {
     // Need to verify that if the batch of hfiles cannot be loaded, none are loaded.
     TableName tn = helper.createTableWithRegions(10);
@@ -330,7 +330,7 @@ public class TestSpaceQuotas {
     }
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testTableQuotaOverridesNamespaceQuota() throws Exception {
     final SpaceViolationPolicy policy = SpaceViolationPolicy.NO_INSERTS;
     final TableName tn = helper.createTableWithRegions(10);

@@ -177,7 +177,7 @@ public class TestAccessController2 extends SecureTestUtil {
     assertEquals(0, AccessControlLists.getNamespacePermissions(conf, namespace).size());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCreateWithCorrectOwner() throws Exception {
     // Create a test user
     final User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
@@ -214,7 +214,7 @@ public class TestAccessController2 extends SecureTestUtil {
     assertTrue(perms.get(0).implies(Permission.Action.ADMIN));
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCreateTableWithGroupPermissions() throws Exception {
     grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.CREATE);
     try {
@@ -239,7 +239,7 @@ public class TestAccessController2 extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testACLTableAccess() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -348,7 +348,7 @@ public class TestAccessController2 extends SecureTestUtil {
   /*
    * Test table scan operation at table, column family and column qualifier level.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testPostGrantAndRevokeScanAction() throws Exception {
     AccessTestAction scanTableActionForGroupWithTableLevelAccess = new AccessTestAction() {
       @Override
@@ -486,7 +486,7 @@ public class TestAccessController2 extends SecureTestUtil {
   public static class MyAccessController extends AccessController {
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCoprocessorLoading() throws Exception {
     MasterCoprocessorHost cpHost =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
@@ -500,7 +500,7 @@ public class TestAccessController2 extends SecureTestUtil {
       ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testACLZNodeDeletion() throws Exception {
     String baseAclZNode = "/hbase/acl/";
     String ns = "testACLZNodeDeletionNamespace";

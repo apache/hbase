@@ -108,7 +108,7 @@ public class TestFailedAppendAndSync {
    * First I need to set up some mocks for Server and RegionServerServices. I also need to
    * set up a dodgy WAL that will throw an exception when we go to append to it.
    */
-  @Test (timeout=300000)
+  @Test
   public void testLockupAroundBadAssignSync() throws IOException {
     final AtomicLong rolls = new AtomicLong(0);
     // Dodgy WAL. Will throw exceptions when flags set.

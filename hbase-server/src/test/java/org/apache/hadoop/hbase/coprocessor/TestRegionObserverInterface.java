@@ -378,7 +378,7 @@ public class TestRegionObserverInterface {
 
   }
 
-  @Test(timeout = 300000)
+  @Test
   // HBase-3758
   public void testHBase3758() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());

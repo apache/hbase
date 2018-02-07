@@ -90,7 +90,7 @@ public class TestMasterProcedureEvents {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testMasterInitializedEvent() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -108,7 +108,7 @@ public class TestMasterProcedureEvents {
       new CreateTableProcedure(procExec.getEnvironment(), htd, new HRegionInfo[] { hri }));
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testServerCrashProcedureEvent() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();

@@ -86,7 +86,7 @@ public class TestCellCounter {
    * Test CellCounter all data should print to output
    *
    */
-  @Test (timeout=300000)
+  @Test
   public void testCellCounter() throws Exception {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
@@ -124,7 +124,7 @@ public class TestCellCounter {
   /**
    * Test CellCounter all data should print to output
    */
-  @Test(timeout = 300000)
+  @Test
   public void testCellCounterPrefix() throws Exception {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
@@ -162,7 +162,7 @@ public class TestCellCounter {
   /**
    * Test CellCounter with time range all data should print to output
    */
-  @Test (timeout=300000)
+  @Test
   public void testCellCounterStartTimeRange() throws Exception {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
@@ -203,7 +203,7 @@ public class TestCellCounter {
   /**
    * Test CellCounter with time range all data should print to output
    */
-  @Test (timeout=300000)
+  @Test
   public void testCellCounteEndTimeRange() throws Exception {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
@@ -243,7 +243,7 @@ public class TestCellCounter {
   /**
    * Test CellCounter with time range all data should print to output
    */
-  @Test (timeout=300000)
+  @Test
   public void testCellCounteOutOfTimeRange() throws Exception {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
@@ -288,7 +288,7 @@ public class TestCellCounter {
   /**
    * Test main method of CellCounter
    */
-  @Test (timeout=300000)
+  @Test
   public void testCellCounterMain() throws Exception {
 
     PrintStream oldPrintStream = System.err;
@@ -320,7 +320,7 @@ public class TestCellCounter {
   /**
    * Test CellCounter for complete table all data should print to output
    */
-  @Test(timeout = 600000)
+  @Test
   public void testCellCounterForCompleteTable() throws Exception {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     String outputPath = OUTPUT_DIR + sourceTable;

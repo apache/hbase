@@ -580,7 +580,7 @@ public class TestWALProcedureStore {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testWalReplayOrder_AB_A() throws Exception {
     /*
      * | A B | -> | A |
@@ -623,7 +623,7 @@ public class TestWALProcedureStore {
     });
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testWalReplayOrder_ABC_BAD() throws Exception {
     /*
      * | A B C | -> | B A D |

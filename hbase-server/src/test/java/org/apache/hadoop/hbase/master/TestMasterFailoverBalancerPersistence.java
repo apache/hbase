@@ -47,7 +47,7 @@ public class TestMasterFailoverBalancerPersistence {
    *
    * @throws Exception
    */
-  @Test(timeout = 240000)
+  @Test
   public void testMasterFailoverBalancerPersistence() throws Exception {
     final int NUM_MASTERS = 3;
     final int NUM_RS = 1;

@@ -198,7 +198,7 @@ public class TestChangingEncoding {
     TEST_UTIL.waitUntilNoRegionsInTransition(TIMEOUT_MS);
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void testChangingEncoding() throws Exception {
     prepareTest("ChangingEncoding");
     for (boolean onlineChange : new boolean[]{false, true}) {
@@ -210,7 +210,7 @@ public class TestChangingEncoding {
     }
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void testChangingEncodingWithCompaction() throws Exception {
     prepareTest("ChangingEncodingWithCompaction");
     for (boolean onlineChange : new boolean[]{false, true}) {

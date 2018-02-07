@@ -59,7 +59,7 @@ public class TestTableStateManager {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testUpgradeFromZk() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.startMiniCluster(2, 1);

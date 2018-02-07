@@ -52,7 +52,7 @@ public class TestAsyncLogRolling extends AbstractTestLogRolling {
     AbstractTestLogRolling.setUpBeforeClass();
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testLogRollOnDatanodeDeath() throws IOException, InterruptedException {
     dfsCluster.startDataNodes(TEST_UTIL.getConfiguration(), 3, true, null, null);
     tableName = getName();

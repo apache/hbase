@@ -94,7 +94,7 @@ public class TestDeleteNamespaceProcedure {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteNamespace() throws Exception {
     final String namespaceName = "testDeleteNamespace";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -110,7 +110,7 @@ public class TestDeleteNamespaceProcedure {
     validateNamespaceNotExist(namespaceName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testDeleteNonExistNamespace() throws Exception {
     final String namespaceName = "testDeleteNonExistNamespace";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -129,7 +129,7 @@ public class TestDeleteNamespaceProcedure {
       ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testDeleteSystemNamespace() throws Exception {
     final String namespaceName = NamespaceDescriptor.SYSTEM_NAMESPACE.getName();
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -144,7 +144,7 @@ public class TestDeleteNamespaceProcedure {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testDeleteNonEmptyNamespace() throws Exception {
     final String namespaceName = "testDeleteNonExistNamespace";
     final TableName tableName = TableName.valueOf("testDeleteNonExistNamespace:" + name.getMethodName());
@@ -164,7 +164,7 @@ public class TestDeleteNamespaceProcedure {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final String namespaceName = "testRecoveryAndDoubleExecution";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -186,7 +186,7 @@ public class TestDeleteNamespaceProcedure {
     validateNamespaceNotExist(namespaceName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final String namespaceName = "testRollbackAndDoubleExecution";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

@@ -87,7 +87,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     TestReplicationBase.tearDownAfterClass();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void disableNotFullReplication() throws Exception {
     HTableDescriptor table = new HTableDescriptor(admin2.getTableDescriptor(tableName));
     HColumnDescriptor f = new HColumnDescriptor("notReplicatedFamily");
@@ -104,7 +104,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationWhenSlaveClusterDoesntHaveTable() throws Exception {
     admin1.disableTableReplication(tableName);
     admin2.disableTable(tableName);
@@ -114,7 +114,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     assertTrue(admin2.tableExists(tableName));
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationWhenReplicationNotEnabled() throws Exception {
     HTableDescriptor table = new HTableDescriptor(admin1.getTableDescriptor(tableName));
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
@@ -135,7 +135,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationWhenTableDescriptorIsNotSameInClusters() throws Exception {
     HTableDescriptor table = new HTableDescriptor(admin2.getTableDescriptor(tableName));
     HColumnDescriptor f = new HColumnDescriptor("newFamily");
@@ -160,7 +160,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDisableAndEnableReplication() throws Exception {
     admin1.disableTableReplication(tableName);
     HTableDescriptor table = admin1.getTableDescriptor(tableName);
@@ -174,22 +174,22 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
   }
 
-  @Test(timeout = 300000, expected = TableNotFoundException.class)
+  @Test(expected = TableNotFoundException.class)
   public void testDisableReplicationForNonExistingTable() throws Exception {
     admin1.disableTableReplication(TableName.valueOf(name.getMethodName()));
   }
 
-  @Test(timeout = 300000, expected = TableNotFoundException.class)
+  @Test(expected = TableNotFoundException.class)
   public void testEnableReplicationForNonExistingTable() throws Exception {
     admin1.enableTableReplication(TableName.valueOf(name.getMethodName()));
   }
 
-  @Test(timeout = 300000, expected = IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testDisableReplicationWhenTableNameAsNull() throws Exception {
     admin1.disableTableReplication(null);
   }
 
-  @Test(timeout = 300000, expected = IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testEnableReplicationWhenTableNameAsNull() throws Exception {
     admin1.enableTableReplication(null);
   }
@@ -198,7 +198,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
    * Test enable table replication should create table only in user explicit specified table-cfs.
    * HBASE-14717
    */
-  @Test(timeout = 300000)
+  @Test
   public void testEnableReplicationForExplicitSetTableCfs() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     String peerId = "2";
@@ -239,7 +239,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testReplicationPeerConfigUpdateCallback() throws Exception {
     String peerId = "1";
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();

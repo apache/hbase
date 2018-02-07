@@ -85,7 +85,7 @@ public class TestEnableTable {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testEnableTableWithNoRegionServers() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -149,7 +149,7 @@ public class TestEnableTable {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test(timeout=60000)
+  @Test
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());

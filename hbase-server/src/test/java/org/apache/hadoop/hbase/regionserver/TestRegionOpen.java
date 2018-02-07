@@ -82,7 +82,7 @@ public class TestRegionOpen {
     return HTU.getHBaseCluster().getLiveRegionServerThreads().get(0).getRegionServer();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testPriorityRegionIsOpenedWithSeparateThreadPool() throws Exception {
     final TableName tableName = TableName.valueOf(TestRegionOpen.class.getSimpleName());
     ThreadPoolExecutor exec = getRS().getExecutorService()
@@ -100,7 +100,7 @@ public class TestRegionOpen {
     assertEquals(completed + 1, exec.getCompletedTaskCount());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testNonExistentRegionReplica() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] FAMILYNAME = Bytes.toBytes("fam");

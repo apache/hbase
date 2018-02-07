@@ -368,7 +368,7 @@ public class TestWALFactory {
    *              [FSNamesystem.nextGenerationStampForBlock])
    * 3. HDFS-142 (on restart, maintain pendingCreates)
    */
-  @Test (timeout=300000)
+  @Test
   public void testAppendClose() throws Exception {
     TableName tableName =
         TableName.valueOf(currentTest.getMethodName());

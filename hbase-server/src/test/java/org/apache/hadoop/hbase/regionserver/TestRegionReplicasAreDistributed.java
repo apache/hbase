@@ -112,7 +112,7 @@ public class TestRegionReplicasAreDistributed {
     return HTU.getMiniHBaseCluster().getRegionServer(2);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasCreatedAreDistributed() throws Exception {
     try {
       checkAndAssertRegionDistribution(false);

@@ -148,7 +148,7 @@ public class TestSnapshotFromClient {
    * Test snapshotting not allowed hbase:meta and -ROOT-
    * @throws Exception
    */
-  @Test (timeout=300000)
+  @Test
   public void testMetaTablesSnapshot() throws Exception {
     Admin admin = UTIL.getAdmin();
     byte[] snapshotName = Bytes.toBytes("metaSnapshot");
@@ -166,7 +166,7 @@ public class TestSnapshotFromClient {
    *
    * @throws Exception
    */
-  @Test (timeout=300000)
+  @Test
   public void testSnapshotDeletionWithRegex() throws Exception {
     Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
@@ -202,7 +202,7 @@ public class TestSnapshotFromClient {
    * Test snapshotting a table that is offline
    * @throws Exception
    */
-  @Test (timeout=300000)
+  @Test
   public void testOfflineTableSnapshot() throws Exception {
     Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
@@ -250,7 +250,7 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
     Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
@@ -279,7 +279,7 @@ public class TestSnapshotFromClient {
     }
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testOfflineTableSnapshotWithEmptyRegions() throws Exception {
     // test with an empty table with one region
 
@@ -323,7 +323,7 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testListTableSnapshots() throws Exception {
     Admin admin = null;
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -369,7 +369,7 @@ public class TestSnapshotFromClient {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testListTableSnapshotsWithRegex() throws Exception {
     Admin admin = null;
     try {
@@ -408,7 +408,7 @@ public class TestSnapshotFromClient {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDeleteTableSnapshots() throws Exception {
     Admin admin = null;
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -443,7 +443,7 @@ public class TestSnapshotFromClient {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testDeleteTableSnapshotsWithRegex() throws Exception {
     Admin admin = null;
     Pattern tableNamePattern = Pattern.compile("test.*");

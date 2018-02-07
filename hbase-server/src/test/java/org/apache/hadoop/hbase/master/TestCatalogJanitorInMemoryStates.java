@@ -90,7 +90,7 @@ public class TestCatalogJanitorInMemoryStates {
   /**
    * Test clearing a split parent from memory.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testInMemoryParentCleanup() throws IOException, InterruptedException {
     final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     final ServerManager sm = TEST_UTIL.getHBaseCluster().getMaster().getServerManager();

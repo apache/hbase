@@ -185,7 +185,7 @@ public class TestLogRollAbort {
    * comes back online after the master declared it dead and started to split.
    * Want log rolling after a master split to fail. See HBASE-2312.
    */
-  @Test (timeout=300000)
+  @Test
   public void testLogRollAfterSplitStart() throws IOException {
     LOG.info("Verify wal roll after split starts will fail.");
     String logName = ServerName.valueOf("testLogRollAfterSplitStart",

@@ -127,7 +127,7 @@ public class TestZooKeeperACL {
    * then check the subset of world-readable nodes in the three tests after
    * that.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseRootZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -146,7 +146,7 @@ public class TestZooKeeperACL {
    * should be created with 2 ACLs: one specifies that the hbase user has
    * full access to the node; the other, that it is world-readable.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseRootRegionServerZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -183,7 +183,7 @@ public class TestZooKeeperACL {
    * created with 2 ACLs: one specifies that the hbase user has full access
    * to the node; the other, that it is world-readable.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseMasterServerZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -219,7 +219,7 @@ public class TestZooKeeperACL {
    * created with 2 ACLs: one specifies that the hbase user has full access
    * to the node; the other, that it is world-readable.
    */
-  @Test (timeout=30000)
+  @Test
   public void testHBaseIDZNodeACL() throws Exception {
     if (!secureZKAvailable) {
       return;
@@ -325,7 +325,7 @@ public class TestZooKeeperACL {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testAdminDrainAllowedOnSecureZK() throws Exception {
     if (!secureZKAvailable) {
       return;

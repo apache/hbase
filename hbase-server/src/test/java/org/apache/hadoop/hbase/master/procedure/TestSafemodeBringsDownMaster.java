@@ -94,7 +94,7 @@ public class TestSafemodeBringsDownMaster {
   public void tearDown() throws Exception {
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSafemodeBringsDownMaster() throws Exception {
     final TableName tableName = TableName.valueOf("testSafemodeBringsDownMaster");
     final byte[][] splitKeys = new byte[][] {

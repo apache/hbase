@@ -78,7 +78,7 @@ public class TestMetaShutdownHandler {
    * the region server so that it is still up during the master SSH.
    * We will check that the master SSH is still successfully done.
    */
-  @Test (timeout=180000)
+  @Test
   public void testExpireMetaRegionServer() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();

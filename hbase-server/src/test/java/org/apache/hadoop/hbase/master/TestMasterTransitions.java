@@ -198,7 +198,8 @@ public class TestMasterTransitions {
    * in.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a>
    */
-  @Ignore @Test  (timeout=300000) public void testRegionCloseWhenNoMetaHBase2428()
+  @Ignore @Test
+  public void testRegionCloseWhenNoMetaHBase2428()
   throws Exception {
     /*
     LOG.info("Running testRegionCloseWhenNoMetaHBase2428");
@@ -253,7 +254,8 @@ public class TestMasterTransitions {
    * If confusion between old and new, purportedly meta never comes back.  Test
    * that meta gets redeployed.
    */
-  @Ignore @Test (timeout=300000) public void testAddingServerBeforeOldIsDead2413()
+  @Ignore @Test
+  public void testAddingServerBeforeOldIsDead2413()
   throws IOException {
     /*
     LOG.info("Running testAddingServerBeforeOldIsDead2413");
@@ -380,7 +382,8 @@ public class TestMasterTransitions {
    * done.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a>
    */
-  @Ignore @Test (timeout=300000) public void testKillRSWithOpeningRegion2482()
+  @Ignore @Test
+  public void testKillRSWithOpeningRegion2482()
   throws Exception {
     /*
     LOG.info("Running testKillRSWithOpeningRegion2482");

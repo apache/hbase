@@ -158,7 +158,7 @@ public class TestMobStoreScanner {
     testGetFromArchive(true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testGetMassive() throws Exception {
     setUp(defaultThreshold, TableName.valueOf(name.getMethodName()));
 

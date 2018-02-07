@@ -33,7 +33,7 @@ public class TestInstancePending {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestInstancePending.class);
 
-  @Test(timeout = 1000)
+  @Test
   public void test() throws Exception {
     final InstancePending<String> pending = new InstancePending<>();
     final AtomicReference<String> getResultRef = new AtomicReference<>();

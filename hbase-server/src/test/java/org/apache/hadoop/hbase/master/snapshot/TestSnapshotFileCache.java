@@ -92,7 +92,7 @@ public class TestSnapshotFileCache {
     fs.delete(snapshotDir, true);
   }
 
-  @Test(timeout = 10000000)
+  @Test
   public void testLoadAndDelete() throws IOException {
     // don't refresh the cache unless we tell it to
     long period = Long.MAX_VALUE;

@@ -408,25 +408,25 @@ public class TestLockProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
   }
 
-  @Test(timeout = 20000)
+  @Test
   public void testRemoteTableLockRecovery() throws Exception {
     LockRequest lock = getTableExclusiveLock(tableName1, testMethodName);
     testRemoteLockRecovery(lock);
   }
 
-  @Test(timeout = 20000)
+  @Test
   public void testRemoteNamespaceLockRecovery() throws Exception {
     LockRequest lock = getNamespaceLock(namespace, testMethodName);
     testRemoteLockRecovery(lock);
   }
 
-  @Test(timeout = 20000)
+  @Test
   public void testRemoteRegionLockRecovery() throws Exception {
     LockRequest lock = getRegionLock(tableRegions1, testMethodName);
     testRemoteLockRecovery(lock);
   }
 
-  @Test (timeout = 20000)
+  @Test
   public void testLocalMasterLockRecovery() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     CountDownLatch latch = new CountDownLatch(1);

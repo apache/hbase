@@ -67,7 +67,7 @@ public class TestSnapshotClientRetries {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000, expected=SnapshotExistsException.class)
+  @Test(expected=SnapshotExistsException.class)
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
     TEST_UTIL.createTable(TEST_TABLE.getTableName(), "f");
@@ -75,7 +75,7 @@ public class TestSnapshotClientRetries {
     snapshotAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
   }
 
-  @Test(timeout = 60000, expected=SnapshotDoesNotExistException.class)
+  @Test(expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws Exception {
     final String snapshotName = "testCloneNonExistentSnapshot";
     cloneAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());

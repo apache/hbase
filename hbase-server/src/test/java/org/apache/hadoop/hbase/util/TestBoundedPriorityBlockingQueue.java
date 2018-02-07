@@ -206,7 +206,7 @@ public class TestBoundedPriorityBlockingQueue {
     assertNull(null, queue.poll());
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testPollInExecutor() throws InterruptedException {
     final TestObject testObj = new TestObject(0, 0);
 

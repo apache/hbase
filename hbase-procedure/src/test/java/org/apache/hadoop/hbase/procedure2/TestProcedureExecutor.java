@@ -75,7 +75,7 @@ public class TestProcedureExecutor {
     procExecutor.start(numThreads, true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testWorkerStuck() throws Exception {
     // replace the executor
     final Configuration conf = new Configuration(htu.getConfiguration());

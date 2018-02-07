@@ -75,7 +75,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     LOG.info("Done initializing cluster");
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testCreateAndDelete() throws Exception {
     String testName = "testCreateAndDelete";
     String nsName = prefix + "_" + testName;
@@ -97,7 +97,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     assertNull(zkNamespaceManager.get(nsName));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDeleteReservedNS() throws Exception {
     boolean exceptionCaught = false;
     try {
@@ -119,7 +119,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testNamespaceOperations() throws Exception {
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns1").build()).join();
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns2").build()).join();

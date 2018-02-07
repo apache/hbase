@@ -278,7 +278,7 @@ public class TestMobCompactor {
     LOG.info("alter status finished");
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMinorCompaction() throws Exception {
     resetConf();
     int mergeSize = 5000;
@@ -428,7 +428,7 @@ public class TestMobCompactor {
         new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testCompactionWithHFileLink() throws IOException, InterruptedException {
     resetConf();
     String tableNameAsString = "testCompactionWithHFileLink";
@@ -517,7 +517,7 @@ public class TestMobCompactor {
     assertRefFileNameEqual(family1);
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMajorCompactionFromAdmin() throws Exception {
     resetConf();
     int mergeSize = 5000;
@@ -592,7 +592,7 @@ public class TestMobCompactor {
     table.close();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testScannerOnBulkLoadRefHFiles() throws Exception {
     resetConf();
     setUp("testScannerOnBulkLoadRefHFiles");
@@ -652,7 +652,7 @@ public class TestMobCompactor {
    * is compacted with some other normal hfiles. This is to make sure the mvcc is included
    * after compaction for mob enabled store files.
    */
-  @Test(timeout = 300000)
+  @Test
   public void testGetAfterCompaction() throws Exception {
     resetConf();
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);

@@ -103,7 +103,7 @@ public class TestDeadServer {
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
   }
 
-  @Test(timeout = 15000)
+  @Test
   public void testCrashProcedureReplay() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();

@@ -277,7 +277,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Test that shows that exception thrown from the RS side will result in an exception on the
    * LIHFile client.
    */
-  @Test(expected = IOException.class, timeout = 120000)
+  @Test(expected = IOException.class)
   public void testBulkLoadPhaseFailure() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     final AtomicInteger attmptedCalls = new AtomicInteger();
@@ -391,7 +391,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * atomic bulk load call. We cannot use presplitting to test this path, so we actually inject a
    * split just before the atomic region load.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testSplitWhileBulkLoadPhase() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
@@ -437,7 +437,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This test splits a table and attempts to bulk load. The bulk import files should be split
    * before atomically importing.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testGroupOrSplitPresplit() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
@@ -477,7 +477,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This test creates a table with many small regions. The bulk load files would be splitted
    * multiple times before all of them can be loaded successfully.
    */
-  @Test(timeout = 120000)
+  @Test
   public void testSplitTmpFileCleanUp() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
@@ -512,7 +512,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   /**
    * This simulates an remote exception which should cause LIHF to exit with an exception.
    */
-  @Test(expected = IOException.class, timeout = 120000)
+  @Test(expected = IOException.class)
   public void testGroupOrSplitFailure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
@@ -546,7 +546,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     fail("doBulkLoad should have thrown an exception");
   }
 
-  @Test(timeout = 120000)
+  @Test
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };

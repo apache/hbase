@@ -64,7 +64,7 @@ public class TestRollingRestart {
   @Rule
   public TestName name = new TestName();
 
-  @Test (timeout=500000)
+  @Test
   public void testBasicRollingRestart() throws Exception {
 
     // Start a cluster with 2 masters and 4 regionservers

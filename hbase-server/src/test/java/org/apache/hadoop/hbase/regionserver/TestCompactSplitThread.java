@@ -153,7 +153,7 @@ public class TestCompactSplitThread {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testFlushWithTableCompactionDisabled() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setCompactionEnabled(false);

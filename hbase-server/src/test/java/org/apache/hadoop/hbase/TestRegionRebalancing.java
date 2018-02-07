@@ -103,7 +103,7 @@ public class TestRegionRebalancing {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=300000)
+  @Test
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());

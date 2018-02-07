@@ -174,7 +174,7 @@ public class TestAssignmentListener {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testServerListener() throws IOException, InterruptedException {
     ServerManager serverManager = TEST_UTIL.getHBaseCluster().getMaster().getServerManager();
 
@@ -216,7 +216,7 @@ public class TestAssignmentListener {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testAssignmentListener() throws IOException, InterruptedException {
     AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     Admin admin = TEST_UTIL.getAdmin();

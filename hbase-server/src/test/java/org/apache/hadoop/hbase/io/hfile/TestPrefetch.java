@@ -77,7 +77,7 @@ public class TestPrefetch {
     assertTrue(cc.shouldPrefetchOnOpen());
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testPrefetch() throws Exception {
     Path storeFile = writeStoreFile();
     readStoreFile(storeFile);

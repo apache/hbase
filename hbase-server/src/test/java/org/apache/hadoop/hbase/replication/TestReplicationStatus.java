@@ -57,7 +57,7 @@ public class TestReplicationStatus extends TestReplicationBase {
    * test : status.getLoad(server).getReplicationLoadSink()
    * * @throws Exception
    */
-  @Test(timeout = 300000)
+  @Test
   public void testReplicationStatus() throws Exception {
     LOG.info("testReplicationStatus");
 

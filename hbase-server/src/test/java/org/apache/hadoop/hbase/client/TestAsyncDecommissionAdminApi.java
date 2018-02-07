@@ -44,7 +44,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAsyncDecommissionAdminApi.class);
 
-  @Test(timeout = 30000)
+  @Test
   public void testAsyncDecommissionRegionServers() throws Exception {
     List<ServerName> decommissionedRegionServers = admin.listDecommissionedRegionServers().get();
     assertTrue(decommissionedRegionServers.isEmpty());

@@ -371,7 +371,7 @@ public class TestPerTableCFReplication {
     assertTrue(tabCFsMap.get(tableName3).contains("cf3"));
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testPerTableCFReplication() throws Exception {
     LOG.info("testPerTableCFReplication");
     ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf1);

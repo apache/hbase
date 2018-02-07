@@ -122,7 +122,7 @@ public class TestRegionReplicas {
     return HTU.getMiniHBaseCluster().getRegionServer(0);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testOpenRegionReplica() throws Exception {
     openRegion(HTU, getRS(), hriSecondary);
     try {
@@ -138,7 +138,7 @@ public class TestRegionReplicas {
   }
 
   /** Tests that the meta location is saved for secondary regions */
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicaUpdatesMetaLocation() throws Exception {
     openRegion(HTU, getRS(), hriSecondary);
     Table meta = null;
@@ -152,7 +152,7 @@ public class TestRegionReplicas {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicaGets() throws Exception {
     try {
       //load some data to primary
@@ -176,7 +176,7 @@ public class TestRegionReplicas {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testGetOnTargetRegionReplica() throws Exception {
     try {
       //load some data to primary
@@ -233,7 +233,7 @@ public class TestRegionReplicas {
     before();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRefresStoreFiles() throws Exception {
     // enable store file refreshing
     final int refreshPeriod = 2000; // 2 sec
@@ -310,7 +310,7 @@ public class TestRegionReplicas {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testFlushAndCompactionsInPrimary() throws Exception {
 
     long runtime = 30 * 1000;
@@ -431,7 +431,7 @@ public class TestRegionReplicas {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testVerifySecondaryAbilityToReadWithOnFiles() throws Exception {
     // disable the store file refresh chore (we do this by hand)
     HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 0);

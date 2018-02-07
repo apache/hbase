@@ -326,7 +326,7 @@ public class TestCacheConfig {
    * Assert that when BUCKET_CACHE_COMBINED_KEY is false, the non-default, that we deploy
    * LruBlockCache as L1 with a BucketCache for L2.
    */
-  @Test (timeout=10000)
+  @Test
   public void testBucketCacheConfigL1L2Setup() {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     // Make lru size is smaller than bcSize for sure.  Need this to be true so when eviction

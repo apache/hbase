@@ -64,7 +64,7 @@ public class TestSnapshotFromAdmin {
    * passed from the server ensures the correct overall waiting for the snapshot to finish.
    * @throws Exception
    */
-  @Test(timeout = 60000)
+  @Test
   public void testBackoffLogic() throws Exception {
     final int pauseTime = 100;
     final int maxWaitTime =
