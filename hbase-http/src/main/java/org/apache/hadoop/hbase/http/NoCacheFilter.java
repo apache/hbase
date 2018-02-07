@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import java.io.IOException;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -24,14 +26,13 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class NoCacheFilter implements Filter {
-
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
   }
@@ -52,5 +53,4 @@ public class NoCacheFilter implements Filter {
   @Override
   public void destroy() {
   }
-
 }

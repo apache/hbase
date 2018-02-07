@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -45,7 +46,7 @@ import org.slf4j.impl.Log4jLoggerAdapter;
  */
 @InterfaceAudience.Private
 public final class LogLevel {
-  public static final String USAGES = "\nUsage: General options are:\n"
+  private static final String USAGES = "\nUsage: General options are:\n"
       + "\t[-getlevel <host:httpPort> <name>]\n"
       + "\t[-setlevel <host:httpPort> <name> <level>]\n";
 
@@ -75,19 +76,16 @@ public final class LogLevel {
       connection.connect();
       try (InputStreamReader streamReader = new InputStreamReader(connection.getInputStream());
            BufferedReader bufferedReader = new BufferedReader(streamReader)) {
-        for(String line; (line = bufferedReader.readLine()) != null; ) {
-          if (line.startsWith(MARKER)) {
-            System.out.println(TAG.matcher(line).replaceAll(""));
-          }
-        }
+        bufferedReader.lines().filter(Objects::nonNull).filter(line -> line.startsWith(MARKER))
+                .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));
       }
     } catch (IOException ioe) {
       System.err.println("" + ioe);
     }
   }
 
-  static final String MARKER = "<!-- OUTPUT -->";
-  static final Pattern TAG = Pattern.compile("<[^>]*>");
+  private static final String MARKER = "<!-- OUTPUT -->";
+  private static final Pattern TAG = Pattern.compile("<[^>]*>");
 
   /**
    * A servlet implementation
@@ -98,9 +96,8 @@ public final class LogLevel {
     private static final long serialVersionUID = 1L;
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response
-        ) throws ServletException, IOException {
-
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
       // Do the authorization
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
           response)) {
@@ -175,8 +172,7 @@ public final class LogLevel {
         + "Set the specified log level for the specified log name." + "</td>\n" + "</form>\n"
         + "</tr>\n" + "</table>\n" + "</center>\n" + "</p>\n" + "<hr/>\n";
 
-    private static void process(org.apache.log4j.Logger log, String level,
-        PrintWriter out) throws IOException {
+    private static void process(org.apache.log4j.Logger log, String level, PrintWriter out) {
       if (level != null) {
         if (!level.equals(org.apache.log4j.Level.toLevel(level).toString())) {
           out.println(MARKER + "<div class='text-danger'>" + "Bad level : <strong>" + level
@@ -192,14 +188,18 @@ public final class LogLevel {
     }
 
     private static void process(java.util.logging.Logger log, String level,
-        PrintWriter out) throws IOException {
+        PrintWriter out) {
       if (level != null) {
         log.setLevel(java.util.logging.Level.parse(level));
         out.println(MARKER + "Setting Level to " + level + " ...<br />");
       }
 
       java.util.logging.Level lev;
-      for(; (lev = log.getLevel()) == null; log = log.getParent());
+
+      while ((lev = log.getLevel()) == null) {
+        log = log.getParent();
+      }
+
       out.println(MARKER + "Effective level: <b>" + lev + "</b><br />");
     }
   }

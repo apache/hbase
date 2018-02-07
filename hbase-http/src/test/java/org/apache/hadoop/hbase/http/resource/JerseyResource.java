@@ -52,7 +52,7 @@ public class JerseyResource {
   public Response get(
       @PathParam(PATH) @DefaultValue("UNKNOWN_" + PATH) final String path,
       @QueryParam(OP) @DefaultValue("UNKNOWN_" + OP) final String op
-      ) throws IOException {
+  ) throws IOException {
     LOG.info("get: " + PATH + "=" + path + ", " + OP + "=" + op);
 
     final Map<String, Object> m = new TreeMap<>();

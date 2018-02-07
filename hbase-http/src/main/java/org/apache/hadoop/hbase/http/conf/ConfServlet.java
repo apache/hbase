@@ -25,10 +25,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.http.HttpServer;
+
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A servlet to print out the running configuration data.
@@ -56,7 +57,6 @@ public class ConfServlet extends HttpServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-
     if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
                                                    request, response)) {
       return;
@@ -103,5 +103,4 @@ public class ConfServlet extends HttpServlet {
       super(msg);
     }
   }
-
 }
