@@ -608,19 +608,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   protected AsyncWriter createWriterInstance(Path path) throws IOException {
-    try {
-      return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, eventLoopGroup,
-        channelClass);
-    } catch (IOException e) {
-      // this usually means master already think we are dead so let's fail all the pending
-      // syncs. The shutdown process of RS will wait for all regions to be closed before calling
-      // WAL.close so if we do not wake up the thread blocked by sync here it will cause dead
-      // lock.
-      if (e.getMessage().contains("Parent directory doesn't exist:")) {
-        syncFutures.forEach(f -> f.done(f.getTxid(), e));
-      }
-      throw e;
-    }
+    return AsyncFSWALProvider.createAsyncWriter(conf, fs, path, false, eventLoopGroup,
+      channelClass);
   }
 
   private void waitForSafePoint() {
@@ -675,17 +664,34 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {
-        LOG.error("We have waited " + waitOnShutdownInSeconds + " seconds but"
-          + " the close of async writer doesn't complete."
-          + "Please check the status of underlying filesystem"
-          + " or increase the wait time by the config \""
-          + ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS + "\"");
+        LOG.error("We have waited " + waitOnShutdownInSeconds + " seconds but" +
+          " the close of async writer doesn't complete." +
+          "Please check the status of underlying filesystem" +
+          " or increase the wait time by the config \"" + ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS +
+          "\"");
       }
     } catch (InterruptedException e) {
       LOG.error("The wait for close of async writer is interrupted");
       Thread.currentThread().interrupt();
     }
     IOException error = new IOException("WAL has been closed");
+    long nextCursor = waitingConsumePayloadsGatingSequence.get() + 1;
+    // drain all the pending sync requests
+    for (long cursorBound = waitingConsumePayloads.getCursor(); nextCursor <= cursorBound;
+      nextCursor++) {
+      if (!waitingConsumePayloads.isPublished(nextCursor)) {
+        break;
+      }
+      RingBufferTruck truck = waitingConsumePayloads.get(nextCursor);
+      switch (truck.type()) {
+        case SYNC:
+          syncFutures.add(truck.unloadSync());
+          break;
+        default:
+          break;
+      }
+    }
+    // and fail them
     syncFutures.forEach(f -> f.done(f.getTxid(), error));
     if (!(consumeExecutor instanceof EventLoop)) {
       consumeExecutor.shutdown();
