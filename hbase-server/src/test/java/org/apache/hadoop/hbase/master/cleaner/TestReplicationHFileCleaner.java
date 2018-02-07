@@ -204,7 +204,7 @@ public class TestReplicationHFileCleaner {
    * Test for HBASE-14621. This test will not assert directly anything. Without the fix the test
    * will end up in a infinite loop, so it will timeout.
    */
-  @Test(timeout = 15000)
+  @Test
   public void testForDifferntHFileRefsZnodeVersion() throws Exception {
     // 1. Create a file
     Path file = new Path(root, "testForDifferntHFileRefsZnodeVersion");

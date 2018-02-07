@@ -280,7 +280,7 @@ public class TestReplicaWithCluster {
     HTU.shutdownMiniCluster();
   }
 
-  @Test (timeout=30000)
+  @Test
   public void testCreateDeleteTable() throws IOException {
     // Create table then get the single region for our new table.
     HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
@@ -313,7 +313,7 @@ public class TestReplicaWithCluster {
     HTU.deleteTable(hdt.getTableName());
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testChangeTable() throws Exception {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testChangeTable"))
             .setRegionReplication(NB_SERVERS)
@@ -373,7 +373,7 @@ public class TestReplicaWithCluster {
   }
 
   @SuppressWarnings("deprecation")
-  @Test (timeout=300000)
+  @Test
   public void testReplicaAndReplication() throws Exception {
     HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaAndReplication");
     hdt.setRegionReplication(NB_SERVERS);
@@ -457,7 +457,7 @@ public class TestReplicaWithCluster {
     // the minicluster has negative impact of deleting all HConnections in JVM.
   }
 
-  @Test (timeout=30000)
+  @Test
   public void testBulkLoad() throws IOException {
     // Create table then get the single region for our new table.
     LOG.debug("Creating test table");

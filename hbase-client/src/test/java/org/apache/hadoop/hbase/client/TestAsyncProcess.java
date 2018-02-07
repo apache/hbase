@@ -586,7 +586,7 @@ public class TestAsyncProcess {
     doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
   }
 
-  @Test(timeout=300000)
+  @Test
   public void testSubmitRandomSizeRequest() throws Exception {
     Random rn = new Random();
     final long limit = 10 * 1024 * 1024;
@@ -611,7 +611,7 @@ public class TestAsyncProcess {
     doSubmitRequest(maxHeapSizePerRequest, putsHeapSize);
   }
 
-  @Test(timeout=120000)
+  @Test
   public void testSubmitLargeRequest() throws Exception {
     long maxHeapSizePerRequest = 2 * 1024 * 1024;
     long putsHeapSize = maxHeapSizePerRequest * 2;

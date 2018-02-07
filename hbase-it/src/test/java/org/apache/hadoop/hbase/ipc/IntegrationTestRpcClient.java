@@ -293,7 +293,7 @@ public class IntegrationTestRpcClient {
   Test that not started connections are successfully removed from connection pool when
   rpc client is closing.
    */
-  @Test (timeout = 30000)
+  @Test
   public void testRpcWithWriteThread() throws IOException, InterruptedException {
     LOG.info("Starting test");
     Cluster cluster = new Cluster(1, 1);
@@ -312,7 +312,7 @@ public class IntegrationTestRpcClient {
   }
 
 
-  @Test (timeout = 1800000)
+  @Test
   public void testRpcWithChaosMonkeyWithSyncClient() throws Throwable {
     for (int i = 0; i < numIterations; i++) {
       TimeoutThread.runWithTimeout(new Callable<Void>() {
@@ -333,7 +333,7 @@ public class IntegrationTestRpcClient {
     }
   }
 
-  @Test (timeout = 900000)
+  @Test
   @Ignore // TODO: test fails with async client
   public void testRpcWithChaosMonkeyWithAsyncClient() throws Throwable {
     for (int i = 0; i < numIterations; i++) {

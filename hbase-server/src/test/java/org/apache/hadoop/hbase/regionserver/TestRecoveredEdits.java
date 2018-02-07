@@ -77,7 +77,7 @@ public class TestRecoveredEdits {
    * made it in.
    * @throws IOException
    */
-  @Test (timeout=180000)
+  @Test
   public void testReplayWorksThoughLotsOfFlushing() throws
       IOException {
     for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {

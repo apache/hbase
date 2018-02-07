@@ -131,7 +131,7 @@ public class TestMiniClusterLoadSequential {
     return writer;
   }
 
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void loadTest() throws Exception {
     prepareForLoadTest();
     runLoadTestOnExistingTable();

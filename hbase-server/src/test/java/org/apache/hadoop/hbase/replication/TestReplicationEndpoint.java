@@ -126,7 +126,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     });
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testCustomReplicationEndpoint() throws Exception {
     // test installing a custom replication endpoint other than the default one.
     admin.addPeer("testCustomReplicationEndpoint",
@@ -165,7 +165,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     admin.removePeer("testCustomReplicationEndpoint");
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testReplicationEndpointReturnsFalseOnReplicate() throws Exception {
     Assert.assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
     Assert.assertTrue(!ReplicationEndpointReturningFalse.replicated.get());
@@ -201,7 +201,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     admin.removePeer("testReplicationEndpointReturnsFalseOnReplicate");
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testInterClusterReplication() throws Exception {
     final String id = "testInterClusterReplication";
 
@@ -247,7 +247,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     utility1.deleteTableData(tableName);
   }
 
-  @Test (timeout=120000)
+  @Test
   public void testWALEntryFilterFromReplicationEndpoint() throws Exception {
     ReplicationPeerConfig rpc =  new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
@@ -276,7 +276,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     admin.removePeer("testWALEntryFilterFromReplicationEndpoint");
   }
 
-  @Test (timeout=120000, expected=IOException.class)
+  @Test (expected=IOException.class)
   public void testWALEntryFilterAddValidation() throws Exception {
     ReplicationPeerConfig rpc =  new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
@@ -286,7 +286,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     admin.addPeer("testWALEntryFilterAddValidation", rpc);
   }
 
-  @Test (timeout=120000, expected=IOException.class)
+  @Test (expected=IOException.class)
   public void testWALEntryFilterUpdateValidation() throws Exception {
     ReplicationPeerConfig rpc =  new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());

@@ -137,7 +137,7 @@ public class TestRogueRSAssignment {
     admin.setBalancerRunning(true, false);
   }
 
-  @Test(timeout = 120000)
+  @Test
   public void testReportRSWithWrongRegion() throws Exception {
     final TableName tableName = TableName.valueOf(this.name.getMethodName());
 

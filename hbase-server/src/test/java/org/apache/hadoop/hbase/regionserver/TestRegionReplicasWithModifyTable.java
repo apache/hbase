@@ -107,7 +107,7 @@ public class TestRegionReplicasWithModifyTable {
     return HTU.getMiniHBaseCluster().getRegionServer(2);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasUsingEnableTable() throws Exception {
     TableName tableName = null;
     try {
@@ -128,7 +128,7 @@ public class TestRegionReplicasWithModifyTable {
     HTU.getAdmin().deleteTable(tableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasUsingEnableTableForMultipleRegions() throws Exception {
     TableName tableName = null;
     try {
@@ -144,7 +144,7 @@ public class TestRegionReplicasWithModifyTable {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreased() throws Exception {
     TableName tableName = null;
     try {
@@ -160,7 +160,7 @@ public class TestRegionReplicasWithModifyTable {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasByEnableTableWhenReplicaCountIsDecreased() throws Exception {
     TableName tableName = null;
     try {
@@ -176,7 +176,7 @@ public class TestRegionReplicasWithModifyTable {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasByEnableTableWhenReplicaCountIsDecreasedWithMultipleRegions()
       throws Exception {
     TableName tableName = null;
@@ -193,7 +193,7 @@ public class TestRegionReplicasWithModifyTable {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreasedWithmultipleRegions()
       throws Exception {
     TableName tableName = null;

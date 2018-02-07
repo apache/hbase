@@ -1261,7 +1261,7 @@ public class TestMasterObserver {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testStarted() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1280,7 +1280,7 @@ public class TestMasterObserver {
         cp.wasStartMasterCalled());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -1409,7 +1409,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSnapshotOperations() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -1470,7 +1470,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testNamespaceOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     String testNamespace = "observed_ns";
@@ -1503,7 +1503,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRegionTransitionOperations() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -1592,7 +1592,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDescriptorsEnumeration() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1609,7 +1609,7 @@ public class TestMasterObserver {
       cp.wasGetTableDescriptorsCalled());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableNamesEnumeration() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1624,7 +1624,7 @@ public class TestMasterObserver {
       cp.wasGetTableNamesCalled());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAbortProcedureOperation() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1639,7 +1639,7 @@ public class TestMasterObserver {
       cp.wasAbortProcedureCalled());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGetProceduresOperation() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1654,7 +1654,7 @@ public class TestMasterObserver {
       cp.wasGetProceduresCalled());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGetLocksOperation() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 

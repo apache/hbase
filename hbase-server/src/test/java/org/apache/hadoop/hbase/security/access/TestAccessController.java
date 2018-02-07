@@ -340,7 +340,7 @@ public class TestAccessController extends SecureTestUtil {
         TEST_TABLE.getNamespaceAsString()).size());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testUnauthorizedShutdown() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override public Object run() throws Exception {
@@ -353,7 +353,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testUnauthorizedStopMaster() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override public Object run() throws Exception {
@@ -367,7 +367,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSecurityCapabilities() throws Exception {
     List<SecurityCapability> capabilities = TEST_UTIL.getConnection().getAdmin()
       .getSecurityCapabilities();
@@ -377,7 +377,7 @@ public class TestAccessController extends SecureTestUtil {
       capabilities.contains(SecurityCapability.CELL_AUTHORIZATION));
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableCreate() throws Exception {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
@@ -397,7 +397,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableModify() throws Exception {
     AccessTestAction modifyTable = new AccessTestAction() {
       @Override
@@ -416,7 +416,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(modifyTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDelete() throws Exception {
     AccessTestAction deleteTable = new AccessTestAction() {
       @Override
@@ -432,7 +432,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(deleteTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableTruncate() throws Exception {
     AccessTestAction truncateTable = new AccessTestAction() {
       @Override
@@ -449,7 +449,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDisable() throws Exception {
     AccessTestAction disableTable = new AccessTestAction() {
       @Override
@@ -478,7 +478,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_CREATE, USER_GROUP_ADMIN, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableEnable() throws Exception {
     AccessTestAction enableTable = new AccessTestAction() {
       @Override
@@ -592,7 +592,7 @@ public class TestAccessController extends SecureTestUtil {
       getProceduresAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGetLocks() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -607,7 +607,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testMove() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -630,7 +630,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAssign() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -651,7 +651,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testUnassign() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -672,7 +672,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRegionOffline() throws Exception {
     List<HRegionLocation> regions;
     try (RegionLocator locator = systemUserConnection.getRegionLocator(TEST_TABLE)) {
@@ -693,7 +693,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSetSplitOrMergeEnabled() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -709,7 +709,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testBalance() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -724,7 +724,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testBalanceSwitch() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -739,7 +739,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testShutdown() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -754,7 +754,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testStopMaster() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -775,7 +775,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_NONE, USER_RO, USER_GROUP_ADMIN, USER_GROUP_READ, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSplitWithSplitRow() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     createTestTable(tableName);
@@ -795,7 +795,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testFlush() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -811,7 +811,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCompact() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -839,7 +839,7 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRead() throws Exception {
     // get action
     AccessTestAction getAction = new AccessTestAction() {
@@ -879,7 +879,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyRead(scanAction);
   }
 
-  @Test (timeout=180000)
+  @Test
   // test put, delete, increment
   public void testWrite() throws Exception {
     // put action
@@ -928,7 +928,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyWrite(incrementAction);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testReadWrite() throws Exception {
     // action for checkAndDelete
     AccessTestAction checkAndDeleteAction = new AccessTestAction() {
@@ -963,7 +963,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyReadWrite(checkAndPut);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testBulkLoad() throws Exception {
     try {
       FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -1080,7 +1080,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAppend() throws Exception {
 
     AccessTestAction appendAction = new AccessTestAction() {
@@ -1107,7 +1107,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_ADMIN);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGrantRevoke() throws Exception {
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
@@ -1189,7 +1189,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPostGrantRevoke() throws Exception {
     final TableName tableName =
         TableName.valueOf("TempTable");
@@ -1443,7 +1443,7 @@ public class TestAccessController extends SecureTestUtil {
     return perms.contains(userPermission);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPostGrantRevokeAtQualifierLevel() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family1 = Bytes.toBytes("f1");
@@ -1546,7 +1546,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPermissionList() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family1 = Bytes.toBytes("f1");
@@ -1676,7 +1676,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGlobalPermissionList() throws Exception {
     List<UserPermission> perms;
     Table acl = systemUserConnection.getTable(AccessControlLists.ACL_TABLE_NAME);
@@ -1710,7 +1710,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_CREATE, USER_RW, USER_NONE, USER_RO);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCheckPermissions() throws Exception {
     // --------------------------------------
     // test global permissions
@@ -1877,7 +1877,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testStopRegionServer() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -1892,7 +1892,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testRollWALWriterRequest() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -1907,7 +1907,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testOpenRegion() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -1922,7 +1922,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCloseRegion() throws Exception {
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -1937,7 +1937,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSnapshot() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
@@ -1996,7 +1996,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSnapshotWithOwner() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
@@ -2052,7 +2052,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGlobalAuthorizationForNewRegisteredRS() throws Exception {
     LOG.debug("Test for global authorization for a new registered RegionServer.");
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
@@ -2115,7 +2115,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDescriptorsEnumeration() throws Exception {
     User TABLE_ADMIN = User.createUserForTesting(conf, "UserA", new String[0]);
 
@@ -2159,7 +2159,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableNameEnumeration() throws Exception {
     AccessTestAction listTablesAction = new AccessTestAction() {
       @Override
@@ -2181,7 +2181,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyIfEmptyList(listTablesAction, USER_NONE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTableDeletion() throws Exception {
     User TABLE_ADMIN = User.createUserForTesting(conf, "TestUser", new String[0]);
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -2220,7 +2220,7 @@ public class TestAccessController extends SecureTestUtil {
     createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testNamespaceUserGrant() throws Exception {
     AccessTestAction getAction = new AccessTestAction() {
       @Override
@@ -2244,7 +2244,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(getAction, USER_NONE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientGrantRevoke() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testGrantRevoke = User.createUserForTesting(conf, "testGrantRevoke", new String[0]);
@@ -2283,7 +2283,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(getAction, testGrantRevoke);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientGlobalGrantRevoke() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testGlobalGrantRevoke = User.createUserForTesting(conf,
@@ -2329,7 +2329,7 @@ public class TestAccessController extends SecureTestUtil {
 
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testAccessControlClientMultiGrantRevoke() throws Exception {
     User testGrantRevoke =
         User.createUserForTesting(conf, "testGrantRevoke", new String[0]);
@@ -2452,7 +2452,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(putAction, testGrantRevoke);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientGrantRevokeOnNamespace() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testNS = User.createUserForTesting(conf, "testNS", new String[0]);
@@ -2542,7 +2542,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testCoprocessorExec() throws Exception {
     // Set up our ping endpoint service on all regions of our test table
     for (JVMClusterUtil.RegionServerThread thread:
@@ -2593,7 +2593,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testSetQuota() throws Exception {
     AccessTestAction setUserQuotaAction = new AccessTestAction() {
       @Override
@@ -2660,7 +2660,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testGetNamespacePermission() throws Exception {
     String namespace = "testGetNamespacePermission";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
@@ -2703,7 +2703,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testTruncatePerms() throws Exception {
     try {
       List<UserPermission> existingPerms = AccessControlClient.getUserPermissions(
@@ -2736,7 +2736,7 @@ public class TestAccessController extends SecureTestUtil {
     };
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControlClientUserPerms() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     createTestTable(tableName);
@@ -2755,7 +2755,7 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testAccessControllerUserPermsRegexHandling() throws Exception {
     User testRegexHandler = User.createUserForTesting(conf, "testRegexHandling", new String[0]);
 
@@ -2812,7 +2812,7 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_ADMIN);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPrepareAndCleanBulkLoad() throws Exception {
     AccessTestAction prepareBulkLoadAction = new AccessTestAction() {
       @Override
@@ -2832,7 +2832,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyAnyCreate(cleanupBulkLoadAction);
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testReplicateLogEntries() throws Exception {
     AccessTestAction replicateLogEntriesAction = new AccessTestAction() {
       @Override

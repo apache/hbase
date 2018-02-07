@@ -48,7 +48,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Rule public TestName name = new TestName();
 
-  @Test(timeout=60000)
+  @Test
   public void testModifyTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -86,7 +86,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     assertEquals(newMemStoreFlushSize, currentHtd.getMemStoreFlushSize());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testModifyTableAddCF() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -126,7 +126,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     assertEquals(3, currentHtd.getFamiliesKeys().size());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testModifyTableDeleteCF() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf1 = "cf1";
@@ -185,7 +185,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     assertTrue(currentHtd.hasFamily(Bytes.toBytes(cf1)));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf2 = "cf2";
@@ -225,7 +225,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       tableName, regions, false, "cf1", cf2);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRecoveryAndDoubleExecutionOnline() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf2 = "cf2";
@@ -264,7 +264,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       tableName, regions, "cf1", cf2);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecutionOnline() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String familyName = "cf2";
@@ -293,7 +293,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       tableName, regions, "cf1");
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecutionOffline() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final String familyName = "cf2";

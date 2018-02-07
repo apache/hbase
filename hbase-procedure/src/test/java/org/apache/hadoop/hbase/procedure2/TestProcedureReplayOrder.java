@@ -86,7 +86,7 @@ public class TestProcedureReplayOrder {
     fs.delete(logDir, true);
   }
 
-  @Test(timeout=90000)
+  @Test
   public void testSingleStepReplayOrder() throws Exception {
     final int NUM_PROC_XTHREAD = 32;
     final int NUM_PROCS = NUM_THREADS * NUM_PROC_XTHREAD;
@@ -107,7 +107,7 @@ public class TestProcedureReplayOrder {
     procEnv.assertSortedExecList(NUM_PROCS);
   }
 
-  @Test(timeout=90000)
+  @Test
   public void testMultiStepReplayOrder() throws Exception {
     final int NUM_PROC_XTHREAD = 24;
     final int NUM_PROCS = NUM_THREADS * (NUM_PROC_XTHREAD * 2);

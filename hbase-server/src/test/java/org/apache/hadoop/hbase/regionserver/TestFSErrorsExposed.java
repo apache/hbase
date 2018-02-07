@@ -184,7 +184,7 @@ public class TestFSErrorsExposed {
    * removes the data from HDFS underneath it, and ensures that
    * errors are bubbled to the client.
    */
-  @Test(timeout=5 * 60 * 1000)
+  @Test
   public void testFullSystemBubblesFSErrors() throws Exception {
     // We won't have an error if the datanode is not there if we use short circuit
     //  it's a known 'feature'.

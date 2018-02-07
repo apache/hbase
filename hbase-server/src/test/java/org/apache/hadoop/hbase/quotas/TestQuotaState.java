@@ -49,7 +49,7 @@ public class TestQuotaState {
   @Rule
   public TestName name = new TestName();
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateBypass() {
     QuotaState quotaInfo = new QuotaState();
     assertTrue(quotaInfo.isBypass());
@@ -60,7 +60,7 @@ public class TestQuotaState {
     assertNoopLimiter(userQuotaState.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSimpleQuotaStateOperation() {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final int NUM_GLOBAL_THROTTLE = 3;
@@ -81,7 +81,7 @@ public class TestQuotaState {
     assertThrottleException(quotaInfo.getTableLimiter(tableName), NUM_TABLE_THROTTLE);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateUpdateBypassThrottle() {
     final long LAST_UPDATE = 10;
 
@@ -100,7 +100,7 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getTableLimiter(UNKNOWN_TABLE_NAME));
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateUpdateGlobalThrottle() {
     final int NUM_GLOBAL_THROTTLE_1 = 3;
     final int NUM_GLOBAL_THROTTLE_2 = 11;
@@ -146,7 +146,7 @@ public class TestQuotaState {
     assertNoopLimiter(quotaInfo.getGlobalLimiter());
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testQuotaStateUpdateTableThrottle() {
     final TableName tableNameA = TableName.valueOf(name.getMethodName() + "A");
     final TableName tableNameB = TableName.valueOf(name.getMethodName() + "B");

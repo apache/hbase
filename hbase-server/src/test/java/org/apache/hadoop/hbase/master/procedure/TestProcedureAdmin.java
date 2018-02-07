@@ -94,7 +94,7 @@ public class TestProcedureAdmin {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testAbortProcedureSuccess() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -119,7 +119,7 @@ public class TestProcedureAdmin {
       tableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testAbortProcedureFailure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -151,7 +151,7 @@ public class TestProcedureAdmin {
       UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testAbortProcedureInterruptedNotAllowed() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -179,7 +179,7 @@ public class TestProcedureAdmin {
       UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testAbortNonExistProcedure() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     Random randomGenerator = new Random();
@@ -193,7 +193,7 @@ public class TestProcedureAdmin {
     assertFalse(abortResult);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testGetProcedure() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

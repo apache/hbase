@@ -77,7 +77,7 @@ public class TestNettyRpcServer {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testNettyRpcServer() throws Exception {
     final Table table = TEST_UTIL.createTable(TABLE, FAMILY);
     try {

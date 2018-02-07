@@ -146,7 +146,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testExceptionFromCoprocessorWhenCreatingTable()
       throws IOException {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();

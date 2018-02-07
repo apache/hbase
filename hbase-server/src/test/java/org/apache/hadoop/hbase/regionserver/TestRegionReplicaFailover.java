@@ -108,7 +108,7 @@ public class TestRegionReplicaFailover {
    * Tests the case where a newly created table with region replicas and no data, the secondary
    * region replicas are available to read immediately.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testSecondaryRegionWithEmptyRegion() throws IOException {
     // Create a new table with region replication, don't put any data. Test that the secondary
     // region replica is available to read.
@@ -127,7 +127,7 @@ public class TestRegionReplicaFailover {
    * (enable/disable table, etc) makes the region replicas readable.
    * @throws IOException
    */
-  @Test(timeout = 60000)
+  @Test
   public void testSecondaryRegionWithNonEmptyRegion() throws IOException {
     // Create a new table with region replication and load some data
     // than disable and enable the table again and verify the data from secondary
@@ -146,7 +146,7 @@ public class TestRegionReplicaFailover {
   /**
    * Tests the case where killing a primary region with unflushed data recovers
    */
-  @Test (timeout = 120000)
+  @Test
   public void testPrimaryRegionKill() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName())) {
@@ -209,7 +209,7 @@ public class TestRegionReplicaFailover {
    * Tests the case where killing a secondary region with unflushed data recovers, and the replica
    * becomes available to read again shortly.
    */
-  @Test (timeout = 120000)
+  @Test
   public void testSecondaryRegionKill() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName())) {
@@ -250,7 +250,7 @@ public class TestRegionReplicaFailover {
    * new writes while one of the secondaries is killed. Verification is done for both of the
    * secondary replicas.
    */
-  @Test (timeout = 120000)
+  @Test
   public void testSecondaryRegionKillWhilePrimaryIsAcceptingWrites() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName());
@@ -322,7 +322,7 @@ public class TestRegionReplicaFailover {
    * Tests the case where we are creating a table with a lot of regions and replicas. Opening region
    * replicas should not block handlers on RS indefinitely.
    */
-  @Test (timeout = 120000)
+  @Test
   public void testLotsOfRegionReplicas() throws IOException {
     int numRegions = NB_SERVERS * 20;
     int regionReplication = 10;

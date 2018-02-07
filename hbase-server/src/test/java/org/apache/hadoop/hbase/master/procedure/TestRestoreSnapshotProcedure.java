@@ -148,7 +148,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     return htd;
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testRestoreSnapshot() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -160,7 +160,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     validateSnapshotRestore();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRestoreSnapshotToDifferentTable() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName restoredTableName = TableName.valueOf(name.getMethodName());
@@ -175,7 +175,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRestoreSnapshotToEnabledTable() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -195,7 +195,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 

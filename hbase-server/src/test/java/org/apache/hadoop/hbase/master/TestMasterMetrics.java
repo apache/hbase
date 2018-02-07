@@ -85,7 +85,7 @@ public class TestMasterMetrics {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testClusterRequests() throws Exception {
 
     // sending fake request to master to see how metric value has changed

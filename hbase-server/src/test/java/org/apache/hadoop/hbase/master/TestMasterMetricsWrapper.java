@@ -58,7 +58,7 @@ public class TestMasterMetricsWrapper {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout = 30000)
+  @Test
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);

@@ -247,7 +247,7 @@ public class TestSplitLogWorker {
 
   };
 
-  @Test(timeout=60000)
+  @Test
   public void testAcquireTaskAtStartup() throws Exception {
     LOG.info("testAcquireTaskAtStartup");
     SplitLogCounters.resetCounters();
@@ -283,7 +283,7 @@ public class TestSplitLogWorker {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRaceForTask() throws Exception {
     LOG.info("testRaceForTask");
     SplitLogCounters.resetCounters();
@@ -317,7 +317,7 @@ public class TestSplitLogWorker {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testPreemptTask() throws Exception {
     LOG.info("testPreemptTask");
     SplitLogCounters.resetCounters();
@@ -350,7 +350,7 @@ public class TestSplitLogWorker {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testMultipleTasks() throws Exception {
     LOG.info("testMultipleTasks");
     SplitLogCounters.resetCounters();
@@ -394,7 +394,7 @@ public class TestSplitLogWorker {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRescan() throws Exception {
     LOG.info("testRescan");
     SplitLogCounters.resetCounters();
@@ -446,7 +446,7 @@ public class TestSplitLogWorker {
     assertEquals(2, num);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testAcquireMultiTasks() throws Exception {
     LOG.info("testAcquireMultiTasks");
     SplitLogCounters.resetCounters();
@@ -481,7 +481,7 @@ public class TestSplitLogWorker {
    * RS
    * @throws Exception
    */
-  @Test(timeout=60000)
+  @Test
   public void testAcquireMultiTasksByAvgTasksPerRS() throws Exception {
     LOG.info("testAcquireMultiTasks");
     SplitLogCounters.resetCounters();

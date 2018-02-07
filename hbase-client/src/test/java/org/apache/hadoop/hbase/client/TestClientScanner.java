@@ -462,7 +462,7 @@ public class TestClientScanner {
    * Tests the case where all replicas of a region throw an exception. It should not cause a hang
    * but the exception should propagate to the client
    */
-  @Test (timeout = 30000)
+  @Test
   public void testExceptionsFromReplicasArePropagated() throws IOException {
     scan.setConsistency(Consistency.TIMELINE);
 

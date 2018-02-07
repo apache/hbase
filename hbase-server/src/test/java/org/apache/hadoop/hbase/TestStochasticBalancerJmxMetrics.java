@@ -124,7 +124,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * In Ensemble mode, there should be only one ensemble table
    */
-  @Test (timeout=60000)
+  @Test
   public void testJmxMetrics_EnsembleMode() throws Exception {
     loadBalancer = new StochasticLoadBalancer();
 
@@ -153,7 +153,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * In per-table mode, each table has a set of metrics
    */
-  @Test (timeout=60000)
+  @Test
   public void testJmxMetrics_PerTableMode() throws Exception {
     loadBalancer = new StochasticLoadBalancer();
 

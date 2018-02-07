@@ -103,7 +103,7 @@ public class TestHFileCleaner {
         + status.getAccessTime();
   }
 
-  @Test(timeout = 60 *1000)
+  @Test
   public void testHFileCleaning() throws Exception {
     final EnvironmentEdge originalEdge = EnvironmentEdgeManager.getDelegate();
     String prefix = "someHFileThatWouldBeAUUID";
@@ -340,7 +340,7 @@ public class TestHFileCleaner {
     Assert.assertEquals(SMALL_FILE_NUM, cleaner.getNumOfDeletedSmallFiles());
   }
 
-  @Test(timeout = 60 * 1000)
+  @Test
   public void testOnConfigurationChange() throws Exception {
     // constants
     final int ORIGINAL_THROTTLE_POINT = 512 * 1024;

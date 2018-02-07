@@ -84,7 +84,7 @@ public class TestCreateNamespaceProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testCreateNamespace() throws Exception {
     final NamespaceDescriptor nsd = NamespaceDescriptor.create("testCreateNamespace").build();
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -98,7 +98,7 @@ public class TestCreateNamespaceProcedure {
     validateNamespaceCreated(nsd);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCreateSameNamespaceTwice() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testCreateSameNamespaceTwice").build();
@@ -124,7 +124,7 @@ public class TestCreateNamespaceProcedure {
       ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceExistException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCreateSystemNamespace() throws Exception {
     final NamespaceDescriptor nsd =
         UTIL.getAdmin().getNamespaceDescriptor(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
@@ -141,7 +141,7 @@ public class TestCreateNamespaceProcedure {
       ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceExistException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCreateNamespaceWithInvalidRegionCount() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testCreateNamespaceWithInvalidRegionCount").build();
@@ -161,7 +161,7 @@ public class TestCreateNamespaceProcedure {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCreateNamespaceWithInvalidTableCount() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testCreateNamespaceWithInvalidTableCount").build();
@@ -181,7 +181,7 @@ public class TestCreateNamespaceProcedure {
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testRecoveryAndDoubleExecution").build();
@@ -202,7 +202,7 @@ public class TestCreateNamespaceProcedure {
     validateNamespaceCreated(nsd);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
         NamespaceDescriptor.create("testRollbackAndDoubleExecution").build();

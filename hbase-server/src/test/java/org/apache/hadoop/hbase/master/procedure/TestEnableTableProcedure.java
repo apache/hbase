@@ -47,7 +47,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestEnableTableProcedure.class);
   @Rule public TestName name = new TestName();
 
-  @Test(timeout = 60000)
+  @Test
   public void testEnableTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -64,7 +64,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableIsEnabled(getMaster(), tableName);
   }
 
-  @Test(timeout=60000, expected=TableNotDisabledException.class)
+  @Test(expected=TableNotDisabledException.class)
   public void testEnableNonDisabledTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -97,7 +97,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     Assert.fail("Enable should throw exception through latch.");
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -120,7 +120,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableIsEnabled(getMaster(), tableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

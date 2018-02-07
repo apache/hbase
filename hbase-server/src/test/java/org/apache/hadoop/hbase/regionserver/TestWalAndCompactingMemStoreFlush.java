@@ -142,7 +142,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushWithEager() throws IOException {
     // Set up the configuration
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
@@ -376,7 +376,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
   /*------------------------------------------------------------------------------*/
   /* Check the same as above but for index-compaction type of compacting memstore */
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushWithIndexCompaction() throws IOException {
     /*------------------------------------------------------------------------------*/
     /* SETUP */
@@ -632,7 +632,7 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushAndWALinDataCompaction() throws IOException {
     // Set up the configuration
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
@@ -764,7 +764,7 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSelectiveFlushWithBasicAndMerge() throws IOException {
     // Set up the configuration
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
@@ -907,7 +907,7 @@ public class TestWalAndCompactingMemStoreFlush {
   }
 
   // should end in 300 seconds (5 minutes)
-  @Test(timeout = 300000)
+  @Test
   public void testStressFlushAndWALinIndexCompaction() throws IOException {
     // Set up the configuration
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 600 * 1024);

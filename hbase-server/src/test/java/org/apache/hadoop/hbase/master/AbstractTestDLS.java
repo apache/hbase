@@ -171,7 +171,7 @@ public abstract class AbstractTestDLS {
     ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testRecoveredEdits() throws Exception {
     conf.setLong("hbase.regionserver.hlog.blocksize", 30 * 1024); // create more than one wal
     startCluster(NUM_RS);
@@ -250,7 +250,7 @@ public abstract class AbstractTestDLS {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testMasterStartsUpWithLogSplittingWork() throws Exception {
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_RS - 1);
     startCluster(NUM_RS);
@@ -310,7 +310,7 @@ public abstract class AbstractTestDLS {
    * @throws Exception
    */
   // Was marked flaky before Distributed Log Replay cleanup.
-  @Test(timeout = 300000)
+  @Test
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
     startCluster(3);
@@ -367,7 +367,7 @@ public abstract class AbstractTestDLS {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testThreeRSAbort() throws Exception {
     LOG.info("testThreeRSAbort");
     int numRegionsToCreate = 40;
@@ -402,7 +402,7 @@ public abstract class AbstractTestDLS {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testDelayedDeleteOnFailure() throws Exception {
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
@@ -470,7 +470,7 @@ public abstract class AbstractTestDLS {
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testReadWriteSeqIdFiles() throws Exception {
     LOG.info("testReadWriteSeqIdFiles");
     startCluster(2);

@@ -47,7 +47,7 @@ public class TestLogLevel {
 
   static final PrintStream out = System.out;
 
-  @Test (timeout=60000)
+  @Test
   @SuppressWarnings("deprecation")
   public void testDynamicLogLevel() throws Exception {
     String logName = TestLogLevel.class.getName();

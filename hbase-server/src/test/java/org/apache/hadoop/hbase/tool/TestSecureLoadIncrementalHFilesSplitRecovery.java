@@ -65,7 +65,7 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery
   }
 
   // Disabling this test as it does not work in secure mode
-  @Test(timeout = 180000)
+  @Test
   @Override
   public void testBulkLoadPhaseFailure() {
   }

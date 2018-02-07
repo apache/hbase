@@ -114,7 +114,7 @@ public class TestScannerRetriableFailure {
     }
   }
 
-  @Test(timeout=180000)
+  @Test
   public void testFaultyScanner() throws Exception {
     TableName tableName = TEST_TABLE.getTableName();
     Table table = UTIL.createTable(tableName, FAMILY_NAME);

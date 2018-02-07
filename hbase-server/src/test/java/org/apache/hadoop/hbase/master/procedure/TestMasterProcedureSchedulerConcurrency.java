@@ -71,7 +71,7 @@ public class TestMasterProcedureSchedulerConcurrency {
    * Verify that "write" operations for a single table are serialized,
    * but different tables can be executed in parallel.
    */
-  @Test(timeout=60000)
+  @Test
   public void testConcurrentWriteOps() throws Exception {
     final TestTableProcSet procSet = new TestTableProcSet(queue);
 
@@ -157,7 +157,7 @@ public class TestMasterProcedureSchedulerConcurrency {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testMasterProcedureSchedulerPerformanceEvaluation() throws Exception {
     // Make sure the tool does not get stuck
     MasterProcedureSchedulerPerformanceEvaluation.main(new String[] {

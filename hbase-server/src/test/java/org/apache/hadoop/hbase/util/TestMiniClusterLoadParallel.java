@@ -48,7 +48,7 @@ public class TestMiniClusterLoadParallel
   }
 
   @Override
-  @Test(timeout=TIMEOUT_MS)
+  @Test
   public void loadTest() throws Exception {
     prepareForLoadTest();
 

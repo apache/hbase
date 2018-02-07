@@ -143,7 +143,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals(0, rt.getListOfRegionServers().size());
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testRegionServerRemovedEvent() throws Exception {
     ZKUtil.createAndWatch(zkw,
       ZNodePaths.joinZNode(zkw.znodePaths.rsZNode, "hostname2.example.org:1234"),
@@ -159,7 +159,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("hostname2.example.org:1234", rsRemovedData);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testPeerRemovedEvent() throws Exception {
     rp.registerPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
     rt.registerListener(new DummyReplicationListener());
@@ -171,7 +171,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("5", peerRemovedData);
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testPeerListChangedEvent() throws Exception {
     // add a peer
     rp.registerPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()));
@@ -194,7 +194,7 @@ public class TestReplicationTrackerZKImpl {
     rp.unregisterPeer("5");
   }
 
-  @Test(timeout = 30000)
+  @Test
   public void testPeerNameControl() throws Exception {
     int exists = 0;
     int hyphen = 0;

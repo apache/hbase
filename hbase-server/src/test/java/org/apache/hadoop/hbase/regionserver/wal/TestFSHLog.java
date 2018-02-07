@@ -127,7 +127,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
   /**
    * Test case for https://issues.apache.org/jira/browse/HBASE-16721
    */
-  @Test (timeout = 30000)
+  @Test
   public void testUnflushedSeqIdTracking() throws IOException, InterruptedException {
     final String name = this.name.getMethodName();
     final byte[] b = Bytes.toBytes("b");

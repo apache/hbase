@@ -201,7 +201,7 @@ public class TestLogsCleaner {
     }
   }
 
-  @Test(timeout=5000)
+  @Test
   public void testZnodeCversionChange() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();

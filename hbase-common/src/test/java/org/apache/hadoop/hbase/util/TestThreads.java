@@ -43,7 +43,7 @@ public class TestThreads {
 
   private final AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
-  @Test(timeout=60000)
+  @Test
   public void testSleepWithoutInterrupt() throws InterruptedException {
     Thread sleeper = new Thread(new Runnable() {
       @Override

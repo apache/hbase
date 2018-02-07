@@ -171,7 +171,7 @@ public class TestReplicationWithTags {
     utility1.shutdownMiniCluster();
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testReplicationWithCellTags() throws Exception {
     LOG.info("testSimplePutDelete");
     Put put = new Put(ROW);

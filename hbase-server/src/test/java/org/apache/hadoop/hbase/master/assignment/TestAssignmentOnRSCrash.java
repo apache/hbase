@@ -82,22 +82,22 @@ public class TestAssignmentOnRSCrash {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKillRsWithUserRegionWithData() throws Exception {
     testCrashRsWithUserRegion(true, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testKillRsWithUserRegionWithoutData() throws Exception {
     testCrashRsWithUserRegion(true, false);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStopRsWithUserRegionWithData() throws Exception {
     testCrashRsWithUserRegion(false, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testStopRsWithUserRegionWithoutData() throws Exception {
     testCrashRsWithUserRegion(false, false);
   }
@@ -133,12 +133,12 @@ public class TestAssignmentOnRSCrash {
     assertTrue("expected RSs to be killed", nkilled > 0);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testKillRsWithMetaRegion() throws Exception {
     testCrashRsWithMetaRegion(true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testStopRsWithMetaRegion() throws Exception {
     testCrashRsWithMetaRegion(false);
   }

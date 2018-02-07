@@ -48,7 +48,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
 
   @Rule public TestName name = new TestName();
 
-  @Test(timeout = 60000)
+  @Test
   public void testDisableTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -64,7 +64,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testDisableTableMultipleTimes() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -112,7 +112,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

@@ -61,7 +61,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 
-  @Test(timeout=60000)
+  @Test
   public void testExceptionDuringInitialization() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
@@ -88,7 +88,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testExceptionFromCoprocessorDuringPut() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();

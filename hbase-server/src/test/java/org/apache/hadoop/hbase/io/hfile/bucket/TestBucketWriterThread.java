@@ -111,7 +111,7 @@ public class TestBucketWriterThread {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=30000)
+  @Test
   public void testNonErrorCase() throws IOException, InterruptedException {
     bc.cacheBlock(this.plainKey, this.plainCacheable);
     doDrainOfOneEntry(this.bc, this.wt, this.q);
@@ -137,7 +137,7 @@ public class TestBucketWriterThread {
    * @throws InterruptedException
    */
   @SuppressWarnings("unchecked")
-  @Test (timeout=30000)
+  @Test
   public void testIOE() throws IOException, InterruptedException {
     this.bc.cacheBlock(this.plainKey, plainCacheable);
     RAMQueueEntry rqe = q.remove();
@@ -156,7 +156,7 @@ public class TestBucketWriterThread {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=30000)
+  @Test
   public void testCacheFullException()
       throws IOException, InterruptedException {
     this.bc.cacheBlock(this.plainKey, plainCacheable);

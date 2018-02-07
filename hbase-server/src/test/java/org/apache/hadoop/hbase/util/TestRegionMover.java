@@ -176,7 +176,7 @@ public class TestRegionMover {
   /**
    * Test that loading the same region set doesn't cause timeout loop during meta load.
    */
-  @Test(timeout = 30000)
+  @Test
   public void testRepeatedLoad() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);

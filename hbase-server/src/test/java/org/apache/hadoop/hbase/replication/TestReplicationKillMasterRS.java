@@ -38,7 +38,7 @@ public class TestReplicationKillMasterRS extends TestReplicationKillRS {
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestReplicationKillMasterRS.class);
 
-  @Test(timeout=300000)
+  @Test
   public void killOneMasterRS() throws Exception {
     loadTableAndKillRS(utility1);
   }

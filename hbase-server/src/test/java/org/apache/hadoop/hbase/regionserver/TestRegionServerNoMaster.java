@@ -214,13 +214,13 @@ public class TestRegionServerNoMaster {
   }
 
 
-  @Test(timeout = 60000)
+  @Test
   public void testCloseByRegionServer() throws Exception {
     closeRegionNoZK();
     openRegion(HTU, getRS(), hri);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMultipleCloseFromMaster() throws Exception {
     for (int i = 0; i < 10; i++) {
       AdminProtos.CloseRegionRequest crr =
@@ -242,7 +242,7 @@ public class TestRegionServerNoMaster {
   /**
    * Test that if we do a close while opening it stops the opening.
    */
-  @Test(timeout = 60000)
+  @Test
   public void testCancelOpeningWithoutZK() throws Exception {
     // We close
     closeRegionNoZK();

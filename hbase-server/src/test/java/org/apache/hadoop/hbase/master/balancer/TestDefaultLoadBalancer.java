@@ -131,7 +131,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    *
    * @throws Exception
    */
-  @Test (timeout=60000)
+  @Test
   public void testBalanceClusterOverall() throws Exception {
     Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad = new TreeMap<>();
     for (int[] mockCluster : clusterStateMocks) {
@@ -169,7 +169,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    * level balance while the bytable strategy cannot
    * @throws Exception
    */
-  @Test (timeout=60000)
+  @Test
   public void testImpactOfBalanceClusterOverall() throws Exception {
     Map<TableName, Map<ServerName, List<RegionInfo>>> clusterLoad = new TreeMap<>();
     Map<ServerName, List<RegionInfo>> clusterServers = mockUniformClusterServers(mockUniformCluster);

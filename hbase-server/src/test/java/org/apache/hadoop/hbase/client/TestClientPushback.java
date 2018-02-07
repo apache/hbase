@@ -92,7 +92,7 @@ public class TestClientPushback {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testClientTracksServerPushback() throws Exception{
     Configuration conf = UTIL.getConfiguration();
 

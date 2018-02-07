@@ -80,7 +80,7 @@ public class TestProcedureEvents {
     fs.delete(logDir, true);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testTimeoutEventProcedure() throws Exception {
     final int NTIMEOUTS = 5;
 
@@ -92,12 +92,12 @@ public class TestProcedureEvents {
     assertEquals(NTIMEOUTS + 1, proc.getTimeoutsCount());
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testTimeoutEventProcedureDoubleExecution() throws Exception {
     testTimeoutEventProcedureDoubleExecution(false);
   }
 
-  @Test(timeout=30000)
+  @Test
   public void testTimeoutEventProcedureDoubleExecutionKillIfSuspended() throws Exception {
     testTimeoutEventProcedureDoubleExecution(true);
   }

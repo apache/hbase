@@ -41,7 +41,7 @@ public class TestReplicationThrottler {
   /**
    * unit test for throttling
    */
-  @Test(timeout=10000)
+  @Test
   public void testThrottling() {
     LOG.info("testThrottling");
 

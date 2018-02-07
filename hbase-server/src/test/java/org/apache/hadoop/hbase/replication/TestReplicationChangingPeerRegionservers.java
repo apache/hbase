@@ -92,7 +92,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     }
   }
 
-  @Test(timeout = 300000)
+  @Test
   public void testChangingNumberOfPeerRegionServers() throws IOException, InterruptedException {
 
     LOG.info("testSimplePutDelete");

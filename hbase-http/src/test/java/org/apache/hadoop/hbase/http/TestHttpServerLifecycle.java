@@ -52,13 +52,13 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test(timeout=60000)
+  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
   public void testCreatedServerIsNotAlive() throws Throwable {
     HttpServer server = createTestServer();
     assertNotLive(server);
   }
 
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test(timeout=60000)
+  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
   public void testStopUnstartedServer() throws Throwable {
     HttpServer server = createTestServer();
     stop(server);
@@ -69,7 +69,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test(timeout=60000)
+  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
   public void testStartedServerIsAlive() throws Throwable {
     HttpServer server = null;
     server = createTestServer();
@@ -95,7 +95,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test(timeout=60000)
+  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
   public void testStoppedServerIsNotAlive() throws Throwable {
     HttpServer server = createAndStartTestServer();
     assertAlive(server);
@@ -108,7 +108,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test(timeout=60000)
+  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
   public void testStoppingTwiceServerIsAllowed() throws Throwable {
     HttpServer server = createAndStartTestServer();
     assertAlive(server);
@@ -124,7 +124,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    * @throws Throwable
    *           on failure
    */
-  @Ignore ("Hangs on occasion; see HBASE-14430") @Test(timeout=60000)
+  @Ignore ("Hangs on occasion; see HBASE-14430") @Test
   public void testWepAppContextAfterServerStop() throws Throwable {
     HttpServer server = null;
     String key = "test.attribute.key";

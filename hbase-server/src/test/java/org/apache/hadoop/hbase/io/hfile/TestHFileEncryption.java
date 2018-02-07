@@ -128,7 +128,7 @@ public class TestHFileEncryption {
     return b.getOnDiskSizeWithHeader();
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testDataBlockEncryption() throws IOException {
     final int blocks = 10;
     final int[] blockSizes = new int[blocks];
@@ -164,7 +164,7 @@ public class TestHFileEncryption {
     }
   }
 
-  @Test(timeout=20000)
+  @Test
   public void testHFileEncryptionMetadata() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
@@ -202,7 +202,7 @@ public class TestHFileEncryption {
     }
   }
 
-  @Test(timeout=6000000)
+  @Test
   public void testHFileEncryption() throws Exception {
     // Create 1000 random test KVs
     RedundantKVGenerator generator = new RedundantKVGenerator();

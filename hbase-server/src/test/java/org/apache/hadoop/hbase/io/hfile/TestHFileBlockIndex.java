@@ -744,12 +744,12 @@ public class TestHFileBlockIndex {
         valueRead);
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testIntermediateLevelIndicesWithLargeKeys() throws IOException {
     testIntermediateLevelIndicesWithLargeKeys(16);
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testIntermediateLevelIndicesWithLargeKeysWithMinNumEntries() throws IOException {
     // because of the large rowKeys, we will end up with a 50-level block index without sanity check
     testIntermediateLevelIndicesWithLargeKeys(2);

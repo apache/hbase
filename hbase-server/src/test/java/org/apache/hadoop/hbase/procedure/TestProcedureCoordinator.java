@@ -123,7 +123,7 @@ public class TestProcedureCoordinator {
   /**
    * Check handling a connection failure correctly if we get it during the acquiring phase
    */
-  @Test(timeout = 60000)
+  @Test
   public void testUnreachableControllerDuringPrepare() throws Exception {
     coordinator = buildNewCoordinator();
     // setup the proc
@@ -154,7 +154,7 @@ public class TestProcedureCoordinator {
   /**
    * Check handling a connection failure correctly if we get it during the barrier phase
    */
-  @Test(timeout = 60000)
+  @Test
   public void testUnreachableControllerDuringCommit() throws Exception {
     coordinator = buildNewCoordinator();
 
@@ -184,17 +184,17 @@ public class TestProcedureCoordinator {
         anyListOf(String.class));
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testNoCohort() throws Exception {
     runSimpleProcedure();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testSingleCohortOrchestration() throws Exception {
     runSimpleProcedure("one");
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMultipleCohortOrchestration() throws Exception {
     runSimpleProcedure("one", "two", "three", "four");
   }
@@ -210,7 +210,7 @@ public class TestProcedureCoordinator {
   /**
    * Test that if nodes join the barrier early we still correctly handle the progress
    */
-  @Test(timeout = 60000)
+  @Test
   public void testEarlyJoiningBarrier() throws Exception {
     final String[] cohort = new String[] { "one", "two", "three", "four" };
     coordinator = buildNewCoordinator();

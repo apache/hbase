@@ -100,7 +100,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     return htd;
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCloneSnapshot() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf("testCloneSnapshot2");
@@ -117,7 +117,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       clonedTableName);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testCloneSnapshotToSameTable() throws Exception {
     // take the snapshot
     SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
@@ -135,7 +135,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       ProcedureTestingUtility.getExceptionCause(result) instanceof TableExistsException);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf("testRecoveryAndDoubleExecution");
@@ -158,7 +158,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       clonedTableName);
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final TableName clonedTableName = TableName.valueOf("testRollbackAndDoubleExecution");

@@ -104,7 +104,7 @@ public class TestWALProcedureStoreOnHDFS {
     }
   }
 
-  @Test(timeout=60000, expected=RuntimeException.class)
+  @Test(expected=RuntimeException.class)
   public void testWalAbortOnLowReplication() throws Exception {
     setupDFS();
 
@@ -123,7 +123,7 @@ public class TestWALProcedureStoreOnHDFS {
     assertFalse(store.isRunning());
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testWalAbortOnLowReplicationWithQueuedWriters() throws Exception {
     setupDFS();
 
@@ -167,7 +167,7 @@ public class TestWALProcedureStoreOnHDFS {
                                    reCount.get() < thread.length);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testWalRollOnLowReplication() throws Exception {
     UTIL.getConfiguration().setInt("dfs.namenode.replication.min", 1);
     setupDFS();

@@ -1153,7 +1153,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     }
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testDeleteColumnWithLatestTimeStampWhenNoVersionMatches() throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
@@ -1874,7 +1874,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     }
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSpecificDeletesFollowedByDeleteFamily() throws Exception {
     setAuths();
     final TableName tableName = TableName.valueOf(testName.getMethodName());
@@ -1961,7 +1961,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     }
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testSpecificDeletesFollowedByDeleteFamily1() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
       new PrivilegedExceptionAction<VisibilityLabelsResponse>() {

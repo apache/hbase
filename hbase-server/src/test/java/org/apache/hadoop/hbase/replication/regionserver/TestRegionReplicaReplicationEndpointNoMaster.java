@@ -174,7 +174,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testReplayCallable() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly
     openRegion(HTU, rs0, hriSecondary);
@@ -214,7 +214,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testReplayCallableWithRegionMove() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly while
     // the region is moved to another location.It tests handling of RME.
@@ -249,7 +249,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     connection.close();
   }
 
-  @Test (timeout = 240000)
+  @Test
   public void testRegionReplicaReplicationEndpointReplicate() throws Exception {
     // tests replaying the edits to a secondary region replica using the RRRE.replicate()
     openRegion(HTU, rs0, hriSecondary);

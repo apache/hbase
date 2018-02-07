@@ -71,7 +71,7 @@ public class TestProcedureSuspended {
     procStore.stop(false);
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testSuspendWhileHoldingLocks() {
     final AtomicBoolean lockA = new AtomicBoolean(false);
     final AtomicBoolean lockB = new AtomicBoolean(false);
@@ -125,7 +125,7 @@ public class TestProcedureSuspended {
     assertEquals(false, lockB.get());
   }
 
-  @Test(timeout=10000)
+  @Test
   public void testYieldWhileHoldingLocks() {
     final AtomicBoolean lock = new AtomicBoolean(false);
 

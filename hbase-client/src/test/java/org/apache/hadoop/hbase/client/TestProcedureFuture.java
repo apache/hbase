@@ -105,7 +105,7 @@ public class TestProcedureFuture {
    * we are skipping the waitOperationResult() call,
    * since we are getting the procedure result.
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithProcId() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, 100L);
@@ -120,7 +120,7 @@ public class TestProcedureFuture {
   /**
    * Verify that the spin loop for the procedure running works.
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithProcIdAndSpinning() throws Exception {
     final AtomicInteger spinCount = new AtomicInteger(0);
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
@@ -147,7 +147,7 @@ public class TestProcedureFuture {
    * When a master return a result without procId,
    * we are skipping the getProcedureResult() call.
    */
-  @Test(timeout=60000)
+  @Test
   public void testWithoutProcId() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, null);
@@ -167,7 +167,7 @@ public class TestProcedureFuture {
    * This happens when the operation calls happens on a "new master" but while we are waiting
    * the operation to be completed, we failover on an "old master".
    */
-  @Test(timeout=60000)
+  @Test
   public void testOnServerWithNoProcedureSupport() throws Exception {
     HBaseAdmin admin = Mockito.mock(HBaseAdmin.class);
     TestFuture f = new TestFuture(admin, 100L) {

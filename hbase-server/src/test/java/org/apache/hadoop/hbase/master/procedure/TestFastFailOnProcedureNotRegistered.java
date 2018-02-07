@@ -36,7 +36,7 @@ public class TestFastFailOnProcedureNotRegistered extends TestTableDDLProcedureB
   public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestFastFailOnProcedureNotRegistered.class);
 
-  @Test(expected=DoNotRetryIOException.class, timeout = 3000)
+  @Test(expected=DoNotRetryIOException.class)
   public void testFastFailOnProcedureNotRegistered() throws IOException {
     Admin admin = UTIL.getAdmin();
     Map<String, String> props = new HashMap<String, String>();

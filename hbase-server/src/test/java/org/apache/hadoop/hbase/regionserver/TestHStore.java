@@ -1465,7 +1465,7 @@ public class TestHStore {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout=30000)
+  @Test
   public void testRunDoubleMemStoreCompactors() throws IOException, InterruptedException {
     int flushSize = 500;
     Configuration conf = HBaseConfiguration.create();

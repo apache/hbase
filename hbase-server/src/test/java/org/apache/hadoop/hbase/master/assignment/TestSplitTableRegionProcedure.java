@@ -137,7 +137,7 @@ public class TestSplitTableRegionProcedure {
     }
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testSplitTableRegion() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

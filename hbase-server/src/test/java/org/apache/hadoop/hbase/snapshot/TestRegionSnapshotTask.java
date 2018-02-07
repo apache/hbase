@@ -106,7 +106,7 @@ public class TestRegionSnapshotTask {
    * not be moved around if a snapshot operation is in progress.
    * See HBASE-18398
    */
-  @Test(timeout = 30000)
+  @Test
   public void testAddRegionWithCompactions() throws Exception {
     final TableName tableName = TableName.valueOf("test_table");
     Table table = setupTable(tableName);

@@ -188,7 +188,7 @@ public class TestSnapshotMetadata {
   /**
    * Verify that the describe for a cloned table matches the describe from the original.
    */
-  @Test (timeout=300000)
+  @Test
   public void testDescribeMatchesAfterClone() throws Exception {
     // Clone the original table
     final String clonedTableNameAsString = "clone" + originalTableName;
@@ -229,7 +229,7 @@ public class TestSnapshotMetadata {
   /**
    * Verify that the describe for a restored table matches the describe for one the original.
    */
-  @Test (timeout=300000)
+  @Test
   public void testDescribeMatchesAfterRestore() throws Exception {
     runRestoreWithAdditionalMetadata(false);
   }
@@ -238,7 +238,7 @@ public class TestSnapshotMetadata {
    * Verify that if metadata changed after a snapshot was taken, that the old metadata replaces the
    * new metadata during a restore
    */
-  @Test (timeout=300000)
+  @Test
   public void testDescribeMatchesAfterMetadataChangeAndRestore() throws Exception {
     runRestoreWithAdditionalMetadata(true);
   }
@@ -248,7 +248,7 @@ public class TestSnapshotMetadata {
    * the restored table's original metadata
    * @throws Exception
    */
-  @Test (timeout=300000)
+  @Test
   public void testDescribeOnEmptyTableMatchesAfterMetadataChangeAndRestore() throws Exception {
     runRestoreWithAdditionalMetadata(true, false);
   }

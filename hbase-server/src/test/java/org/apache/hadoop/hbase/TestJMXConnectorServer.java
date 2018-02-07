@@ -79,7 +79,7 @@ public class TestJMXConnectorServer {
   /**
    * This tests to validate the HMaster's ConnectorServer after unauthorised stopMaster call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testHMConnectorServerWhenStopMaster() throws Exception {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName() + "," + MyAccessController.class.getName());
@@ -117,7 +117,7 @@ public class TestJMXConnectorServer {
    * This tests to validate the RegionServer's ConnectorServer after unauthorised stopRegionServer
    * call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testRSConnectorServerWhenStopRegionServer() throws Exception {
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName() + "," + MyAccessController.class.getName());
@@ -147,7 +147,7 @@ public class TestJMXConnectorServer {
   /**
    * This tests to validate the HMaster's ConnectorServer after unauthorised shutdown call.
    */
-  @Test(timeout = 180000)
+  @Test
   public void testHMConnectorServerWhenShutdownCluster() throws Exception {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName() + "," + MyAccessController.class.getName());

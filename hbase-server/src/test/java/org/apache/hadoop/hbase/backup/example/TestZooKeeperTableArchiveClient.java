@@ -140,7 +140,7 @@ public class TestZooKeeperTableArchiveClient {
   /**
    * Test turning on/off archiving
    */
-  @Test (timeout=300000)
+  @Test
   public void testArchivingEnableDisable() throws Exception {
     // 1. turn on hfile backups
     LOG.debug("----Starting archiving");
@@ -163,7 +163,7 @@ public class TestZooKeeperTableArchiveClient {
       archivingClient.getArchivingEnabled(TABLE_NAME));
   }
 
-  @Test (timeout=300000)
+  @Test
   public void testArchivingOnSingleTable() throws Exception {
     createArchiveDirectory();
     FileSystem fs = UTIL.getTestFileSystem();
@@ -211,7 +211,7 @@ public class TestZooKeeperTableArchiveClient {
    * Test archiving/cleaning across multiple tables, where some are retained, and others aren't
    * @throws Exception on failure
    */
-  @Test (timeout=300000)
+  @Test
   public void testMultipleTables() throws Exception {
     createArchiveDirectory();
     String otherTable = "otherTable";

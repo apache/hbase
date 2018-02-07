@@ -87,17 +87,17 @@ public class TestServerCrashProcedure {
   }
 
 
-  @Test(timeout=60000)
+  @Test
   public void testCrashTargetRs() throws Exception {
     testRecoveryAndDoubleExecution(false, false);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecutionOnRsWithMeta() throws Exception {
     testRecoveryAndDoubleExecution(true, true);
   }
 
-  @Test(timeout=60000)
+  @Test
   public void testRecoveryAndDoubleExecutionOnRsWithoutMeta() throws Exception {
     testRecoveryAndDoubleExecution(false, true);
   }

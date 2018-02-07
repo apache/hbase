@@ -52,7 +52,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
    *
    * @throws Exception
    */
-  @Test(timeout = 600000)
+  @Test
   public void testDisableInactivePeer() throws Exception {
 
     // enabling and shutdown the peer

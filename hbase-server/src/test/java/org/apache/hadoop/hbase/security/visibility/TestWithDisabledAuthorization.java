@@ -122,7 +122,7 @@ public class TestWithDisabledAuthorization {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testManageUserAuths() throws Throwable {
     // Even though authorization is disabled, we should be able to manage user auths
 
@@ -200,7 +200,7 @@ public class TestWithDisabledAuthorization {
     assertEquals(0, authsList.size());
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testPassiveVisibility() throws Exception {
     // No values should be filtered regardless of authorization if we are passive
     try (Table t = createTableAndWriteDataWithLabels(

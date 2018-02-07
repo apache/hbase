@@ -57,7 +57,7 @@ public class TestMasterShutdown {
    * Verifies that all masters are properly shutdown.
    * @throws Exception
    */
-  @Test (timeout=120000)
+  @Test
   public void testMasterShutdown() throws Exception {
     final int NUM_MASTERS = 3;
     final int NUM_RS = 3;
@@ -103,7 +103,7 @@ public class TestMasterShutdown {
     htu.shutdownMiniCluster();
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 0;

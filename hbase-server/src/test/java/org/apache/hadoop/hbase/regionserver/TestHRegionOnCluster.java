@@ -68,7 +68,7 @@ public class TestHRegionOnCluster {
   @Rule
   public TestName name = new TestName();
 
-  @Test (timeout=300000)
+  @Test
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 3;

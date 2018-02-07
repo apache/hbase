@@ -133,7 +133,7 @@ public class TestThriftHttpServer {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Test(timeout=600000)
+  @Test
   public void testRunThriftServerWithHeaderBufferLength() throws Exception {
 
     // Test thrift server with HTTP header length less than 64k
@@ -149,7 +149,7 @@ public class TestThriftHttpServer {
     runThriftServer(1024 * 64);
   }
 
-  @Test(timeout=600000)
+  @Test
   public void testRunThriftServer() throws Exception {
     runThriftServer(0);
   }
