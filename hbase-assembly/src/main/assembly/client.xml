@@ -1,0 +1,137 @@
+<?xml version="1.0"?>
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.1 http://maven.apache.org/xsd/assembly-1.1.1.xsd">
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+  <!--This 'all' id is not appended to the produced bundle because we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
+  <id>client-bin</id>
+  <formats>
+    <format>tar.gz</format>
+  </formats>
+  <!-- Override the root directory in the tarball -->
+  <baseDirectory>hbase-${project.version}-client</baseDirectory>
+  <componentDescriptors>
+      <componentDescriptor>src/main/assembly/client-components.xml</componentDescriptor>
+  </componentDescriptors>
+  <moduleSets>
+    <moduleSet>
+      <useAllReactorProjects>true</useAllReactorProjects>
+      <includes>
+        <!-- Keep this list sorted by name -->
+        <include>org.apache.hbase:hbase-annotations</include>
+        <include>org.apache.hbase:hbase-client</include>
+        <include>org.apache.hbase:hbase-common</include>
+        <include>org.apache.hbase:hbase-hadoop-compat</include>
+        <include>org.apache.hbase:hbase-hadoop2-compat</include>
+        <include>org.apache.hbase:hbase-mapreduce</include>
+        <include>org.apache.hbase:hbase-metrics</include>
+        <include>org.apache.hbase:hbase-metrics-api</include>
+        <include>org.apache.hbase:hbase-procedure</include>
+        <include>org.apache.hbase:hbase-protocol</include>
+        <include>org.apache.hbase:hbase-protocol-shaded</include>
+        <include>org.apache.hbase:hbase-server</include>
+        <include>org.apache.hbase:hbase-zookeeper</include>
+      </includes>
+      <!-- Binaries for the dependencies also go in the hbase-jars directory -->
+      <binaries>
+        <outputDirectory>lib</outputDirectory>
+        <unpack>false</unpack>
+        <dependencySets>
+          <!-- Exclude jruby-complete from hbase_home/lib -->
+          <dependencySet>
+            <excludes>
+              <exclude>com.sun.jersey:*</exclude>
+              <exclude>com.sun.jersey.contribs:*</exclude>
+              <!-- Exclude jars which typical clients don't need -->
+              <exclude>org.apache.hbase:hbase-external-blockcache</exclude>
+              <exclude>org.apache.hbase:hbase-http</exclude>
+              <exclude>org.apache.hbase:hbase-replication</exclude>
+              <exclude>org.apache.hbase:hbase-rest</exclude>
+              <exclude>org.apache.hbase:hbase-rsgroup</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-client</exclude>
+              <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
+              <!-- At present, hbase-shell doesn't actually contain
+                   any Java code we need to include. Ruby files are
+                   copied elsewhere in this descriptor. -->
+              <exclude>org.apache.hbase:hbase-shell</exclude>
+              <exclude>org.apache.hbase:hbase-thrift</exclude>
+              <exclude>org.jruby:jruby-complete</exclude>
+            </excludes>
+          </dependencySet>
+        </dependencySets>
+      </binaries>
+    </moduleSet>
+    <moduleSet>
+      <useAllReactorProjects>true</useAllReactorProjects>
+      <includes>
+        <include>org.apache.hbase:hbase-shaded-client</include>
+        <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+      </includes>
+      <!-- Binaries for the dependencies also go in the hbase-jars directory -->
+      <binaries>
+        <outputDirectory>shaded-lib</outputDirectory>
+        <unpack>false</unpack>
+        <dependencySets>
+          <dependencySet>
+            <includes>
+              <!-- Keep this list sorted by name -->
+              <include>org.apache.hbase:hbase-shaded-client</include>
+              <include>org.apache.hbase:hbase-shaded-mapreduce</include>
+            </includes>
+            <useTransitiveDependencies>false</useTransitiveDependencies>
+          </dependencySet>
+        </dependencySets>
+      </binaries>
+    </moduleSet>
+  </moduleSets>
+  <!-- Include the generated LICENSE and NOTICE files -->
+  <files>
+    <file>
+      <source>${project.build.directory}/maven-shared-archive-resources/META-INF/LICENSE</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LICENSE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${project.build.directory}/NOTICE.aggregate</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>NOTICE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${basedir}/src/main/resources/META-INF/LEGAL</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LEGAL</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+  </files>
+
+  <!-- Add jruby-complete to hbase_home/lib/ruby.
+       Update JRUBY_PACKAGED_WITH_HBASE in bin/hbase and hbase.cmd if you would like to update outputDirectory below -->
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>lib/ruby</outputDirectory>
+      <includes>
+        <include>org.jruby:jruby-complete</include>
+      </includes>
+    </dependencySet>
+  </dependencySets>
+
+</assembly>
