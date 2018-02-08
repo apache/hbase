@@ -1186,6 +1186,7 @@ public class AssignmentManager implements ServerListener {
     LOG.debug("Joining cluster...");
 
     // Scan hbase:meta to build list of existing regions, servers, and assignment
+    // hbase:meta is online when we get to here and TableStateManager has been started.
     loadMeta();
 
     for (int i = 0; master.getServerManager().countOfRegionServers() < 1; ++i) {
@@ -1232,6 +1233,10 @@ public class AssignmentManager implements ServerListener {
               regionStates.addRegionToServer(regionNode);
             } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
               regionStates.addToOfflineRegions(regionNode);
+            } else if (localState == State.CLOSED && getTableStateManager().
+                isTableState(regionNode.getTable(), TableState.State.DISABLED)) {
+              // The region is CLOSED and the table is DISABLED, there is nothing to schedule;
+              // the region is inert.
             } else {
               // These regions should have a procedure in replay
               regionStates.addRegionInTransition(regionNode, null);
@@ -1496,8 +1501,10 @@ public class AssignmentManager implements ServerListener {
     synchronized (regionNode) {
       regionNode.transitionState(State.OPEN, RegionStates.STATES_EXPECTED_ON_OPEN);
       if (isMetaRegion(hri)) {
-        master.getTableStateManager().setTableState(TableName.META_TABLE_NAME,
-            TableState.State.ENABLED);
+        // Usually we'd set a table ENABLED at this stage but hbase:meta is ALWAYs enabled, it
+        // can't be disabled -- so skip the RPC (besides... enabled is managed by TableStateManager
+        // which is backed by hbase:meta... Avoid setting ENABLED to avoid having to update state
+        // on table that contains state.
         setMetaInitialized(hri, true);
       }
       regionStates.addRegionToServer(regionNode);

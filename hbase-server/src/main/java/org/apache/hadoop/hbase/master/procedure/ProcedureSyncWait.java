@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -207,7 +206,7 @@ public final class ProcedureSyncWait {
   }
 
   protected static void waitRegionInTransition(final MasterProcedureEnv env,
-      final List<RegionInfo> regions) throws IOException, CoordinatedStateException {
+      final List<RegionInfo> regions) throws IOException {
     final RegionStates states = env.getAssignmentManager().getRegionStates();
     for (final RegionInfo region : regions) {
       ProcedureSyncWait.waitFor(env, "regions " + region.getRegionNameAsString() + " in transition",

@@ -59,6 +59,9 @@ public class ZNodePaths {
   // znode containing the current cluster state
   public final String clusterStateZNode;
   // znode used for table disabling/enabling
+  // Still used in hbase2 by MirroringTableStateManager; it mirrors internal table state out to
+  // zookeeper for hbase1 clients to make use of. If no hbase1 clients disable. See
+  // MirroringTableStateManager. To be removed in hbase3.
   @Deprecated
   public final String tableZNode;
   // znode containing the unique cluster ID
