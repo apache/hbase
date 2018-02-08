@@ -31,6 +31,8 @@ import com.google.protobuf.TextFormat;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -113,8 +115,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  * @see ProtobufUtil
  */
 // TODO: Generate this class from the shaded version.
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(
-  value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification="None. Address sometime.")
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class.
 public final class ProtobufUtil {
   private ProtobufUtil() {
@@ -168,14 +168,18 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Dynamic class loader to load filter/comparators
-   */
-  private final static ClassLoader CLASS_LOADER;
+    * Dynamic class loader to load filter/comparators
+    */
+  private final static class ClassLoaderHolder {
+    private final static ClassLoader CLASS_LOADER;
 
-  static {
-    ClassLoader parent = ProtobufUtil.class.getClassLoader();
-    Configuration conf = HBaseConfiguration.create();
-    CLASS_LOADER = new DynamicClassLoader(conf, parent);
+    static {
+      ClassLoader parent = ProtobufUtil.class.getClassLoader();
+      Configuration conf = HBaseConfiguration.create();
+      CLASS_LOADER = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)
+        () -> new DynamicClassLoader(conf, parent)
+      );
+    }
   }
 
   /**
@@ -1430,8 +1434,7 @@ public final class ProtobufUtil {
     String funcName = "parseFrom";
     byte [] value = proto.getSerializedComparator().toByteArray();
     try {
-      Class<? extends ByteArrayComparable> c =
-        (Class<? extends ByteArrayComparable>)Class.forName(type, true, CLASS_LOADER);
+      Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
@@ -1454,8 +1457,7 @@ public final class ProtobufUtil {
     final byte [] value = proto.getSerializedFilter().toByteArray();
     String funcName = "parseFrom";
     try {
-      Class<? extends Filter> c =
-        (Class<? extends Filter>)Class.forName(type, true, CLASS_LOADER);
+      Class<?> c = Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
@@ -1541,7 +1543,7 @@ public final class ProtobufUtil {
     String type = parameter.getName();
     try {
       Class<? extends Throwable> c =
-        (Class<? extends Throwable>)Class.forName(type, true, CLASS_LOADER);
+        (Class<? extends Throwable>)Class.forName(type, true, ClassLoaderHolder.CLASS_LOADER);
       Constructor<? extends Throwable> cn = null;
       try {
         cn = c.getDeclaredConstructor(String.class);

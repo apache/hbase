@@ -26,7 +26,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,6 +40,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.token.Token;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +53,15 @@ public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
   private static final Logger LOG = LoggerFactory.getLogger(TokenUtil.class);
 
+  // Set in TestTokenUtil via reflection
+  private static ServiceException injectedException;
+
+  private static void injectFault() throws ServiceException {
+    if (injectedException != null) {
+      throw injectedException;
+    }
+  }
+
   /**
    * Obtain and return an authentication token for the current user.
    * @param conn The HBase cluster connection
@@ -63,6 +72,8 @@ public class TokenUtil {
       Connection conn) throws IOException {
     Table meta = null;
     try {
+      injectFault();
+
       meta = conn.getTable(TableName.META_TABLE_NAME);
       CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
       AuthenticationProtos.AuthenticationService.BlockingInterface service =
