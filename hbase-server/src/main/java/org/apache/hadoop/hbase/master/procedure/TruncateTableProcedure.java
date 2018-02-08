@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -141,7 +140,7 @@ public class TruncateTableProcedure
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
-    } catch (HBaseException|IOException e) {
+    } catch (IOException e) {
       if (isRollbackSupported(state)) {
         setFailure("master-truncate-table", e);
       } else {

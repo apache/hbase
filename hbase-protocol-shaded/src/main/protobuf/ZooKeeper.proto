@@ -85,7 +85,7 @@ message SplitLogTask {
 
 /**
  * The znode that holds state of table.
- * Deprected, table state is stored in table descriptor on HDFS.
+ * Deprected, table state is stored in hbase:meta since 2.0.0.
  */
 message DeprecatedTableState {
   // Table's current state

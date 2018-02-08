@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
-import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -180,7 +179,6 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterMaintenanceModeTracker;
@@ -716,7 +714,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Initialize all ZK based system trackers.
    */
   void initializeZKBasedSystemTrackers() throws IOException,
-      InterruptedException, KeeperException, CoordinatedStateException {
+      InterruptedException, KeeperException {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.normalizer = RegionNormalizerFactory.getRegionNormalizer(conf);
     this.normalizer.setMasterServices(this);
@@ -780,7 +778,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * </ol>
    */
   private void finishActiveMasterInitialization(MonitoredTask status)
-      throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
+      throws IOException, InterruptedException, KeeperException {
 
     Thread zombieDetector = new Thread(new InitializationMonitor(this),
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
@@ -820,7 +818,12 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // This manager is started AFTER hbase:meta is confirmed on line.
     // See inside metaBootstrap.recoverMeta(); below. Shouldn't be so cryptic!
-    this.tableStateManager = new TableStateManager(this);
+    // hbase.mirror.table.state.to.zookeeper is so hbase1 clients can connect. They read table
+    // state from zookeeper while hbase2 reads it from hbase:meta. Disable if no hbase1 clients.
+    this.tableStateManager =
+        this.conf.getBoolean(MirroringTableStateManager.MIRROR_TABLE_STATE_TO_ZK_KEY, true)?
+        new MirroringTableStateManager(this):
+        new TableStateManager(this);
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -875,11 +878,10 @@ public class HMaster extends HRegionServer implements MasterServices {
       return;
     }
 
-    // we recover hbase:meta region servers inside master initialization and
-    // handle other failed servers in SSH in order to start up master node ASAP
+    // Bring up hbase:meta. recoverMeta is a blocking call waiting until hbase:meta is deployed.
+    // It also starts the TableStateManager.
     MasterMetaBootstrap metaBootstrap = createMetaBootstrap(this, status);
     metaBootstrap.recoverMeta();
-
 
     //Initialize after meta as it scans meta
     if (favoredNodesManager != null) {
@@ -888,15 +890,6 @@ public class HMaster extends HRegionServer implements MasterServices {
       snapshotOfRegionAssignment.initialize();
       favoredNodesManager.initialize(snapshotOfRegionAssignment);
     }
-
-    // migrating existent table state from zk, so splitters
-    // and recovery process treat states properly.
-    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
-        .queryForTableStates(getZooKeeper()).entrySet()) {
-      LOG.info("Converting state from zk to new states:" + entry);
-      tableStateManager.setTableState(entry.getKey(), entry.getValue());
-    }
-    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().znodePaths.tableZNode);
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
     metaBootstrap.processDeadServers();

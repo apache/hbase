@@ -53,8 +53,11 @@ public class MasterMetaBootstrap {
   }
 
   public void recoverMeta() throws InterruptedException, IOException {
+    // This is a blocking call that waits until hbase:meta is deployed.
     master.recoverMeta();
+    // Now we can start the TableStateManager. It is backed by hbase:meta.
     master.getTableStateManager().start();
+    // Enable server crash procedure handling
     enableCrashedServerProcessing(false);
   }
 
