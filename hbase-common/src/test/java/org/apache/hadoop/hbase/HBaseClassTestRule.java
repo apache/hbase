@@ -57,20 +57,9 @@ public final class HBaseClassTestRule implements TestRule {
 
   private static long getTimeoutInSeconds(Class<?> clazz) {
     Category[] categories = clazz.getAnnotationsByType(Category.class);
-    if (categories.length == 0) {
-      throw new IllegalArgumentException(clazz.getName() + " is not annotated with @Category");
-    }
     for (Class<?> c : categories[0].value()) {
-      if (c == SmallTests.class) {
-        // See SmallTests. Supposed to run 15 seconds.
-        // Lots of these timeout on Jenkins... a stall of ten or twenty seconds mess up what looks
-        // fine when run local.
-        return 60;
-      } else if (c == MediumTests.class) {
-        // See MediumTests. Supposed to run 50 seconds.
-        return 180;
-      } else if (c == LargeTests.class) {
-        // Let large tests have a ten minute timeout.
+      if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
+        // All tests have a 10minute timeout.
         return TimeUnit.MINUTES.toSeconds(10);
       }
     }
