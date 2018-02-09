@@ -155,7 +155,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private synchronized void init() throws IOException{
     refresh();
-    rsGroupStartupWorker.start();
     serverEventsListenerThread.start();
     masterServices.getServerManager().registerListener(serverEventsListenerThread);
     failedOpenUpdaterThread = new FailedOpenUpdaterThread(masterServices.getConfiguration());
@@ -167,6 +166,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     RSGroupInfoManagerImpl instance = new RSGroupInfoManagerImpl(master);
     instance.init();
     return instance;
+  }
+
+  public void start(){
+    // create system table of rsgroup
+    rsGroupStartupWorker.start();
   }
 
   @Override
