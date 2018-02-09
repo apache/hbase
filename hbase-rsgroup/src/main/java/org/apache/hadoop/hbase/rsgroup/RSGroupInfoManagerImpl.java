@@ -137,7 +137,6 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   public void init() throws IOException{
     rsGroupStartupWorker = new RSGroupStartupWorker(this, master, conn);
     refresh();
-    rsGroupStartupWorker.start();
     defaultServerUpdater = new DefaultServerUpdater(this);
     Threads.setDaemonThreadRunning(defaultServerUpdater);
     failedOpenUpdater = new FailedOpenUpdater(this);
@@ -148,6 +147,11 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
   boolean isInit() {
     return isInit;
+  }
+
+  public void start(){
+    // create system table of rsgroup
+    rsGroupStartupWorker.start();
   }
 
   /**
