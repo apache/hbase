@@ -104,7 +104,7 @@ public class TestSimpleRpcScheduler {
     CallRunner task = createMockTask();
     task.setStatus(new MonitoredRPCHandlerImpl());
     scheduler.dispatch(task);
-    verify(task, timeout(1000)).run();
+    verify(task, timeout(10000)).run();
     scheduler.stop();
   }
 
@@ -218,7 +218,7 @@ public class TestSimpleRpcScheduler {
       scheduler.dispatch(task);
     }
     for (CallRunner task : tasks) {
-      verify(task, timeout(1000)).run();
+      verify(task, timeout(10000)).run();
     }
     scheduler.stop();
 
