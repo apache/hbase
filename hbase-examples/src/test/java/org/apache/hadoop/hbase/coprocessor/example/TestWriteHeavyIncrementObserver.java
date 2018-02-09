@@ -63,7 +63,7 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
       Result r = scanner.next();
       assertTrue(r.rawCells().length > 2);
     }
-    UTIL.getAdmin().flush(NAME);
+    UTIL.flush(NAME);
     UTIL.getAdmin().majorCompact(NAME);
     HStore store = UTIL.getHBaseCluster().findRegionsForTable(NAME).get(0).getStore(FAMILY);
     Waiter.waitFor(UTIL.getConfiguration(), 30000, new Waiter.ExplainingPredicate<Exception>() {
