@@ -387,6 +387,12 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
           throw new HBaseIOException(msg);
         }
         infoManager = cps.get(0).getGroupInfoManager();
+        if(infoManager == null){
+          String msg = "RSGroupInfoManager hasn't been initialized";
+          LOG.error(msg);
+          throw new HBaseIOException(msg);
+        }
+        infoManager.start();
       }
     } catch (IOException e) {
       throw new HBaseIOException("Failed to initialize GroupInfoManagerImpl", e);

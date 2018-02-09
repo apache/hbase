@@ -48,6 +48,8 @@ public interface RSGroupInfoManager {
   byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
   byte[] ROW_KEY = {0};
 
+  void start();
+
   /**
    * Add given RSGroupInfo to existing list of group infos.
    */
