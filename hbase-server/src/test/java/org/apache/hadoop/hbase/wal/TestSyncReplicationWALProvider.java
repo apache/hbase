@@ -27,6 +27,7 @@ import java.util.Optional;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -35,6 +36,8 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogTestHelper;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,7 +54,7 @@ public class TestSyncReplicationWALProvider {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncReplicationWALProvider.class);
+    HBaseClassTestRule.forClass(TestSyncReplicationWALProvider.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -69,19 +72,30 @@ public class TestSyncReplicationWALProvider {
 
   private static WALFactory FACTORY;
 
-  private static Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
-    if (info.getTable().equals(TABLE)) {
-      return Optional.of(Pair.newPair(PEER_ID, REMOTE_WAL_DIR));
-    } else {
-      return Optional.empty();
+  public static final class InfoProvider implements SyncReplicationPeerInfoProvider {
+
+    @Override
+    public Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info) {
+      if (info.getTable().equals(TABLE)) {
+        return Optional.of(Pair.newPair(PEER_ID, REMOTE_WAL_DIR));
+      } else {
+        return Optional.empty();
+      }
+    }
+
+    @Override
+    public boolean isInState(RegionInfo info, SyncReplicationState state) {
+      // TODO Implement SyncReplicationPeerInfoProvider.isInState
+      return false;
     }
   }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    UTIL.getConfiguration().setBoolean(HConstants.SYNC_REPLICATION_ENABLED, true);
     UTIL.startMiniDFSCluster(3);
-    FACTORY = new WALFactory(UTIL.getConfiguration(), "test",
-        TestSyncReplicationWALProvider::getPeerIdAndRemoteWALDir);
+    FACTORY = new WALFactory(UTIL.getConfiguration(), "test");
+    ((SyncReplicationWALProvider) FACTORY.getWALProvider()).setPeerInfoProvider(new InfoProvider());
     UTIL.getTestFileSystem().mkdirs(new Path(REMOTE_WAL_DIR, PEER_ID));
   }
 
@@ -151,9 +165,9 @@ public class TestSyncReplicationWALProvider {
     DualAsyncFSWAL wal = (DualAsyncFSWAL) FACTORY.getWAL(REGION);
     assertEquals(2, FACTORY.getWALs().size());
     testReadWrite(wal);
-    SyncReplicationWALProvider walProvider =
-      (SyncReplicationWALProvider) FACTORY.getWALProvider();
-    walProvider.peerRemoved(PEER_ID);
+    SyncReplicationWALProvider walProvider = (SyncReplicationWALProvider) FACTORY.getWALProvider();
+    walProvider.peerSyncReplicationStateChange(PEER_ID, SyncReplicationState.ACTIVE,
+      SyncReplicationState.DOWNGRADE_ACTIVE, 1);
     assertEquals(1, FACTORY.getWALs().size());
   }
 }

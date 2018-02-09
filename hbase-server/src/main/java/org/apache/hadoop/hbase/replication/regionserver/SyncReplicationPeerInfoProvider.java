@@ -15,26 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.hbase.replication.regionserver.PeerProcedureHandler;
-import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
+import java.util.Optional;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A source for a replication stream has to expose this service. This service allows an application
- * to hook into the regionserver and watch for new transactions.
+ * Get the information for a sync replication peer.
  */
 @InterfaceAudience.Private
-public interface ReplicationSourceService extends ReplicationService {
+public interface SyncReplicationPeerInfoProvider {
 
   /**
-   * Returns an info provider for sync replication peer.
+   * Return the peer id and remote WAL directory if the region is synchronously replicated and the
+   * state is {@link SyncReplicationState#ACTIVE}.
    */
-  SyncReplicationPeerInfoProvider getSyncReplicationPeerInfoProvider();
+  Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info);
 
   /**
-   * Returns a Handler to handle peer procedures.
+   * Check whether the give region is contained in a sync replication peer which is in the given
+   * state.
    */
-  PeerProcedureHandler getPeerProcedureHandler();
+  boolean isInState(RegionInfo info, SyncReplicationState state);
 }

@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.regionserver.PeerActionListener;
-import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerProvider;
+import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
@@ -67,7 +67,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private final WALProvider provider;
 
-  private final SyncReplicationPeerProvider peerProvider;
+  private SyncReplicationPeerInfoProvider peerInfoProvider;
 
   private WALFactory factory;
 
@@ -85,9 +85,12 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   private final KeyLocker<String> createLock = new KeyLocker<>();
 
-  SyncReplicationWALProvider(WALProvider provider, SyncReplicationPeerProvider peerProvider) {
+  SyncReplicationWALProvider(WALProvider provider) {
     this.provider = provider;
-    this.peerProvider = peerProvider;
+  }
+
+  public void setPeerInfoProvider(SyncReplicationPeerInfoProvider peerInfoProvider) {
+    this.peerInfoProvider = peerInfoProvider;
   }
 
   @Override
@@ -99,7 +102,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     this.conf = conf;
     this.factory = factory;
     Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass =
-        NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
+      NettyAsyncFSWALConfigHelper.getEventLoopConfig(conf);
     eventLoopGroup = eventLoopGroupAndChannelClass.getFirst();
     channelClass = eventLoopGroupAndChannelClass.getSecond();
   }
@@ -112,9 +115,9 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
     Path remoteWALDirPath = new Path(remoteWALDir);
     FileSystem remoteFs = remoteWALDirPath.getFileSystem(conf);
     return new DualAsyncFSWAL(CommonFSUtils.getWALFileSystem(conf), remoteFs,
-        CommonFSUtils.getWALRootDir(conf), new Path(remoteWALDirPath, peerId),
-        getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
-        conf, listeners, true, getLogPrefix(peerId), LOG_SUFFIX, eventLoopGroup, channelClass);
+      CommonFSUtils.getWALRootDir(conf), new Path(remoteWALDirPath, peerId),
+      getWALDirectoryName(factory.factoryId), getWALArchiveDirectoryName(conf, factory.factoryId),
+      conf, listeners, true, getLogPrefix(peerId), LOG_SUFFIX, eventLoopGroup, channelClass);
   }
 
   private DualAsyncFSWAL getWAL(String peerId, String remoteWALDir) throws IOException {
@@ -139,7 +142,7 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   @Override
   public WAL getWAL(RegionInfo region) throws IOException {
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
-        peerProvider.getPeerIdAndRemoteWALDir(region);
+      peerInfoProvider.getPeerIdAndRemoteWALDir(region);
     if (peerIdAndRemoteWALDir.isPresent()) {
       Pair<String, String> pair = peerIdAndRemoteWALDir.get();
       return getWAL(pair.getFirst(), pair.getSecond());
@@ -221,14 +224,12 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
   }
 
   @Override
-  public void peerRemoved(String peerId) {
-    safeClose(peerId2WAL.remove(peerId));
-  }
-
-  @Override
   public void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
-      SyncReplicationState to) {
-    assert to == SyncReplicationState.DOWNGRADE_ACTIVE;
-    safeClose(peerId2WAL.remove(peerId));
+      SyncReplicationState to, int stage) {
+    // TODO: stage 0
+    if (from == SyncReplicationState.ACTIVE && to == SyncReplicationState.DOWNGRADE_ACTIVE &&
+      stage == 1) {
+      safeClose(peerId2WAL.remove(peerId));
+    }
   }
 }

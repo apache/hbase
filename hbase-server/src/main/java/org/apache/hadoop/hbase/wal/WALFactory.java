@@ -24,10 +24,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
-import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
@@ -145,18 +145,6 @@ public class WALFactory {
   }
 
   /**
-   * instantiate a provider from a config property. requires conf to have already been set (as well
-   * as anything the provider might need to read).
-   */
-  private WALProvider getProvider(String key, String defaultValue, String providerId)
-      throws IOException {
-    WALProvider provider = createProvider(getProviderClass(key, defaultValue));
-    provider.init(this, conf, providerId);
-    provider.addWALActionsListener(new MetricsWAL());
-    return provider;
-  }
-
-  /**
    * @param conf must not be null, will keep a reference to read params in later reader/writer
    *          instances.
    * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
@@ -173,33 +161,19 @@ public class WALFactory {
     this.factoryId = factoryId;
     // end required early initialization
     if (conf.getBoolean("hbase.regionserver.hlog.enabled", true)) {
-      provider = getProvider(WAL_PROVIDER, DEFAULT_WAL_PROVIDER, null);
+      WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
+      if (conf.getBoolean(HConstants.SYNC_REPLICATION_ENABLED, false)) {
+        provider = new SyncReplicationWALProvider(provider);
+      }
+      provider.init(this, conf, null);
+      provider.addWALActionsListener(new MetricsWAL());
+      this.provider = provider;
     } else {
       // special handling of existing configuration behavior.
       LOG.warn("Running with WAL disabled.");
       provider = new DisabledWALProvider();
       provider.init(this, conf, factoryId);
     }
-  }
-
-  /**
-   * A temporary constructor for testing synchronous replication.
-   * <p>
-   * Remove it once we can integrate the synchronous replication logic in RS.
-   */
-  @VisibleForTesting
-  WALFactory(Configuration conf, String factoryId, SyncReplicationPeerProvider peerProvider)
-      throws IOException {
-    timeoutMillis = conf.getInt("hbase.hlog.open.timeout", 300000);
-    /* TODO Both of these are probably specific to the fs wal provider */
-    logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
-      AbstractFSWALProvider.Reader.class);
-    this.conf = conf;
-    this.factoryId = factoryId;
-    WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
-    this.provider = new SyncReplicationWALProvider(provider, peerProvider);
-    this.provider.init(this, conf, null);
-    this.provider.addWALActionsListener(new MetricsWAL());
   }
 
   /**
@@ -250,8 +224,9 @@ public class WALFactory {
       if (provider != null) {
         return provider;
       }
-      provider = getProvider(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER,
-        AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+      provider = createProvider(getProviderClass(META_WAL_PROVIDER, DEFAULT_META_WAL_PROVIDER));
+      provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
+      provider.addWALActionsListener(new MetricsWAL());
       if (metaProvider.compareAndSet(null, provider)) {
         return provider;
       } else {

@@ -17,19 +17,32 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Get the peer id and remote root dir if the region is synchronously replicated.
+ * Used to map region to sync replication peer id.
+ * <p>
+ * TODO: now only support include table options.
  */
 @InterfaceAudience.Private
-public interface SyncReplicationPeerProvider {
+class SyncReplicationPeerMappingManager {
 
-  /**
-   * Return the peer id and remote WAL directory if the region is synchronously replicated.
-   */
-  Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info);
+  private final ConcurrentMap<TableName, String> table2PeerId = new ConcurrentHashMap<>();
+
+  void add(String peerId, ReplicationPeerConfig peerConfig) {
+    peerConfig.getTableCFsMap().keySet().forEach(tn -> table2PeerId.put(tn, peerId));
+  }
+
+  void remove(String peerId, ReplicationPeerConfig peerConfig) {
+    peerConfig.getTableCFsMap().keySet().forEach(table2PeerId::remove);
+  }
+
+  String getPeerId(RegionInfo info) {
+    return table2PeerId.get(info.getTable());
+  }
 }
