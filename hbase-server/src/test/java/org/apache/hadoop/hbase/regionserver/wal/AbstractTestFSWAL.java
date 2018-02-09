@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +34,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,16 +42,17 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALCoprocessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -153,7 +155,7 @@ public abstract class AbstractTestFSWAL {
     }
   }
 
-  protected void addEdits(WAL log, RegionInfo hri, HTableDescriptor htd, int times,
+  protected void addEdits(WAL log, RegionInfo hri, TableDescriptor htd, int times,
       MultiVersionConcurrencyControl mvcc, NavigableMap<byte[], Integer> scopes)
       throws IOException {
     final byte[] row = Bytes.toBytes("row");
@@ -249,26 +251,20 @@ public abstract class AbstractTestFSWAL {
     conf1.setInt("hbase.regionserver.maxlogs", 1);
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(conf1), DIR.toString(),
       HConstants.HREGION_OLDLOGDIR_NAME, conf1, null, true, null, null);
-    HTableDescriptor t1 =
-        new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
-    HTableDescriptor t2 =
-        new HTableDescriptor(TableName.valueOf("t2")).addFamily(new HColumnDescriptor("row"));
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(t1.getTableName())
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .build();
-    RegionInfo hri2 = RegionInfoBuilder.newBuilder(t2.getTableName())
-        .setStartKey(HConstants.EMPTY_START_ROW)
-        .setEndKey(HConstants.EMPTY_END_ROW)
-        .build();
+    TableDescriptor t1 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t1"))
+      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+    TableDescriptor t2 = TableDescriptorBuilder.newBuilder(TableName.valueOf("t2"))
+      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(t1.getTableName()).build();
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(t2.getTableName()).build();
     // add edits and roll the wal
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (byte[] fam : t1.getFamiliesKeys()) {
+    for (byte[] fam : t1.getColumnFamilyNames()) {
       scopes1.put(fam, 0);
     }
     NavigableMap<byte[], Integer> scopes2 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (byte[] fam : t2.getFamiliesKeys()) {
+    for (byte[] fam : t2.getColumnFamilyNames()) {
       scopes2.put(fam, 0);
     }
     try {
@@ -293,12 +289,12 @@ public abstract class AbstractTestFSWAL {
       assertEquals(hri1.getEncodedNameAsBytes(), regionsToFlush[0]);
       // flush region 1, and roll the wal file. Only last wal which has entries for region1 should
       // remain.
-      flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getFamiliesKeys());
+      flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
       wal.rollWriter();
       // only one wal should remain now (that is for the second region).
       assertEquals(1, wal.getNumRolledLogFiles());
       // flush the second region
-      flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getFamiliesKeys());
+      flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getColumnFamilyNames());
       wal.rollWriter(true);
       // no wal should remain now.
       assertEquals(0, wal.getNumRolledLogFiles());
@@ -315,14 +311,14 @@ public abstract class AbstractTestFSWAL {
       regionsToFlush = wal.findRegionsToForceFlush();
       assertEquals(2, regionsToFlush.length);
       // flush both regions
-      flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getFamiliesKeys());
-      flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getFamiliesKeys());
+      flushRegion(wal, hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
+      flushRegion(wal, hri2.getEncodedNameAsBytes(), t2.getColumnFamilyNames());
       wal.rollWriter(true);
       assertEquals(0, wal.getNumRolledLogFiles());
       // Add an edit to region1, and roll the wal.
       addEdits(wal, hri1, t1, 2, mvcc, scopes1);
       // tests partial flush: roll on a partial flush, and ensure that wal is not archived.
-      wal.startCacheFlush(hri1.getEncodedNameAsBytes(), t1.getFamiliesKeys());
+      wal.startCacheFlush(hri1.getEncodedNameAsBytes(), t1.getColumnFamilyNames());
       wal.rollWriter();
       wal.completeCacheFlush(hri1.getEncodedNameAsBytes());
       assertEquals(1, wal.getNumRolledLogFiles());
@@ -364,15 +360,15 @@ public abstract class AbstractTestFSWAL {
     final TableName tableName = TableName.valueOf(testName);
     final RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
     final byte[] rowName = tableName.getName();
-    final HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor("f"));
+    final TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
     HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
       TEST_UTIL.getConfiguration(), htd);
     HBaseTestingUtility.closeRegionAndWAL(r);
     final int countPerFamily = 10;
     final AtomicBoolean goslow = new AtomicBoolean(false);
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (byte[] fam : htd.getFamiliesKeys()) {
+    for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes.put(fam, 0);
     }
     // subclass and doctor a method.
@@ -392,15 +388,15 @@ public abstract class AbstractTestFSWAL {
     EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
     try {
       List<Put> puts = null;
-      for (HColumnDescriptor hcd : htd.getFamilies()) {
+      for (byte[] fam : htd.getColumnFamilyNames()) {
         puts =
-            TestWALReplay.addRegionEdits(rowName, hcd.getName(), countPerFamily, ee, region, "x");
+            TestWALReplay.addRegionEdits(rowName, fam, countPerFamily, ee, region, "x");
       }
 
       // Now assert edits made it in.
       final Get g = new Get(rowName);
       Result result = region.get(g);
-      assertEquals(countPerFamily * htd.getFamilies().size(), result.size());
+      assertEquals(countPerFamily * htd.getColumnFamilyNames().size(), result.size());
 
       // Construct a WALEdit and add it a few times to the WAL.
       WALEdit edits = new WALEdit();
@@ -443,6 +439,38 @@ public abstract class AbstractTestFSWAL {
       wal.sync();
     } finally {
       wal.close();
+    }
+  }
+
+  @Test
+  public void testWriteEntryCanBeNull() throws IOException {
+    String testName = currentTest.getMethodName();
+    AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), testName,
+      CONF, null, true, null, null);
+    wal.close();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
+      .addColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+    RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (byte[] fam : td.getColumnFamilyNames()) {
+      scopes.put(fam, 0);
+    }
+    long timestamp = System.currentTimeMillis();
+    byte[] row = Bytes.toBytes("row");
+    WALEdit cols = new WALEdit();
+    cols.add(new KeyValue(row, row, row, timestamp, row));
+    WALKeyImpl key =
+        new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(), SequenceId.NO_SEQUENCE_ID,
+          timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE, mvcc, scopes);
+    try {
+      wal.append(ri, key, cols, true);
+      fail("Should fail since the wal has already been closed");
+    } catch (IOException e) {
+      // expected
+      assertThat(e.getMessage(), containsString("log is closed"));
+      // the WriteEntry should be null since we fail before setting it.
+      assertNull(key.getWriteEntry());
     }
   }
 }

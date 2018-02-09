@@ -156,7 +156,9 @@ public class WALUtil {
       // Call complete only here because these are markers only. They are not for clients to read.
       mvcc.complete(walKey.getWriteEntry());
     } catch (IOException ioe) {
-      mvcc.complete(walKey.getWriteEntry());
+      if (walKey.getWriteEntry() != null) {
+        mvcc.complete(walKey.getWriteEntry());
+      }
       throw ioe;
     }
     return walKey;
