@@ -21,12 +21,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -59,30 +59,23 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
     // we do not hack scan operation so using scan we could get the original values added into the
     // table.
     try (ResultScanner scanner = TABLE.getScanner(new Scan().withStartRow(ROW)
-        .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
+      .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
       Result r = scanner.next();
       assertTrue(r.rawCells().length > 2);
     }
     UTIL.flush(NAME);
-    UTIL.getAdmin().majorCompact(NAME);
-    HStore store = UTIL.getHBaseCluster().findRegionsForTable(NAME).get(0).getStore(FAMILY);
-    Waiter.waitFor(UTIL.getConfiguration(), 30000, new Waiter.ExplainingPredicate<Exception>() {
-
-      @Override
-      public boolean evaluate() throws Exception {
-        return store.getStorefilesCount() == 1;
+    HRegion region = UTIL.getHBaseCluster().findRegionsForTable(NAME).get(0);
+    HStore store = region.getStore(FAMILY);
+    for (;;) {
+      region.compact(true);
+      if (store.getStorefilesCount() == 1) {
+        break;
       }
-
-      @Override
-      public String explainFailure() throws Exception {
-        return "Major compaction hangs, there are still " + store.getStorefilesCount() +
-            " store files";
-      }
-    });
+    }
     assertSum();
     // Should only have two cells after flush and major compaction
     try (ResultScanner scanner = TABLE.getScanner(new Scan().withStartRow(ROW)
-        .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
+      .withStopRow(ROW, true).addFamily(FAMILY).readAllVersions().setAllowPartialResults(true))) {
       Result r = scanner.next();
       assertEquals(2, r.rawCells().length);
     }
