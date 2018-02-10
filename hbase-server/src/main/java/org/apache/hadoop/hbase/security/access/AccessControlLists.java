@@ -644,8 +644,7 @@ public class AccessControlLists {
    *
    * Writes a set of permission [user: table permission]
    */
-  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms,
-      Configuration conf) {
+  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms) {
     return ProtobufUtil.prependPBMagic(AccessControlUtil.toUserTablePermissions(perms).toByteArray());
   }
 
