@@ -247,7 +247,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       tables.entrySet()) {
       byte[] entry = t.getKey();
       ListMultimap<String,TablePermission> perms = t.getValue();
-      byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+      byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms);
       getAuthManager().getZKPermissionWatcher().writeToZookeeper(entry, serialized);
     }
     initialized = true;
@@ -284,7 +284,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         currentEntry = entry;
         ListMultimap<String, TablePermission> perms =
             AccessControlLists.getPermissions(conf, entry, t);
-        byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+        byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms);
         zkw.writeToZookeeper(entry, serialized);
       }
     } catch(IOException ex) {
@@ -2456,7 +2456,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       throws IOException {
     requirePermission(ctx, "replicateLogEntries", Action.WRITE);
   }
-  
+
   @Override
   public void  preClearCompactionQueues(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
           throws IOException {
