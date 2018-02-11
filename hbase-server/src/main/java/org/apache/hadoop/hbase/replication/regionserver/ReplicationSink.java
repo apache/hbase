@@ -404,9 +404,10 @@ public class ReplicationSink {
     } catch (RetriesExhaustedWithDetailsException rewde) {
       for (Throwable ex : rewde.getCauses()) {
         if (ex instanceof TableNotFoundException) {
-          throw new TableNotFoundException("'"+tableName+"'");
+          throw new TableNotFoundException("'" + tableName + "'");
         }
       }
+      throw rewde;
     } catch (InterruptedException ix) {
       throw (InterruptedIOException) new InterruptedIOException().initCause(ix);
     } finally {
