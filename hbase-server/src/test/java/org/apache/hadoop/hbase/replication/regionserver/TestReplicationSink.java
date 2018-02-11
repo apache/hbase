@@ -33,6 +33,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
@@ -67,6 +70,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -265,6 +269,40 @@ public class TestReplicationSink {
     Get get = new Get(Bytes.toBytes(1));
     Result res = table1.get(get);
     assertEquals(0, res.size());
+  }
+
+  @Test
+  public void testRethrowRetriesExhaustedWithDetailsException() throws Exception {
+    TableName notExistTable = TableName.valueOf("notExistTable");
+    List<WALEntry> entries = new ArrayList<>();
+    List<Cell> cells = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      entries.add(createEntry(notExistTable, i, KeyValue.Type.Put, cells));
+    }
+    try {
+      SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+      Assert.fail("Should re-throw TableNotFoundException.");
+    } catch (TableNotFoundException e) {
+    }
+    entries.clear();
+    cells.clear();
+    for (int i = 0; i < 10; i++) {
+      entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
+    }
+    try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Admin admin = conn.getAdmin()) {
+        admin.disableTable(TABLE_NAME1);
+        try {
+          SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
+            replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+          Assert.fail("Should re-throw RetriesExhaustedWithDetailsException.");
+        } catch (RetriesExhaustedWithDetailsException e) {
+        } finally {
+          admin.enableTable(TABLE_NAME1);
+        }
+      }
+    }
   }
 
   /**
