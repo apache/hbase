@@ -17,36 +17,32 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.List;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.junit.Test;
 
-public class RestoreSnapshotFromClientAfterSplittingRegionsTestBase
+public class RestoreSnapshotFromClientAfterTruncateTestBase
     extends RestoreSnapshotFromClientTestBase {
 
   @Test
-  public void testRestoreSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
-    List<RegionInfo> regionInfos = admin.getRegions(tableName);
-    RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
-
-    // Split the first region
-    splitRegion(regionInfos.get(0));
-
-    // Take a snapshot
-    admin.snapshot(snapshotName1, tableName);
-
-    // Load more data
+  public void testRestoreSnapshotAfterTruncate() throws Exception {
+    TableName tableName = TableName.valueOf(getValidMethodName());
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    int numOfRows = 0;
 
-    // Split the second region
-    splitRegion(regionInfos.get(1));
-
-    // Restore the snapshot
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      numOfRows = countRows(table);
+    }
+    // take snapshot
+    admin.snapshot("snap", tableName);
     admin.disableTable(tableName);
-    admin.restoreSnapshot(snapshotName1);
-    admin.enableTable(tableName);
+    admin.truncateTable(tableName, false);
+    admin.disableTable(tableName);
+    admin.restoreSnapshot("snap");
 
-    verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+    admin.enableTable(tableName);
+    verifyRowCount(TEST_UTIL, tableName, numOfRows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 }
