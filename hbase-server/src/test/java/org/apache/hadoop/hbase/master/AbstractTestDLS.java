@@ -42,7 +42,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -75,6 +74,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -92,6 +92,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -398,7 +399,14 @@ public abstract class AbstractTestDLS {
         }
       });
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-      assertEquals(numRegionsToCreate * numRowsPerRegion, TEST_UTIL.countRows(table));
+      int rows;
+      try {
+        rows = TEST_UTIL.countRows(table);
+      } catch (Exception e) {
+        Threads.printThreadInfo(System.out, "Thread dump before fail");
+        throw e;
+      }
+      assertEquals(numRegionsToCreate * numRowsPerRegion, rows);
     }
   }
 
