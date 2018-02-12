@@ -158,7 +158,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
       LOG.info("Assigned, not reassigning; " + this + "; " + regionNode.toShortString());
       return false;
     }
-    // Don't assign if table is in disabling of disabled state.
+    // Don't assign if table is in disabling or disabled state.
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
     TableName tn = regionNode.getRegionInfo().getTable();
     if (tsm.isTableState(tn, TableState.State.DISABLING, TableState.State.DISABLED)) {
@@ -166,7 +166,7 @@ public class AssignProcedure extends RegionTransitionProcedure {
       return false;
     }
     // If the region is SPLIT, we can't assign it. But state might be CLOSED, rather than
-    // SPLIT which is what a region gets set to when Unassigned as part of SPLIT. FIX.
+    // SPLIT which is what a region gets set to when unassigned as part of SPLIT. FIX.
     if (regionNode.isInState(State.SPLIT) ||
         (regionNode.getRegionInfo().isOffline() && regionNode.getRegionInfo().isSplit())) {
       LOG.info("SPLIT, cannot be assigned; " + this + "; " + regionNode +
