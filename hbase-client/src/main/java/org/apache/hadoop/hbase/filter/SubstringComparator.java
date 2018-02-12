@@ -43,6 +43,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
  * </pre>
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class SubstringComparator extends ByteArrayComparable {
 
   private String substr;

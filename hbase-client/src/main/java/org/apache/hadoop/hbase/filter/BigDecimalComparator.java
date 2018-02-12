@@ -36,6 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * A BigDecimal comparator which numerical compares against the specified byte array
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class BigDecimalComparator extends ByteArrayComparable {
   private BigDecimal bigDecimal;
 

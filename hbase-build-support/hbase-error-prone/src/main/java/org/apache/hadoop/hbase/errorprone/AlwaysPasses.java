@@ -30,7 +30,7 @@ import com.sun.source.tree.CompilationUnitTree;
     category = BugPattern.Category.JDK,
     summary = "A placeholder rule that never matches.",
     severity = BugPattern.SeverityLevel.ERROR,
-    suppressibility = BugPattern.Suppressibility.UNSUPPRESSIBLE,
+    suppressionAnnotations = {},
     linkType = BugPattern.LinkType.NONE)
 public class AlwaysPasses extends BugChecker implements BugChecker.CompilationUnitTreeMatcher {
   @Override

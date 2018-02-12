@@ -32,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 // adding special compareTo methods. We have to clean it. Deprecate this class and replace it
 // with a more generic one which says it compares bytes (not necessary a byte array only)
 // BytesComparable implements Comparable<Byte> will work?
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public abstract class ByteArrayComparable implements Comparable<byte[]> {
 
   byte[] value;

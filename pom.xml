@@ -1363,7 +1363,7 @@
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <checkstyle.version>6.18</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
-    <error-prone.version>2.1.1</error-prone.version>
+    <error-prone.version>2.2.0</error-prone.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <findbugs.maven.version>3.0.4</findbugs.maven.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
