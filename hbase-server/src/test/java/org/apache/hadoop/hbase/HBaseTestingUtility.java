@@ -2411,6 +2411,19 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return rows;
   }
 
+  /**
+   * Returns all regions of the specified table
+   *
+   * @param tableName the table name
+   * @return all regions of the specified table
+   * @throws IOException when getting the regions fails.
+   */
+  private List<RegionInfo> getRegions(TableName tableName) throws IOException {
+    try (Admin admin = getConnection().getAdmin()) {
+      return admin.getRegions(tableName);
+    }
+  }
+
   /*
    * Find any other region server which is different from the one identified by parameter
    * @param rs
@@ -2429,9 +2442,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Tool to get the reference to the region server object that holds the
    * region of the specified user table.
-   * It first searches for the meta rows that contain the region of the
-   * specified table, then gets the index of that RS, and finally retrieves
-   * the RS's reference.
    * @param tableName user table to lookup in hbase:meta
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
@@ -2439,21 +2449,27 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    */
   public HRegionServer getRSForFirstRegionInTable(TableName tableName)
       throws IOException, InterruptedException {
-    List<byte[]> metaRows = getMetaTableRows(tableName);
-    if (metaRows == null || metaRows.isEmpty()) {
+    List<RegionInfo> regions = getRegions(tableName);
+    if (regions == null || regions.isEmpty()) {
       return null;
     }
-    LOG.debug("Found " + metaRows.size() + " rows for table " +
-      tableName);
-    byte [] firstrow = metaRows.get(0);
-    LOG.debug("FirstRow=" + Bytes.toString(firstrow));
+    LOG.debug("Found " + regions.size() + " regions for table " +
+        tableName);
+
+    byte[] firstRegionName = regions.stream()
+        .filter(r -> !r.isOffline())
+        .map(RegionInfo::getRegionName)
+        .findFirst()
+        .orElseThrow(() -> new IOException("online regions not found in table " + tableName));
+
+    LOG.debug("firstRegionName=" + Bytes.toString(firstRegionName));
     long pause = getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     int numRetries = getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     RetryCounter retrier = new RetryCounter(numRetries+1, (int)pause, TimeUnit.MICROSECONDS);
     while(retrier.shouldRetry()) {
-      int index = getMiniHBaseCluster().getServerWith(firstrow);
+      int index = getMiniHBaseCluster().getServerWith(firstRegionName);
       if (index != -1) {
         return getMiniHBaseCluster().getRegionServerThreads().get(index).getRegionServer();
       }
