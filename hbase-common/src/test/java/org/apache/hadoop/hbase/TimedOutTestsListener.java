@@ -55,12 +55,13 @@ public class TimedOutTestsListener extends RunListener {
 
   @Override
   public void testFailure(Failure failure) throws Exception {
-    if (failure != null && failure.getMessage() != null 
+    if (failure != null && failure.getMessage() != null
         && failure.getMessage().startsWith(TEST_TIMED_OUT_PREFIX)) {
       output.println("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
       output.println();
       output.print(buildThreadDiagnosticString());
     }
+    output.flush();
   }
   
   public static String buildThreadDiagnosticString() {
