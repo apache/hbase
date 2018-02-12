@@ -1355,9 +1355,6 @@ public final class HConstants {
 
   public static final String NOT_IMPLEMENTED = "Not implemented";
 
-  // TODO: need to find a better place to hold it.
-  public static final String SYNC_REPLICATION_ENABLED = "hbase.replication.sync.enabled";
-
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

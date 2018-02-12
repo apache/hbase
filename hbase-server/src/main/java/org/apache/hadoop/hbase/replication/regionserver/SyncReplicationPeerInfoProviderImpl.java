@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.util.Pair;
@@ -44,11 +45,14 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
     if (peerId == null) {
       return Optional.empty();
     }
-    ReplicationPeer peer = replicationPeers.getPeer(peerId);
+    ReplicationPeerImpl peer = replicationPeers.getPeer(peerId);
     if (peer == null) {
       return Optional.empty();
     }
-    if (peer.getSyncReplicationState() == SyncReplicationState.ACTIVE) {
+    Pair<SyncReplicationState, SyncReplicationState> states =
+        peer.getSyncReplicationStateAndNewState();
+    if (states.getFirst() == SyncReplicationState.ACTIVE &&
+      states.getSecond() == SyncReplicationState.NONE) {
       return Optional.of(Pair.newPair(peerId, peer.getPeerConfig().getRemoteWALDir()));
     } else {
       return Optional.empty();
@@ -56,16 +60,19 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
   }
 
   @Override
-  public boolean isInState(RegionInfo info, SyncReplicationState state) {
+  public boolean checkState(RegionInfo info,
+      BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
     String peerId = mapping.getPeerId(info);
     if (peerId == null) {
       return false;
     }
-    ReplicationPeer peer = replicationPeers.getPeer(peerId);
+    ReplicationPeerImpl peer = replicationPeers.getPeer(peerId);
     if (peer == null) {
       return false;
     }
-    return peer.getSyncReplicationState() == state;
+    Pair<SyncReplicationState, SyncReplicationState> states =
+        peer.getSyncReplicationStateAndNewState();
+    return checker.test(states.getFirst(), states.getSecond());
   }
 
 }

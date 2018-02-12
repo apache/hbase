@@ -1805,7 +1805,7 @@ public class HRegionServer extends HasThread implements
     boolean isMasterNoTableOrSystemTableOnly = this instanceof HMaster &&
       (!LoadBalancer.isTablesOnMaster(conf) || LoadBalancer.isSystemTablesOnlyOnMaster(conf));
     if (isMasterNoTableOrSystemTableOnly) {
-      conf.setBoolean(HConstants.SYNC_REPLICATION_ENABLED, false);
+      conf.setBoolean(ReplicationUtils.SYNC_REPLICATION_ENABLED, false);
     }
     WALFactory factory = new WALFactory(conf, serverName.toString());
     if (!isMasterNoTableOrSystemTableOnly) {

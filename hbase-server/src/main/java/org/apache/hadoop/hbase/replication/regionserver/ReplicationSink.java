@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +28,6 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -41,9 +39,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -52,13 +47,18 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * <p>
@@ -82,10 +82,10 @@ public class ReplicationSink {
   private final Configuration conf;
   // Volatile because of note in here -- look for double-checked locking:
   // http://www.oracle.com/technetwork/articles/javase/bloch-effective-08-qa-140880.html
-  private volatile Connection sharedHtableCon;
+  private volatile Connection sharedConn;
   private final MetricsSink metrics;
   private final AtomicLong totalReplicatedEdits = new AtomicLong();
-  private final Object sharedHtableConLock = new Object();
+  private final Object sharedConnLock = new Object();
   // Number of hfiles that we successfully replicated
   private long hfilesReplicated = 0;
   private SourceFSConfigurationProvider provider;
@@ -108,12 +108,12 @@ public class ReplicationSink {
         conf.get("hbase.replication.source.fs.conf.provider",
           DefaultSourceFSConfigurationProvider.class.getCanonicalName());
     try {
-      @SuppressWarnings("rawtypes")
-      Class c = Class.forName(className);
-      this.provider = (SourceFSConfigurationProvider) c.getDeclaredConstructor().newInstance();
+      Class<? extends SourceFSConfigurationProvider> c =
+          Class.forName(className).asSubclass(SourceFSConfigurationProvider.class);
+      this.provider = c.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
-      throw new IllegalArgumentException("Configured source fs configuration provider class "
-          + className + " throws error.", e);
+      throw new IllegalArgumentException(
+        "Configured source fs configuration provider class " + className + " throws error.", e);
     }
   }
 
@@ -221,6 +221,8 @@ public class ReplicationSink {
                 clusterIds.add(toUUID(clusterId));
               }
               mutation.setClusterIds(clusterIds);
+              mutation.setAttribute(ReplicationUtils.REPLICATION_ATTR_NAME,
+                HConstants.EMPTY_BYTE_ARRAY);
               addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
@@ -374,11 +376,11 @@ public class ReplicationSink {
    */
   public void stopReplicationSinkServices() {
     try {
-      if (this.sharedHtableCon != null) {
-        synchronized (sharedHtableConLock) {
-          if (this.sharedHtableCon != null) {
-            this.sharedHtableCon.close();
-            this.sharedHtableCon = null;
+      if (this.sharedConn != null) {
+        synchronized (sharedConnLock) {
+          if (this.sharedConn != null) {
+            this.sharedConn.close();
+            this.sharedConn = null;
           }
         }
       }
@@ -394,14 +396,12 @@ public class ReplicationSink {
    * @param allRows list of actions
    * @throws IOException
    */
-  protected void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
+  private void batch(TableName tableName, Collection<List<Row>> allRows) throws IOException {
     if (allRows.isEmpty()) {
       return;
     }
-    Table table = null;
-    try {
-      Connection connection = getConnection();
-      table = connection.getTable(tableName);
+    Connection connection = getConnection();
+    try (Table table = connection.getTable(tableName)) {
       for (List<Row> rows : allRows) {
         table.batch(rows, null);
       }
@@ -414,21 +414,18 @@ public class ReplicationSink {
       throw rewde;
     } catch (InterruptedException ix) {
       throw (InterruptedIOException) new InterruptedIOException().initCause(ix);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
   private Connection getConnection() throws IOException {
     // See https://en.wikipedia.org/wiki/Double-checked_locking
-    Connection connection = sharedHtableCon;
+    Connection connection = sharedConn;
     if (connection == null) {
-      synchronized (sharedHtableConLock) {
-        connection = sharedHtableCon;
+      synchronized (sharedConnLock) {
+        connection = sharedConn;
         if (connection == null) {
-          connection = sharedHtableCon = ConnectionFactory.createConnection(conf);
+          connection = ConnectionFactory.createConnection(conf);
+          sharedConn = connection;
         }
       }
     }
@@ -441,9 +438,10 @@ public class ReplicationSink {
    * of the last edit that was applied
    */
   public String getStats() {
-    return this.totalReplicatedEdits.get() == 0 ? "" : "Sink: " +
-      "age in ms of last applied edit: " + this.metrics.refreshAgeOfLastAppliedOp() +
-      ", total replicated edits: " + this.totalReplicatedEdits;
+    long total = this.totalReplicatedEdits.get();
+    return total == 0 ? ""
+        : "Sink: " + "age in ms of last applied edit: " + this.metrics.refreshAgeOfLastAppliedOp() +
+          ", total replicated edits: " + total;
   }
 
   /**

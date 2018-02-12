@@ -17,31 +17,28 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.util.Optional;
 import java.util.function.BiPredicate;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Get the information for a sync replication peer.
+ * Check whether we need to reject the request from client.
  */
 @InterfaceAudience.Private
-public interface SyncReplicationPeerInfoProvider {
+public class RejectRequestsFromClientStateChecker
+    implements BiPredicate<SyncReplicationState, SyncReplicationState> {
 
-  /**
-   * Return the peer id and remote WAL directory if the region is synchronously replicated and the
-   * state is {@link SyncReplicationState#ACTIVE}.
-   */
-  Optional<Pair<String, String>> getPeerIdAndRemoteWALDir(RegionInfo info);
+  private static final RejectRequestsFromClientStateChecker INST =
+    new RejectRequestsFromClientStateChecker();
 
-  /**
-   * Check whether the give region is contained in a sync replication peer which can pass the state
-   * checker.
-   * <p>
-   * Will call the checker with current sync replication state and new sync replication state.
-   */
-  boolean checkState(RegionInfo info,
-      BiPredicate<SyncReplicationState, SyncReplicationState> checker);
+  @Override
+  public boolean test(SyncReplicationState state, SyncReplicationState newState) {
+    // reject requests from client if we are in standby state, or we are going to transit to standby
+    // state.
+    return state == SyncReplicationState.STANDBY || newState == SyncReplicationState.STANDBY;
+  }
+
+  public static RejectRequestsFromClientStateChecker get() {
+    return INST;
+  }
 }

@@ -141,6 +141,9 @@ public class SyncReplicationWALProvider implements WALProvider, PeerActionListen
 
   @Override
   public WAL getWAL(RegionInfo region) throws IOException {
+    if (region == null) {
+      return provider.getWAL(region);
+    }
     Optional<Pair<String, String>> peerIdAndRemoteWALDir =
       peerInfoProvider.getPeerIdAndRemoteWALDir(region);
     if (peerIdAndRemoteWALDir.isPresent()) {

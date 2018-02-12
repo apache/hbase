@@ -120,6 +120,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTrack
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
+import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -2431,6 +2433,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return region.execService(execController, serviceCall);
   }
 
+  private boolean shouldRejectRequestsFromClient(HRegion region) {
+    return regionServer.getReplicationSourceService().getSyncReplicationPeerInfoProvider()
+      .checkState(region.getRegionInfo(), RejectRequestsFromClientStateChecker.get());
+  }
+
+  private void rejectIfInStandByState(HRegion region) throws DoNotRetryIOException {
+    if (shouldRejectRequestsFromClient(region)) {
+      throw new DoNotRetryIOException(
+        region.getRegionInfo().getRegionNameAsString() + " is in STANDBY state.");
+    }
+  }
+
   /**
    * Get data from a table.
    *
@@ -2439,8 +2453,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  public GetResponse get(final RpcController controller,
-      final GetRequest request) throws ServiceException {
+  public GetResponse get(final RpcController controller, final GetRequest request)
+      throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
     OperationQuota quota = null;
     HRegion region = null;
@@ -2449,6 +2463,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       requestCount.increment();
       rpcGetRequestCount.increment();
       region = getRegion(request.getRegion());
+      rejectIfInStandByState(region);
 
       GetResponse.Builder builder = GetResponse.newBuilder();
       ClientProtos.Get get = request.getGet();
@@ -2587,16 +2602,45 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  private void failRegionAction(MultiResponse.Builder responseBuilder,
+      RegionActionResult.Builder regionActionResultBuilder, RegionAction regionAction,
+      CellScanner cellScanner, Throwable error) {
+    rpcServer.getMetrics().exception(error);
+    regionActionResultBuilder.setException(ResponseConverter.buildException(error));
+    responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
+    // All Mutations in this RegionAction not executed as we can not see the Region online here
+    // in this RS. Will be retried from Client. Skipping all the Cells in CellScanner
+    // corresponding to these Mutations.
+    if (cellScanner != null) {
+      skipCellsForMutations(regionAction.getActionList(), cellScanner);
+    }
+  }
+
+  private boolean isReplicationRequest(Action action) {
+    // replication request can only be put or delete.
+    if (!action.hasMutation()) {
+      return false;
+    }
+    MutationProto mutation = action.getMutation();
+    MutationType type = mutation.getMutateType();
+    if (type != MutationType.PUT && type != MutationType.DELETE) {
+      return false;
+    }
+    // replication will set a special attribute so we can make use of it to decide whether a request
+    // is for replication.
+    return mutation.getAttributeList().stream().map(p -> p.getName())
+      .filter(n -> n.equals(ReplicationUtils.REPLICATION_ATTR_NAME)).findAny().isPresent();
+  }
+
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
-   *
    * @param rpcc the RPC controller
    * @param request the multi request
    * @throws ServiceException
    */
   @Override
   public MultiResponse multi(final RpcController rpcc, final MultiRequest request)
-  throws ServiceException {
+      throws ServiceException {
     try {
       checkOpen();
     } catch (IOException ie) {
@@ -2636,17 +2680,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         region = getRegion(regionSpecifier);
         quota = getRpcQuotaManager().checkQuota(region, regionAction.getActionList());
       } catch (IOException e) {
-        rpcServer.getMetrics().exception(e);
-        regionActionResultBuilder.setException(ResponseConverter.buildException(e));
-        responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
-        // All Mutations in this RegionAction not executed as we can not see the Region online here
-        // in this RS. Will be retried from Client. Skipping all the Cells in CellScanner
-        // corresponding to these Mutations.
-        skipCellsForMutations(regionAction.getActionList(), cellScanner);
+        failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner, e);
         continue;  // For this region it's a failure.
       }
-
+      boolean rejectIfFromClient = shouldRejectRequestsFromClient(region);
       if (regionAction.hasAtomic() && regionAction.getAtomic()) {
+        // We only allow replication in standby state and it will not set the atomic flag.
+        if (rejectIfFromClient) {
+          failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner,
+            new DoNotRetryIOException(
+              region.getRegionInfo().getRegionNameAsString() + " is in STANDBY state"));
+          quota.close();
+          continue;
+        }
         // How does this call happen?  It may need some work to play well w/ the surroundings.
         // Need to return an item per Action along w/ Action index.  TODO.
         try {
@@ -2677,6 +2723,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         }
       } else {
+        if (rejectIfFromClient && regionAction.getActionCount() > 0 &&
+          !isReplicationRequest(regionAction.getAction(0))) {
+          // fail if it is not a replication request
+          failRegionAction(responseBuilder, regionActionResultBuilder, regionAction, cellScanner,
+            new DoNotRetryIOException(
+              region.getRegionInfo().getRegionNameAsString() + " is in STANDBY state"));
+          quota.close();
+          continue;
+        }
         // doNonAtomicRegionMutation manages the exception internally
         if (context != null && closeCallBack == null) {
           // An RpcCallBack that creates a list of scanners that needs to perform callBack
@@ -2692,7 +2747,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
       quota.close();
       ClientProtos.RegionLoadStats regionLoadStats = region.getLoadStatistics();
-      if(regionLoadStats != null) {
+      if (regionLoadStats != null) {
         regionStats.put(regionSpecifier, regionLoadStats);
       }
     }
@@ -2751,8 +2806,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param request the mutate request
    */
   @Override
-  public MutateResponse mutate(final RpcController rpcc,
-      final MutateRequest request) throws ServiceException {
+  public MutateResponse mutate(final RpcController rpcc, final MutateRequest request)
+      throws ServiceException {
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
     HBaseRpcController controller = (HBaseRpcController)rpcc;
@@ -2772,6 +2827,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       requestCount.increment();
       rpcMutateRequestCount.increment();
       region = getRegion(request.getRegion());
+      rejectIfInStandByState(region);
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       MutationProto mutation = request.getMutation();
       if (!region.getRegionInfo().isMetaRegion()) {
@@ -2941,6 +2997,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 "'hbase.client.scanner.timeout.period' configuration.");
       }
     }
+    rejectIfInStandByState(rsh.r);
     RegionInfo hri = rsh.s.getRegionInfo();
     // Yes, should be the same instance
     if (regionServer.getOnlineRegion(hri.getRegionName()) != rsh.r) {
@@ -2967,6 +3024,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private RegionScannerHolder newRegionScanner(ScanRequest request, ScanResponse.Builder builder)
       throws IOException {
     HRegion region = getRegion(request.getRegion());
+    rejectIfInStandByState(region);
     ClientProtos.Scan protoScan = request.getScan();
     boolean isLoadingCfsOnDemandSet = protoScan.hasLoadColumnFamiliesOnDemand();
     Scan scan = ProtobufUtil.toScan(protoScan);

@@ -197,8 +197,18 @@ public class TransitPeerSyncReplicationStateProcedure
         addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
           .map(sn -> new RefreshPeerProcedure(peerId, getPeerOperationType(), sn, 1))
           .toArray(RefreshPeerProcedure[]::new));
+        if (toState == SyncReplicationState.STANDBY) {
+          setNextState(PeerSyncReplicationStateTransitionState.CREATE_DIR_FOR_REMOTE_WAL);
+        } else {
+          setNextState(
+            PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
+        }
+        return Flow.HAS_MORE_STATE;
+      case CREATE_DIR_FOR_REMOTE_WAL:
+        // TODO: create wal for write remote wal
         setNextState(
           PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
+        return Flow.HAS_MORE_STATE;
       case POST_PEER_SYNC_REPLICATION_STATE_TRANSITION:
         try {
           postTransit(env);
