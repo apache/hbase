@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -317,8 +317,8 @@ public class TestReplicationSink {
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testReplicateEntries");
     Path familyDir = new Path(dir, Bytes.toString(FAM_NAME1));
     int numRows = 10;
-
     List<Path> p = new ArrayList<>(1);
+    final String hfilePrefix = "hfile-";
 
     // 1. Generate 25 hfile ranges
     Random rng = new SecureRandom();
@@ -335,7 +335,7 @@ public class TestReplicationSink {
     FileSystem fs = dir.getFileSystem(conf);
     Iterator<Integer> numbersItr = numberList.iterator();
     for (int i = 0; i < 25; i++) {
-      Path hfilePath = new Path(familyDir, "hfile_" + i);
+      Path hfilePath = new Path(familyDir, hfilePrefix + i);
       HFileTestUtil.createHFile(conf, fs, hfilePath, FAM_NAME1, FAM_NAME1,
         Bytes.toBytes(numbersItr.next()), Bytes.toBytes(numbersItr.next()), numRows);
       p.add(hfilePath);
@@ -370,10 +370,10 @@ public class TestReplicationSink {
               .append(Bytes.toString(TABLE_NAME1.getName())).append(Path.SEPARATOR)
               .append(Bytes.toString(loadDescriptor.getEncodedRegionName().toByteArray()))
               .append(Path.SEPARATOR).append(Bytes.toString(FAM_NAME1)).append(Path.SEPARATOR)
-              .append("hfile_" + i).toString();
+              .append(hfilePrefix + i).toString();
       String dst = baseNamespaceDir + Path.SEPARATOR + pathToHfileFromNS;
-
-      FileUtil.copy(fs, p.get(0), fs, new Path(dst), false, conf);
+      Path dstPath = new Path(dst);
+      FileUtil.copy(fs, p.get(0), fs, dstPath, false, conf);
     }
 
     entries.add(builder.build());
@@ -388,6 +388,7 @@ public class TestReplicationSink {
       // 8. Assert data is replicated
       assertEquals(numRows, scanner.next(numRows).length);
     }
+    // Clean up the created hfiles or it will mess up subsequent tests
   }
 
   private WALEntry createEntry(TableName table, int row,  KeyValue.Type type, List<Cell> cells) {
