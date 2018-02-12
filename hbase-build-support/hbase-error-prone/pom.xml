@@ -37,6 +37,12 @@
       <artifactId>error_prone_annotation</artifactId>
       <version>${error-prone.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <!--mvn dependency:analyze says this is not used but compile fails

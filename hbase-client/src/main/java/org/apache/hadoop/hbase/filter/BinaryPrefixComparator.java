@@ -36,6 +36,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
  * {@link BinaryComparator}.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class BinaryPrefixComparator extends ByteArrayComparable {
 
   /**
