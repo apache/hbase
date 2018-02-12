@@ -1332,7 +1332,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         // in version 8, the BloomFilter setting changed from bool to enum
         if (version < 8 && Bytes.toString(key.get()).equals(BLOOMFILTER)) {
           value.set(Bytes.toBytes(
-              Boolean.getBoolean(Bytes.toString(value.get()))
+              Boolean.parseBoolean(Bytes.toString(value.get()))
                 ? BloomType.ROW.toString()
                 : BloomType.NONE.toString()));
         }
