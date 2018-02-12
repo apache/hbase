@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A long comparator which numerical compares against the specified byte array
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class LongComparator extends ByteArrayComparable {
   private long longValue;
 

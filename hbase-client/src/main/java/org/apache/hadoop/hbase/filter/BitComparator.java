@@ -33,6 +33,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
  * with the specified byte array. Then returns whether the result is non-zero.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class BitComparator extends ByteArrayComparable {
 
   /** Bit operators. */

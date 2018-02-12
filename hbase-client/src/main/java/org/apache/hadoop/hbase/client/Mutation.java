@@ -118,7 +118,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       .collect(Collectors.toMap(e -> e.getKey(), e -> new ArrayList<>(e.getValue()),
         (k, v) -> {
           throw new RuntimeException("collisions!!!");
-        }, () -> new TreeMap(Bytes.BYTES_COMPARATOR)));
+        }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
   }
 
   /**

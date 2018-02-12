@@ -69,6 +69,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
  * @see java.util.regex.Pattern
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ComparableType") // Should this move to Comparator usage?
 public class RegexStringComparator extends ByteArrayComparable {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegexStringComparator.class);

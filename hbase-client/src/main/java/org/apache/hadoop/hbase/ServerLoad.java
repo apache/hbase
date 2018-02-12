@@ -448,7 +448,7 @@ public class ServerLoad implements ServerMetrics {
         .collect(Collectors.toMap(Map.Entry::getKey, e -> new RegionLoad(e.getValue()),
           (v1, v2) -> {
             throw new RuntimeException("key collisions?");
-          }, () -> new TreeMap(Bytes.BYTES_COMPARATOR)));
+          }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
   }
 
   /**
