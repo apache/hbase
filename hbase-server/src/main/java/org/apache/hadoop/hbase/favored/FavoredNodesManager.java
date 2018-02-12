@@ -269,21 +269,25 @@ public class FavoredNodesManager {
     return result;
   }
 
-  public synchronized void deleteFavoredNodesForRegions(Collection<RegionInfo> regionInfoList) {
-    for (RegionInfo hri : regionInfoList) {
-      List<ServerName> favNodes = getFavoredNodes(hri);
-      if (favNodes != null) {
-        if (primaryRSToRegionMap.containsKey(favNodes.get(PRIMARY.ordinal()))) {
-          primaryRSToRegionMap.get(favNodes.get(PRIMARY.ordinal())).remove(hri);
-        }
-        if (secondaryRSToRegionMap.containsKey(favNodes.get(SECONDARY.ordinal()))) {
-          secondaryRSToRegionMap.get(favNodes.get(SECONDARY.ordinal())).remove(hri);
-        }
-        if (teritiaryRSToRegionMap.containsKey(favNodes.get(TERTIARY.ordinal()))) {
-          teritiaryRSToRegionMap.get(favNodes.get(TERTIARY.ordinal())).remove(hri);
-        }
-        globalFavoredNodesAssignmentPlan.removeFavoredNodes(hri);
+  public synchronized void deleteFavoredNodesForRegion(RegionInfo regionInfo) {
+    List<ServerName> favNodes = getFavoredNodes(regionInfo);
+    if (favNodes != null) {
+      if (primaryRSToRegionMap.containsKey(favNodes.get(PRIMARY.ordinal()))) {
+        primaryRSToRegionMap.get(favNodes.get(PRIMARY.ordinal())).remove(regionInfo);
       }
+      if (secondaryRSToRegionMap.containsKey(favNodes.get(SECONDARY.ordinal()))) {
+        secondaryRSToRegionMap.get(favNodes.get(SECONDARY.ordinal())).remove(regionInfo);
+      }
+      if (teritiaryRSToRegionMap.containsKey(favNodes.get(TERTIARY.ordinal()))) {
+        teritiaryRSToRegionMap.get(favNodes.get(TERTIARY.ordinal())).remove(regionInfo);
+      }
+      globalFavoredNodesAssignmentPlan.removeFavoredNodes(regionInfo);
+    }
+  }
+
+  public synchronized void deleteFavoredNodesForRegions(Collection<RegionInfo> regionInfoList) {
+    for (RegionInfo regionInfo : regionInfoList) {
+      deleteFavoredNodesForRegion(regionInfo);
     }
   }
 
