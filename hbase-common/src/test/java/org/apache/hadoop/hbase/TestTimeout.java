@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -41,6 +42,18 @@ public class TestTimeout {
      */
     @Ignore @Test
     public void infiniteLoop() {
-        while (true) {}
+      // Launch a background non-daemon thread.
+      Thread t = new Thread("HangingThread") {
+        public void run() {
+          synchronized(this) {
+            while(true) {
+            }
+          }
+        }
+      };
+      t.start();
+      while (true) {
+        // Just hang out too.
+      }
    }
 }
