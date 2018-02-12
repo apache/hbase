@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -307,12 +306,40 @@ public class TestRestoreSnapshotFromClient {
     // Take a snapshot
     admin.snapshot(snapshotName1, tableName);
 
+    // Load more data
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+
+    // Split the second region
+    splitRegion(regionInfos.get(1));
+
     // Restore the snapshot
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
 
     verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+  }
+
+  @Test
+  public void testRestoreSnapshotAfterTruncate() throws Exception {
+    TableName tableName = TableName.valueOf("testRestoreSnapshotAfterTruncate");
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    int numOfRows = 0;
+
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      numOfRows = countRows(table);
+    }
+    // take snapshot
+    admin.snapshot("snap", tableName);
+    admin.disableTable(tableName);
+    admin.truncateTable(tableName, false);
+    admin.disableTable(tableName);
+    admin.restoreSnapshot("snap");
+
+    admin.enableTable(tableName);
+    verifyRowCount(TEST_UTIL, tableName, numOfRows);
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 
   // ==========================================================================
