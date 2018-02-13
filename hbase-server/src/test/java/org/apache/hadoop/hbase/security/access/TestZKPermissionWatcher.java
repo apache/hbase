@@ -21,7 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -34,8 +33,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -95,26 +92,6 @@ public class TestZKPermissionWatcher {
     UTIL.shutdownMiniCluster();
   }
 
-  private void setTableACL(
-      User user, TableAuthManager srcAuthManager, TableAuthManager destAuthManager,
-      TablePermission.Action... actions) throws Exception{
-    // update ACL: george RW
-    ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
-    perms.replaceValues(user.getShortName(),
-        Collections.singletonList(new TablePermission(TEST_TABLE, null, actions)));
-    byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms);
-    final long mtime = destAuthManager.getMTime();
-    srcAuthManager.getZKPermissionWatcher().writeToZookeeper(TEST_TABLE.getName(), serialized);
-    // Wait for the update to propagate
-    UTIL.waitFor(10000, 100, new Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return destAuthManager.getMTime() > mtime;
-      }
-    });
-    Thread.sleep(1000);
-  }
-
   @Test
   public void testPermissionsWatcher() throws Exception {
     Configuration conf = UTIL.getConfiguration();
@@ -139,9 +116,20 @@ public class TestZKPermissionWatcher {
     assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
 
-    // update ACL: george, RW
-    setTableACL(george, AUTH_A, AUTH_B,
-        TablePermission.Action.READ, TablePermission.Action.WRITE);
+    // update ACL: george RW
+    List<TablePermission> acl = new ArrayList<>(1);
+    acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ,
+      TablePermission.Action.WRITE));
+    final long mtimeB = AUTH_B.getMTime();
+    AUTH_A.setTableUserPermissions(george.getShortName(), TEST_TABLE, acl);
+    // Wait for the update to propagate
+    UTIL.waitFor(10000, 100, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return AUTH_B.getMTime() > mtimeB;
+      }
+    });
+    Thread.sleep(1000);
 
     // check it
     assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
@@ -161,8 +149,19 @@ public class TestZKPermissionWatcher {
     assertFalse(AUTH_B.authorizeUser(hubert, TEST_TABLE, null,
       TablePermission.Action.WRITE));
 
-    // update ACL: hubert, Read
-    setTableACL(hubert, AUTH_B, AUTH_A, TablePermission.Action.READ);
+    // update ACL: hubert R
+    acl = new ArrayList<>(1);
+    acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ));
+    final long mtimeA = AUTH_A.getMTime();
+    AUTH_B.setTableUserPermissions("hubert", TEST_TABLE, acl);
+    // Wait for the update to propagate
+    UTIL.waitFor(10000, 100, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return AUTH_A.getMTime() > mtimeA;
+      }
+    });
+    Thread.sleep(1000);
 
     // check it
     assertTrue(AUTH_A.authorizeUser(george, TEST_TABLE, null,
