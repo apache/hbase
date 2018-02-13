@@ -187,6 +187,8 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.DNS;
@@ -198,6 +200,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -286,6 +289,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private final int rowSizeWarnThreshold;
 
+  // We want to vet all accesses at the point of entry itself; limiting scope of access checker
+  // instance to only this class to prevent its use from spreading deeper into implementation.
+  // Initialized in start() since AccessChecker needs ZKWatcher which is created by HRegionServer
+  // after RSRpcServices constructor and before start() is called.
+  // Initialized only if authorization is enabled, else remains null.
+  private AccessChecker accessChecker;
+
   /**
    * Holder class which holds the RegionScanner, nextCallSeq and RpcCallbacks together.
    */
@@ -370,6 +380,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private static ResultOrException getResultOrException(
       final ResultOrException.Builder builder, final int index) {
     return builder.setIndex(index).build();
+  }
+
+  /**
+   * Checks for the following pre-checks in order:
+   * <ol>
+   *   <li>RegionServer is running</li>
+   *   <li>If authorization is enabled, then RPC caller has ADMIN permissions</li>
+   * </ol>
+   * @param requestName name of rpc request. Used in reporting failures to provide context.
+   * @throws ServiceException If any of the above listed pre-check fails.
+   */
+  private void rpcPreCheck(String requestName) throws ServiceException {
+    try {
+      checkOpen();
+      requirePermission(requestName, Permission.Action.ADMIN);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 
   /**
@@ -1166,6 +1194,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return new AnnotationReadingPriorityFunction(this);
   }
 
+  protected void requirePermission(String request, Permission.Action perm) throws IOException {
+    if (accessChecker != null) {
+      accessChecker.requirePermission(RpcServer.getRequestUser(), request, perm);
+    }
+  }
+
+
   public static String getHostname(Configuration conf, boolean isMaster)
       throws UnknownHostException {
     String hostname = conf.get(isMaster? HRegionServer.MASTER_HOSTNAME_KEY :
@@ -1289,21 +1324,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return regionServer.getRegionServerQuotaManager();
   }
 
-  void start() {
+  void start(ZooKeeperWatcher zkWatcher) {
+    if (AccessChecker.isAuthorizationSupported(getConfiguration())) {
+      accessChecker = new AccessChecker(getConfiguration(), zkWatcher);
+    }
     this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
   }
 
   void stop() {
+    if (accessChecker != null) {
+      accessChecker.stop();
+    }
     closeAllScanners();
     rpcServer.stop();
   }
 
   /**
    * Called to verify that this server is up and running.
-   *
-   * @throws IOException
    */
+  // TODO : Rename this and HMaster#checkInitialized to isRunning() (or a better name).
   protected void checkOpen() throws IOException {
     if (regionServer.isAborted()) {
       throw new RegionServerAbortedException("Server " + regionServer.serverName + " aborting");
@@ -3192,6 +3232,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
       CoprocessorServiceRequest request) throws ServiceException {
+    rpcPreCheck("execRegionServerService");
     return regionServer.execRegionServerService(controller, request);
   }
 

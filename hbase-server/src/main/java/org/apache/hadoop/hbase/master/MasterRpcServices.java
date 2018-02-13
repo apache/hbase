@@ -192,6 +192,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -249,6 +250,24 @@ public class MasterRpcServices extends RSRpcServices
     return new MasterAnnotationReadingPriorityFunction(this);
   }
 
+  /**
+   * Checks for the following pre-checks in order:
+   * <ol>
+   *   <li>Master is initialized</li>
+   *   <li>Rpc caller has admin permissions</li>
+   * </ol>
+   * @param requestName name of rpc request. Used in reporting failures to provide context.
+   * @throws ServiceException If any of the above listed pre-check fails.
+   */
+  private void rpcPreCheck(String requestName) throws ServiceException {
+    try {
+      master.checkInitialized();
+      requirePermission(requestName, Permission.Action.ADMIN);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
   enum BalanceSwitchMode {
     SYNC,
     ASYNC
@@ -290,25 +309,6 @@ public class MasterRpcServices extends RSRpcServices
 
   boolean synchronousBalanceSwitch(final boolean b) throws IOException {
     return switchBalancer(b, BalanceSwitchMode.SYNC);
-  }
-
-  /**
-   * Sets normalizer on/off flag in ZK.
-   */
-  public boolean normalizerSwitch(boolean on) {
-    boolean oldValue = master.getRegionNormalizerTracker().isNormalizerOn();
-    boolean newValue = on;
-    try {
-      try {
-        master.getRegionNormalizerTracker().setNormalizerOn(newValue);
-      } catch (KeeperException ke) {
-        throw new IOException(ke);
-      }
-      LOG.info(master.getClientIdAuditPrefix() + " set normalizerSwitch=" + newValue);
-    } catch (IOException ioe) {
-      LOG.warn("Error flipping normalizer switch", ioe);
-    }
-    return oldValue;
   }
 
   /**
@@ -649,11 +649,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public EnableCatalogJanitorResponse enableCatalogJanitor(RpcController c,
       EnableCatalogJanitorRequest req) throws ServiceException {
-    try {
-      master.checkInitialized();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
+    rpcPreCheck("enableCatalogJanitor");
     return EnableCatalogJanitorResponse.newBuilder().setPrevValue(
       master.catalogJanitorChore.setEnabled(req.getEnable())).build();
   }
@@ -661,11 +657,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public SetCleanerChoreRunningResponse setCleanerChoreRunning(RpcController c,
       SetCleanerChoreRunningRequest req) throws ServiceException {
-    try {
-      master.checkInitialized();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
+    rpcPreCheck("setCleanerChoreRunning");
     boolean prevValue =
       master.getLogCleaner().getEnabled() && master.getHFileCleaner().getEnabled();
     master.getLogCleaner().setEnabled(req.getOn());
@@ -690,10 +682,9 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public ClientProtos.CoprocessorServiceResponse execMasterService(final RpcController controller,
       final ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
+    rpcPreCheck("execMasterService");
     try {
-      master.checkInitialized();
       ServerRpcController execController = new ServerRpcController();
-
       ClientProtos.CoprocessorServiceCall call = request.getCall();
       String serviceName = call.getServiceName();
       String methodName = call.getMethodName();
@@ -749,8 +740,8 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public ExecProcedureResponse execProcedure(RpcController controller,
       ExecProcedureRequest request) throws ServiceException {
+    rpcPreCheck("execProcedure");
     try {
-      master.checkInitialized();
       ProcedureDescription desc = request.getProcedure();
       MasterProcedureManager mpm = master.getMasterProcedureManagerHost().getProcedureManager(
         desc.getSignature());
@@ -758,12 +749,8 @@ public class MasterRpcServices extends RSRpcServices
         throw new ServiceException("The procedure is not registered: "
           + desc.getSignature());
       }
-
-      LOG.info(master.getClientIdAuditPrefix() + " procedure request for: "
-        + desc.getSignature());
-
+      LOG.info(master.getClientIdAuditPrefix() + " procedure request for: " + desc.getSignature());
       mpm.execProcedure(desc);
-
       // send back the max amount of time the client should wait for the procedure
       // to complete
       long waitTime = SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME;
@@ -784,21 +771,16 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public ExecProcedureResponse execProcedureWithRet(RpcController controller,
       ExecProcedureRequest request) throws ServiceException {
+    rpcPreCheck("execProcedureWithRet");
     try {
-      master.checkInitialized();
       ProcedureDescription desc = request.getProcedure();
-      MasterProcedureManager mpm = master.getMasterProcedureManagerHost().getProcedureManager(
-        desc.getSignature());
+      MasterProcedureManager mpm =
+        master.getMasterProcedureManagerHost().getProcedureManager(desc.getSignature());
       if (mpm == null) {
-        throw new ServiceException("The procedure is not registered: "
-          + desc.getSignature());
+        throw new ServiceException("The procedure is not registered: " + desc.getSignature());
       }
-
-      LOG.info(master.getClientIdAuditPrefix() + " procedure request for: "
-        + desc.getSignature());
-
+      LOG.info(master.getClientIdAuditPrefix() + " procedure request for: " + desc.getSignature());
       byte[] data = mpm.execProcedureWithRet(desc);
-
       ExecProcedureResponse.Builder builder = ExecProcedureResponse.newBuilder();
       // set return data if available
       if (data != null) {
@@ -1110,8 +1092,7 @@ public class MasterRpcServices extends RSRpcServices
 
   @Override
   public AbortProcedureResponse abortProcedure(
-      RpcController rpcController,
-      AbortProcedureRequest request) throws ServiceException {
+      RpcController rpcController, AbortProcedureRequest request) throws ServiceException {
     try {
       AbortProcedureResponse.Builder response = AbortProcedureResponse.newBuilder();
       boolean abortResult =
@@ -1362,8 +1343,8 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public RunCatalogScanResponse runCatalogScan(RpcController c,
       RunCatalogScanRequest req) throws ServiceException {
+    rpcPreCheck("runCatalogScan");
     try {
-      master.checkInitialized();
       return ResponseConverter.buildRunCatalogScanResponse(master.catalogJanitorChore.scan());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1373,14 +1354,9 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public RunCleanerChoreResponse runCleanerChore(RpcController c, RunCleanerChoreRequest req)
       throws ServiceException {
-    try {
-      master.checkInitialized();
-      Boolean result = master.getHFileCleaner().runCleaner()
-          && master.getLogCleaner().runCleaner();
-      return ResponseConverter.buildRunCleanerChoreResponse(result);
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
+    rpcPreCheck("runCleanerChore");
+    Boolean result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
+    return ResponseConverter.buildRunCleanerChoreResponse(result);
   }
 
   @Override
@@ -1614,6 +1590,7 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public NormalizeResponse normalize(RpcController controller,
       NormalizeRequest request) throws ServiceException {
+    rpcPreCheck("normalize");
     try {
       return NormalizeResponse.newBuilder().setNormalizerRan(master.normalizeRegions()).build();
     } catch (IOException | CoordinatedStateException ex) {
@@ -1624,13 +1601,18 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public SetNormalizerRunningResponse setNormalizerRunning(RpcController controller,
       SetNormalizerRunningRequest request) throws ServiceException {
+    rpcPreCheck("setNormalizerRunning");
+
+    // Sets normalizer on/off flag in ZK.
+    boolean prevValue = master.getRegionNormalizerTracker().isNormalizerOn();
+    boolean newValue = request.getOn();
     try {
-      master.checkInitialized();
-      boolean prevValue = normalizerSwitch(request.getOn());
-      return SetNormalizerRunningResponse.newBuilder().setPrevNormalizerValue(prevValue).build();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+      master.getRegionNormalizerTracker().setNormalizerOn(newValue);
+    } catch (KeeperException ke) {
+      LOG.warn("Error flipping normalizer switch", ke);
     }
+    LOG.info(master.getClientIdAuditPrefix() + " set normalizerSwitch=" + newValue);
+    return SetNormalizerRunningResponse.newBuilder().setPrevNormalizerValue(prevValue).build();
   }
 
   @Override

@@ -123,9 +123,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
 
   @Override
   public void stop(CoprocessorEnvironment env) {
-    if (accessChecker.getAuthManager() != null) {
-      TableAuthManager.release(accessChecker.getAuthManager());
-    }
+    accessChecker.stop();
   }
 
   @Override

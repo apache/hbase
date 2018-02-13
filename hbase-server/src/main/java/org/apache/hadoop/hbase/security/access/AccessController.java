@@ -846,15 +846,14 @@ public class AccessController extends BaseMasterAndRegionObserver
 
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
+    // Throws RuntimeException if fails to load TableAuthManager so that coprocessor is unloaded.
     accessChecker = new AccessChecker(env.getConfiguration(), zk);
     tableAcls = new MapMaker().weakValues().makeMap();
   }
 
   @Override
   public void stop(CoprocessorEnvironment env) {
-    if (getAuthManager()!= null) {
-      TableAuthManager.release(getAuthManager());
-    }
+    accessChecker.stop();
   }
 
   @Override

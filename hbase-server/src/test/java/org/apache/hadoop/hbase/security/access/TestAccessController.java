@@ -217,15 +217,16 @@ public class TestAccessController extends SecureTestUtil {
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
 
     TEST_UTIL.startMiniCluster();
-    MasterCoprocessorHost cpHost =
+    MasterCoprocessorHost masterCpHost =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
-    cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(AccessController.class.getName());
-    CP_ENV = cpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
+    masterCpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
+    ACCESS_CONTROLLER = (AccessController) masterCpHost.findCoprocessor(
+        AccessController.class.getName());
+    CP_ENV = masterCpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
-    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
+    RegionServerCoprocessorHost rsCpHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
       .getRegionServerCoprocessorHost();
-    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
+    RSCP_ENV = rsCpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available

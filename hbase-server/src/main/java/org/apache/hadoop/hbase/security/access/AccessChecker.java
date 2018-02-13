@@ -38,6 +38,9 @@ import org.slf4j.LoggerFactory;
 public final class AccessChecker {
   private static final Logger AUDITLOG =
       LoggerFactory.getLogger("SecurityLogger." + AccessChecker.class.getName());
+  // TODO: we should move to a design where we don't even instantiate an AccessChecker if
+  // authorization is not enabled (like in RSRpcServices), instead of always instantiating one and
+  // calling requireXXX() only to do nothing (since authorizationEnabled will be false).
   private TableAuthManager authManager;
   /**
    * if we are active, usually false, only true if "hbase.security.authorization"
@@ -57,8 +60,6 @@ public final class AccessChecker {
    */
   public AccessChecker(final Configuration conf, final ZooKeeperWatcher zkw)
       throws RuntimeException {
-    // If zk is null or IOException while obtaining auth manager,
-    // throw RuntimeException so that the coprocessor is unloaded.
     if (zkw != null) {
       try {
         this.authManager = TableAuthManager.getOrCreate(zkw, conf);
@@ -69,6 +70,13 @@ public final class AccessChecker {
       throw new NullPointerException("Error obtaining AccessChecker, zk found null.");
     }
     authorizationEnabled = isAuthorizationSupported(conf);
+  }
+
+  /**
+   * Releases {@link TableAuthManager}'s reference.
+   */
+  public void stop() {
+    TableAuthManager.release(authManager);
   }
 
   public TableAuthManager getAuthManager() {
@@ -159,6 +167,9 @@ public final class AccessChecker {
    */
   public void requireAccess(User user, String request, TableName tableName,
       Action... permissions) throws IOException {
+    if (!authorizationEnabled) {
+      return;
+    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
@@ -173,7 +184,7 @@ public final class AccessChecker {
       }
     }
     logResult(result);
-    if (authorizationEnabled && !result.isAllowed()) {
+    if (!result.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
     }
   }
@@ -198,7 +209,10 @@ public final class AccessChecker {
    */
   public void requireGlobalPermission(User user, String request, Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
-    AuthResult result = null;
+    if (!authorizationEnabled) {
+      return;
+    }
+    AuthResult result;
     if (authManager.authorize(user, perm)) {
       result = AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap);
       result.getParams().setTableName(tableName).setFamilies(familyMap);
@@ -207,11 +221,9 @@ public final class AccessChecker {
       result = AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap);
       result.getParams().setTableName(tableName).setFamilies(familyMap);
       logResult(result);
-      if (authorizationEnabled) {
-        throw new AccessDeniedException("Insufficient permissions for user '" +
-            (user != null ? user.getShortName() : "null") +"' (global, action=" +
-            perm.toString() + ")");
-      }
+      throw new AccessDeniedException(
+          "Insufficient permissions for user '" + (user != null ? user.getShortName() : "null")
+              + "' (global, action=" + perm.toString() + ")");
     }
   }
 
@@ -224,7 +236,10 @@ public final class AccessChecker {
    */
   public void requireGlobalPermission(User user, String request, Action perm,
       String namespace) throws IOException {
-    AuthResult authResult = null;
+    if (!authorizationEnabled) {
+      return;
+    }
+    AuthResult authResult;
     if (authManager.authorize(user, perm)) {
       authResult = AuthResult.allow(request, "Global check allowed", user, perm, null);
       authResult.getParams().setNamespace(namespace);
@@ -233,11 +248,9 @@ public final class AccessChecker {
       authResult = AuthResult.deny(request, "Global check failed", user, perm, null);
       authResult.getParams().setNamespace(namespace);
       logResult(authResult);
-      if (authorizationEnabled) {
-        throw new AccessDeniedException("Insufficient permissions for user '" +
-            (user != null ? user.getShortName() : "null") +"' (global, action=" +
-            perm.toString() + ")");
-      }
+      throw new AccessDeniedException(
+          "Insufficient permissions for user '" + (user != null ? user.getShortName() : "null")
+              + "' (global, action=" + perm.toString() + ")");
     }
   }
 
@@ -248,23 +261,24 @@ public final class AccessChecker {
    */
   public void requireNamespacePermission(User user, String request, String namespace,
       Action... permissions) throws IOException {
+    if (!authorizationEnabled) {
+      return;
+    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.authorize(user, namespace, permission)) {
-        result = AuthResult.allow(request, "Namespace permission granted",
-            user, permission, namespace);
+        result =
+            AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
         break;
       } else {
         // rest of the world
-        result = AuthResult.deny(request, "Insufficient permissions", user,
-            permission, namespace);
+        result = AuthResult.deny(request, "Insufficient permissions", user, permission, namespace);
       }
     }
     logResult(result);
-    if (authorizationEnabled && !result.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions "
-          + result.toContextString());
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
     }
   }
 
@@ -273,28 +287,29 @@ public final class AccessChecker {
    * @param namespace   The given namespace
    * @param permissions Actions being requested
    */
-  public void requireNamespacePermission(User user, String request, String namespace, TableName tableName,
-      Map<byte[], ? extends Collection<byte[]>> familyMap, Action... permissions)
-      throws IOException {
+  public void requireNamespacePermission(User user, String request, String namespace,
+      TableName tableName, Map<byte[], ? extends Collection<byte[]>> familyMap,
+      Action... permissions) throws IOException {
+    if (!authorizationEnabled) {
+      return;
+    }
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.authorize(user, namespace, permission)) {
-        result = AuthResult.allow(request, "Namespace permission granted",
-            user, permission, namespace);
+        result =
+            AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
         result.getParams().setTableName(tableName).setFamilies(familyMap);
         break;
       } else {
         // rest of the world
-        result = AuthResult.deny(request, "Insufficient permissions", user,
-            permission, namespace);
+        result = AuthResult.deny(request, "Insufficient permissions", user, permission, namespace);
         result.getParams().setTableName(tableName).setFamilies(familyMap);
       }
     }
     logResult(result);
-    if (authorizationEnabled && !result.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions "
-          + result.toContextString());
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
     }
   }
 }

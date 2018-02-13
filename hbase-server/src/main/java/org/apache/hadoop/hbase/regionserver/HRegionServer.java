@@ -625,7 +625,7 @@ public class HRegionServer extends HasThread implements
     }
     this.configurationManager = new ConfigurationManager();
 
-    rpcServices.start();
+    rpcServices.start(zooKeeper);
     putUpWebUI();
     this.walRoller = new LogRoller(this, this);
     this.choreService = new ChoreService(getServerName().toString(), true);
