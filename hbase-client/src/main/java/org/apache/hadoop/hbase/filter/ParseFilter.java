@@ -93,6 +93,8 @@ public class ParseFilter {
                       "SingleColumnValueExcludeFilter");
     filterHashMap.put("DependentColumnFilter", ParseConstants.FILTER_PACKAGE + "." +
                       "DependentColumnFilter");
+    filterHashMap.put("ColumnValueFilter", ParseConstants.FILTER_PACKAGE + "." +
+                      "ColumnValueFilter");
 
     // Creates the operatorPrecedenceHashMap
     operatorPrecedenceHashMap = new HashMap<>();
@@ -769,8 +771,6 @@ public class ParseFilter {
 
   /**
    * Takes a compareOperator symbol as a byte array and returns the corresponding CompareOperator
-   * @deprecated Since 2.0
-   * <p>
    * @param compareOpAsByteArray the comparatorOperator symbol as a byte array
    * @return the Compare Operator
    */

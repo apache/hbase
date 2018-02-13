@@ -169,3 +169,10 @@ message RowRange {
 message MultiRowRangeFilter {
   repeated RowRange row_range_list = 1;
 }
+
+message ColumnValueFilter {
+  required bytes family = 1;
+  required bytes qualifier = 2;
+  required CompareType compare_op = 3;
+  required Comparator comparator = 4;
+}
