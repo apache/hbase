@@ -111,13 +111,13 @@ public class ReplicationSyncUp extends Configured implements Tool {
       while (manager.getOldSources().size() > 0) {
         Thread.sleep(SLEEP_TIME);
       }
+      manager.join();
     } catch (InterruptedException e) {
       System.err.println("didn't wait long enough:" + e);
       return (-1);
+    } finally {
+      zkw.close();
     }
-
-    manager.join();
-    zkw.close();
 
     return 0;
   }
