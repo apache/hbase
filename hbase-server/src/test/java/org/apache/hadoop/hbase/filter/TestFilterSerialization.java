@@ -341,4 +341,13 @@ public class TestFilterSerialization {
     assertTrue(multiRowRangeFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(multiRowRangeFilter))));
   }
+
+  @Test
+  public void testColumnValueFilter() throws Exception {
+    ColumnValueFilter columnValueFilter =
+        new ColumnValueFilter(Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
+            CompareOperator.EQUAL, Bytes.toBytes("value"));
+    assertTrue(columnValueFilter.areSerializedFieldsEqual(
+        ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnValueFilter))));
+  }
 }

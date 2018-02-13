@@ -685,4 +685,15 @@ public class TestParseFilter {
     assertEquals(clazz, filter.getClass());
     return clazz.cast(filter);
   }
+
+  @Test
+  public void testColumnValueFilter() throws IOException {
+    String filterString = "ColumnValueFilter ('family', 'qualifier', <, 'binaryprefix:value')";
+    ColumnValueFilter cvf = doTestFilter(filterString, ColumnValueFilter.class);
+    assertEquals("family", new String(cvf.getFamily(), StandardCharsets.UTF_8));
+    assertEquals("qualifier", new String(cvf.getQualifier(), StandardCharsets.UTF_8));
+    assertEquals(CompareOperator.LESS, cvf.getCompareOperator());
+    assertTrue(cvf.getComparator() instanceof BinaryPrefixComparator);
+    assertEquals("value", new String(cvf.getComparator().getValue(), StandardCharsets.UTF_8));
+  }
 }
