@@ -974,24 +974,42 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 [[hbase.unittests]]
 === Unit Tests
 
-Apache HBase test cases are subdivided into four categories: small, medium, large, and
-integration with corresponding JUnit link:https://github.com/junit-team/junit4/wiki/Categories[categories]: `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
-JUnit categories are denoted using java annotations and look like this in your unit test code.
+Apache HBase unit tests must carry a Category annotation and
+as of `hbase-2.0.0`, must be stamped with the HBase `ClassRule`.
+Here is an example of what a Test Class looks like with a 
+Category and ClassRule included:
 
 [source,java]
 ----
 ...
 @Category(SmallTests.class)
 public class TestHRegionInfo {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestHRegionInfo.class);
+
   @Test
   public void testCreateHRegionInfoName() throws Exception {
     // ...
   }
 }
 ----
+Here the Test Class is `TestHRegionInfo`. The `CLASS_RULE` has
+the same form in every test class only the `.class` you pass
+is that of the local test; i.e. in the TestTimeout Test Class, you'd
+pass `TestTimeout.class` to the `CLASS_RULE` instead of the
+`TestHRegionInfo.class` we have above. The `CLASS_RULE`
+is where we'll enforce timeouts (currently set at a hard-limit of
+ten minutes for all tests) and other cross-unit test facility.
+The test is in the `SmallTest` Category.
 
-The above example shows how to mark a test case as belonging to the `small` category.
-All test cases in HBase should have a categorization.
+Categories can be arbitrary and provided as a list but each test MUST
+carry one from the following list of sizings: `small`, `medium`, `large`, and
+`integration`. The test sizing is designated using the JUnit
+link:https://github.com/junit-team/junit4/wiki/Categories[categories]: `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
+JUnit Categories are denoted using java annotations (a special unit test looks
+for the presence of the @Category annotation in all unit tess and will fail if it
+finds a test suite missing a sizing marking).
 
 The first three categories, `small`, `medium`, and `large`, are for test cases which run when you
 type `$ mvn test`.
@@ -1000,28 +1018,26 @@ The `integration` category is not for unit tests, but for integration tests.
 These are run when you invoke `$ mvn verify`.
 Integration tests are described in <<integration.tests,integration.tests>>.
 
-HBase uses a patched maven surefire plugin and maven profiles to implement its unit test characterizations.
-
-Keep reading to figure which annotation of the set small, medium, and large to put on your new
-HBase test case.
+Keep reading to figure which annotation of the set `small`, `medium`, and `large`
+to put on your new HBase test case.
 
 .Categorizing Tests
 Small Tests (((SmallTests)))::
-  _Small_ test cases are executed in a shared JVM and individual test cases should run in 15 seconds
-   or less; i.e. a link:https://en.wikipedia.org/wiki/JUnit[junit test fixture], a java object made
-   up of test methods, should finish in under 15 seconds. These test cases can not use mini cluster.
-   These are run as part of patch pre-commit.
+  _Small_ test cases are executed in a shared JVM and each test suite/test class should
+   run in 15 seconds or less; i.e. a link:https://en.wikipedia.org/wiki/JUnit[junit test fixture], a java object made
+   up of test methods, should finish in under 15 seconds, no matter how many or how few test methods
+   it has. These test cases should not use a minicluster.
 
 Medium Tests (((MediumTests)))::
-  _Medium_ test cases are executed in separate JVM and individual test case should run in 50 seconds
-   or less. Together, they should take less than 30 minutes, and are quite stable in their results.
-   These test cases can use a mini cluster. These are run as part of patch pre-commit.
+  _Medium_ test cases are executed in separate JVM and individual test suites or test classes or in
+  junit parlance, link:https://en.wikipedia.org/wiki/JUnit[test fixture], should run in 50 seconds
+   or less. These test cases can use a mini cluster.
 
 Large Tests (((LargeTests)))::
-  _Large_ test cases are everything else.
-  They are typically large-scale tests, regression tests for specific bugs, timeout tests, performance tests.
-  They are executed before a commit on the pre-integration machines.
-  They can be run on the developer machine as well.
+  _Large_ test cases are everything else. They are typically large-scale tests, regression tests
+  for specific bugs, timeout tests, or performance tests. No large test suite can take longer than
+  ten minutes. It will be killed as timed out. Cast your test as an Integration Test if it needs
+  to run longer.
 
 Integration Tests (((IntegrationTests)))::
   _Integration_ tests are system level tests.
@@ -1034,17 +1050,13 @@ Integration Tests (((IntegrationTests)))::
 ==== Default: small and medium category tests
 
 Running `mvn test` will execute all small tests in a single JVM (no fork) and then medium tests in a separate JVM for each test instance.
-Medium tests are NOT executed if there is an error in a small test.
-Large tests are NOT executed.
-There is one report for small tests, and one report for medium tests if they are executed.
+Medium tests are NOT executed if there is an error in a small test. Large tests are NOT executed.
 
 [[hbase.unittests.cmds.test.runalltests]]
 ==== Running all tests
 
 Running `mvn test -P runAllTests` will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
 Medium and large tests are NOT executed if there is an error in a small test.
-Large tests are NOT executed if there is an error in a small or medium test.
-There is one report for small tests, and one report for medium and large tests if they are executed.
 
 [[hbase.unittests.cmds.test.localtests.mytest]]
 ==== Running a single test or all tests in a package
@@ -1061,7 +1073,7 @@ mvn test '-Dtest=org.apache.hadoop.hbase.client.*'
 ----
 
 When `-Dtest` is specified, the `localTests` profile will be used.
-It will use the official release of maven surefire, rather than our custom surefire plugin, and the old connector (The HBase build uses a patched version of the maven surefire plugin). Each junit test is executed in a separate JVM (A fork per test class). There is no parallelization when tests are running in this mode.
+Each junit test is executed in a separate JVM (A fork per test class). There is no parallelization when tests are running in this mode.
 You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
 It's harmless.
 However, you need to make sure the sum of `Tests run:` in the `Results:` section of test reports matching the number of tests you specified because no error will be reported when a non-existent test case is specified.
@@ -1125,6 +1137,29 @@ For example running +./dev-support/hbasetests.sh+ will execute small and medium 
 Running +./dev-support/hbasetests.sh
                         runAllTests+ will execute all tests.
 Running +./dev-support/hbasetests.sh replayFailed+ will rerun the failed tests a second time, in a separate jvm and without parallelisation.
+
+[[hbase.unittests.timeouts]]
+==== Test Timeouts(((Test Timeouts)))
+The HBase unit test sizing Categorization timeouts are not strictly enforced.
+
+Any test that runs longer than ten minutes will be timedout/killed.
+
+As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
+[source,java]
+----
+...
+  @Test(timeout=30000)
+  public void testCreateHRegionInfoName() throws Exception {
+    // ...
+  }
+----
+They are discouraged and don't make much sense given we are timing
+base of how long the whole Test Fixture/Class/Suite takes and 
+that the variance in how long a test method takes varies wildly
+dependent upon context (loaded Apache Infrastructure versus
+developer machine with nothing else running on it).
+
+
 
 [[hbase.unittests.resource.checker]]
 ==== Test Resource Checker(((Test ResourceChecker)))
