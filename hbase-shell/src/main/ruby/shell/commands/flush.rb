@@ -23,11 +23,14 @@ module Shell
       def help
         <<-EOF
 Flush all regions in passed table or pass a region row to
-flush an individual region.  For example:
+flush an individual region or a region server name whose format
+is 'host,port,startcode', to flush all its regions.
+For example:
 
   hbase> flush 'TABLENAME'
   hbase> flush 'REGIONNAME'
   hbase> flush 'ENCODED_REGIONNAME'
+  hbase> flush 'REGION_SERVER_NAME'
 EOF
       end
 
