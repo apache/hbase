@@ -40,15 +40,15 @@ import org.junit.runner.notification.RunListener;
 public class TimedOutTestsListener extends RunListener {
 
   static final String TEST_TIMED_OUT_PREFIX = "test timed out after";
-  
+
   private static String INDENT = "    ";
 
   private final PrintWriter output;
-  
+
   public TimedOutTestsListener() {
     this.output = new PrintWriter(System.err);
   }
-  
+
   public TimedOutTestsListener(PrintWriter output) {
     this.output = output;
   }
@@ -63,16 +63,16 @@ public class TimedOutTestsListener extends RunListener {
     }
     output.flush();
   }
-  
+
   public static String buildThreadDiagnosticString() {
     StringWriter sw = new StringWriter();
     PrintWriter output = new PrintWriter(sw);
-    
+
     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss,SSS");
     output.println(String.format("Timestamp: %s", dateFormat.format(new Date())));
     output.println();
     output.println(buildThreadDump());
-    
+
     String deadlocksInfo = buildDeadlockInfo();
     if (deadlocksInfo != null) {
       output.println("====> DEADLOCKS DETECTED <====");
@@ -106,28 +106,28 @@ public class TimedOutTestsListener extends RunListener {
     }
     return dump.toString();
   }
-  
+
   static String buildDeadlockInfo() {
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
     long[] threadIds = threadBean.findMonitorDeadlockedThreads();
     if (threadIds != null && threadIds.length > 0) {
       StringWriter stringWriter = new StringWriter();
       PrintWriter out = new PrintWriter(stringWriter);
-      
+
       ThreadInfo[] infos = threadBean.getThreadInfo(threadIds, true, true);
       for (ThreadInfo ti : infos) {
         printThreadInfo(ti, out);
         printLockInfo(ti.getLockedSynchronizers(), out);
         out.println();
       }
-      
+
       out.close();
       return stringWriter.toString();
     } else {
       return null;
     }
   }
-  
+
   private static void printThreadInfo(ThreadInfo ti, PrintWriter out) {
     // print thread information
     printThread(ti, out);
@@ -173,5 +173,5 @@ public class TimedOutTestsListener extends RunListener {
     }
     out.println();
   }
-  
+
 }
