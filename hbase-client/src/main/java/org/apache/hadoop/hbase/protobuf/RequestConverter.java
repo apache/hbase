@@ -473,7 +473,7 @@ public final class RequestConverter {
     return regionActionBuilder;
   }
 
-  private static RegionAction.Builder getRegionActionBuilderWithRegion(
+  public static RegionAction.Builder getRegionActionBuilderWithRegion(
       final RegionAction.Builder regionActionBuilder, final byte [] regionName) {
     RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     regionActionBuilder.setRegion(region);
@@ -997,7 +997,7 @@ public final class RequestConverter {
  }
 
  /**
-  * @see {@link #buildRollWALWriterRequest()
+  * @see {@link #buildRollWALWriterRequest()}
   */
  private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST =
      RollWALWriterRequest.newBuilder().build();
@@ -1066,7 +1066,7 @@ public final class RequestConverter {
    * @return a Condition
    * @throws IOException
    */
-  private static Condition buildCondition(final byte[] row,
+  public static Condition buildCondition(final byte[] row,
       final byte[] family, final byte [] qualifier,
       final ByteArrayComparable comparator,
       final CompareType compareType) throws IOException {
