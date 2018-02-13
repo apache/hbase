@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -69,12 +70,11 @@ public class FileMmapEngine implements IOEngine {
       throw ioex;
     }
     ByteBufferAllocator allocator = new ByteBufferAllocator() {
-      int pos = 0;
+      AtomicInteger pos = new AtomicInteger(0);
       @Override
       public ByteBuffer allocate(long size) throws IOException {
         ByteBuffer buffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_WRITE,
-            pos * size, size);
-        pos++;
+          pos.getAndIncrement() * size, size);
         return buffer;
       }
     };
@@ -106,7 +106,7 @@ public class FileMmapEngine implements IOEngine {
     byte[] dst = new byte[length];
     bufferArray.getMultiple(offset, length, dst);
     return deserializer.deserialize(new SingleByteBuff(ByteBuffer.wrap(dst)), true,
-        MemoryType.EXCLUSIVE);
+      MemoryType.EXCLUSIVE);
   }
 
   /**
