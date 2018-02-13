@@ -243,7 +243,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       tables.entrySet()) {
       byte[] entry = t.getKey();
       ListMultimap<String,TablePermission> perms = t.getValue();
-      byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+      byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms);
       getAuthManager().getZKPermissionWatcher().writeToZookeeper(entry, serialized);
     }
     initialized = true;
@@ -275,7 +275,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         try (Table t = regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           ListMultimap<String,TablePermission> perms =
               AccessControlLists.getPermissions(conf, entry, t);
-          byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
+          byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms);
           zkw.writeToZookeeper(entry, serialized);
         }
       } catch (IOException ex) {
