@@ -624,7 +624,7 @@ public class HRegionServer extends HasThread implements
         masterAddressTracker = null;
         clusterStatusTracker = null;
       }
-      this.rpcServices.start();
+      this.rpcServices.start(zooKeeper);
       // This violates 'no starting stuff in Constructor' but Master depends on the below chore
       // and executor being created and takes a different startup route. Lots of overlap between HRS
       // and M (An M IS A HRS now). Need to refactor so less duplication between M and its super

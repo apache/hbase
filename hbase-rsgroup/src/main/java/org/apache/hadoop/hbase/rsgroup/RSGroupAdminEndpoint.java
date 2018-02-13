@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.hbase.security.access.TableAuthManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -128,7 +127,7 @@ public class RSGroupAdminEndpoint implements MasterCoprocessor, MasterObserver {
 
   @Override
   public void stop(CoprocessorEnvironment env) {
-    TableAuthManager.release(accessChecker.getAuthManager());
+    accessChecker.stop();
   }
 
   @Override

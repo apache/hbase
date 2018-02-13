@@ -119,6 +119,8 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenPriorityRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -129,6 +131,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -319,6 +322,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private final int rowSizeWarnThreshold;
 
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
+
+  // We want to vet all accesses at the point of entry itself; limiting scope of access checker
+  // instance to only this class to prevent its use from spreading deeper into implementation.
+  // Initialized in start() since AccessChecker needs ZKWatcher which is created by HRegionServer
+  // after RSRpcServices constructor and before start() is called.
+  // Initialized only if authorization is enabled, else remains null.
+  private AccessChecker accessChecker;
 
   /**
    * Services launched in RSRpcServices. By default they are on but you can use the below
@@ -1239,6 +1249,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return new AnnotationReadingPriorityFunction(this);
   }
 
+  protected void requirePermission(String request, Permission.Action perm) throws IOException {
+    if (accessChecker != null) {
+      accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, perm);
+    }
+  }
+
+
   public static String getHostname(Configuration conf, boolean isMaster)
       throws UnknownHostException {
     String hostname = conf.get(isMaster? HRegionServer.MASTER_HOSTNAME_KEY :
@@ -1403,12 +1420,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return regionServer.getRegionServerSpaceQuotaManager();
   }
 
-  void start() {
+  void start(ZKWatcher zkWatcher) {
+    if (AccessChecker.isAuthorizationSupported(getConfiguration())) {
+      accessChecker = new AccessChecker(getConfiguration(), zkWatcher);
+    }
     this.scannerIdGenerator = new ScannerIdGenerator(this.regionServer.serverName);
     rpcServer.start();
   }
 
   void stop() {
+    if (accessChecker != null) {
+      accessChecker.stop();
+    }
     closeAllScanners();
     rpcServer.stop();
   }
