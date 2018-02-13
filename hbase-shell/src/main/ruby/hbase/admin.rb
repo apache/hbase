@@ -50,12 +50,17 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Requests a table or region flush
-    def flush(table_or_region_name)
-      @admin.flushRegion(table_or_region_name.to_java_bytes)
-    rescue java.lang.IllegalArgumentException => e
+    # Requests a table or region or region server flush
+    def flush(name)
+      @admin.flushRegion(name.to_java_bytes)
+    rescue java.lang.IllegalArgumentException
       # Unknown region. Try table.
-      @admin.flush(TableName.valueOf(table_or_region_name))
+      begin
+        @admin.flush(TableName.valueOf(name))
+      rescue java.lang.IllegalArgumentException
+        # Unknown table. Try region server.
+        @admin.flushRegionServer(ServerName.valueOf(name))
+      end
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1285,6 +1290,12 @@ module Hbase
         end
       end
       @admin.clearDeadServers(servers).to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # List live region servers
+    def list_liveservers
+      @admin.getClusterStatus.getServers.to_a
     end
   end
 end

@@ -101,6 +101,10 @@ module Hbase
 
     define_test "flush should work" do
       command(:flush, 'hbase:meta')
+      servers = admin.list_liveservers
+      servers.each do |s|
+        command(:flush, s.toString)
+      end
     end
 
     #-------------------------------------------------------------------------------
