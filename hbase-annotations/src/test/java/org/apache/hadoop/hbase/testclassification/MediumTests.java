@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,16 +19,16 @@
 package org.apache.hadoop.hbase.testclassification;
 
 /**
- * Tag a test as 'Medium', meaning that the test class has the following
- * characteristics:
+ * Tagging a test as 'medium' means that the test class has the following characteristics:
  * <ul>
- *  <li>executed in an isolated JVM. Tests can however be executed in different JVM on the same
- *  machine simultaneously.</li>
- *  <li>will have to be executed by the developer before submitting a bug</li>
- *  <li>ideally, last less than 1 minutes to help parallelization</li>
+ *  <li>it can be executed in an isolated JVM (Tests can however be executed in different JVMs on
+ *  the  same  machine simultaneously so be careful two concurrent tests end up fighting over ports
+ *  or other singular resources).</li>
+ *  <li>ideally, the whole medium test-suite/class, no matter how many or how few test methods it
+ *  has, will complete in 50 seconds; otherwise make it a 'large' test.</li>
  * </ul>
  *
- *  Use it for tests that cannot be tagged as 'Small'.
+ *  Use it for tests that cannot be tagged as 'small'. Use it when you need to start up a cluster.
  *
  * @see SmallTests
  * @see LargeTests
