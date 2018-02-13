@@ -452,40 +452,53 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private void mutateRows(final Region region,
       final List<ClientProtos.Action> actions,
       final CellScanner cellScanner, RegionActionResult.Builder builder) throws IOException {
-    if (!region.getRegionInfo().isMetaTable()) {
-      regionServer.cacheFlusher.reclaimMemStoreMemory();
-    }
-    RowMutations rm = null;
-    int i = 0;
-    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+    int countOfCompleteMutation = 0;
+    try {
+      if (!region.getRegionInfo().isMetaTable()) {
+        regionServer.cacheFlusher.reclaimMemStoreMemory();
+      }
+      RowMutations rm = null;
+      int i = 0;
+      ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
         ClientProtos.ResultOrException.newBuilder();
-    for (ClientProtos.Action action: actions) {
-      if (action.hasGet()) {
-        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
-          action.getGet());
-      }
-      MutationType type = action.getMutation().getMutateType();
-      if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray());
-      }
-      switch (type) {
-        case PUT:
-          rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
-          break;
-        case DELETE:
-          rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
-          break;
-        default:
-          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
-      }
-      // To unify the response format with doNonAtomicRegionMutation and read through client's
-      // AsyncProcess we have to add an empty result instance per operation
-      resultOrExceptionOrBuilder.clear();
-      resultOrExceptionOrBuilder.setIndex(i++);
-      builder.addResultOrException(
+      for (ClientProtos.Action action: actions) {
+        if (action.hasGet()) {
+          throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
+            action.getGet());
+        }
+        MutationType type = action.getMutation().getMutateType();
+        if (rm == null) {
+          rm = new RowMutations(action.getMutation().getRow().toByteArray());
+        }
+        switch (type) {
+          case PUT:
+            Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            rm.add(put);
+            break;
+          case DELETE:
+            Delete delete = ProtobufUtil.toDelete(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            rm.add(delete);
+            break;
+          default:
+            throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
+        }
+        // To unify the response format with doNonAtomicRegionMutation and read through client's
+        // AsyncProcess we have to add an empty result instance per operation
+        resultOrExceptionOrBuilder.clear();
+        resultOrExceptionOrBuilder.setIndex(i++);
+        builder.addResultOrException(
           resultOrExceptionOrBuilder.build());
+      }
+      region.mutateRow(rm);
+    } finally {
+      // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
+      // even if the malformed cells are not skipped.
+      for (int i = countOfCompleteMutation; i < actions.size(); ++i) {
+        skipCellsForMutation(actions.get(i), cellScanner);
+      }
     }
-    region.mutateRow(rm);
   }
 
   /**
@@ -504,41 +517,53 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, ByteArrayComparable comparator,
                                     RegionActionResult.Builder builder) throws IOException {
-    if (!region.getRegionInfo().isMetaTable()) {
-      regionServer.cacheFlusher.reclaimMemStoreMemory();
-    }
-    RowMutations rm = null;
-    int i = 0;
-    ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
+    int countOfCompleteMutation = 0;
+    try {
+      RowMutations rm = null;
+      if (!region.getRegionInfo().isMetaTable()) {
+        regionServer.cacheFlusher.reclaimMemStoreMemory();
+      }
+      int i = 0;
+      ClientProtos.ResultOrException.Builder resultOrExceptionOrBuilder =
         ClientProtos.ResultOrException.newBuilder();
-    for (ClientProtos.Action action: actions) {
-      if (action.hasGet()) {
-        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
+      for (ClientProtos.Action action: actions) {
+        if (action.hasGet()) {
+          throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
             action.getGet());
-      }
-      MutationType type = action.getMutation().getMutateType();
-      if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray());
-      }
-      switch (type) {
-        case PUT:
-          rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
-          break;
-        case DELETE:
-          rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
-          break;
-        default:
-          throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
-      }
-      // To unify the response format with doNonAtomicRegionMutation and read through client's
-      // AsyncProcess we have to add an empty result instance per operation
-      resultOrExceptionOrBuilder.clear();
-      resultOrExceptionOrBuilder.setIndex(i++);
-      builder.addResultOrException(
+        }
+        MutationType type = action.getMutation().getMutateType();
+        if (rm == null) {
+          rm = new RowMutations(action.getMutation().getRow().toByteArray());
+        }
+        switch (type) {
+          case PUT:
+            Put put = ProtobufUtil.toPut(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            rm.add(put);
+            break;
+          case DELETE:
+            Delete delete = ProtobufUtil.toDelete(action.getMutation(), cellScanner);
+            ++countOfCompleteMutation;
+            rm.add(delete);
+            break;
+          default:
+            throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
+        }
+        // To unify the response format with doNonAtomicRegionMutation and read through client's
+        // AsyncProcess we have to add an empty result instance per operation
+        resultOrExceptionOrBuilder.clear();
+        resultOrExceptionOrBuilder.setIndex(i++);
+        builder.addResultOrException(
           resultOrExceptionOrBuilder.build());
+      }
+      return region.checkAndRowMutate(row, family, qualifier, compareOp, comparator, rm, true);
+    } finally {
+      // Currently, the checkAndMutate isn't supported by batch so it won't mess up the cell scanner
+      // even if the malformed cells are not skipped.
+      for (int i = countOfCompleteMutation; i < actions.size(); ++i) {
+        skipCellsForMutation(actions.get(i), cellScanner);
+      }
     }
-    return region.checkAndRowMutate(row, family, qualifier, compareOp,
-        comparator, rm, Boolean.TRUE);
   }
 
   /**
@@ -707,9 +732,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           context.incrementResponseExceptionSize(pair.getSerializedSize());
           resultOrExceptionBuilder.setIndex(action.getIndex());
           builder.addResultOrException(resultOrExceptionBuilder.build());
-          if (cellScanner != null) {
-            skipCellsForMutation(action, cellScanner);
-          }
+          skipCellsForMutation(action, cellScanner);
           continue;
         }
         if (action.hasGet()) {
@@ -871,8 +894,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
     } catch (IOException ie) {
-      for (int i = 0; i < mutations.size(); i++) {
-        builder.addResultOrException(getResultOrException(ie, mutations.get(i).getIndex()));
+      int processedMutationIndex = 0;
+      for (Action mutation : mutations) {
+        // The non-null mArray[i] means the cell scanner has been read.
+        if (mArray[processedMutationIndex++] == null) {
+          skipCellsForMutation(mutation, cells);
+        }
+        builder.addResultOrException(getResultOrException(ie, mutation.getIndex()));
       }
     }
     if (regionServer.metricsRegionServer != null) {
@@ -2271,9 +2299,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // All Mutations in this RegionAction not executed as we can not see the Region online here
         // in this RS. Will be retried from Client. Skipping all the Cells in CellScanner
         // corresponding to these Mutations.
-        if (cellScanner != null) {
-          skipCellsForMutations(regionAction.getActionList(), cellScanner);
-        }
+        skipCellsForMutations(regionAction.getActionList(), cellScanner);
         continue;  // For this region it's a failure.
       }
 
@@ -2333,12 +2359,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private void skipCellsForMutations(List<Action> actions, CellScanner cellScanner) {
+    if (cellScanner == null) {
+      return;
+    }
     for (Action action : actions) {
       skipCellsForMutation(action, cellScanner);
     }
   }
 
   private void skipCellsForMutation(Action action, CellScanner cellScanner) {
+    if (cellScanner == null) {
+      return;
+    }
     try {
       if (action.hasMutation()) {
         MutationProto m = action.getMutation();
