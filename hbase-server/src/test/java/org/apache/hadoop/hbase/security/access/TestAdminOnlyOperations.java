@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -31,12 +32,14 @@ import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -88,7 +91,7 @@ public class TestAdminOnlyOperations {
   private static User USER_GROUP_ADMIN;
 
   // Dummy service to test execService calls. Needs to be public so can be loaded as Coprocessor.
-  public static class DummyCpService implements MasterCoprocessor {
+  public static class DummyCpService implements MasterCoprocessor, RegionServerCoprocessor {
     public DummyCpService() {}
 
     @Override
@@ -103,7 +106,8 @@ public class TestAdminOnlyOperations {
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
       "," + DummyCpService.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName());
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
+      "," + DummyCpService.class.getName());
     conf.set(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, "true");
     SecureTestUtil.configureSuperuser(conf);
   }
@@ -161,6 +165,24 @@ public class TestAdminOnlyOperations {
     });
   }
 
+  private void verifiedDeniedServiceException(User user, Action action) throws Exception {
+    user.runAs((PrivilegedExceptionAction<?>) () -> {
+      boolean accessDenied = false;
+      try (Connection conn = ConnectionFactory.createConnection(conf);
+          Admin admin = conn.getAdmin()) {
+        action.run(admin);
+      } catch (ServiceException e) {
+        // For MasterRpcServices.execService.
+        if (e.getCause() instanceof AccessDeniedException) {
+          accessDenied = true;
+        }
+      }
+      assertTrue("Expected access to be denied", accessDenied);
+      return null;
+    });
+
+  }
+
   private void verifyAdminCheckForAction(Action action) throws Exception {
     verifyAllowed(USER_ADMIN, action);
     verifyAllowed(USER_GROUP_ADMIN, action);
@@ -207,20 +229,7 @@ public class TestAdminOnlyOperations {
     verifyAllowed(USER_ADMIN, action);
     verifyAllowed(USER_GROUP_ADMIN, action);
     // This is same as above verifyAccessDenied
-    USER_NON_ADMIN.runAs((PrivilegedExceptionAction<?>) () -> {
-      boolean accessDenied = false;
-      try (Connection conn = ConnectionFactory.createConnection(conf);
-          Admin admin = conn.getAdmin()) {
-        action.run(admin);
-      } catch (ServiceException e) {
-        // For MasterRpcServices.execService.
-        if (e.getCause() instanceof AccessDeniedException) {
-          accessDenied = true;
-        }
-      }
-      assertTrue("Expected access to be denied", accessDenied);
-      return null;
-    });
+    verifiedDeniedServiceException(USER_NON_ADMIN, action);
   }
 
   @Test
@@ -240,5 +249,20 @@ public class TestAdminOnlyOperations {
   @Test
   public void testSetNormalizerRunning() throws Exception {
     verifyAdminCheckForAction((admin) -> admin.normalizerSwitch(true));
+  }
+
+  @Test
+  public void testExecRegionServerService() throws Exception {
+    Action action = (admin) -> {
+      ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
+      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
+          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(
+              admin.coprocessorService(serverName));
+      service.ping(null, TestProtos.EmptyRequestProto.getDefaultInstance());
+    };
+
+    verifyAllowed(USER_ADMIN, action);
+    verifyAllowed(USER_GROUP_ADMIN, action);
+    verifiedDeniedServiceException(USER_NON_ADMIN, action);
   }
 }

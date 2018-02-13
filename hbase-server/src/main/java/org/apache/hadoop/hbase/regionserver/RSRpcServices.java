@@ -498,6 +498,24 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   /**
+   * Checks for the following pre-checks in order:
+   * <ol>
+   *   <li>RegionServer is running</li>
+   *   <li>If authorization is enabled, then RPC caller has ADMIN permissions</li>
+   * </ol>
+   * @param requestName name of rpc request. Used in reporting failures to provide context.
+   * @throws ServiceException If any of the above listed pre-check fails.
+   */
+  private void rpcPreCheck(String requestName) throws ServiceException {
+    try {
+      checkOpen();
+      requirePermission(requestName, Permission.Action.ADMIN);
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  /**
    * Starts the nonce operation for a mutation, if needed.
    * @param mutation Mutation.
    * @param nonceGroup Nonce group from the request.
@@ -1438,9 +1456,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   /**
    * Called to verify that this server is up and running.
-   *
-   * @throws IOException
    */
+  // TODO : Rename this and HMaster#checkInitialized to isRunning() (or a better name).
   protected void checkOpen() throws IOException {
     if (regionServer.isAborted()) {
       throw new RegionServerAbortedException("Server " + regionServer.serverName + " aborting");
@@ -3432,6 +3449,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
       CoprocessorServiceRequest request) throws ServiceException {
+    rpcPreCheck("execRegionServerService");
     return regionServer.execRegionServerService(controller, request);
   }
 
