@@ -73,6 +73,10 @@ import org.apache.hadoop.io.Text;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.jasper.tagplugins.jstl.core.Remove;
 
 /**
  * Maintains lists of permission grants to users and groups to allow for
@@ -667,8 +671,7 @@ public class AccessControlLists {
    *
    * Writes a set of permission [user: table permission]
    */
-  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms,
-      Configuration conf) {
+  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms) {
     return ProtobufUtil.prependPBMagic(ProtobufUtil.toUserTablePermissions(perms).toByteArray());
   }
 
@@ -755,7 +758,7 @@ public class AccessControlLists {
          // Deserialize the table permissions from the KV
          // TODO: This can be improved. Don't build UsersAndPermissions just to unpack it again,
          // use the builder
-         AccessControlProtos.UsersAndPermissions.Builder builder = 
+         AccessControlProtos.UsersAndPermissions.Builder builder =
            AccessControlProtos.UsersAndPermissions.newBuilder();
          ProtobufUtil.mergeFrom(builder, tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
          ListMultimap<String,Permission> kvPerms =
