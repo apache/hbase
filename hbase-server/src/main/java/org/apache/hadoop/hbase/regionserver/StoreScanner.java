@@ -815,6 +815,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         return false;
       }
     } while ((nextCell = this.heap.peek()) != null && CellUtil.matchingRowColumn(cell, nextCell));
+    // We need this check because it may happen that the new scanner that we get
+    // during heap.next() is requiring reseek due of fake KV previously generated for
+    // ROWCOL bloom filter optimization. See HBASE-19863 for more details
+    if (nextCell != null && matcher.compareKeyForNextColumn(nextCell, cell) < 0) {
+      return false;
+    }
     return true;
   }
 
