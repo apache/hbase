@@ -47,6 +47,11 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
   }
 
   @Override
+  public List<String> getListOfReplicators() throws KeeperException {
+    return super.getListOfReplicatorsZK();
+  }
+
+  @Override
   public List<String> getLogsInQueue(String serverName, String queueId) throws KeeperException {
     String znode = ZKUtil.joinZNode(this.queuesZNode, serverName);
     znode = ZKUtil.joinZNode(znode, queueId);
