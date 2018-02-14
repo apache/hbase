@@ -1480,21 +1480,42 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param htd
-   * @param families
-   * @param splitKeys
+   * @param htd table descriptor
+   * @param families array of column families
+   * @param splitKeys array of split keys
    * @param c Configuration to use
    * @return An HTable instance for the created table.
-   * @throws IOException
+   * @throws IOException if getAdmin or createTable fails
    */
   public HTable createTable(HTableDescriptor htd, byte[][] families, byte[][] splitKeys,
       Configuration c) throws IOException {
+    // Disable blooms (they are on by default as of 0.95) but we disable them here because
+    // tests have hard coded counts of what to expect in block cache, etc., and blooms being
+    // on is interfering.
+    return createTable(htd, families, splitKeys, BloomType.NONE, HConstants.DEFAULT_BLOCKSIZE, c);
+  }
+
+  /**
+   * Create a table.
+   * @param htd table descriptor
+   * @param families array of column families
+   * @param splitKeys array of split keys
+   * @param type Bloom type
+   * @param blockSize block size
+   * @param c Configuration to use
+   * @return An HTable instance for the created table.
+   * @throws IOException if getAdmin or createTable fails
+   */
+
+  public HTable createTable(HTableDescriptor htd, byte[][] families, byte[][] splitKeys,
+      BloomType type, int blockSize, Configuration c) throws IOException {
     for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       // Disable blooms (they are on by default as of 0.95) but we disable them here because
       // tests have hard coded counts of what to expect in block cache, etc., and blooms being
       // on is interfering.
-      hcd.setBloomFilterType(BloomType.NONE);
+      hcd.setBloomFilterType(type);
+      hcd.setBlocksize(blockSize);
       htd.addFamily(hcd);
     }
     getHBaseAdmin().createTable(htd, splitKeys);
@@ -1506,8 +1527,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param htd
-   * @param splitRows
+   * @param htd table descriptor
+   * @param splitRows array of split keys
    * @return An HTable instance for the created table.
    * @throws IOException
    */
