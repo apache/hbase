@@ -1,5 +1,36 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.4.2 2/23/2018
+
+** Sub-task
+    * [HBASE-19877] - hbase-common and hbase-zookeeper don't add the log4j.properties to the resource path for testing
+
+** Bug
+    * [HBASE-18282] - ReplicationLogCleaner can delete WALs not yet replicated in case of a KeeperException
+    * [HBASE-19728] - Add lock to filesCompacting in all place.
+    * [HBASE-19871] - delete.rb should require user to provide the column
+    * [HBASE-19876] - The exception happening in converting pb mutation to hbase.mutation messes up the CellScanner
+    * [HBASE-19892] - Checking 'patch attach' and yetus 0.7.0 and move to Yetus 0.7.0
+    * [HBASE-19900] - Region-level exception destroy the result of batch
+    * [HBASE-19901] - Up yetus proclimit on nightlies
+    * [HBASE-19905] - ReplicationSyncUp tool will not exit if a peer replication is disabled
+    * [HBASE-19934] - HBaseSnapshotException when read replicas is enabled and online snapshot is taken after region splitting
+    * [HBASE-19937] - Ensure createRSGroupTable be called after ProcedureExecutor and LoadBalancer are initialized 
+    * [HBASE-19972] - Should rethrow  the RetriesExhaustedWithDetailsException when failed to apply the batch in ReplicationSink
+    * [HBASE-19979] - ReplicationSyncUp tool may leak Zookeeper connection
+    * [HBASE-19981] - Boolean#getBoolean is used to parse value
+    * [HBASE-19996] - Some nonce procs might not be cleaned up (follow up HBASE-19756)
+
+** New Feature
+    * [HBASE-19886] - Display maintenance mode in shell, web UI
+
+** Improvement
+    * [HBASE-19917] - Improve RSGroupBasedLoadBalancer#filterServers() to be more efficient
+
+** Test
+    * [HBASE-19949] - TestRSGroupsWithACL fails with ExceptionInInitializerError
+
+
 Release Notes - HBase - Version 1.4.1 2/2/2018
 
 ** Sub-task
