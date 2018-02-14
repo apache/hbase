@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -293,6 +294,25 @@ public class TestRestoreSnapshotFromClient {
     } catch (Exception e) {
       fail("Expected CorruptedSnapshotException got: " + e);
     }
+  }
+
+  @Test
+  public void testRestoreSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
+    List<RegionInfo> regionInfos = admin.getRegions(tableName);
+    RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
+
+    // Split the first region
+    splitRegion(regionInfos.get(0));
+
+    // Take a snapshot
+    admin.snapshot(snapshotName1, tableName);
+
+    // Restore the snapshot
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName1);
+    admin.enableTable(tableName);
+
+    verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
   }
 
   // ==========================================================================

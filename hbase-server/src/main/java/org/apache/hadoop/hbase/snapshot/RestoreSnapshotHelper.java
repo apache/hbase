@@ -195,11 +195,33 @@ public class RestoreSnapshotHelper {
     // this instance, by removing the regions already present in the restore dir.
     Set<String> regionNames = new HashSet<>(regionManifests.keySet());
 
+    List<RegionInfo> tableRegions = getTableRegions();
+
     RegionInfo mobRegion = MobUtils.getMobRegionInfo(snapshotManifest.getTableDescriptor()
         .getTableName());
+    if (tableRegions != null) {
+      // restore the mob region in case
+      if (regionNames.contains(mobRegion.getEncodedName())) {
+        monitor.rethrowException();
+        status.setStatus("Restoring mob region...");
+        List<RegionInfo> mobRegions = new ArrayList<>(1);
+        mobRegions.add(mobRegion);
+        restoreHdfsMobRegions(exec, regionManifests, mobRegions);
+        regionNames.remove(mobRegion.getEncodedName());
+        status.setStatus("Finished restoring mob region.");
+      }
+    }
+    if (regionNames.contains(mobRegion.getEncodedName())) {
+      // add the mob region
+      monitor.rethrowException();
+      status.setStatus("Cloning mob region...");
+      cloneHdfsMobRegion(regionManifests, mobRegion);
+      regionNames.remove(mobRegion.getEncodedName());
+      status.setStatus("Finished cloning mob region.");
+    }
+
     // Identify which region are still available and which not.
     // NOTE: we rely upon the region name as: "table name, start key, end key"
-    List<RegionInfo> tableRegions = getTableRegions();
     if (tableRegions != null) {
       monitor.rethrowException();
       for (RegionInfo regionInfo: tableRegions) {
@@ -213,49 +235,39 @@ public class RestoreSnapshotHelper {
           metaChanges.addRegionToRemove(regionInfo);
         }
       }
-
-      // Restore regions using the snapshot data
-      monitor.rethrowException();
-      status.setStatus("Restoring table regions...");
-      if (regionNames.contains(mobRegion.getEncodedName())) {
-        // restore the mob region in case
-        List<RegionInfo> mobRegions = new ArrayList<>(1);
-        mobRegions.add(mobRegion);
-        restoreHdfsMobRegions(exec, regionManifests, mobRegions);
-        regionNames.remove(mobRegion.getEncodedName());
-      }
-      restoreHdfsRegions(exec, regionManifests, metaChanges.getRegionsToRestore());
-      status.setStatus("Finished restoring all table regions.");
-
-      // Remove regions from the current table
-      monitor.rethrowException();
-      status.setStatus("Starting to delete excess regions from table");
-      removeHdfsRegions(exec, metaChanges.getRegionsToRemove());
-      status.setStatus("Finished deleting excess regions from table.");
     }
 
     // Regions to Add: present in the snapshot but not in the current table
+    List<RegionInfo> regionsToAdd = new ArrayList<>(regionNames.size());
     if (regionNames.size() > 0) {
-      List<RegionInfo> regionsToAdd = new ArrayList<>(regionNames.size());
-
       monitor.rethrowException();
-      // add the mob region
-      if (regionNames.contains(mobRegion.getEncodedName())) {
-        cloneHdfsMobRegion(regionManifests, mobRegion);
-        regionNames.remove(mobRegion.getEncodedName());
-      }
       for (String regionName: regionNames) {
         LOG.info("region to add: " + regionName);
-        regionsToAdd.add(ProtobufUtil.toRegionInfo(regionManifests.get(regionName).getRegionInfo()));
+        regionsToAdd.add(ProtobufUtil.toRegionInfo(regionManifests.get(regionName)
+            .getRegionInfo()));
       }
-
-      // Create new regions cloning from the snapshot
-      monitor.rethrowException();
-      status.setStatus("Cloning regions...");
-      RegionInfo[] clonedRegions = cloneHdfsRegions(exec, regionManifests, regionsToAdd);
-      metaChanges.setNewRegions(clonedRegions);
-      status.setStatus("Finished cloning regions.");
     }
+
+    // Create new regions cloning from the snapshot
+    // HBASE-19980: We need to call cloneHdfsRegions() before restoreHdfsRegions() because
+    // regionsMap is constructed in cloneHdfsRegions() and it can be used in restoreHdfsRegions().
+    monitor.rethrowException();
+    status.setStatus("Cloning regions...");
+    RegionInfo[] clonedRegions = cloneHdfsRegions(exec, regionManifests, regionsToAdd);
+    metaChanges.setNewRegions(clonedRegions);
+    status.setStatus("Finished cloning regions.");
+
+    // Restore regions using the snapshot data
+    monitor.rethrowException();
+    status.setStatus("Restoring table regions...");
+    restoreHdfsRegions(exec, regionManifests, metaChanges.getRegionsToRestore());
+    status.setStatus("Finished restoring all table regions.");
+
+    // Remove regions from the current table
+    monitor.rethrowException();
+    status.setStatus("Starting to delete excess regions from table");
+    removeHdfsRegions(exec, metaChanges.getRegionsToRemove());
+    status.setStatus("Finished deleting excess regions from table.");
 
     LOG.info("finishing restore table regions using snapshot=" + snapshotDesc);
 
@@ -742,11 +754,16 @@ public class RestoreSnapshotHelper {
 
     // Add the daughter region to the map
     String regionName = Bytes.toString(regionsMap.get(regionInfo.getEncodedNameAsBytes()));
+    if (regionName == null) {
+      regionName = regionInfo.getEncodedName();
+    }
     LOG.debug("Restore reference " + regionName + " to " + clonedRegionName);
     synchronized (parentsMap) {
       Pair<String, String> daughters = parentsMap.get(clonedRegionName);
       if (daughters == null) {
-        daughters = new Pair<>(regionName, null);
+        // In case one side of the split is already compacted, regionName is put as both first and
+        // second of Pair
+        daughters = new Pair<>(regionName, regionName);
         parentsMap.put(clonedRegionName, daughters);
       } else if (!regionName.equals(daughters.getFirst())) {
         daughters.setSecond(regionName);
