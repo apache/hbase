@@ -20,14 +20,18 @@ package org.apache.hadoop.hbase.master.replication;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -44,7 +48,7 @@ public class TransitPeerSyncReplicationStateProcedure
     extends AbstractPeerProcedure<PeerSyncReplicationStateTransitionState> {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TransitPeerSyncReplicationStateProcedure.class);
+      LoggerFactory.getLogger(TransitPeerSyncReplicationStateProcedure.class);
 
   private SyncReplicationState fromState;
 
@@ -67,8 +71,8 @@ public class TransitPeerSyncReplicationStateProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     TransitPeerSyncReplicationStateStateData.Builder builder =
-      TransitPeerSyncReplicationStateStateData.newBuilder()
-        .setToState(ReplicationPeerConfigUtil.toSyncReplicationState(toState));
+        TransitPeerSyncReplicationStateStateData.newBuilder()
+          .setToState(ReplicationPeerConfigUtil.toSyncReplicationState(toState));
     if (fromState != null) {
       builder.setFromState(ReplicationPeerConfigUtil.toSyncReplicationState(fromState));
     }
@@ -79,7 +83,7 @@ public class TransitPeerSyncReplicationStateProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     TransitPeerSyncReplicationStateStateData data =
-      serializer.deserialize(TransitPeerSyncReplicationStateStateData.class);
+        serializer.deserialize(TransitPeerSyncReplicationStateStateData.class);
     toState = ReplicationPeerConfigUtil.toSyncReplicationState(data.getToState());
     if (data.hasFromState()) {
       fromState = ReplicationPeerConfigUtil.toSyncReplicationState(data.getFromState());
@@ -205,7 +209,22 @@ public class TransitPeerSyncReplicationStateProcedure
         }
         return Flow.HAS_MORE_STATE;
       case CREATE_DIR_FOR_REMOTE_WAL:
-        // TODO: create wal for write remote wal
+        MasterFileSystem mfs = env.getMasterFileSystem();
+        Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
+        Path remoteWALDirForPeer = new Path(remoteWALDir, peerId);
+        FileSystem walFs = mfs.getWALFileSystem();
+        try {
+          if (walFs.exists(remoteWALDirForPeer)) {
+            LOG.warn("Wal dir {} already exists, usually this should not happen, continue anyway",
+              remoteWALDirForPeer);
+          } else if (!walFs.mkdirs(remoteWALDirForPeer)) {
+            LOG.warn("Can not create remote wal dir {}", remoteWALDirForPeer);
+            throw new ProcedureYieldException();
+          }
+        } catch (IOException e) {
+          LOG.warn("Failed to create remote wal dir {}", remoteWALDirForPeer, e);
+          throw new ProcedureYieldException();
+        }
         setNextState(
           PeerSyncReplicationStateTransitionState.POST_PEER_SYNC_REPLICATION_STATE_TRANSITION);
         return Flow.HAS_MORE_STATE;

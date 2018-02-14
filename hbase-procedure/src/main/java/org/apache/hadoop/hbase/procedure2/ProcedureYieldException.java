@@ -15,16 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-// TODO: Not used yet
+/**
+ * Indicate that a procedure wants to be rescheduled. Usually because there are something wrong but
+ * we do not want to fail the procedure.
+ * <p>
+ * TODO: need to support scheduling after a delay.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class ProcedureYieldException extends ProcedureException {
+
   /** default constructor */
   public ProcedureYieldException() {
     super();

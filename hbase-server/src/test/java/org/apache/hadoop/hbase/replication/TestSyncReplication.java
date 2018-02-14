@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -154,8 +157,13 @@ public class TestSyncReplication {
 
   @Test
   public void testStandby() throws Exception {
+    MasterFileSystem mfs = UTIL2.getHBaseCluster().getMaster().getMasterFileSystem();
+    Path remoteWALDir = new Path(mfs.getWALRootDir(), ReplicationUtils.REMOTE_WAL_DIR_NAME);
+    Path remoteWALDirForPeer = new Path(remoteWALDir, PEER_ID);
+    assertFalse(mfs.getWALFileSystem().exists(remoteWALDirForPeer));
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.STANDBY);
+    assertTrue(mfs.getWALFileSystem().exists(remoteWALDirForPeer));
     try (Table table = UTIL2.getConnection().getTable(TABLE_NAME)) {
       assertDisallow(table, t -> t.get(new Get(Bytes.toBytes("row"))));
       assertDisallow(table,
