@@ -189,8 +189,7 @@ implements ServerProcedureInterface {
    * @throws IOException
    */
   private void processMeta(final MasterProcedureEnv env) throws IOException {
-    if (LOG.isDebugEnabled()) LOG.debug(this + "; Processing hbase:meta that was on " +
-        this.serverName);
+    LOG.debug("{}; processing hbase:meta", this);
 
     // Assign meta if still carrying it. Check again: region may be assigned because of RIT timeout
     final AssignmentManager am = env.getMasterServices().getAssignmentManager();
