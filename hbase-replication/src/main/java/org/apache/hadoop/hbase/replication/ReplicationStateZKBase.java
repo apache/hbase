@@ -93,12 +93,18 @@ public abstract class ReplicationStateZKBase {
     this.hfileRefsZNode = ZNodePaths.joinZNode(replicationZNode, hfileRefsZNodeName);
   }
 
-  public List<String> getListOfReplicators() {
+  /**
+   * Subclasses that use ZK explicitly can just call this directly while classes
+   * that are trying to hide internal details of storage can wrap the KeeperException
+   * into a ReplicationException or something else.
+   */
+  protected List<String> getListOfReplicatorsZK() throws KeeperException {
     List<String> result = null;
     try {
       result = ZKUtil.listChildrenNoWatch(this.zookeeper, this.queuesZNode);
     } catch (KeeperException e) {
       this.abortable.abort("Failed to get list of replicators", e);
+      throw e;
     }
     return result;
   }

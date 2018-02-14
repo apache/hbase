@@ -59,6 +59,11 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
       throw new ReplicationException("Internal error while initializing a queues client", e);
     }
   }
+  
+  @Override
+  public List<String> getListOfReplicators() throws KeeperException {
+    return super.getListOfReplicatorsZK();
+  }
 
   @Override
   public List<String> getLogsInQueue(String serverName, String queueId) throws KeeperException {

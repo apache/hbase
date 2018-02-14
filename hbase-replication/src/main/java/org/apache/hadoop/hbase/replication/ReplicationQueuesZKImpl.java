@@ -100,7 +100,17 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       }
     }
   }
-
+  
+  @Override
+  public List<String> getListOfReplicators() throws ReplicationException {
+    try {
+      return super.getListOfReplicatorsZK();
+    } catch (KeeperException e) {
+      LOG.warn("getListOfReplicators() from ZK failed", e);
+      throw new ReplicationException("getListOfReplicators() from ZK failed", e);
+    }
+  }
+  
   @Override
   public void removeQueue(String queueId) {
     try {

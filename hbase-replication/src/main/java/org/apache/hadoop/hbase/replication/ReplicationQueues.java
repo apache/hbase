@@ -119,8 +119,9 @@ public interface ReplicationQueues {
    * Get a list of all region servers that have outstanding replication queues. These servers could
    * be alive, dead or from a previous run of the cluster.
    * @return a list of server names
+   * @throws ReplicationException
    */
-  List<String> getListOfReplicators();
+  List<String> getListOfReplicators() throws ReplicationException;
 
   /**
    * Checks if the provided znode is the same as this region server's

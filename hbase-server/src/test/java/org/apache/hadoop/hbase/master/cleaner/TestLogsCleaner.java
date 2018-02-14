@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doAnswer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -30,6 +31,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -51,6 +54,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesArguments;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientZKImpl;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -59,13 +64,14 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -219,12 +225,10 @@ public class TestLogsCleaner {
     cleaner.getDeletableFiles(new LinkedList<>());
   }
 
-  /**
-   * ReplicationLogCleaner should be able to ride over ZooKeeper errors without aborting.
-   */
-  @Test
-  public void testZooKeeperAbort() throws Exception {
+  @Test(timeout=10000)
+  public void testZooKeeperAbortDuringGetListOfReplicators() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
     List<FileStatus> dummyFiles = Lists.newArrayList(
@@ -232,20 +236,56 @@ public class TestLogsCleaner {
         new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
     );
 
-    try (FaultyZooKeeperWatcher faultyZK = new FaultyZooKeeperWatcher(conf,
-        "testZooKeeperAbort-faulty", null)) {
+    FaultyZooKeeperWatcher faultyZK =
+        new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
+    final AtomicBoolean getListOfReplicatorsFailed = new AtomicBoolean(false);
+
+    try {
       faultyZK.init();
-      cleaner.setConf(conf, faultyZK);
-      cleaner.preClean();
+      ReplicationQueuesClient replicationQueuesClient = spy(ReplicationFactory.getReplicationQueuesClient(
+        new ReplicationQueuesClientArguments(conf, new ReplicationLogCleaner.WarnOnlyAbortable(), faultyZK)));
+      doAnswer(new Answer<Object>() {
+        @Override
+        public Object answer(InvocationOnMock invocation) throws Throwable {
+          try {
+            return invocation.callRealMethod();
+          } catch (KeeperException.ConnectionLossException e) {
+            getListOfReplicatorsFailed.set(true);
+            throw e;
+          }
+        }
+      }).when(replicationQueuesClient).getListOfReplicators();
+      replicationQueuesClient.init();
+
+      cleaner.setConf(conf, faultyZK, replicationQueuesClient);
       // should keep all files due to a ConnectionLossException getting the queues znodes
+      cleaner.preClean();
       Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
+
+      assertTrue(getListOfReplicatorsFailed.get());
       assertFalse(toDelete.iterator().hasNext());
       assertFalse(cleaner.isStopped());
+    } finally {
+      faultyZK.close();
     }
+  }
 
-    // when zk is working both files should be returned
-    cleaner = new ReplicationLogCleaner();
-    try (ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null)) {
+  /**
+   * When zk is working both files should be returned
+   * @throws Exception
+   */
+  @Test(timeout=10000)
+  public void testZooKeeperNormal() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+
+    List<FileStatus> dummyFiles = Lists.newArrayList(
+        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
+        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
+    );
+    
+    ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null);
+    try {
       cleaner.setConf(conf, zkw);
       cleaner.preClean();
       Iterable<FileStatus> filesToDelete = cleaner.getDeletableFiles(dummyFiles);
@@ -255,6 +295,8 @@ public class TestLogsCleaner {
       assertTrue(iter.hasNext());
       assertEquals(new Path("log2"), iter.next().getPath());
       assertFalse(iter.hasNext());
+    } finally {
+      zkw.close();
     }
   }
 
@@ -395,7 +437,7 @@ public class TestLogsCleaner {
     public void init() throws Exception {
       this.zk = spy(super.getRecoverableZooKeeper());
       doThrow(new KeeperException.ConnectionLossException())
-          .when(zk).getData("/hbase/replication/rs", null, new Stat());
+        .when(zk).getChildren("/hbase/replication/rs", null);
     }
 
     @Override

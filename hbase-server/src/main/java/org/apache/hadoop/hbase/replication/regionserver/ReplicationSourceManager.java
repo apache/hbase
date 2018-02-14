@@ -792,7 +792,22 @@ public class ReplicationSourceManager implements ReplicationListener {
 
     @Override
     public void run() {
-      List<String> currentReplicators = replicationQueues.getListOfReplicators();
+      List<String> currentReplicators = null;
+      while (currentReplicators == null) {
+        try {
+          currentReplicators = replicationQueues.getListOfReplicators();
+        } catch (ReplicationException e1) {
+          LOG.warn("Failure in getListOfReplicators(), will retry later", e1);
+          try {
+            Thread.sleep(ThreadLocalRandom.current().nextInt(10000));
+          } catch (InterruptedException e2) {
+            LOG.warn("Interrupted while waiting for list of replicators to be available, "
+                + "will not adopt any abandoned queues", e2);
+            Thread.currentThread().interrupt();
+            break;
+          }
+        }
+      }
       if (currentReplicators == null || currentReplicators.isEmpty()) {
         return;
       }
