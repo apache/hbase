@@ -54,6 +54,7 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   public MoveRegionProcedure(final MasterProcedureEnv env, final RegionPlan plan) {
     super(env, plan.getRegionInfo());
     this.plan = plan;
+    LOG.info("REMOVE", new Throwable("REMOVE: Just to see who is calling Move!!!"));
   }
 
   @Override
