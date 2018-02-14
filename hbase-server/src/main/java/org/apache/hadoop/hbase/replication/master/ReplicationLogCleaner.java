@@ -156,6 +156,14 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     }
   }
 
+  @VisibleForTesting
+  public void setConf(Configuration conf, ZooKeeperWatcher zk, 
+      ReplicationQueuesClient replicationQueuesClient) {
+    super.setConf(conf);
+    this.zkw = zk;
+    this.replicationQueues = replicationQueuesClient;
+  }
+
   @Override
   public void stop(String why) {
     if (this.stopped) return;
@@ -171,7 +179,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     return this.stopped;
   }
 
-  private static class WarnOnlyAbortable implements Abortable {
+  public static class WarnOnlyAbortable implements Abortable {
 
     @Override
     public void abort(String why, Throwable e) {

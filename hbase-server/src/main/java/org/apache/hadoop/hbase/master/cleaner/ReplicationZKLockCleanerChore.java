@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
@@ -108,7 +109,8 @@ public class ReplicationZKLockCleanerChore extends ScheduledChore {
       }
     } catch (KeeperException e) {
       LOG.warn("zk operation interrupted", e);
+    } catch (ReplicationException e2) {
+      LOG.warn("replication exception", e2);
     }
-
   }
 }
