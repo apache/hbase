@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
+import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -178,17 +179,19 @@ public class ProcedureExecutor<TEnvironment> {
         // TODO: Select TTL based on Procedure type
         if ((procInfo.hasClientAckTime() && (now - procInfo.getClientAckTime()) >= evictAckTtl) ||
             (now - procInfo.getLastUpdate()) >= evictTtl) {
+          // Failed Procedures aren't persisted in WAL.
+          if (!(procInfo instanceof FailedProcedureInfo)) {
+            store.delete(entry.getKey());
+          }
+          it.remove();
+
+          NonceKey nonceKey = procInfo.getNonceKey();
+          if (nonceKey != null) {
+            nonceKeysToProcIdsMap.remove(nonceKey);
+          }
           if (isDebugEnabled) {
             LOG.debug("Evict completed procedure: " + procInfo);
           }
-          NonceKey nonceKey = procInfo.getNonceKey();
-          // Nonce procedures aren't persisted in WAL.
-          if (nonceKey == null) {
-            store.delete(entry.getKey());
-          } else {
-            nonceKeysToProcIdsMap.remove(nonceKey);
-          }
-          it.remove();
         }
       }
     }
@@ -696,7 +699,7 @@ public class ProcedureExecutor<TEnvironment> {
     if (procId == null || completed.containsKey(procId)) return;
 
     final long currentTime = EnvironmentEdgeManager.currentTime();
-    final ProcedureInfo result = new ProcedureInfo(
+    final ProcedureInfo result = new FailedProcedureInfo(
       procId.longValue(),
       procName,
       procOwner != null ? procOwner.getShortName() : null,
@@ -708,6 +711,17 @@ public class ProcedureExecutor<TEnvironment> {
       currentTime,
       null);
     completed.putIfAbsent(procId, result);
+  }
+
+  public static class FailedProcedureInfo extends ProcedureInfo {
+
+    public FailedProcedureInfo(long procId, String procName, String procOwner,
+        ProcedureState procState, long parentId, NonceKey nonceKey,
+        ErrorHandlingProtos.ForeignExceptionMessage exception, long lastUpdate, long startTime,
+        byte[] result) {
+      super(procId, procName, procOwner, procState, parentId, nonceKey, exception, lastUpdate,
+          startTime, result);
+    }
   }
 
   // ==========================================================================
