@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doAnswer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -29,6 +30,7 @@ import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
@@ -55,12 +57,13 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 @Category(MediumTests.class)
 public class TestLogsCleaner {
@@ -177,13 +180,10 @@ public class TestLogsCleaner {
     cleaner.getDeletableFiles(new LinkedList<FileStatus>());
   }
 
-  /**
-   * ReplicationLogCleaner should be able to ride over ZooKeeper errors without
-   * aborting.
-   */
-  @Test
-  public void testZooKeeperAbort() throws Exception {
+  @Test(timeout=10000)
+  public void testZooKeeperAbortDuringGetListOfReplicators() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
     List<FileStatus> dummyFiles = Lists.newArrayList(
@@ -193,19 +193,51 @@ public class TestLogsCleaner {
 
     FaultyZooKeeperWatcher faultyZK =
         new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
+    final AtomicBoolean getListOfReplicatorsFailed = new AtomicBoolean(false);
+
     try {
       faultyZK.init();
-      cleaner.setConf(conf, faultyZK);
+      ReplicationQueuesClient replicationQueuesClient = spy(ReplicationFactory.getReplicationQueuesClient(
+        faultyZK, conf, new ReplicationLogCleaner.WarnOnlyAbortable()));
+      doAnswer(new Answer<Object>() {
+        @Override
+        public Object answer(InvocationOnMock invocation) throws Throwable {
+          try {
+            return invocation.callRealMethod();
+          } catch (KeeperException.ConnectionLossException e) {
+            getListOfReplicatorsFailed.set(true);
+            throw e;
+          }
+        }
+      }).when(replicationQueuesClient).getListOfReplicators();
+      replicationQueuesClient.init();
+
+      cleaner.setConf(conf, faultyZK, replicationQueuesClient);
       // should keep all files due to a ConnectionLossException getting the queues znodes
       Iterable<FileStatus> toDelete = cleaner.getDeletableFiles(dummyFiles);
+
+      assertTrue(getListOfReplicatorsFailed.get());
       assertFalse(toDelete.iterator().hasNext());
       assertFalse(cleaner.isStopped());
     } finally {
       faultyZK.close();
     }
+  }
 
-    // when zk is working both files should be returned
-    cleaner = new ReplicationLogCleaner();
+  /**
+   * When zk is working both files should be returned
+   * @throws Exception
+   */
+  @Test(timeout=10000)
+  public void testZooKeeperNormal() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+
+    List<FileStatus> dummyFiles = Lists.newArrayList(
+        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
+        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
+    );
+    
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testZooKeeperAbort-normal", null);
     try {
       cleaner.setConf(conf, zkw);
@@ -291,7 +323,7 @@ public class TestLogsCleaner {
     public void init() throws Exception {
       this.zk = spy(super.getRecoverableZooKeeper());
       doThrow(new KeeperException.ConnectionLossException())
-          .when(zk).getData("/hbase/replication/rs", null, new Stat());
+        .when(zk).getChildren("/hbase/replication/rs", null);
     }
 
     public RecoverableZooKeeper getRecoverableZooKeeper() {
