@@ -22,8 +22,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -32,6 +35,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -279,6 +288,51 @@ public class TestRestoreSnapshotFromClient {
       assertFalse(admin.tableExists(cloneName));
     } catch (Exception e) {
       fail("Expected CorruptedSnapshotException got: " + e);
+    }
+  }
+
+  @Test
+  public void testRestoreSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
+    // HBASE-20008: Add a coprocessor to delay compactions of the daughter regions. To reproduce
+    // the NullPointerException, we need to delay compactions of the daughter regions after
+    // splitting region.
+    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
+    tableDescriptor.addCoprocessor(DelayCompactionObserver.class.getName());
+    admin.disableTable(tableName);
+    admin.modifyTable(tableName, tableDescriptor);
+    admin.enableTable(tableName);
+
+    List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
+    RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
+
+    // Split the first region
+    splitRegion(regionInfos.get(0));
+
+    // Take a snapshot
+    admin.snapshot(snapshotName1, tableName);
+
+    // Restore the snapshot
+    admin.disableTable(tableName);
+    admin.restoreSnapshot(snapshotName1);
+    admin.enableTable(tableName);
+
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+  }
+
+  public static class DelayCompactionObserver extends BaseRegionObserver {
+    @Override
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+        final Store store, final InternalScanner scanner, final ScanType scanType)
+        throws IOException {
+
+      try {
+        // Delay 5 seconds.
+        TimeUnit.SECONDS.sleep(5);
+      } catch (InterruptedException ex) {
+        throw new InterruptedIOException(ex.getMessage());
+      }
+
+      return scanner;
     }
   }
 
