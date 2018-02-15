@@ -549,6 +549,20 @@ public final class AvlUtil {
     }
 
     /**
+     * @param head the head of the linked list
+     * @param base the node which we want to add the {@code node} before it
+     * @param node the node which we want to add it before the {@code base} node
+     */
+    public static <TNode extends AvlLinkedNode> TNode prepend(TNode head, TNode base, TNode node) {
+      assert !isLinked(node) : node + " is already linked";
+      node.iterNext = base;
+      node.iterPrev = base.iterPrev;
+      base.iterPrev.iterNext = node;
+      base.iterPrev = node;
+      return head == base ? node : head;
+    }
+
+    /**
      * @param node the node to check
      * @return true if the node is linked to a list, false otherwise
      */

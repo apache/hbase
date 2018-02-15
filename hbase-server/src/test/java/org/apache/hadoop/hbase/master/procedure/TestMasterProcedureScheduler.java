@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -60,15 +61,13 @@ public class TestMasterProcedureScheduler {
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterProcedureScheduler.class);
 
   private MasterProcedureScheduler queue;
-  private Configuration conf;
 
   @Rule
   public TestName name = new TestName();
 
   @Before
   public void setUp() throws IOException {
-    conf = HBaseConfiguration.create();
-    queue = new MasterProcedureScheduler(conf);
+    queue = new MasterProcedureScheduler();
     queue.start();
   }
 
@@ -283,26 +282,24 @@ public class TestMasterProcedureScheduler {
     // Fetch the 1st item and take the write lock
     Procedure procNs1 = queue.poll();
     assertEquals(1, procNs1.getProcId());
-    assertEquals(false, queue.waitNamespaceExclusiveLock(procNs1, nsName1));
+    assertFalse(queue.waitNamespaceExclusiveLock(procNs1, nsName1));
 
-    // System tables have 2 as default priority
+    // namespace table has higher priority so we still return procedure for it
     Procedure procNs2 = queue.poll();
     assertEquals(4, procNs2.getProcId());
-    assertEquals(false, queue.waitNamespaceExclusiveLock(procNs2, nsName2));
+    assertFalse(queue.waitNamespaceExclusiveLock(procNs2, nsName2));
     queue.wakeNamespaceExclusiveLock(procNs2, nsName2);
 
     // add procNs2 back in the queue
     queue.yield(procNs2);
 
-    // table on ns1 is locked, so we get table on ns2
+    // again
     procNs2 = queue.poll();
-    assertEquals(3, procNs2.getProcId());
-    assertEquals(false, queue.waitTableExclusiveLock(procNs2, tableName2));
+    assertEquals(4, procNs2.getProcId());
+    assertFalse(queue.waitNamespaceExclusiveLock(procNs2, nsName2));
 
-    // ns2 is not available (TODO we may avoid this one)
-    Procedure procNs2b = queue.poll();
-    assertEquals(4, procNs2b.getProcId());
-    assertEquals(true, queue.waitNamespaceExclusiveLock(procNs2b, nsName2));
+    // ns1 and ns2 are both locked so we get nothing
+    assertNull(queue.poll());
 
     // release the ns1 lock
     queue.wakeNamespaceExclusiveLock(procNs1, nsName1);
@@ -312,11 +309,11 @@ public class TestMasterProcedureScheduler {
     assertEquals(2, procId);
 
     // release ns2
-    queue.wakeTableExclusiveLock(procNs2, tableName2);
+    queue.wakeNamespaceExclusiveLock(procNs2, nsName2);
 
-    // we are now able to execute ns2
+    // we are now able to execute table of ns2
     procId = queue.poll().getProcId();
-    assertEquals(4, procId);
+    assertEquals(3, procId);
   }
 
   @Test
