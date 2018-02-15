@@ -45,9 +45,20 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
     throw new IllegalStateException("This is an Immutable MemStoreLAB.");
   }
 
+  /**
+   * The process of merging assumes all cells are allocated on mslab.
+   * There is a rare case in which the first immutable segment,
+   * participating in a merge, is a CSLM.
+   * Since the CSLM hasn't been flattened yet, and there is no point in flattening it (since it is
+   * going to be merged), its big cells (for whom size > maxAlloc) must be copied into mslab.
+   * This method copies the passed cell into the first mslab in the mslabs list,
+   * returning either a new cell instance over the copied data,
+   * or null when this cell cannt be copied.
+   */
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
-    throw new IllegalStateException("This is an Immutable MemStoreLAB.");
+    MemStoreLAB mslab = this.mslabs.get(0);
+    return mslab.forceCopyOfBigCellInto(cell);
   }
 
   /* Creating chunk to be used as index chunk in CellChunkMap, part of the chunks array.
