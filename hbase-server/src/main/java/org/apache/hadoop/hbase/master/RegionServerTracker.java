@@ -104,14 +104,24 @@ public class RegionServerTracker extends ZKListener {
         }
       }
     }
-    if (server.isInitialized()) {
-      server.checkIfShouldMoveSystemRegionAsync();
-    }
   }
 
   private void remove(final ServerName sn) {
     synchronized(this.regionServers) {
       this.regionServers.remove(sn);
+    }
+  }
+
+  @Override
+  public void nodeCreated(String path) {
+    if (path.startsWith(watcher.znodePaths.rsZNode)) {
+      String serverName = ZKUtil.getNodeName(path);
+      LOG.info("RegionServer ephemeral node created, adding [" + serverName + "]");
+      if (server.isInitialized()) {
+        // Only call the check to move servers if a RegionServer was added to the cluster; in this
+        // case it could be a server with a new version so it makes sense to run the check.
+        server.checkIfShouldMoveSystemRegionAsync();
+      }
     }
   }
 

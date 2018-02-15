@@ -455,12 +455,27 @@ public class AssignmentManager implements ServerListener {
    * If so, move all system table regions to RS with the highest version to keep compatibility.
    * The reason is, RS in new version may not be able to access RS in old version when there are
    * some incompatible changes.
+   * <p>This method is called when a new RegionServer is added to cluster only.</p>
    */
   public void checkIfShouldMoveSystemRegionAsync() {
+    // TODO: Fix this thread. If a server is killed and a new one started, this thread thinks that
+    // it should 'move' the system tables from the old server to the new server but
+    // ServerCrashProcedure is on it; and it will take care of the assign without dataloss.
+    if (this.master.getServerManager().countOfRegionServers() <= 1) {
+      return;
+    }
+    // This thread used to run whenever there was a change in the cluster. The ZooKeeper
+    // childrenChanged notification came in before the nodeDeleted message and so this method
+    // cold run before a ServerCrashProcedure could run. That meant that this thread could see
+    // a Crashed Server before ServerCrashProcedure and it could find system regions on the
+    // crashed server and go move them before ServerCrashProcedure had a chance; could be
+    // dataloss too if WALs were not recovered.
     new Thread(() -> {
       try {
         synchronized (checkIfShouldMoveSystemRegionLock) {
           List<RegionPlan> plans = new ArrayList<>();
+          // TODO: I don't think this code does a good job if all servers in cluster have same
+          // version. It looks like it will schedule unnecessary moves.
           for (ServerName server : getExcludedServersForSystemTable()) {
             if (master.getServerManager().isServerDead(server)) {
               // TODO: See HBASE-18494 and HBASE-18495. Though getExcludedServersForSystemTable()
@@ -471,13 +486,15 @@ public class AssignmentManager implements ServerListener {
               // handling.
               continue;
             }
-            List<RegionInfo> regionsShouldMove = getCarryingSystemTables(server);
+            List<RegionInfo> regionsShouldMove = getSystemTables(server);
             if (!regionsShouldMove.isEmpty()) {
               for (RegionInfo regionInfo : regionsShouldMove) {
                 // null value for dest forces destination server to be selected by balancer
                 RegionPlan plan = new RegionPlan(regionInfo, server, null);
                 if (regionInfo.isMetaRegion()) {
                   // Must move meta region first.
+                  LOG.info("Async MOVE of {} to newer Server={}",
+                      regionInfo.getEncodedName(), server);
                   moveAsync(plan);
                 } else {
                   plans.add(plan);
@@ -485,6 +502,8 @@ public class AssignmentManager implements ServerListener {
               }
             }
             for (RegionPlan plan : plans) {
+              LOG.info("Async MOVE of {} to newer Server={}",
+                  plan.getRegionInfo().getEncodedName(), server);
               moveAsync(plan);
             }
           }
@@ -495,7 +514,7 @@ public class AssignmentManager implements ServerListener {
     }).start();
   }
 
-  private List<RegionInfo> getCarryingSystemTables(ServerName serverName) {
+  private List<RegionInfo> getSystemTables(ServerName serverName) {
     Set<RegionStateNode> regions = this.getRegionStates().getServerNode(serverName).getRegions();
     if (regions == null) {
       return new ArrayList<>();
