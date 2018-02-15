@@ -18,46 +18,25 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.jruby.embed.PathType;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ ClientTests.class, MediumTests.class })
-public class TestShellNoCluster extends AbstractTestShell {
+@Category({ ClientTests.class, LargeTests.class })
+public class TestAdminShell extends AbstractTestShell {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestShellNoCluster.class);
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    // no cluster
-    List<String> loadPaths = new ArrayList<>(2);
-    loadPaths.add("src/main/ruby");
-    loadPaths.add("src/test/ruby");
-    jruby.setLoadPaths(loadPaths);
-    jruby.put("$TEST_CLUSTER", TEST_UTIL);
-    System.setProperty("jruby.jit.logging.verbose", "true");
-    System.setProperty("jruby.jit.logging", "true");
-    System.setProperty("jruby.native.verbose", "true");
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    // no cluster
-  }
+    HBaseClassTestRule.forClass(TestAdminShell.class);
 
   @Test
-  public void testRunNoClusterShellTests() throws IOException {
-    // Start ruby tests without cluster
-    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/no_cluster_tests_runner.rb");
+  public void testRunShellTests() throws IOException {
+    System.setProperty("shell.test.include", "admin_test.rb");
+    // Start all ruby tests
+    jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }
 }
