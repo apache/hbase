@@ -57,6 +57,20 @@ public abstract class ProcedurePrepareLatch {
     return hasProcedureSupport(major, minor) ? noopLatch : new CompatibilityLatch();
   }
 
+  /**
+   * Creates a latch which blocks.
+   */
+  public static ProcedurePrepareLatch createBlockingLatch() {
+    return new CompatibilityLatch();
+  }
+
+  /**
+   * Returns the singleton latch which does nothing.
+   */
+  public static ProcedurePrepareLatch getNoopLatch() {
+    return noopLatch;
+  }
+
   private static boolean hasProcedureSupport(int major, int minor) {
     return VersionInfoUtil.currentClientHasMinimumVersion(major, minor);
   }

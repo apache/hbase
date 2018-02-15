@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -228,7 +229,7 @@ public class TableNamespaceManager implements Stoppable {
   private void blockingCreateNamespace(final NamespaceDescriptor namespaceDescriptor)
       throws IOException {
     ClusterSchema clusterSchema = this.masterServices.getClusterSchema();
-    long procId = clusterSchema.createNamespace(namespaceDescriptor, null);
+    long procId = clusterSchema.createNamespace(namespaceDescriptor, null, ProcedurePrepareLatch.getNoopLatch());
     block(this.masterServices, procId);
   }
 

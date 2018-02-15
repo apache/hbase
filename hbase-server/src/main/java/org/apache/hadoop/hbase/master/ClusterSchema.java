@@ -22,6 +22,7 @@ import java.io.InterruptedIOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.NonceKey;
 
@@ -79,32 +80,35 @@ public interface ClusterSchema {
    * Create a new Namespace.
    * @param namespaceDescriptor descriptor for new Namespace
    * @param nonceKey A unique identifier for this operation from the client or process.
+   * @param latch A latch to block on for precondition validation
    * @return procedure id
    * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
    *    as well as {@link IOException}
    */
-  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey)
+  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
 
   /**
    * Modify an existing Namespace.
    * @param nonceKey A unique identifier for this operation from the client or process.
+   * @param latch A latch to block on for precondition validation
    * @return procedure id
    * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
    *    as well as {@link IOException}
    */
-  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey)
+  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
 
   /**
    * Delete an existing Namespace.
    * Only empty Namespaces (no tables) can be removed.
    * @param nonceKey A unique identifier for this operation from the client or process.
+   * @param latch A latch to block on for precondition validation
    * @return procedure id
    * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
    *    as well as {@link IOException}
    */
-  long deleteNamespace(String name, NonceKey nonceKey)
+  long deleteNamespace(String name, NonceKey nonceKey, ProcedurePrepareLatch latch)
   throws IOException;
 
   /**

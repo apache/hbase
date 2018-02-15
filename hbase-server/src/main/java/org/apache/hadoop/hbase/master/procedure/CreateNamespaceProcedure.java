@@ -50,7 +50,12 @@ public class CreateNamespaceProcedure
 
   public CreateNamespaceProcedure(final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) {
-    super(env);
+    this(env, nsDescriptor, null);
+  }
+
+  public CreateNamespaceProcedure(final MasterProcedureEnv env,
+      final NamespaceDescriptor nsDescriptor, ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.nsDescriptor = nsDescriptor;
     this.traceEnabled = null;
   }
@@ -64,7 +69,12 @@ public class CreateNamespaceProcedure
     try {
       switch (state) {
       case CREATE_NAMESPACE_PREPARE:
-        prepareCreate(env);
+        boolean success = prepareCreate(env);
+        releaseSyncLatch();
+        if (!success) {
+          assert isFailed() : "createNamespace should have an exception here";
+          return Flow.NO_MORE_STATE;
+        }
         setNextState(CreateNamespaceState.CREATE_NAMESPACE_CREATE_DIRECTORY);
         break;
       case CREATE_NAMESPACE_CREATE_DIRECTORY:
@@ -102,6 +112,7 @@ public class CreateNamespaceProcedure
     if (state == CreateNamespaceState.CREATE_NAMESPACE_PREPARE) {
       // nothing to rollback, pre-create is just state checks.
       // TODO: coprocessor rollback semantic is still undefined.
+      releaseSyncLatch();
       return;
     }
     // The procedure doesn't have a rollback. The execution will succeed, at some point.
@@ -190,11 +201,14 @@ public class CreateNamespaceProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private void prepareCreate(final MasterProcedureEnv env) throws IOException {
+  private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(nsDescriptor.getName())) {
-      throw new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists");
+      setFailure("master-create-namespace",
+          new NamespaceExistException("Namespace " + nsDescriptor.getName() + " already exists"));
+      return false;
     }
     getTableNamespaceManager(env).validateTableAndRegionCount(nsDescriptor);
+    return true;
   }
 
   /**
