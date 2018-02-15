@@ -31,12 +31,21 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
     extends StateMachineProcedure<MasterProcedureEnv, TState>
     implements TableProcedureInterface {
 
+  private final ProcedurePrepareLatch syncLatch;
+
   protected AbstractStateMachineNamespaceProcedure() {
     // Required by the Procedure framework to create the procedure on replay
+    syncLatch = null;
   }
 
   protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env) {
+    this(env, null);
+  }
+
+  protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env,
+      final ProcedurePrepareLatch latch) {
     this.setOwner(env.getRequestUser());
+    this.syncLatch = latch;
   }
 
   protected abstract String getNamespaceName();
@@ -68,5 +77,9 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     env.getProcedureScheduler().wakeNamespaceExclusiveLock(this, getNamespaceName());
+  }
+
+  protected void releaseSyncLatch() {
+    ProcedurePrepareLatch.releaseLatch(syncLatch, this);
   }
 }

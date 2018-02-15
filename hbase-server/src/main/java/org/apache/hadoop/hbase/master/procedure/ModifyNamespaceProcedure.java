@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,12 @@ public class ModifyNamespaceProcedure
 
   public ModifyNamespaceProcedure(final MasterProcedureEnv env,
       final NamespaceDescriptor newNsDescriptor) {
-    super(env);
+    this(env, newNsDescriptor, null);
+  }
+
+  public ModifyNamespaceProcedure(final MasterProcedureEnv env,
+      final NamespaceDescriptor newNsDescriptor, final ProcedurePrepareLatch latch) {
+    super(env, latch);
     this.oldNsDescriptor = null;
     this.newNsDescriptor = newNsDescriptor;
     this.traceEnabled = null;
@@ -66,7 +72,12 @@ public class ModifyNamespaceProcedure
     try {
       switch (state) {
       case MODIFY_NAMESPACE_PREPARE:
-        prepareModify(env);
+        boolean success = prepareModify(env);
+        releaseSyncLatch();
+        if (!success) {
+          assert isFailed() : "Modify namespace should have an exception here";
+          return Flow.NO_MORE_STATE;
+        }
         setNextState(ModifyNamespaceState.MODIFY_NAMESPACE_UPDATE_NS_TABLE);
         break;
       case MODIFY_NAMESPACE_UPDATE_NS_TABLE:
@@ -96,6 +107,7 @@ public class ModifyNamespaceProcedure
     if (state == ModifyNamespaceState.MODIFY_NAMESPACE_PREPARE) {
       // nothing to rollback, pre-modify is just checks.
       // TODO: coprocessor rollback semantic is still undefined.
+      releaseSyncLatch();
       return;
     }
 
@@ -173,14 +185,22 @@ public class ModifyNamespaceProcedure
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private void prepareModify(final MasterProcedureEnv env) throws IOException {
+  private boolean prepareModify(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(newNsDescriptor.getName()) == false) {
-      throw new NamespaceNotFoundException(newNsDescriptor.getName());
+      setFailure("master-modify-namespace", new NamespaceNotFoundException(
+            newNsDescriptor.getName()));
+      return false;
     }
-    getTableNamespaceManager(env).validateTableAndRegionCount(newNsDescriptor);
+    try {
+      getTableNamespaceManager(env).validateTableAndRegionCount(newNsDescriptor);
+    } catch (ConstraintException e) {
+      setFailure("master-modify-namespace", e);
+      return false;
+    }
 
     // This is used for rollback
     oldNsDescriptor = getTableNamespaceManager(env).get(newNsDescriptor.getName());
+    return true;
   }
 
   /**
