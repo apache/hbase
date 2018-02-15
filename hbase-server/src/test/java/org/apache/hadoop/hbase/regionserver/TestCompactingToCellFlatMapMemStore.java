@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
@@ -823,6 +824,71 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
             + CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
             + 2 * oneCellOnCCMHeapSize;
     assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
+  }
+
+  /**
+   * CellChunkMap Segment index requires all cell data to be written in the MSLAB Chunks.
+   * Even though MSLAB is enabled, cells bigger than the size of a chunk are not
+   * written in the MSLAB Chunks.
+   * If such cells are found in the process of a merge they need to be copied into MSLAB.
+   * testForceCopyOfBigCellIntoImmutableSegment checks that the
+   * ImmutableMemStoreLAB's forceCopyOfBigCellInto does what it's supposed to do.
+   */
+  @Test
+  public void testForceCopyOfBigCellIntoImmutableSegment() throws IOException {
+
+    if (toCellChunkMap == false) {
+      return;
+    }
+
+    // set memstore to flat into CellChunkMap
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+            String.valueOf(compactionType));
+    ((MyCompactingMemStore) memstore).initiateType(compactionType, memstore.getConfiguration());
+    ((CompactingMemStore) memstore).setIndexType(CompactingMemStore.IndexType.CHUNK_MAP);
+
+    char[] chars = new char[MemStoreLAB.CHUNK_SIZE_DEFAULT];
+    for (int i = 0; i < chars.length; i++) {
+      chars[i] = 'A';
+    }
+    String bigVal = new String(chars);
+    byte[] val = Bytes.toBytes(bigVal);
+
+    // We need to add two cells, five times, in order to guarantee a merge
+    List<String[]> keysList = new ArrayList<>();
+    keysList.add(new String[]{"A", "B"});
+    keysList.add(new String[]{"C", "D"});
+    keysList.add(new String[]{"E", "F"});
+    keysList.add(new String[]{"G", "H"});
+    keysList.add(new String[]{"I", "J"});
+
+    // Measuring the size of a single kv
+    KeyValue kv = new KeyValue(Bytes.toBytes("A"), Bytes.toBytes("testfamily"),
+            Bytes.toBytes("testqualifier"), System.currentTimeMillis(), val);
+    long oneCellOnCCMHeapSize =
+            ClassSize.CELL_CHUNK_MAP_ENTRY + ClassSize.align(KeyValueUtil.length(kv));
+
+    long totalHeapSize = MutableSegment.DEEP_OVERHEAD;
+    for (int i = 0; i < 5; i++) {
+      addRowsByKeys(memstore, keysList.get(i), val);
+      while (((CompactingMemStore) memstore).isMemStoreFlushingInMemory()) {
+        Threads.sleep(10);
+      }
+
+      // The in-memory flush size is bigger than the size of a single cell,
+      // but smaller than the size of two cells.
+      // Therefore, the two created cells are flattened together.
+      totalHeapSize += CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
+              + 2 * oneCellOnCCMHeapSize;
+      if (i == 4) {
+        // Four out of the five are merged into one,
+        // and the segment becomes immutable
+        totalHeapSize -= (3 * CellChunkImmutableSegment.DEEP_OVERHEAD_CCM
+                + MutableSegment.DEEP_OVERHEAD);
+      }
+      assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize());
+    }
   }
 
 
