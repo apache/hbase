@@ -183,8 +183,9 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       String msg = "restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " failed. Try re-running the restore command.";
       LOG.error(msg, e);
-      monitor.receive(new ForeignException(masterServices.getServerName().toString(), e));
-      throw new RestoreSnapshotException(msg, e);
+      IOException rse = new RestoreSnapshotException(msg, e);
+      monitor.receive(new ForeignException(masterServices.getServerName().toString(), rse));
+      throw rse;
     }
   }
 
