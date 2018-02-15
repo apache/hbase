@@ -24,9 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.procedure.TestMasterProcedureScheduler.TestTableProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -51,12 +49,10 @@ public class TestMasterProcedureSchedulerConcurrency {
       LoggerFactory.getLogger(TestMasterProcedureSchedulerConcurrency.class);
 
   private MasterProcedureScheduler queue;
-  private Configuration conf;
 
   @Before
   public void setUp() throws IOException {
-    conf = HBaseConfiguration.create();
-    queue = new MasterProcedureScheduler(conf);
+    queue = new MasterProcedureScheduler();
     queue.start();
   }
 
