@@ -1182,10 +1182,9 @@ public class HTable implements Table {
     final List<String> callbackErrorServers = new ArrayList<>();
     Object[] results = new Object[execs.size()];
 
-    AsyncProcess asyncProcess =
-        new AsyncProcess(connection, configuration,
-            RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
-            true, RpcControllerFactory.instantiate(configuration));
+    AsyncProcess asyncProcess = new AsyncProcess(connection, configuration,
+        RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
+        RpcControllerFactory.instantiate(configuration));
 
     Callback<ClientProtos.CoprocessorServiceResult> resultsCallback
     = (byte[] region, byte[] row, ClientProtos.CoprocessorServiceResult serviceResult) -> {

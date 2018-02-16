@@ -388,8 +388,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
             new ConcurrentHashMap<CancellableRegionServerCallable, Boolean>());
     this.asyncProcess = asyncProcess;
     this.errorsByServer = createServerErrorTracker();
-    this.errors = (asyncProcess.globalErrors != null)
-        ? asyncProcess.globalErrors : new BatchErrors();
+    this.errors = new BatchErrors();
     this.operationTimeout = task.getOperationTimeout();
     this.rpcTimeout = task.getRpcTimeout();
     this.currentCallable = task.getCallable();
