@@ -892,10 +892,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.getRegionInfo().getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
       status.setStatus("Writing region info on filesystem");
       fs.checkRegionInfoOnFilesystem();
-    } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping creation of .regioninfo file for " + this.getRegionInfo());
-      }
     }
 
     // Initialize all the HStores
