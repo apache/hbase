@@ -225,7 +225,6 @@ public class SplitTableRegionProcedure
           setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_PRE_OPERATION);
           break;
         } else {
-          assert isFailed() : "split region should have an exception here";
           return Flow.NO_MORE_STATE;
         }
       case SPLIT_TABLE_REGION_PRE_OPERATION:

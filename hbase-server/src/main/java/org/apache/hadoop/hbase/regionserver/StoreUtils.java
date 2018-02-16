@@ -120,7 +120,7 @@ public class StoreUtils {
     if (comparator.compareRows(midKey, firstKey) == 0 ||
         comparator.compareRows(midKey, lastKey) == 0) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("cannot split because midkey is the same as first or last row");
+        LOG.debug("cannot split {} because midkey is the same as first or last row", file);
       }
       return Optional.empty();
     }
