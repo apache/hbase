@@ -255,10 +255,16 @@ public class MergeTableRegionsProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      LOG.warn("Error trying to merge regions " + RegionInfo.getShortNameToLog(regionsToMerge) +
-        " in the table " + getTableName() + " (in state=" + state + ")", e);
-
-      setFailure("master-merge-regions", e);
+      String msg = "Error trying to merge regions " +
+        RegionInfo.getShortNameToLog(regionsToMerge) + " in the table " + getTableName() +
+           " (in state=" + state + ")";
+      if (!isRollbackSupported(state)) {
+        // We reach a state that cannot be rolled back. We just need to keep retry.
+        LOG.warn(msg, e);
+      } else {
+        LOG.error(msg, e);
+        setFailure("master-merge-regions", e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
