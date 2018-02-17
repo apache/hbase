@@ -270,7 +270,6 @@ public class SplitTableRegionProcedure
       } else {
         LOG.error(msg, e);
         setFailure(e);
-        setFailure("master-split-regions", e);
       }
     }
     // if split fails,  need to call ((HRegion)parent).clearSplit() when it is a force split
