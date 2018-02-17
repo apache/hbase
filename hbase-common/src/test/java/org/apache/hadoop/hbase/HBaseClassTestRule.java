@@ -61,7 +61,7 @@ public final class HBaseClassTestRule implements TestRule {
     for (Class<?> c : categories[0].value()) {
       if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
         // All tests have a 10minute timeout.
-        return TimeUnit.MINUTES.toSeconds(10);
+        return TimeUnit.MINUTES.toSeconds(13);
       }
     }
     throw new IllegalArgumentException(
