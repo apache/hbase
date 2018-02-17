@@ -1000,7 +1000,7 @@ is that of the local test; i.e. in the TestTimeout Test Class, you'd
 pass `TestTimeout.class` to the `CLASS_RULE` instead of the
 `TestHRegionInfo.class` we have above. The `CLASS_RULE`
 is where we'll enforce timeouts (currently set at a hard-limit of
-ten minutes for all tests) and other cross-unit test facility.
+thirteen! minutes for all tests -- 780 seconds) and other cross-unit test facility.
 The test is in the `SmallTest` Category.
 
 Categories can be arbitrary and provided as a list but each test MUST
