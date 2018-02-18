@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.BufferedMutatorImpl.MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -837,7 +838,7 @@ public class TestAsyncProcess {
       @Override
       public void run(){
         Threads.sleep(1000);
-        Assert.assertFalse(checkPoint.get()); // TODO: this is timing-dependent
+        assertFalse(checkPoint.get()); // TODO: this is timing-dependent
         ai.decrementAndGet();
         ap.tasksInProgress.decrementAndGet();
         checkPoint2.set(true);
@@ -849,7 +850,7 @@ public class TestAsyncProcess {
     puts.add(p);
 
     ap.submit(DUMMY_TABLE, puts, false, null, false);
-    Assert.assertFalse(puts.isEmpty());
+    assertFalse(puts.isEmpty());
 
     t.start();
 
@@ -1930,5 +1931,49 @@ public class TestAsyncProcess {
     expectedSleep += normalPause;
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
     Assert.assertTrue("Slept for too long: " + actualSleep + "ms", actualSleep <= expectedSleep);
+  }
+
+  @Test
+  public void testQueueRowAccess() throws Exception {
+    ClusterConnection conn = createHConnection();
+    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, null, null,
+      new BufferedMutatorParams(DUMMY_TABLE).writeBufferSize(100000));
+    Put p0 = new Put(DUMMY_BYTES_1).addColumn(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
+    Put p1 = new Put(DUMMY_BYTES_2).addColumn(DUMMY_BYTES_2, DUMMY_BYTES_2, DUMMY_BYTES_2);
+    mutator.mutate(p0);
+    BufferedMutatorImpl.QueueRowAccess ra0 = mutator.createQueueRowAccess();
+    // QueueRowAccess should take all undealt mutations
+    assertEquals(0, mutator.undealtMutationCount.get());
+    mutator.mutate(p1);
+    assertEquals(1, mutator.undealtMutationCount.get());
+    BufferedMutatorImpl.QueueRowAccess ra1 = mutator.createQueueRowAccess();
+    // QueueRowAccess should take all undealt mutations
+    assertEquals(0, mutator.undealtMutationCount.get());
+    assertEquals(1, ra0.size());
+    assertEquals(1, ra1.size());
+    Iterator<Row> iter0 = ra0.iterator();
+    Iterator<Row> iter1 = ra1.iterator();
+    assertTrue(iter0.hasNext());
+    assertTrue(iter1.hasNext());
+    // the next() will poll the mutation from inner buffer and update the buffer count
+    assertTrue(iter0.next() == p0);
+    assertEquals(1, mutator.writeAsyncBuffer.size());
+    assertEquals(p1.heapSize(), mutator.currentWriteBufferSize.get());
+    assertTrue(iter1.next() == p1);
+    assertEquals(0, mutator.writeAsyncBuffer.size());
+    assertEquals(0, mutator.currentWriteBufferSize.get());
+    assertFalse(iter0.hasNext());
+    assertFalse(iter1.hasNext());
+    // ra0 doest handle the mutation so the mutation won't be pushed back to buffer
+    iter0.remove();
+    ra0.close();
+    assertEquals(0, mutator.undealtMutationCount.get());
+    assertEquals(0, mutator.writeAsyncBuffer.size());
+    assertEquals(0, mutator.currentWriteBufferSize.get());
+    // ra1 doesn't handle the mutation so the mutation will be pushed back to buffer
+    ra1.close();
+    assertEquals(1, mutator.undealtMutationCount.get());
+    assertEquals(1, mutator.writeAsyncBuffer.size());
+    assertEquals(p1.heapSize(), mutator.currentWriteBufferSize.get());
   }
 }

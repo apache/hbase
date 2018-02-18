@@ -17,6 +17,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.BufferedMutatorParams.UNSET;
 import com.google.common.annotations.VisibleForTesting;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Arrays;
@@ -61,7 +62,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 public class BufferedMutatorImpl implements BufferedMutator {
 
   private static final Log LOG = LogFactory.getLog(BufferedMutatorImpl.class);
-  
+
   private final ExceptionListener listener;
 
   protected ClusterConnection connection; // non-final so can be overridden in test
@@ -288,26 +289,22 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
 
     if (!synchronous) {
-      QueueRowAccess taker = new QueueRowAccess();
-      try {
+      try (QueueRowAccess taker = createQueueRowAccess()){
         ap.submit(tableName, taker, true, null, false);
         if (ap.hasError()) {
           LOG.debug(tableName + ": One or more of the operations have failed -"
               + " waiting for all operation in progress to finish (successfully or not)");
         }
-      } finally {
-        taker.restoreRemainder();
       }
     }
     if (synchronous || ap.hasError()) {
-      QueueRowAccess taker = new QueueRowAccess();
-      try {
-        while (!taker.isEmpty()) {
+      while (true) {
+        try (QueueRowAccess taker = createQueueRowAccess()){
+          if (taker.isEmpty()) {
+            break;
+          }
           ap.submit(tableName, taker, true, null, false);
-          taker.reset();
         }
-      } finally {
-        taker.restoreRemainder();
       }
 
       RetriesExhaustedWithDetailsException error =
@@ -444,36 +441,35 @@ public class BufferedMutatorImpl implements BufferedMutator {
     return Arrays.asList(writeAsyncBuffer.toArray(new Row[0]));
   }
 
-  private class QueueRowAccess implements RowAccess<Row> {
-    private int remainder = undealtMutationCount.getAndSet(0);
+  @VisibleForTesting
+  QueueRowAccess createQueueRowAccess() {
+    return new QueueRowAccess();
+  }
 
-    void reset() {
-      restoreRemainder();
-      remainder = undealtMutationCount.getAndSet(0);
-    }
+  @VisibleForTesting
+  class QueueRowAccess implements RowAccess<Row>, Closeable {
+    private int remainder = undealtMutationCount.getAndSet(0);
+    private Mutation last = null;
 
     @Override
     public Iterator<Row> iterator() {
       return new Iterator<Row>() {
-        private final Iterator<Mutation> iter = writeAsyncBuffer.iterator();
         private int countDown = remainder;
-        private Mutation last = null;
         @Override
         public boolean hasNext() {
-          if (countDown <= 0) {
-            return false;
-          }
-          return iter.hasNext();
+          return countDown > 0;
         }
         @Override
         public Row next() {
+          restoreLastMutation();
           if (!hasNext()) {
             throw new NoSuchElementException();
           }
-          last = iter.next();
+          last = writeAsyncBuffer.poll();
           if (last == null) {
             throw new NoSuchElementException();
           }
+          currentWriteBufferSize.addAndGet(-last.heapSize());
           --countDown;
           return last;
         }
@@ -482,11 +478,19 @@ public class BufferedMutatorImpl implements BufferedMutator {
           if (last == null) {
             throw new IllegalStateException();
           }
-          iter.remove();
-          currentWriteBufferSize.addAndGet(-last.heapSize());
           --remainder;
+          last = null;
         }
       };
+    }
+
+    private void restoreLastMutation() {
+      // restore the last mutation since it isn't submitted
+      if (last != null) {
+        writeAsyncBuffer.add(last);
+        currentWriteBufferSize.addAndGet(last.heapSize());
+        last = null;
+      }
     }
 
     @Override
@@ -494,16 +498,17 @@ public class BufferedMutatorImpl implements BufferedMutator {
       return remainder;
     }
 
-    void restoreRemainder() {
+    @Override
+    public boolean isEmpty() {
+      return remainder <= 0;
+    }
+    @Override
+    public void close() {
+      restoreLastMutation();
       if (remainder > 0) {
         undealtMutationCount.addAndGet(remainder);
         remainder = 0;
       }
-    }
-
-    @Override
-    public boolean isEmpty() {
-      return remainder <= 0;
     }
   }
 }
