@@ -124,7 +124,7 @@ public class TestCatalogJanitorInMemoryStates {
    * AM's serverHoldings and
    */
   @Test(timeout = 180000)
-  public void testInMemoryForReplicaParentCleanup() throws IOException, InterruptedException {
+  public void testInMemoryForReplicaParentCleanup() throws Exception {
     final AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     final CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().catalogJanitorChore;
 
@@ -139,35 +139,27 @@ public class TestCatalogJanitorInMemoryStates {
     // There are two regions, one for primary, one for the replica.
     assertTrue(allRegionLocations.size() == 2);
 
-    HRegionLocation replicaParentRegion, primaryParentRegion;
-    if (RegionReplicaUtil.isDefaultReplica(
-        allRegionLocations.get(0).getRegionInfo().getReplicaId())) {
-      primaryParentRegion = allRegionLocations.get(0);
-      replicaParentRegion = allRegionLocations.get(1);
-    } else {
-      primaryParentRegion = allRegionLocations.get(1);
-      replicaParentRegion = allRegionLocations.get(0);
-    }
+    final HRegionLocation primaryParentRegion
+      = RegionReplicaUtil.isDefaultReplica(
+      allRegionLocations.get(0).getRegionInfo().getReplicaId()) ? allRegionLocations.get(0)
+        : allRegionLocations.get(1);
+    final HRegionLocation replicaParentRegion
+      = RegionReplicaUtil.isDefaultReplica(
+      allRegionLocations.get(0).getRegionInfo().getReplicaId()) ? allRegionLocations.get(1)
+      : allRegionLocations.get(0);
 
-    List<HRegionLocation> primaryDaughters = splitRegion(primaryParentRegion.getRegionInfo(),
-        Bytes.toBytes("a"));
+    assertNotNull("Should have found daughter regions for " + primaryParentRegion,
+      splitRegion(primaryParentRegion.getRegionInfo(), Bytes.toBytes("a")));
 
-    // Wait until the replica parent region is offline.
-    while (am.getRegionStates().isRegionOnline(replicaParentRegion.getRegionInfo())) {
-      Thread.sleep(100);
-    }
-
-    assertNotNull("Should have found daughter regions for " + primaryDaughters, primaryDaughters);
-
-    // check that primary parent region is not in AM's serverHoldings
-    assertFalse("Primary Parent region should have been removed from RegionState's serverHoldings",
-        am.getRegionStates().existsInServerHoldings(primaryParentRegion.getServerName(),
-            primaryParentRegion.getRegionInfo()));
-
-    // check that primary parent region is not in AM's serverHoldings
-    assertFalse("Primary Parent region should have been removed from RegionState's serverHoldings",
-        am.getRegionStates().existsInServerHoldings(replicaParentRegion.getServerName(),
-            replicaParentRegion.getRegionInfo()));
+    TEST_UTIL.waitFor(60 * 1000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return !am.getRegionStates().existsInServerHoldings(primaryParentRegion.getServerName(),
+          primaryParentRegion.getRegionInfo()) &&
+          !am.getRegionStates().existsInServerHoldings(replicaParentRegion.getServerName(),
+            replicaParentRegion.getRegionInfo());
+      }
+    });
   }
 
   /*
