@@ -295,7 +295,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
         break;
       }
       AsyncRequestFuture asf;
-      try (QueueRowAccess access = new QueueRowAccess()) {
+      try (QueueRowAccess access = createQueueRowAccess()) {
         if (access.isEmpty()) {
           // It means someone has gotten the ticker to run the flush.
           break;
@@ -406,16 +406,46 @@ public class BufferedMutatorImpl implements BufferedMutator {
     return currentWriteBufferSize.get();
   }
 
+  /**
+   * Count the mutations which haven't been processed.
+   * @return count of undealt mutation
+   */
   @VisibleForTesting
   int size() {
     return undealtMutationCount.get();
   }
 
-  private class QueueRowAccess implements RowAccess<Row>, Closeable {
+  /**
+   * Count the mutations which haven't been flushed
+   * @return count of unflushed mutation
+   */
+  @VisibleForTesting
+  int getUnflushedSize() {
+    return writeAsyncBuffer.size();
+  }
+
+  @VisibleForTesting
+  QueueRowAccess createQueueRowAccess() {
+    return new QueueRowAccess();
+  }
+
+  @VisibleForTesting
+  class QueueRowAccess implements RowAccess<Row>, Closeable {
     private int remainder = undealtMutationCount.getAndSet(0);
+    private Mutation last = null;
+
+    private void restoreLastMutation() {
+      // restore the last mutation since it isn't submitted
+      if (last != null) {
+        writeAsyncBuffer.add(last);
+        currentWriteBufferSize.addAndGet(last.heapSize());
+        last = null;
+      }
+    }
 
     @Override
     public void close() {
+      restoreLastMutation();
       if (remainder > 0) {
         undealtMutationCount.addAndGet(remainder);
         remainder = 0;
@@ -425,25 +455,22 @@ public class BufferedMutatorImpl implements BufferedMutator {
     @Override
     public Iterator<Row> iterator() {
       return new Iterator<Row>() {
-        private final Iterator<Mutation> iter = writeAsyncBuffer.iterator();
         private int countDown = remainder;
-        private Mutation last = null;
         @Override
         public boolean hasNext() {
-          if (countDown <= 0) {
-            return false;
-          }
-          return iter.hasNext();
+          return countDown > 0;
         }
         @Override
         public Row next() {
+          restoreLastMutation();
           if (!hasNext()) {
             throw new NoSuchElementException();
           }
-          last = iter.next();
+          last = writeAsyncBuffer.poll();
           if (last == null) {
             throw new NoSuchElementException();
           }
+          currentWriteBufferSize.addAndGet(-last.heapSize());
           --countDown;
           return last;
         }
@@ -452,8 +479,6 @@ public class BufferedMutatorImpl implements BufferedMutator {
           if (last == null) {
             throw new IllegalStateException();
           }
-          iter.remove();
-          currentWriteBufferSize.addAndGet(-last.heapSize());
           --remainder;
           last = null;
         }

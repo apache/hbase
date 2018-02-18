@@ -1795,4 +1795,48 @@ public class TestAsyncProcess {
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
     Assert.assertTrue("Slept for too long: " + actualSleep + "ms", actualSleep <= expectedSleep);
   }
+
+  @Test
+  public void testQueueRowAccess() throws Exception {
+    ClusterConnection conn = createHConnection();
+    BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, null, null,
+      new BufferedMutatorParams(DUMMY_TABLE).writeBufferSize(100000));
+    Put p0 = new Put(DUMMY_BYTES_1).addColumn(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
+    Put p1 = new Put(DUMMY_BYTES_2).addColumn(DUMMY_BYTES_2, DUMMY_BYTES_2, DUMMY_BYTES_2);
+    mutator.mutate(p0);
+    BufferedMutatorImpl.QueueRowAccess ra0 = mutator.createQueueRowAccess();
+    // QueueRowAccess should take all undealt mutations
+    assertEquals(0, mutator.size());
+    mutator.mutate(p1);
+    assertEquals(1, mutator.size());
+    BufferedMutatorImpl.QueueRowAccess ra1 = mutator.createQueueRowAccess();
+    // QueueRowAccess should take all undealt mutations
+    assertEquals(0, mutator.size());
+    assertEquals(1, ra0.size());
+    assertEquals(1, ra1.size());
+    Iterator<Row> iter0 = ra0.iterator();
+    Iterator<Row> iter1 = ra1.iterator();
+    assertTrue(iter0.hasNext());
+    assertTrue(iter1.hasNext());
+    // the next() will poll the mutation from inner buffer and update the buffer count
+    assertTrue(iter0.next() == p0);
+    assertEquals(1, mutator.getUnflushedSize());
+    assertEquals(p1.heapSize(), mutator.getCurrentWriteBufferSize());
+    assertTrue(iter1.next() == p1);
+    assertEquals(0, mutator.getUnflushedSize());
+    assertEquals(0, mutator.getCurrentWriteBufferSize());
+    assertFalse(iter0.hasNext());
+    assertFalse(iter1.hasNext());
+    // ra0 doest handle the mutation so the mutation won't be pushed back to buffer
+    iter0.remove();
+    ra0.close();
+    assertEquals(0, mutator.size());
+    assertEquals(0, mutator.getUnflushedSize());
+    assertEquals(0, mutator.getCurrentWriteBufferSize());
+    // ra1 doesn't handle the mutation so the mutation will be pushed back to buffer
+    ra1.close();
+    assertEquals(1, mutator.size());
+    assertEquals(1, mutator.getUnflushedSize());
+    assertEquals(p1.heapSize(), mutator.getCurrentWriteBufferSize());
+  }
 }
