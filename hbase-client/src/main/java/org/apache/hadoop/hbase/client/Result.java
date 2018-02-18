@@ -859,7 +859,7 @@ public class Result implements CellScannable, CellScanner {
       return size;
     }
     for (Cell c : result.rawCells()) {
-      size += PrivateCellUtil.estimatedHeapSizeOf(c);
+      size += PrivateCellUtil.estimatedSizeOfCell(c);
     }
     return size;
   }

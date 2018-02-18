@@ -264,8 +264,8 @@ public class TestWALLockup {
         @Override
         public void run() {
           try {
-            if (region.getMemStoreSize() <= 0) {
-              throw new IOException("memstore size=" + region.getMemStoreSize());
+            if (region.getMemStoreDataSize() <= 0) {
+              throw new IOException("memstore size=" + region.getMemStoreDataSize());
             }
             region.flush(false);
           } catch (IOException e) {

@@ -321,7 +321,7 @@ public class TestEndToEndSplitTransaction {
     admin.flushRegion(regionName);
     log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
-    while (rs.getOnlineRegion(regionName).getMemStoreSize() > 0) {
+    while (rs.getOnlineRegion(regionName).getMemStoreDataSize() > 0) {
       Threads.sleep(50);
     }
   }

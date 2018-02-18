@@ -221,7 +221,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     long cellBeforeFlushSize = cellBeforeFlushSize();
     long cellAfterFlushSize = cellAfterFlushSize();
     long totalHeapSize1 = MutableSegment.DEEP_OVERHEAD + 4 * cellBeforeFlushSize;
-    assertEquals(totalCellsLen1, region.getMemStoreSize());
+    assertEquals(totalCellsLen1, region.getMemStoreDataSize());
     assertEquals(totalHeapSize1, ((CompactingMemStore) memstore).heapSize());
 
     MemStoreSize size = memstore.getFlushableSize();

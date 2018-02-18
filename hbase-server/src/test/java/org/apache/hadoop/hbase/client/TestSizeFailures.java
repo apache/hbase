@@ -53,7 +53,7 @@ public class TestSizeFailures {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   protected static int SLAVES = 1;
   private static TableName TABLENAME;
-  private static final int NUM_ROWS = 1000 * 1000, NUM_COLS = 10;
+  private static final int NUM_ROWS = 1000 * 1000, NUM_COLS = 9;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -129,7 +129,7 @@ public class TestSizeFailures {
       long rowsObserved = entry.getKey();
       long entriesObserved = entry.getValue();
 
-      // Verify that we see 1M rows and 10M cells
+      // Verify that we see 1M rows and 9M cells
       assertEquals(NUM_ROWS, rowsObserved);
       assertEquals(NUM_ROWS * NUM_COLS, entriesObserved);
     }
@@ -152,7 +152,7 @@ public class TestSizeFailures {
       long rowsObserved = entry.getKey();
       long entriesObserved = entry.getValue();
 
-      // Verify that we see 1M rows and 10M cells
+      // Verify that we see 1M rows and 9M cells
       assertEquals(NUM_ROWS, rowsObserved);
       assertEquals(NUM_ROWS * NUM_COLS, entriesObserved);
     }

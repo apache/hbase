@@ -172,7 +172,7 @@ public class TestWalAndCompactingMemStoreFlush {
       region.put(createPut(2, i));
     }
 
-    long totalMemstoreSize = region.getMemStoreSize();
+    long totalMemstoreSize = region.getMemStoreDataSize();
 
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF1PhaseI = region.getOldestSeqIdOfStore(FAMILY1);
@@ -363,13 +363,13 @@ public class TestWalAndCompactingMemStoreFlush {
     s = s + "----AFTER THIRD AND FORTH FLUSH, The smallest sequence in region WAL is: "
         + smallestSeqInRegionCurrentMemstorePhaseV
         + ". After additional inserts and last flush, the entire region size is:" + region
-        .getMemStoreSize()
+        .getMemStoreDataSize()
         + "\n----------------------------------\n";
 
     // Since we won't find any CF above the threshold, and hence no specific
     // store to flush, we should flush all the memstores
     // Also compacted memstores are flushed to disk.
-    assertEquals(0, region.getMemStoreSize());
+    assertEquals(0, region.getMemStoreDataSize());
     System.out.println(s);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
@@ -411,7 +411,7 @@ public class TestWalAndCompactingMemStoreFlush {
     /*------------------------------------------------------------------------------*/
     /*------------------------------------------------------------------------------*/
     /* PHASE I - collect sizes */
-    long totalMemstoreSizePhaseI = region.getMemStoreSize();
+    long totalMemstoreSizePhaseI = region.getMemStoreDataSize();
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF1PhaseI = region.getOldestSeqIdOfStore(FAMILY1);
     long smallestSeqCF2PhaseI = region.getOldestSeqIdOfStore(FAMILY2);
@@ -474,7 +474,7 @@ public class TestWalAndCompactingMemStoreFlush {
         .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF3PhaseII = region.getOldestSeqIdOfStore(FAMILY3);
-    long totalMemstoreSizePhaseII = region.getMemStoreSize();
+    long totalMemstoreSizePhaseII = region.getMemStoreDataSize();
 
     /*------------------------------------------------------------------------------*/
     /* PHASE II - validation */
@@ -517,7 +517,7 @@ public class TestWalAndCompactingMemStoreFlush {
     /* PHASE III - collect sizes */
     // How much does the CF1 memstore occupy now? Will be used later.
     MemStoreSize cf1MemstoreSizePhaseIII = region.getStore(FAMILY1).getMemStoreSize();
-    long totalMemstoreSizePhaseIII = region.getMemStoreSize();
+    long totalMemstoreSizePhaseIII = region.getMemStoreDataSize();
 
     /*------------------------------------------------------------------------------*/
     /* PHASE III - validation */
@@ -575,7 +575,7 @@ public class TestWalAndCompactingMemStoreFlush {
     MemStoreSize cf3MemstoreSizePhaseV = region.getStore(FAMILY3).getMemStoreSize();
     long smallestSeqInRegionCurrentMemstorePhaseV = getWAL(region)
         .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
-    long totalMemstoreSizePhaseV = region.getMemStoreSize();
+    long totalMemstoreSizePhaseV = region.getMemStoreDataSize();
 
     /*------------------------------------------------------------------------------*/
     /* PHASE V - validation */
@@ -663,7 +663,7 @@ public class TestWalAndCompactingMemStoreFlush {
     ((CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore).setCompositeSnapshot(false);
     ((CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore).setCompositeSnapshot(false);
 
-    long totalMemstoreSize = region.getMemStoreSize();
+    long totalMemstoreSize = region.getMemStoreDataSize();
 
     // Find the sizes of the memstores of each CF.
     MemStoreSize cf1MemstoreSizePhaseI = region.getStore(FAMILY1).getMemStoreSize();
@@ -794,7 +794,7 @@ public class TestWalAndCompactingMemStoreFlush {
       region.put(createPut(2, i));
     }
 
-    long totalMemstoreSize = region.getMemStoreSize();
+    long totalMemstoreSize = region.getMemStoreDataSize();
 
     // test in-memory flashing into CAM here
     ((CompactingMemStore) ((HStore)region.getStore(FAMILY1)).memstore).setIndexType(

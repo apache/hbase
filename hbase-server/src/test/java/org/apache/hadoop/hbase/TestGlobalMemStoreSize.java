@@ -99,7 +99,7 @@ public class TestGlobalMemStoreSize {
       long globalMemStoreSize = 0;
       for (RegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
-        globalMemStoreSize += server.getRegion(regionInfo.getEncodedName()).getMemStoreSize();
+        globalMemStoreSize += server.getRegion(regionInfo.getEncodedName()).getMemStoreDataSize();
       }
       assertEquals(server.getRegionServerAccounting().getGlobalMemStoreDataSize(),
         globalMemStoreSize);
@@ -130,7 +130,7 @@ public class TestGlobalMemStoreSize {
         for (RegionInfo regionInfo :
             ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
           HRegion r = server.getRegion(regionInfo.getEncodedName());
-          long l = r.getMemStoreSize();
+          long l = r.getMemStoreDataSize();
           if (l > 0) {
             // Only meta could have edits at this stage.  Give it another flush
             // clear them.

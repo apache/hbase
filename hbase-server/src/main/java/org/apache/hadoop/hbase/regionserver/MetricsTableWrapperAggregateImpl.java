@@ -72,7 +72,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         for (Store store : r.getStores()) {
           tempStorefilesSize += store.getStorefilesSize();
         }
-        metricsTable.setMemStoresSize(metricsTable.getMemStoresSize() + r.getMemStoreSize());
+        metricsTable.setMemStoresSize(metricsTable.getMemStoresSize() + r.getMemStoreDataSize());
         metricsTable.setStoreFilesSize(metricsTable.getStoreFilesSize() + tempStorefilesSize);
         metricsTable.setTableSize(metricsTable.getMemStoresSize() + metricsTable.getStoreFilesSize());
         metricsTable.setReadRequestsCount(metricsTable.getReadRequestsCount() + r.getReadRequestsCount());

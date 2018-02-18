@@ -266,7 +266,7 @@ public class HFileBlockIndex {
 
         // Adding blockKeys
         for (Cell key : blockKeys) {
-          heapSize += ClassSize.align(PrivateCellUtil.estimatedHeapSizeOf(key));
+          heapSize += ClassSize.align(PrivateCellUtil.estimatedSizeOfCell(key));
         }
       }
       // Add comparator and the midkey atomicreference

@@ -150,7 +150,21 @@ public interface Region extends ConfigurationObserver {
    *         the memstores of this Region. Means size in bytes for key, value and tags within Cells.
    *         It wont consider any java heap overhead for the cell objects or any other.
    */
-  long getMemStoreSize();
+  long getMemStoreDataSize();
+
+  /**
+   * @return memstore heap size for this region, in bytes. It accounts data size of cells
+   *         added to the memstores of this Region, as well as java heap overhead for the cell
+   *         objects or any other.
+   */
+  long getMemStoreHeapSize();
+
+  /**
+   * @return memstore off-heap size for this region, in bytes. It accounts data size of cells
+   *         added to the memstores of this Region, as well as overhead for the cell
+   *         objects or any other that is allocated off-heap.
+   */
+  long getMemStoreOffHeapSize();
 
   /** @return the number of mutations processed bypassing the WAL */
   long getNumMutationsWithoutWAL();

@@ -310,7 +310,7 @@ public class TestHRegion {
     region.put(put);
     // Close with something in memstore and something in the snapshot.  Make sure all is cleared.
     region.close();
-    assertEquals(0, region.getMemStoreSize());
+    assertEquals(0, region.getMemStoreDataSize());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -391,14 +391,14 @@ public class TestHRegion {
     HRegion region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, hLog,
         COLUMN_FAMILY_BYTES);
     HStore store = region.getStore(COLUMN_FAMILY_BYTES);
-    assertEquals(0, region.getMemStoreSize());
+    assertEquals(0, region.getMemStoreDataSize());
 
     // Put one value
     byte [] value = Bytes.toBytes(method);
     Put put = new Put(value);
     put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
     region.put(put);
-    long onePutSize = region.getMemStoreSize();
+    long onePutSize = region.getMemStoreDataSize();
     assertTrue(onePutSize > 0);
 
     RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
@@ -414,7 +414,7 @@ public class TestHRegion {
     } catch (IOException expected) {
     }
     long expectedSize = onePutSize * 2;
-    assertEquals("memstoreSize should be incremented", expectedSize, region.getMemStoreSize());
+    assertEquals("memstoreSize should be incremented", expectedSize, region.getMemStoreDataSize());
     assertEquals("flushable size should be incremented", expectedSize,
         store.getFlushableSize().getDataSize());
 
@@ -459,13 +459,13 @@ public class TestHRegion {
           // Initialize region
           region = initHRegion(tableName, null, null, false, Durability.SYNC_WAL, wal,
               COLUMN_FAMILY_BYTES);
-          long size = region.getMemStoreSize();
+          long size = region.getMemStoreDataSize();
           Assert.assertEquals(0, size);
           // Put one item into memstore.  Measure the size of one item in memstore.
           Put p1 = new Put(row);
           p1.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual1, 1, (byte[]) null));
           region.put(p1);
-          final long sizeOfOnePut = region.getMemStoreSize();
+          final long sizeOfOnePut = region.getMemStoreDataSize();
           // Fail a flush which means the current memstore will hang out as memstore 'snapshot'.
           try {
             LOG.info("Flushing");
@@ -478,7 +478,7 @@ public class TestHRegion {
           // Make it so all writes succeed from here on out
           ffs.fault.set(false);
           // Check sizes.  Should still be the one entry.
-          Assert.assertEquals(sizeOfOnePut, region.getMemStoreSize());
+          Assert.assertEquals(sizeOfOnePut, region.getMemStoreDataSize());
           // Now add two entries so that on this next flush that fails, we can see if we
           // subtract the right amount, the snapshot size only.
           Put p2 = new Put(row);
@@ -486,13 +486,13 @@ public class TestHRegion {
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual3, 3, (byte[])null));
           region.put(p2);
           long expectedSize = sizeOfOnePut * 3;
-          Assert.assertEquals(expectedSize, region.getMemStoreSize());
+          Assert.assertEquals(expectedSize, region.getMemStoreDataSize());
           // Do a successful flush.  It will clear the snapshot only.  Thats how flushes work.
           // If already a snapshot, we clear it else we move the memstore to be snapshot and flush
           // it
           region.flush(true);
           // Make sure our memory accounting is right.
-          Assert.assertEquals(sizeOfOnePut * 2, region.getMemStoreSize());
+          Assert.assertEquals(sizeOfOnePut * 2, region.getMemStoreDataSize());
         } finally {
           HBaseTestingUtility.closeRegionAndWAL(region);
         }
@@ -524,7 +524,7 @@ public class TestHRegion {
           // Initialize region
           region = initHRegion(tableName, null, null, false,
               Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
-          long size = region.getMemStoreSize();
+          long size = region.getMemStoreDataSize();
           Assert.assertEquals(0, size);
           // Put one item into memstore.  Measure the size of one item in memstore.
           Put p1 = new Put(row);

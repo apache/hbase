@@ -28,23 +28,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MemStoreSizing extends MemStoreSize {
   public static final MemStoreSizing DUD = new MemStoreSizing() {
-    @Override
-    public void incMemStoreSize(MemStoreSize delta) {
-      incMemStoreSize(delta.getDataSize(), delta.getHeapSize());
-    }
 
-    @Override
-    public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
+    @Override public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta,
+        long offHeapSizeDelta) {
       throw new RuntimeException("I'm a dud, you can't use me!");
     }
 
-    @Override
-    public void decMemStoreSize(MemStoreSize delta) {
-      decMemStoreSize(delta.getDataSize(), delta.getHeapSize());
-    }
-
-    @Override
-    public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
+    @Override public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta,
+        long offHeapSizeDelta) {
       throw new RuntimeException("I'm a dud, you can't use me!");
     }
   };
@@ -53,51 +44,38 @@ public class MemStoreSizing extends MemStoreSize {
     super();
   }
 
-  public MemStoreSizing(long dataSize, long heapSize) {
-    super(dataSize, heapSize);
+  public MemStoreSizing(long dataSize, long heapSize, long offHeapSize) {
+    super(dataSize, heapSize, offHeapSize);
   }
 
-  public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
+  public MemStoreSizing(MemStoreSize memStoreSize) {
+    super(memStoreSize);
+  }
+
+  public void incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
     this.dataSize += dataSizeDelta;
     this.heapSize += heapSizeDelta;
+    this.offHeapSize += offHeapSizeDelta;
   }
 
   public void incMemStoreSize(MemStoreSize delta) {
-    incMemStoreSize(delta.getDataSize(), delta.getHeapSize());
+    incMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize());
   }
 
-  public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta) {
+  public void decMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta) {
     this.dataSize -= dataSizeDelta;
     this.heapSize -= heapSizeDelta;
+    this.offHeapSize -= offHeapSizeDelta;
   }
 
   public void decMemStoreSize(MemStoreSize delta) {
-    decMemStoreSize(delta.getDataSize(), delta.getHeapSize());
+    decMemStoreSize(delta.getDataSize(), delta.getHeapSize(), delta.getOffHeapSize());
   }
 
   public void empty() {
     this.dataSize = 0L;
     this.heapSize = 0L;
+    this.offHeapSize = 0L;
   }
 
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == null || (getClass() != obj.getClass())) {
-      return false;
-    }
-    MemStoreSizing other = (MemStoreSizing) obj;
-    return this.dataSize == other.dataSize && this.heapSize == other.heapSize;
-  }
-
-  @Override
-  public int hashCode() {
-    long h = 13 * this.dataSize;
-    h = h + 14 * this.heapSize;
-    return (int) h;
-  }
-
-  @Override
-  public String toString() {
-    return "dataSize=" + this.dataSize + " , heapSize=" + this.heapSize;
-  }
 }

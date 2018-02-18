@@ -699,7 +699,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     int totalCellsLen1 = addRowsByKeys(memstore, keys1);// Adding 4 cells.
     int oneCellOnCSLMHeapSize = 120;
     int oneCellOnCAHeapSize = 88;
-    assertEquals(totalCellsLen1, region.getMemStoreSize());
+    assertEquals(totalCellsLen1, region.getMemStoreDataSize());
     long totalHeapSize = MutableSegment.DEEP_OVERHEAD + 4 * oneCellOnCSLMHeapSize;
     assertEquals(totalHeapSize, ((CompactingMemStore)memstore).heapSize());
     ((CompactingMemStore)memstore).flushInMemory(); // push keys to pipeline and compact
@@ -780,7 +780,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
     int totalCellsLen1 = addRowsByKeys(memstore, keys1);// Adding 3 cells.
     int oneCellOnCSLMHeapSize = 120;
-    assertEquals(totalCellsLen1, region.getMemStoreSize());
+    assertEquals(totalCellsLen1, region.getMemStoreDataSize());
     long totalHeapSize = MutableSegment.DEEP_OVERHEAD + 3 * oneCellOnCSLMHeapSize;
     assertEquals(totalHeapSize, memstore.heapSize());
 
@@ -838,7 +838,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
     regionServicesForStores.addMemStoreSize(new MemStoreSize(hmc.getActive().keySize() - size,
-        hmc.getActive().heapSize() - heapOverhead));
+        hmc.getActive().heapSize() - heapOverhead, 0));
     return totalLen;
   }
 
@@ -859,7 +859,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       LOG.debug("added kv: " + kv.getKeyString() + ", timestamp:" + kv.getTimestamp());
     }
     regionServicesForStores.addMemStoreSize(new MemStoreSize(hmc.getActive().keySize() - size,
-            hmc.getActive().heapSize() - heapOverhead));
+            hmc.getActive().heapSize() - heapOverhead, 0));
     return totalLen;
   }
 

@@ -317,6 +317,16 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return c;
   }
 
+  @Override
+  public boolean isOnHeap() {
+    return !isOffHeap();
+  }
+
+  @Override
+  public boolean isOffHeap() {
+    return this.chunkCreator.isOffheap();
+  }
+
   @VisibleForTesting
   Chunk getCurrentChunk() {
     return this.curChunk.get();

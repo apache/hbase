@@ -44,7 +44,7 @@ public class FlushAllLargeStoresPolicy extends FlushLargeStoresPolicy {
       // Family number might also be zero in some of our unit test case
       return;
     }
-    this.flushSizeLowerBound = getFlushSizeLowerBound(region);
+    setFlushSizeLowerBounds(region);
   }
 
   @Override

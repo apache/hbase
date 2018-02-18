@@ -48,6 +48,10 @@ public abstract class ImmutableSegment extends Segment {
     super(comparator, TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC));
   }
 
+  protected ImmutableSegment(CellComparator comparator, List<ImmutableSegment> segments) {
+    super(comparator, segments, TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC));
+  }
+
   /**------------------------------------------------------------------------
    * C-tor to be used to build the derived classes
    */
