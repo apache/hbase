@@ -43,10 +43,11 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
 
   protected long flushSizeLowerBound = -1;
 
-  protected long getFlushSizeLowerBound(HRegion region) { int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
+  protected void setFlushSizeLowerBounds(HRegion region) {
+    int familyNumber = region.getTableDescriptor().getColumnFamilyCount();
     // For multiple families, lower bound is the "average flush size" by default
     // unless setting in configuration is larger.
-    long flushSizeLowerBound = region.getMemStoreFlushSize() / familyNumber;
+    flushSizeLowerBound = region.getMemStoreFlushSize() / familyNumber;
     long minimumLowerBound =
         getConf().getLong(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
           DEFAULT_HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN);
@@ -57,36 +58,45 @@ public abstract class FlushLargeStoresPolicy extends FlushPolicy {
     String flushedSizeLowerBoundString =
         region.getTableDescriptor().getValue(HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND);
     if (flushedSizeLowerBoundString == null) {
-      LOG.debug("No {} set in table {} descriptor;" +
-          "using region.getMemStoreFlushSize/# of families ({}) instead.",
-          HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
-          region.getTableDescriptor().getTableName(),
-          StringUtils.humanSize(flushSizeLowerBound) + ")");
+      LOG.debug("No {} set in table {} descriptor;"
+          + "using region.getMemStoreFlushHeapSize/# of families ({}) "
+          + "instead."
+          , HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND
+          , region.getTableDescriptor().getTableName()
+          , StringUtils.humanSize(flushSizeLowerBound)
+          + ")");
     } else {
       try {
         flushSizeLowerBound = Long.parseLong(flushedSizeLowerBoundString);
       } catch (NumberFormatException nfe) {
         // fall back for fault setting
-        LOG.warn("Number format exception parsing {} for table {}: {}, {}; " +
-            "using region.getMemStoreFlushSize/# of families ({}) instead.",
-            HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
-            region.getTableDescriptor().getTableName(),
-            flushedSizeLowerBoundString,
-            nfe,
-            flushSizeLowerBound);
+        LOG.warn("Number format exception parsing {} for table {}: {}, {}; "
+                + "using region.getMemStoreFlushHeapSize/# of families ({}) "
+                + "and region.getMemStoreFlushOffHeapSize/# of families ({}) "
+                + "instead."
+            , HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND
+            , region.getTableDescriptor().getTableName()
+            , flushedSizeLowerBoundString
+            , nfe
+            , flushSizeLowerBound
+        );
 
       }
     }
-    return flushSizeLowerBound;
   }
 
   protected boolean shouldFlush(HStore store) {
-    if (store.getMemStoreSize().getDataSize() > this.flushSizeLowerBound) {
-      LOG.debug("Flush {} of {}; memstoreSize={} > lowerBound={}",
-          store.getColumnFamilyName(),
-          region.getRegionInfo().getEncodedName(),
-          store.getMemStoreSize().getDataSize(),
-          this.flushSizeLowerBound);
+    if (store.getMemStoreSize().getHeapSize()
+        + store.getMemStoreSize().getOffHeapSize() > this.flushSizeLowerBound) {
+      LOG.debug("Flush {} of {}; "
+              + "heap memstoreSize={} +"
+              + "off heap memstoreSize={} > memstore lowerBound={}"
+          , store.getColumnFamilyName()
+          , region.getRegionInfo().getEncodedName()
+          , store.getMemStoreSize().getHeapSize()
+          , store.getMemStoreSize().getOffHeapSize()
+          , this.flushSizeLowerBound
+      );
       return true;
     }
     return false;

@@ -366,7 +366,7 @@ public class TestHRegionReplayEvents {
         verifyData(secondaryRegion, 0, lastReplayed, cq, families);
         HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
         long storeMemstoreSize = store.getMemStoreSize().getHeapSize();
-        long regionMemstoreSize = secondaryRegion.getMemStoreSize();
+        long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
         long storeFlushableSize = store.getFlushableSize().getHeapSize();
         long storeSize = store.getSize();
         long storeSizeUncompressed = store.getStoreSizeUncompressed();
@@ -395,7 +395,7 @@ public class TestHRegionReplayEvents {
           assertTrue(storeFlushableSize > newFlushableSize);
 
           // assert that the region memstore is smaller now
-          long newRegionMemstoreSize = secondaryRegion.getMemStoreSize();
+          long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
           assertTrue(regionMemstoreSize > newRegionMemstoreSize);
 
           // assert that the store sizes are bigger
@@ -465,7 +465,7 @@ public class TestHRegionReplayEvents {
         // first verify that everything is replayed and visible before flush event replay
         HStore store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
         long storeMemstoreSize = store.getMemStoreSize().getHeapSize();
-        long regionMemstoreSize = secondaryRegion.getMemStoreSize();
+        long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
         long storeFlushableSize = store.getFlushableSize().getHeapSize();
 
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
@@ -505,7 +505,7 @@ public class TestHRegionReplayEvents {
     assertNotNull(secondaryRegion.getPrepareFlushResult());
     assertEquals(secondaryRegion.getPrepareFlushResult().flushOpSeqId,
       startFlushDesc.getFlushSequenceNumber());
-    assertTrue(secondaryRegion.getMemStoreSize() > 0); // memstore is not empty
+    assertTrue(secondaryRegion.getMemStoreDataSize() > 0); // memstore is not empty
     verifyData(secondaryRegion, 0, numRows, cq, families);
 
     // Test case 2: replay a flush start marker with a smaller seqId
@@ -518,7 +518,7 @@ public class TestHRegionReplayEvents {
     assertNotNull(secondaryRegion.getPrepareFlushResult());
     assertEquals(secondaryRegion.getPrepareFlushResult().flushOpSeqId,
       startFlushDesc.getFlushSequenceNumber());
-    assertTrue(secondaryRegion.getMemStoreSize() > 0); // memstore is not empty
+    assertTrue(secondaryRegion.getMemStoreDataSize() > 0); // memstore is not empty
     verifyData(secondaryRegion, 0, numRows, cq, families);
 
     // Test case 3: replay a flush start marker with a larger seqId
@@ -531,7 +531,7 @@ public class TestHRegionReplayEvents {
     assertNotNull(secondaryRegion.getPrepareFlushResult());
     assertEquals(secondaryRegion.getPrepareFlushResult().flushOpSeqId,
       startFlushDesc.getFlushSequenceNumber());
-    assertTrue(secondaryRegion.getMemStoreSize() > 0); // memstore is not empty
+    assertTrue(secondaryRegion.getMemStoreDataSize() > 0); // memstore is not empty
     verifyData(secondaryRegion, 0, numRows, cq, families);
 
     LOG.info("-- Verifying edits from secondary");
@@ -600,7 +600,7 @@ public class TestHRegionReplayEvents {
     for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    long regionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
 
     // Test case 1: replay the a flush commit marker smaller than what we have prepared
     LOG.info("Testing replaying flush COMMIT " + commitFlushDesc + " on top of flush START"
@@ -620,7 +620,7 @@ public class TestHRegionReplayEvents {
     assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
 
     // assert that the region memstore is same as before
-    long newRegionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertEquals(regionMemstoreSize, newRegionMemstoreSize);
 
     assertNotNull(secondaryRegion.getPrepareFlushResult()); // not dropped
@@ -690,7 +690,7 @@ public class TestHRegionReplayEvents {
     for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    long regionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
 
     // Test case 1: replay the a flush commit marker larger than what we have prepared
     LOG.info("Testing replaying flush COMMIT " + commitFlushDesc + " on top of flush START"
@@ -710,7 +710,7 @@ public class TestHRegionReplayEvents {
     assertTrue(newFlushableSize > 0); // assert that the memstore is not dropped
 
     // assert that the region memstore is smaller than before, but not empty
-    long newRegionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertTrue(newRegionMemstoreSize > 0);
     assertTrue(regionMemstoreSize > newRegionMemstoreSize);
 
@@ -791,7 +791,7 @@ public class TestHRegionReplayEvents {
     for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    long regionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
 
     // Test case 1: replay a flush commit marker without start flush marker
     assertNull(secondaryRegion.getPrepareFlushResult());
@@ -820,7 +820,7 @@ public class TestHRegionReplayEvents {
     }
 
     // assert that the region memstore is same as before (we could not drop)
-    long newRegionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     if (droppableMemstore) {
       assertTrue(0 == newRegionMemstoreSize);
     } else {
@@ -890,7 +890,7 @@ public class TestHRegionReplayEvents {
     for (HStore s : secondaryRegion.getStores()) {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
-    long regionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long regionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertTrue(regionMemstoreSize == 0);
 
     // now replay the region open event that should contain new file locations
@@ -907,7 +907,7 @@ public class TestHRegionReplayEvents {
     assertTrue(newFlushableSize == MutableSegment.DEEP_OVERHEAD);
 
     // assert that the region memstore is empty
-    long newRegionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertTrue(newRegionMemstoreSize == 0);
 
     assertNull(secondaryRegion.getPrepareFlushResult()); //prepare snapshot should be dropped if any
@@ -986,7 +986,7 @@ public class TestHRegionReplayEvents {
     assertTrue(newSnapshotSize.getDataSize() == 0);
 
     // assert that the region memstore is empty
-    long newRegionMemstoreSize = secondaryRegion.getMemStoreSize();
+    long newRegionMemstoreSize = secondaryRegion.getMemStoreDataSize();
     assertTrue(newRegionMemstoreSize == 0);
 
     assertNull(secondaryRegion.getPrepareFlushResult()); //prepare snapshot should be dropped if any
@@ -1434,7 +1434,7 @@ public class TestHRegionReplayEvents {
     LOG.info("-- Replaying edits in secondary");
 
     // Test case 4: replay some edits, ensure that memstore is dropped.
-    assertTrue(secondaryRegion.getMemStoreSize() == 0);
+    assertTrue(secondaryRegion.getMemStoreDataSize() == 0);
     putDataWithFlushes(primaryRegion, 400, 400, 0);
     numRows = 400;
 
@@ -1452,11 +1452,11 @@ public class TestHRegionReplayEvents {
       }
     }
 
-    assertTrue(secondaryRegion.getMemStoreSize() > 0);
+    assertTrue(secondaryRegion.getMemStoreDataSize() > 0);
 
     secondaryRegion.refreshStoreFiles();
 
-    assertTrue(secondaryRegion.getMemStoreSize() == 0);
+    assertTrue(secondaryRegion.getMemStoreDataSize() == 0);
 
     LOG.info("-- Verifying edits from primary");
     verifyData(primaryRegion, 0, numRows, cq, families);

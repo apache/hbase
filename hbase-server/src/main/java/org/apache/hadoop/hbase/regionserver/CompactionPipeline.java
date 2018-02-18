@@ -138,16 +138,25 @@ public class CompactionPipeline {
       if(segment != null) newDataSize = segment.keySize();
       long dataSizeDelta = suffixDataSize - newDataSize;
       long suffixHeapSize = getSegmentsHeapSize(suffix);
+      long suffixOffHeapSize = getSegmentsOffHeapSize(suffix);
       long newHeapSize = 0;
-      if(segment != null) newHeapSize = segment.heapSize();
+      long newOffHeapSize = 0;
+      if(segment != null) {
+        newHeapSize = segment.heapSize();
+        newOffHeapSize = segment.offHeapSize();
+      }
+      long offHeapSizeDelta = suffixOffHeapSize - newOffHeapSize;
       long heapSizeDelta = suffixHeapSize - newHeapSize;
-      region.addMemStoreSize(new MemStoreSizing(-dataSizeDelta, -heapSizeDelta));
-      LOG.debug("Suffix data size={}, new segment data size={}, suffix heap size={}," +
-              "new segment heap size={}",
-          suffixDataSize,
-          newDataSize,
-          suffixHeapSize,
-          newHeapSize);
+      region.addMemStoreSize(new MemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta));
+      LOG.debug("Suffix data size={}, new segment data size={}, "
+              + "suffix heap size={}," + "new segment heap size={}"
+              + "suffix off heap size={}," + "new segment off heap size={}"
+          , suffixDataSize
+          , newDataSize
+          , suffixHeapSize
+          , newHeapSize
+          , suffixOffHeapSize
+          , newOffHeapSize);
     }
     return true;
   }
@@ -156,6 +165,14 @@ public class CompactionPipeline {
     long res = 0;
     for (Segment segment : list) {
       res += segment.heapSize();
+    }
+    return res;
+  }
+
+  private static long getSegmentsOffHeapSize(List<? extends Segment> list) {
+    long res = 0;
+    for (Segment segment : list) {
+      res += segment.offHeapSize();
     }
     return res;
   }
@@ -201,7 +218,8 @@ public class CompactionPipeline {
           if(region != null) {
             // update the global memstore size counter
             // upon flattening there is no change in the data size
-            region.addMemStoreSize(new MemStoreSize(0, newMemstoreAccounting.getHeapSize()));
+            region.addMemStoreSize(new MemStoreSize(0, newMemstoreAccounting.getHeapSize(),
+                newMemstoreAccounting.getOffHeapSize()));
           }
           LOG.debug("Compaction pipeline segment {} flattened", s);
           return true;
@@ -239,19 +257,16 @@ public class CompactionPipeline {
   public MemStoreSizing getTailSizing() {
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
     if (localCopy.isEmpty()) return new MemStoreSizing();
-    return new MemStoreSizing(localCopy.peekLast().keySize(), localCopy.peekLast().heapSize());
+    return new MemStoreSizing(localCopy.peekLast().getMemStoreSize());
   }
 
   public MemStoreSizing getPipelineSizing() {
-    long keySize = 0;
-    long heapSize = 0;
+    MemStoreSizing memStoreSizing = new MemStoreSizing();
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return new MemStoreSizing();
     for (Segment segment : localCopy) {
-      keySize += segment.keySize();
-      heapSize += segment.heapSize();
+      memStoreSizing.incMemStoreSize(segment.getMemStoreSize());
     }
-    return new MemStoreSizing(keySize, heapSize);
+    return memStoreSizing;
   }
 
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,

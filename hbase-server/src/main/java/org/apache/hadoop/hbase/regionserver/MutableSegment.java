@@ -44,7 +44,7 @@ public class MutableSegment extends Segment {
 
   protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
     super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
-    incSize(0,DEEP_OVERHEAD); // update the mutable segment metadata
+    incSize(0, DEEP_OVERHEAD, 0); // update the mutable segment metadata
   }
 
   /**
@@ -88,9 +88,10 @@ public class MutableSegment extends Segment {
             // removed cell is from MSLAB or not. Will do once HBASE-16438 is in
             int cellLen = getCellLength(cur);
             long heapSize = heapSizeChange(cur, true);
-            this.incSize(-cellLen, -heapSize);
+            long offHeapSize = offHeapSizeChange(cur, true);
+            this.incSize(-cellLen, -heapSize, -offHeapSize);
             if (memStoreSizing != null) {
-              memStoreSizing.decMemStoreSize(cellLen, heapSize);
+              memStoreSizing.decMemStoreSize(cellLen, heapSize, offHeapSize);
             }
             it.remove();
           } else {

@@ -43,7 +43,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   private long keySize = 0;
 
   public CompositeImmutableSegment(CellComparator comparator, List<ImmutableSegment> segments) {
-    super(comparator);
+    super(comparator, segments);
     this.segments = segments;
     for (ImmutableSegment s : segments) {
       this.timeRangeTracker.includeTimestamp(s.getTimeRangeTracker().getMax());
@@ -84,14 +84,6 @@ public class CompositeImmutableSegment extends ImmutableSegment {
       result += s.getCellsCount();
     }
     return result;
-  }
-
-  /**
-   * @return the first cell in the segment that has equal or greater key than the given cell
-   */
-  @Override
-  public Cell getFirstAfter(Cell cell) {
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   /**
@@ -206,7 +198,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * Updates the heap size counter of the segment by the given delta
    */
   @Override
-  protected void incSize(long delta, long heapOverhead) {
+  protected void incSize(long delta, long heapOverhead, long offHeapOverhead) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 

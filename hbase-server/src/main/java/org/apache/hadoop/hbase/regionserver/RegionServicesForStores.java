@@ -66,7 +66,7 @@ public class RegionServicesForStores {
   }
 
   public void addMemStoreSize(MemStoreSize size) {
-    region.addAndGetMemStoreSize(size);
+    region.incMemStoreSize(size);
   }
 
   public RegionInfo getRegionInfo() {
@@ -89,6 +89,6 @@ public class RegionServicesForStores {
 
   @VisibleForTesting
   long getMemStoreSize() {
-    return region.getMemStoreSize();
+    return region.getMemStoreDataSize();
   }
 }

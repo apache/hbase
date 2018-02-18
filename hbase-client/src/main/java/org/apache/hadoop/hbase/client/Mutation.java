@@ -488,7 +488,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
           size * ClassSize.REFERENCE);
 
       for(Cell cell : entry.getValue()) {
-        heapsize += PrivateCellUtil.estimatedHeapSizeOf(cell);
+        heapsize += PrivateCellUtil.estimatedSizeOfCell(cell);
       }
     }
     heapsize += getAttributeSize();

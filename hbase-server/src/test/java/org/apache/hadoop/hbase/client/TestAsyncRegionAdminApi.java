@@ -215,30 +215,30 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     ASYNC_CONN.getTable(tableName)
         .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1")))
         .join();
-    assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize() > 0);
+    assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize() > 0);
     // flush region and wait flush operation finished.
     LOG.info("flushing region: " + Bytes.toStringBinary(hri.getRegionName()));
     admin.flushRegion(hri.getRegionName()).get();
     LOG.info("blocking until flush is complete: " + Bytes.toStringBinary(hri.getRegionName()));
     Threads.sleepWithoutInterrupt(500);
-    while (regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize() > 0) {
+    while (regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize() > 0) {
       Threads.sleep(50);
     }
     // check the memstore.
-    assertEquals(0, regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize());
+    assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize(), 0);
 
     // write another put into the specific region
     ASYNC_CONN.getTable(tableName)
         .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2")))
         .join();
-    assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize() > 0);
+    assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize() > 0);
     admin.flush(tableName).get();
     Threads.sleepWithoutInterrupt(500);
-    while (regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize() > 0) {
+    while (regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize() > 0) {
       Threads.sleep(50);
     }
     // check the memstore.
-    assertEquals(0, regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreSize());
+    assertEquals(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize(), 0);
   }
 
   private void waitUntilMobCompactionFinished(TableName tableName)

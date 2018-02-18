@@ -31,17 +31,17 @@ import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * RegionServerAccounting keeps record of some basic real time information about
- * the Region Server. Currently, it keeps record the global memstore size and global memstore heap
- * overhead. It also tracks the replay edits per region.
+ * the Region Server. Currently, it keeps record the global memstore size and global memstore
+ * on-heap and off-heap overhead. It also tracks the replay edits per region.
  */
 @InterfaceAudience.Private
 public class RegionServerAccounting {
   // memstore data size
-  private final LongAdder globalMemstoreDataSize = new LongAdder();
-  // memstore heap size. When off heap MSLAB in place, this will be only heap overhead of the Cell
-  // POJOs and entry overhead of them onto memstore. When on heap MSLAB, this will be include heap
-  // overhead as well as the cell data size. Ya cell data is in on heap area only then.
-  private final LongAdder globalMemstoreHeapSize = new LongAdder();
+  private final LongAdder globalMemStoreDataSize = new LongAdder();
+  // memstore heap size.
+  private final LongAdder globalMemStoreHeapSize = new LongAdder();
+  // memstore off-heap size.
+  private final LongAdder globalMemStoreOffHeapSize = new LongAdder();
 
   // Store the edits size during replaying WAL. Use this to roll back the
   // global memstore size once a region opening failed.
@@ -114,14 +114,21 @@ public class RegionServerAccounting {
    * @return the global Memstore data size in the RegionServer
    */
   public long getGlobalMemStoreDataSize() {
-    return globalMemstoreDataSize.sum();
+    return globalMemStoreDataSize.sum();
   }
 
   /**
    * @return the global memstore heap size in the RegionServer
    */
   public long getGlobalMemStoreHeapSize() {
-    return this.globalMemstoreHeapSize.sum();
+    return this.globalMemStoreHeapSize.sum();
+  }
+
+  /**
+   * @return the global memstore heap size in the RegionServer
+   */
+  public long getGlobalMemStoreOffHeapSize() {
+    return this.globalMemStoreOffHeapSize.sum();
   }
 
   /**
@@ -129,13 +136,15 @@ public class RegionServerAccounting {
    *        the global Memstore size
    */
   public void incGlobalMemStoreSize(MemStoreSize memStoreSize) {
-    globalMemstoreDataSize.add(memStoreSize.getDataSize());
-    globalMemstoreHeapSize.add(memStoreSize.getHeapSize());
+    globalMemStoreDataSize.add(memStoreSize.getDataSize());
+    globalMemStoreHeapSize.add(memStoreSize.getHeapSize());
+    globalMemStoreOffHeapSize.add(memStoreSize.getOffHeapSize());
   }
 
   public void decGlobalMemStoreSize(MemStoreSize memStoreSize) {
-    globalMemstoreDataSize.add(-memStoreSize.getDataSize());
-    globalMemstoreHeapSize.add(-memStoreSize.getHeapSize());
+    globalMemStoreDataSize.add(-memStoreSize.getDataSize());
+    globalMemStoreHeapSize.add(-memStoreSize.getHeapSize());
+    globalMemStoreOffHeapSize.add(-memStoreSize.getOffHeapSize());
   }
 
   /**
@@ -151,13 +160,13 @@ public class RegionServerAccounting {
       }
     } else {
       // If the configured memstore is offheap, check for two things
-      // 1) If the global memstore data size is greater than the configured
+      // 1) If the global memstore off-heap size is greater than the configured
       // 'hbase.regionserver.offheap.global.memstore.size'
       // 2) If the global memstore heap size is greater than the configured onheap
       // global memstore limit 'hbase.regionserver.global.memstore.size'.
       // We do this to avoid OOME incase of scenarios where the heap is occupied with
       // lot of onheap references to the cells in memstore
-      if (getGlobalMemStoreDataSize() >= globalMemStoreLimit) {
+      if (getGlobalMemStoreOffHeapSize() >= globalMemStoreLimit) {
         // Indicates that global memstore size is above the configured
         // 'hbase.regionserver.offheap.global.memstore.size'
         return FlushType.ABOVE_OFFHEAP_HIGHER_MARK;
@@ -181,8 +190,8 @@ public class RegionServerAccounting {
         return FlushType.ABOVE_ONHEAP_LOWER_MARK;
       }
     } else {
-      if (getGlobalMemStoreDataSize() >= globalMemStoreLimitLowMark) {
-        // Indicates that the offheap memstore's data size is greater than the global memstore
+      if (getGlobalMemStoreOffHeapSize() >= globalMemStoreLimitLowMark) {
+        // Indicates that the offheap memstore's size is greater than the global memstore
         // lower limit
         return FlushType.ABOVE_OFFHEAP_LOWER_MARK;
       } else if (getGlobalMemStoreHeapSize() >= globalOnHeapMemstoreLimitLowMark) {
@@ -203,7 +212,7 @@ public class RegionServerAccounting {
     if (memType == MemoryType.HEAP) {
       return (getGlobalMemStoreHeapSize()) * 1.0 / globalMemStoreLimitLowMark;
     } else {
-      return Math.max(getGlobalMemStoreDataSize() * 1.0 / globalMemStoreLimitLowMark,
+      return Math.max(getGlobalMemStoreOffHeapSize() * 1.0 / globalMemStoreLimitLowMark,
           getGlobalMemStoreHeapSize() * 1.0 / globalOnHeapMemstoreLimitLowMark);
     }
   }

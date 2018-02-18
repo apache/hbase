@@ -600,7 +600,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
             // Update the progress of the scanner context
             scannerContext.incrementSizeProgress(cellSize,
-              PrivateCellUtil.estimatedHeapSizeOf(cell));
+              PrivateCellUtil.estimatedSizeOfCell(cell));
             scannerContext.incrementBatchProgress(1);
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {

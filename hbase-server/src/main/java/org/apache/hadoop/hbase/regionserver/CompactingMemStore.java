@@ -157,9 +157,9 @@ public class CompactingMemStore extends AbstractMemStore {
   @Override
   public MemStoreSize size() {
     MemStoreSizing memstoreSizing = new MemStoreSizing();
-    memstoreSizing.incMemStoreSize(this.active.keySize(), this.active.heapSize());
+    memstoreSizing.incMemStoreSize(active.getMemStoreSize());
     for (Segment item : pipeline.getSegments()) {
-      memstoreSizing.incMemStoreSize(item.keySize(), item.heapSize());
+      memstoreSizing.incMemStoreSize(item.getMemStoreSize());
     }
     return memstoreSizing;
   }
@@ -231,13 +231,13 @@ public class CompactingMemStore extends AbstractMemStore {
       // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
       if (compositeSnapshot) {
         snapshotSizing = pipeline.getPipelineSizing();
-        snapshotSizing.incMemStoreSize(this.active.keySize(), this.active.heapSize());
+        snapshotSizing.incMemStoreSize(active.getMemStoreSize());
       } else {
         snapshotSizing = pipeline.getTailSizing();
       }
     }
     return snapshotSizing.getDataSize() > 0 ? snapshotSizing
-        : new MemStoreSize(this.active.keySize(), this.active.heapSize());
+        : new MemStoreSize(active.getMemStoreSize());
   }
 
   @Override

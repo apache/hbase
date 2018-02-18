@@ -133,4 +133,16 @@ public class ImmutableMemStoreLAB implements MemStoreLAB {
       checkAndCloseMSLABs(count);
     }
   }
+
+  @Override
+  public boolean isOnHeap() {
+    return !isOffHeap();
+  }
+
+  @Override
+  public boolean isOffHeap() {
+    return ChunkCreator.getInstance().isOffheap();
+  }
+
+
 }

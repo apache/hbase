@@ -93,7 +93,7 @@ public class TestFlushFromClient {
       t.put(puts);
     }
     assertFalse(getRegionInfo().isEmpty());
-    assertTrue(getRegionInfo().stream().allMatch(r -> r.getMemStoreSize() != 0));
+    assertTrue(getRegionInfo().stream().allMatch(r -> r.getMemStoreDataSize() != 0));
   }
 
   @After
@@ -108,7 +108,7 @@ public class TestFlushFromClient {
   public void testFlushTable() throws Exception {
     try (Admin admin = TEST_UTIL.getAdmin()) {
       admin.flush(tableName);
-      assertFalse(getRegionInfo().stream().anyMatch(r -> r.getMemStoreSize() != 0));
+      assertFalse(getRegionInfo().stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
     }
   }
 
@@ -116,7 +116,7 @@ public class TestFlushFromClient {
   public void testAsyncFlushTable() throws Exception {
     AsyncAdmin admin = asyncConn.getAdmin();
     admin.flush(tableName).get();
-    assertFalse(getRegionInfo().stream().anyMatch(r -> r.getMemStoreSize() != 0));
+    assertFalse(getRegionInfo().stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
   }
 
   @Test
@@ -125,7 +125,7 @@ public class TestFlushFromClient {
       for (HRegion r : getRegionInfo()) {
         admin.flushRegion(r.getRegionInfo().getRegionName());
         TimeUnit.SECONDS.sleep(1);
-        assertEquals(0, r.getMemStoreSize());
+        assertEquals(0, r.getMemStoreDataSize());
       }
     }
   }
@@ -136,7 +136,7 @@ public class TestFlushFromClient {
     for (HRegion r : getRegionInfo()) {
       admin.flushRegion(r.getRegionInfo().getRegionName()).get();
       TimeUnit.SECONDS.sleep(1);
-      assertEquals(0, r.getMemStoreSize());
+      assertEquals(0, r.getMemStoreDataSize());
     }
   }
 
@@ -148,7 +148,7 @@ public class TestFlushFromClient {
             .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
             .collect(Collectors.toList())) {
         admin.flushRegionServer(rs.getServerName());
-        assertFalse(getRegionInfo(rs).stream().anyMatch(r -> r.getMemStoreSize() != 0));
+        assertFalse(getRegionInfo(rs).stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
       }
     }
   }
@@ -161,7 +161,7 @@ public class TestFlushFromClient {
       .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
       .collect(Collectors.toList())) {
       admin.flushRegionServer(rs.getServerName()).get();
-      assertFalse(getRegionInfo(rs).stream().anyMatch(r -> r.getMemStoreSize() != 0));
+      assertFalse(getRegionInfo(rs).stream().anyMatch(r -> r.getMemStoreDataSize() != 0));
     }
   }
 

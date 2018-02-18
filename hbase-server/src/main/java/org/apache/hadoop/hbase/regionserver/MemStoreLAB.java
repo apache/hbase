@@ -114,7 +114,7 @@ public interface MemStoreLAB {
   */
   Chunk getNewExternalJumboChunk(int size);
 
-  public static MemStoreLAB newInstance(Configuration conf) {
+  static MemStoreLAB newInstance(Configuration conf) {
     MemStoreLAB memStoreLAB = null;
     if (isEnabled(conf)) {
       String className = conf.get(MSLAB_CLASS_NAME, MemStoreLABImpl.class.getName());
@@ -124,7 +124,11 @@ public interface MemStoreLAB {
     return memStoreLAB;
   }
 
-  public static boolean isEnabled(Configuration conf) {
+  static boolean isEnabled(Configuration conf) {
     return conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT);
   }
+
+  boolean isOnHeap();
+
+  boolean isOffHeap();
 }
