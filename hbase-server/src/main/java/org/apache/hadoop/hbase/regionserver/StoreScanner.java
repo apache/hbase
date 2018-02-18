@@ -847,7 +847,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // these scanners are properly closed() whether or not the scan is completed successfully
       // Eagerly creating scanners so that we have the ref counting ticking on the newly created
       // store files. In case of stream scanners this eager creation does not induce performance
-      // penalty because in scans (that uses stream scanners) the next() call is bound to happen.   
+      // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
       List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
         isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false);
       flushedstoreFileScanners.addAll(scanners);
