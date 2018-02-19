@@ -1221,11 +1221,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     configurationManager.registerObserver(procEnv);
 
     int cpus = Runtime.getRuntime().availableProcessors();
-    final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
-        Math.max((cpus > 0? cpus/4: 0),
-            MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
-    final boolean abortOnCorruption = conf.getBoolean(
-        MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
+    final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, Math.max(
+      (cpus > 0 ? cpus / 4 : 0), MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
+    final boolean abortOnCorruption =
+      conf.getBoolean(MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
     procedureStore.start(numThreads);
     procedureExecutor.start(numThreads, abortOnCorruption);
@@ -3556,7 +3555,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public boolean recoverMeta() throws IOException {
     ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
     LOG.info("Running RecoverMetaProcedure to ensure proper hbase:meta deploy.");
-    long procId = procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
+    procedureExecutor.submitProcedure(new RecoverMetaProcedure(null, true, latch));
     latch.await();
     LOG.info("hbase:meta deployed at=" +
         getMetaTableLocator().getMetaRegionLocation(getZooKeeper()));
