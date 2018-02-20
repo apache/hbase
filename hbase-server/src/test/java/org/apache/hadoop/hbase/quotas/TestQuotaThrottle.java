@@ -41,11 +41,13 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Ignore // Disabled because flakey. Fails ~30% on a resource constrained GCE though not on Apache.
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestQuotaThrottle {
 
