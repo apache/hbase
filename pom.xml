@@ -3401,6 +3401,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.9</version>
         <reportSets>
           <reportSet>
             <reports>
@@ -3430,6 +3431,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.0.0</version>
         <reportSets>
           <!-- Dev API -->
           <reportSet>
@@ -3635,6 +3637,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${maven.checkstyle.version}</version>
         <configuration>
           <excludes>target/**</excludes>
         </configuration>
@@ -3643,6 +3646,7 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+        <version>2.15.2</version>
       </plugin>
     </plugins>
   </reporting>
