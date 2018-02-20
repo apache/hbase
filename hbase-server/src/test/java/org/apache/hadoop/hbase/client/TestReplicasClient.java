@@ -61,6 +61,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -616,6 +617,7 @@ public class TestReplicasClient {
     }
   }
 
+  @Ignore // Disabled because it is flakey. Fails 17% on constrained GCE. %3 on Apache.
   @Test
   public void testCancelOfMultiGet() throws Exception {
     openRegion(hriSecondary);
