@@ -659,6 +659,81 @@ public class TableAuthManager implements Closeable {
     tableCache.remove(table);
   }
 
+  /**
+   * Overwrites the existing permission set for a given user for a table, and
+   * triggers an update for zookeeper synchronization.
+   * @param username
+   * @param table
+   * @param perms
+   */
+  public void setTableUserPermissions(String username, TableName table,
+      List<TablePermission> perms) {
+    PermissionCache<TablePermission> tablePerms = getTablePermissions(table);
+    tablePerms.replaceUser(username, perms);
+    writeTableToZooKeeper(table, tablePerms);
+  }
+
+  /**
+   * Overwrites the existing permission set for a group and triggers an update
+   * for zookeeper synchronization.
+   * @param group
+   * @param table
+   * @param perms
+   */
+  public void setTableGroupPermissions(String group, TableName table,
+      List<TablePermission> perms) {
+    PermissionCache<TablePermission> tablePerms = getTablePermissions(table);
+    tablePerms.replaceGroup(group, perms);
+    writeTableToZooKeeper(table, tablePerms);
+  }
+
+  /**
+   * Overwrites the existing permission set for a given user for a table, and
+   * triggers an update for zookeeper synchronization.
+   * @param username
+   * @param namespace
+   * @param perms
+   */
+  public void setNamespaceUserPermissions(String username, String namespace,
+      List<TablePermission> perms) {
+    PermissionCache<TablePermission> tablePerms = getNamespacePermissions(namespace);
+    tablePerms.replaceUser(username, perms);
+    writeNamespaceToZooKeeper(namespace, tablePerms);
+  }
+
+  /**
+   * Overwrites the existing permission set for a group and triggers an update
+   * for zookeeper synchronization.
+   * @param group
+   * @param namespace
+   * @param perms
+   */
+  public void setNamespaceGroupPermissions(String group, String namespace,
+      List<TablePermission> perms) {
+    PermissionCache<TablePermission> tablePerms = getNamespacePermissions(namespace);
+    tablePerms.replaceGroup(group, perms);
+    writeNamespaceToZooKeeper(namespace, tablePerms);
+  }
+
+  public void writeTableToZooKeeper(TableName table,
+      PermissionCache<TablePermission> tablePerms) {
+    byte[] serialized = new byte[0];
+    if (tablePerms != null) {
+      serialized = AccessControlLists.writePermissionsAsBytes(tablePerms.getAllPermissions(), conf);
+    }
+    zkperms.writeToZookeeper(table.getName(), serialized);
+  }
+
+  public void writeNamespaceToZooKeeper(String namespace,
+      PermissionCache<TablePermission> tablePerms) {
+    byte[] serialized = new byte[0];
+    if (tablePerms != null) {
+      serialized = AccessControlLists.writePermissionsAsBytes(tablePerms.getAllPermissions(), conf);
+    }
+    zkperms.writeToZookeeper(Bytes.toBytes(AccessControlLists.toNamespaceEntry(namespace)),
+        serialized);
+  }
+
   public long getMTime() {
     return mtime.get();
   }
