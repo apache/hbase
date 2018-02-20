@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -29,23 +27,18 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test all client operations with a coprocessor that
- * just implements the default flush/compact/scan policy.
+ * Test all client operations with a coprocessor that just implements the default flush/compact/scan
+ * policy.
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
+    HBaseClassTestRule.forClass(TestFromClientSideWithCoprocessor.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MultiRowMutationEndpoint.class.getName(), NoOpScanPolicyObserver.class.getName());
-    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
-    // We need more than one region server in this test
-    TEST_UTIL.startMiniCluster(SLAVES);
+    initialize(MultiRowMutationEndpoint.class, NoOpScanPolicyObserver.class);
   }
 }
