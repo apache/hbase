@@ -401,7 +401,7 @@ public class MasterProcedureTestingUtility {
    * idempotent. Use this version of the test when the order in which flow steps are executed is
    * not start to finish; where the procedure may vary the flow steps dependent on circumstance
    * found.
-   * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long, int)
+   * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long, int, boolean)
    */
   public static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId) throws Exception {

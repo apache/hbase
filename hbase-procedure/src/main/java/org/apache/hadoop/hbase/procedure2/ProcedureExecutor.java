@@ -931,18 +931,18 @@ public class ProcedureExecutor<TEnvironment> {
    * Send an abort notification the specified procedure.
    * Depending on the procedure implementation the abort can be considered or ignored.
    * @param procId the procedure to abort
-   * @return true if the procedure exist and has received the abort, otherwise false.
+   * @return true if the procedure exists and has received the abort, otherwise false.
    */
   public boolean abort(final long procId) {
     return abort(procId, true);
   }
 
   /**
-   * Send an abort notification the specified procedure.
-   * Depending on the procedure implementation the abort can be considered or ignored.
+   * Send an abort notification to the specified procedure.
+   * Depending on the procedure implementation, the abort can be considered or ignored.
    * @param procId the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
-   * @return true if the procedure exist and has received the abort, otherwise false.
+   * @return true if the procedure exists and has received the abort, otherwise false.
    */
   public boolean abort(final long procId, final boolean mayInterruptIfRunning) {
     final Procedure proc = procedures.get(procId);

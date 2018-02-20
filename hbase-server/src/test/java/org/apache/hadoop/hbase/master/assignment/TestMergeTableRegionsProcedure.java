@@ -276,7 +276,7 @@ public class TestMergeTableRegionsProcedure {
 
   @Test
   public void testMergeWithoutPONR() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
+    final TableName tableName = TableName.valueOf("testMergeWithoutPONR");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     List<RegionInfo> tableRegions = createTable(tableName);
