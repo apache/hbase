@@ -209,18 +209,13 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   @Override
   protected boolean abort(final TEnvironment env) {
-    final boolean isDebugEnabled = LOG.isDebugEnabled();
     final TState state = getCurrentState();
-    if (isDebugEnabled) {
-      LOG.debug("abort requested for " + this + " state=" + state);
-    }
-
+    LOG.debug("Abort requested for {}", this);
     if (hasMoreState()) {
       aborted.set(true);
       return true;
-    } else if (isDebugEnabled) {
-      LOG.debug("ignoring abort request on state=" + state + " for " + this);
     }
+    LOG.debug("Ignoring abort request on {}", this);
     return false;
   }
 

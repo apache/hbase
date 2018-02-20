@@ -262,14 +262,13 @@ public class SplitTableRegionProcedure
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
     } catch (IOException e) {
-      String msg = "Error trying to split region " + getParentRegion().getEncodedName() + " in the table "
-          + getTableName() + " (in state=" + state + ")";
+      String msg = "Error trying to split region " + getParentRegion().getEncodedName() +
+          " in the table " + getTableName() + " (in state=" + state + ")";
       if (!isRollbackSupported(state)) {
         // We reach a state that cannot be rolled back. We just need to keep retry.
         LOG.warn(msg, e);
       } else {
         LOG.error(msg, e);
-        setFailure(e);
         setFailure("master-split-regions", e);
       }
     }
@@ -830,5 +829,13 @@ public class SplitTableRegionProcedure
       traceEnabled = LOG.isTraceEnabled();
     }
     return traceEnabled;
+  }
+
+  @Override
+  protected boolean abort(MasterProcedureEnv env) {
+    // Abort means rollback. We can't rollback all steps. HBASE-18018 added abort to all
+    // Procedures. Here is a Procedure that has a PONR and cannot be aborted wants it enters this
+    // range of steps; what do we do for these should an operator want to cancel them? HBASE-20022.
+    return isRollbackSupported(getCurrentState())? super.abort(env): false;
   }
 }
