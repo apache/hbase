@@ -162,10 +162,7 @@ public class HTable implements Table {
       final RpcRetryingCallerFactory rpcCallerFactory,
       final RpcControllerFactory rpcControllerFactory,
       final ExecutorService pool) {
-    if (connection == null || connection.isClosed()) {
-      throw new IllegalArgumentException("Connection is null or closed.");
-    }
-    this.connection = connection;
+    this.connection = Preconditions.checkNotNull(connection, "connection is null");
     this.configuration = connection.getConfiguration();
     this.connConfiguration = connection.getConnectionConfiguration();
     if (pool == null) {

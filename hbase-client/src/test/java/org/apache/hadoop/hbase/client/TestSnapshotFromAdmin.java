@@ -92,7 +92,7 @@ public class TestSnapshotFromAdmin {
     // mock the master admin to our mock
     MasterKeepAliveConnection mockMaster = Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
-    Mockito.when(mockConnection.getKeepAliveMasterService()).thenReturn(mockMaster);
+    Mockito.when(mockConnection.getMaster()).thenReturn(mockMaster);
     // we need a real retrying caller
     RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
     RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
@@ -163,7 +163,7 @@ public class TestSnapshotFromAdmin {
 
     // mock the master connection
     MasterKeepAliveConnection master = Mockito.mock(MasterKeepAliveConnection.class);
-    Mockito.when(mockConnection.getKeepAliveMasterService()).thenReturn(master);
+    Mockito.when(mockConnection.getMaster()).thenReturn(master);
     SnapshotResponse response = SnapshotResponse.newBuilder().setExpectedTimeout(0).build();
     Mockito.when(
       master.snapshot((RpcController) Mockito.any(), Mockito.any()))

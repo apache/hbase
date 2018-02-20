@@ -31,12 +31,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -51,9 +49,11 @@ import org.apache.hadoop.net.DNS;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -155,11 +155,11 @@ public final class ConnectionUtils {
     }
 
     @Override
-    public MasterKeepAliveConnection getKeepAliveMasterService() throws MasterNotRunningException {
+    public MasterKeepAliveConnection getMaster() throws IOException {
       if (this.localHostClient instanceof MasterService.BlockingInterface) {
         return new ShortCircuitMasterConnection((MasterService.BlockingInterface)this.localHostClient);
       }
-      return super.getKeepAliveMasterService();
+      return super.getMaster();
     }
   }
 
