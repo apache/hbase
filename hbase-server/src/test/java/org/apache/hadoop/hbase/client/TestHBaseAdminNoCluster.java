@@ -102,7 +102,7 @@ public class TestHBaseAdminNoCluster {
     Mockito.when(masterAdmin.createTable((RpcController)Mockito.any(),
       (CreateTableRequest)Mockito.any())).
         thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
-    Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
+    Mockito.when(connection.getMaster()).thenReturn(masterAdmin);
     Admin admin = new HBaseAdmin(connection);
     try {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
@@ -304,7 +304,7 @@ public class TestHBaseAdminNoCluster {
             throw new MasterNotRunningException(); // all methods will throw an exception
           }
         });
-    Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
+    Mockito.when(connection.getMaster()).thenReturn(masterAdmin);
     RpcControllerFactory rpcControllerFactory = Mockito.mock(RpcControllerFactory.class);
     Mockito.when(connection.getRpcControllerFactory()).thenReturn(rpcControllerFactory);
     Mockito.when(rpcControllerFactory.newController()).thenReturn(

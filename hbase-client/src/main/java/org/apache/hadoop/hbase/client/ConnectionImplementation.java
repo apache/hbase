@@ -538,6 +538,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return this.conf;
   }
 
+  private void checkClosed() throws DoNotRetryIOException {
+    if (this.closed) {
+      throw new DoNotRetryIOException(toString() + " closed");
+    }
+  }
+
   /**
    * @return true if the master is running, throws an exception otherwise
    * @throws org.apache.hadoop.hbase.MasterNotRunningException - if the master is not running
@@ -545,21 +551,24 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    */
   @Deprecated
   @Override
-  public boolean isMasterRunning()
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+  public boolean isMasterRunning() throws MasterNotRunningException, ZooKeeperConnectionException {
     // When getting the master connection, we check it's running,
     // so if there is no exception, it means we've been able to get a
     // connection on a running master
-    MasterKeepAliveConnection m = getKeepAliveMasterService();
+    MasterKeepAliveConnection m;
+    try {
+      m = getKeepAliveMasterService();
+    } catch (IOException e) {
+      throw new MasterNotRunningException(e);
+    }
     m.close();
     return true;
   }
 
   @Override
-  public HRegionLocation getRegionLocation(final TableName tableName,
-      final byte [] row, boolean reload)
-  throws IOException {
-    return reload? relocateRegion(tableName, row): locateRegion(tableName, row);
+  public HRegionLocation getRegionLocation(final TableName tableName, final byte[] row,
+      boolean reload) throws IOException {
+    return reload ? relocateRegion(tableName, row) : locateRegion(tableName, row);
   }
 
 
@@ -576,9 +585,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
       throws IOException {
-    if (this.closed) {
-      throw new IOException(toString() + " closed");
-    }
+    checkClosed();
     try {
       if (!isTableEnabled(tableName)) {
         LOG.debug("Table " + tableName + " not enabled");
@@ -641,8 +648,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return locations == null ? null : locations.getRegionLocation();
   }
 
-  @Override
-  public boolean isDeadServer(ServerName sn) {
+  private boolean isDeadServer(ServerName sn) {
     if (clusterStatusListener == null) {
       return false;
     } else {
@@ -679,19 +685,19 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public HRegionLocation locateRegion(
-      final TableName tableName, final byte[] row) throws IOException{
+  public HRegionLocation locateRegion(final TableName tableName, final byte[] row)
+      throws IOException {
     RegionLocations locations = locateRegion(tableName, row, true, true);
     return locations == null ? null : locations.getRegionLocation();
   }
 
   @Override
-  public HRegionLocation relocateRegion(final TableName tableName,
-      final byte [] row) throws IOException{
-    RegionLocations locations =  relocateRegion(tableName, row,
-      RegionReplicaUtil.DEFAULT_REPLICA_ID);
-    return locations == null ? null :
-      locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+  public HRegionLocation relocateRegion(final TableName tableName, final byte[] row)
+      throws IOException {
+    RegionLocations locations =
+      relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    return locations == null ? null
+      : locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
   @Override
@@ -708,22 +714,17 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   @Override
-  public RegionLocations locateRegion(final TableName tableName,
-    final byte [] row, boolean useCache, boolean retry)
-  throws IOException {
+  public RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
+      boolean retry) throws IOException {
     return locateRegion(tableName, row, useCache, retry, RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
   @Override
-  public RegionLocations locateRegion(final TableName tableName,
-    final byte [] row, boolean useCache, boolean retry, int replicaId)
-  throws IOException {
-    if (this.closed) {
-      throw new DoNotRetryIOException(toString() + " closed");
-    }
-    if (tableName== null || tableName.getName().length == 0) {
-      throw new IllegalArgumentException(
-          "table name cannot be null or zero length");
+  public RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
+      boolean retry, int replicaId) throws IOException {
+    checkClosed();
+    if (tableName == null || tableName.getName().length == 0) {
+      throw new IllegalArgumentException("table name cannot be null or zero length");
     }
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       return locateMeta(tableName, useCache, replicaId);
@@ -1170,6 +1171,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public AdminProtos.AdminService.BlockingInterface getAdmin(ServerName serverName)
       throws IOException {
+    checkClosed();
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
@@ -1184,6 +1186,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public BlockingInterface getClient(ServerName serverName) throws IOException {
+    checkClosed();
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
@@ -1199,7 +1202,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   final MasterServiceState masterServiceState = new MasterServiceState(this);
 
   @Override
-  public MasterProtos.MasterService.BlockingInterface getMaster() throws MasterNotRunningException {
+  public MasterKeepAliveConnection getMaster() throws IOException {
     return getKeepAliveMasterService();
   }
 
@@ -1207,20 +1210,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     mss.userCount++;
   }
 
-  @Override
-  public MasterKeepAliveConnection getKeepAliveMasterService()
-  throws MasterNotRunningException {
+  private MasterKeepAliveConnection getKeepAliveMasterService() throws IOException {
     synchronized (masterLock) {
       if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
         MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
-        try {
-          this.masterServiceState.stub = stubMaker.makeStub();
-        } catch (MasterNotRunningException ex) {
-          throw ex;
-        } catch (IOException e) {
-          // rethrow as MasterNotRunningException so that we can keep the method sig
-          throw new MasterNotRunningException(e);
-        }
+        this.masterServiceState.stub = stubMaker.makeStub();
       }
       resetMasterServiceState(this.masterServiceState);
     }
@@ -1955,9 +1949,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public TableState getTableState(TableName tableName) throws IOException {
-    if (this.closed) {
-      throw new IOException(toString() + " closed");
-    }
+    checkClosed();
     TableState tableState = MetaTableAccessor.getTableState(this, tableName);
     if (tableState == null) {
       throw new TableNotFoundException(tableName);
