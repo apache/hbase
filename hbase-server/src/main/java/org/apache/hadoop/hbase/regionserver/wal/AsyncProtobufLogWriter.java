@@ -108,6 +108,15 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     this.channelClass = channelClass;
   }
 
+  /*
+   * @return class name which is recognized by hbase-1.x to avoid ProtobufLogReader throwing error:
+   *   IOException: Got unknown writer class: AsyncProtobufLogWriter
+   */
+  @Override
+  protected String getWriterClassName() {
+    return "ProtobufLogWriter";
+  }
+
   @Override
   public void append(Entry entry) {
     int buffered = output.buffered();
