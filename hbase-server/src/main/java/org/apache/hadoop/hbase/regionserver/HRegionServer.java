@@ -1623,7 +1623,7 @@ public class HRegionServer extends HasThread implements
       storefileIndexSizeKB += store.getStorefilesRootLevelIndexSize() / 1024;
       CompactionProgress progress = store.getCompactionProgress();
       if (progress != null) {
-        totalCompactingKVs += progress.totalCompactingKVs;
+        totalCompactingKVs += progress.getTotalCompactingKVs();
         currentCompactedKVs += progress.currentCompactedKVs;
       }
       rootLevelIndexSizeKB += (int) (store.getStorefilesRootLevelIndexSize() / 1024);
