@@ -221,7 +221,7 @@ public class TestMajorCompaction {
       if( progress != null ) {
         ++storeCount;
         assertTrue(progress.currentCompactedKVs > 0);
-        assertTrue(progress.totalCompactingKVs > 0);
+        assertTrue(progress.getTotalCompactingKVs() > 0);
       }
       assertTrue(storeCount > 0);
     }
