@@ -19,17 +19,21 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
+import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -239,4 +243,23 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    * @return True if cluster is up; false if cluster is not up (we are shutting down).
    */
   boolean isClusterUp();
+
+  /**
+   * Reports the provided Region sizes hosted by this RegionServer to the active Master.
+   *
+   * @param sizeStore The sizes for Regions locally hosted.
+   * @return {@code false} if reporting should be temporarily paused, {@code true} otherwise.
+   */
+  boolean reportRegionSizesForQuotas(RegionSizeStore sizeStore);
+
+  /**
+   * Reports a collection of files, and their sizes, that belonged to the given {@code table} were
+   * just moved to the archive directory.
+   *
+   * @param tableName The name of the table that files previously belonged to
+   * @param archivedFiles Files and their sizes that were moved to archive
+   * @return {@code true} if the files were successfully reported, {@code false} otherwise.
+   */
+  boolean reportFileArchivalForQuotas(
+      TableName tableName, Collection<Entry<String,Long>> archivedFiles);
 }
