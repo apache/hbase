@@ -38,6 +38,14 @@ public class SecureAsyncProtobufLogWriter extends AsyncProtobufLogWriter {
     super(eventLoopGroup, channelClass);
   }
 
+  /*
+   * @return class name which is recognized by hbase-1.x to avoid ProtobufLogReader throwing error:
+   *   IOException: Got unknown writer class: SecureAsyncProtobufLogWriter
+   */
+  @Override
+  protected String getWriterClassName() {
+    return "SecureProtobufLogWriter";
+  }
   @Override
   protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
       throws IOException {
