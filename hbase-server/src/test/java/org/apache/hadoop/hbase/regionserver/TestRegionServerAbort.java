@@ -144,21 +144,10 @@ public class TestRegionServerAbort {
     put.addColumn(FAMILY_BYTES, Bytes.toBytes("c"), new byte[]{});
     put.setAttribute(StopBlockingRegionObserver.DO_ABORT, new byte[]{1});
 
-    table.put(put);
-    // should have triggered an abort due to FileNotFoundException
-
-    // verify that the regionserver is stopped
-    List<HRegion> regions = null;
-    do {
-      regions = cluster.findRegionsForTable(tableName);
-      if (regions != null && regions.size() > 0) {
-        break;
-      }
-      LOG.warn("Waiting on regions for {} to online");
-      Threads.sleep(100);
-    } while(true);
-
+    List<HRegion> regions = cluster.findRegionsForTable(tableName);
     HRegion firstRegion = cluster.findRegionsForTable(tableName).get(0);
+    table.put(put);
+    // Verify that the regionserver is stopped
     assertNotNull(firstRegion);
     assertNotNull(firstRegion.getRegionServerServices());
     LOG.info("isAborted = " + firstRegion.getRegionServerServices().isAborted());
