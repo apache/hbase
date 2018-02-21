@@ -1,9 +1,10 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.4.2 2/23/2018
+Release Notes - HBase - Version 1.4.2 2/28/2018
 
 ** Sub-task
     * [HBASE-19877] - hbase-common and hbase-zookeeper don't add the log4j.properties to the resource path for testing
+    * [HBASE-20008] - [backport] NullPointerException when restoring a snapshot after splitting a region
 
 ** Bug
     * [HBASE-18282] - ReplicationLogCleaner can delete WALs not yet replicated in case of a KeeperException
@@ -20,11 +21,14 @@ Release Notes - HBase - Version 1.4.2 2/23/2018
     * [HBASE-19979] - ReplicationSyncUp tool may leak Zookeeper connection
     * [HBASE-19981] - Boolean#getBoolean is used to parse value
     * [HBASE-19996] - Some nonce procs might not be cleaned up (follow up HBASE-19756)
+    * [HBASE-20017] - BufferedMutatorImpl submit the same mutation repeatedly
+    * [HBASE-20027] - Add test TestClusterPortAssignment
 
 ** New Feature
     * [HBASE-19886] - Display maintenance mode in shell, web UI
 
 ** Improvement
+    * [HBASE-19770] - Add '--return-values' option to Shell to print return values of commands in interactive mode
     * [HBASE-19917] - Improve RSGroupBasedLoadBalancer#filterServers() to be more efficient
 
 ** Test
