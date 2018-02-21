@@ -23,9 +23,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
@@ -52,17 +49,13 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -247,9 +240,9 @@ public class TestSpaceQuotas {
     TableName tableName = writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, p);
 
     // The table is now in violation. Try to do a bulk load
-    ClientServiceCallable<Void> callable = generateFileToLoad(tableName, 1, 50);
+    ClientServiceCallable<Boolean> callable = helper.generateFileToLoad(tableName, 1, 50);
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
-    RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
+    RpcRetryingCaller<Boolean> caller = factory.newCaller();
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
       fail("Expected the bulk load call to fail!");
@@ -298,7 +291,7 @@ public class TestSpaceQuotas {
         enforcement instanceof DefaultViolationPolicyEnforcement);
 
     // Should generate two files, each of which is over 25KB each
-    ClientServiceCallable<Void> callable = generateFileToLoad(tn, 2, 500);
+    ClientServiceCallable<Boolean> callable = helper.generateFileToLoad(tn, 2, 525);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     FileStatus[] files = fs.listStatus(
         new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
@@ -311,7 +304,7 @@ public class TestSpaceQuotas {
     }
 
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
-    RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
+    RpcRetryingCaller<Boolean> caller = factory.newCaller();
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
       fail("Expected the bulk load call to fail!");
@@ -431,40 +424,5 @@ public class TestSpaceQuotas {
     }
     assertTrue(
         "Expected to see an exception writing data to a table exceeding its quota", sawError);
-  }
-
-  private ClientServiceCallable<Void> generateFileToLoad(
-      TableName tn, int numFiles, int numRowsPerFile) throws Exception {
-    Connection conn = TEST_UTIL.getConnection();
-    FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Configuration conf = TEST_UTIL.getConfiguration();
-    Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
-    fs.mkdirs(baseDir);
-    final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>();
-    for (int i = 1; i <= numFiles; i++) {
-      Path hfile = new Path(baseDir, "file" + i);
-      TestHRegionServerBulkLoad.createHFile(
-          fs, hfile, Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-          Bytes.toBytes("reject"), numRowsPerFile);
-      famPaths.add(new Pair<>(Bytes.toBytes(SpaceQuotaHelperForTests.F1), hfile.toString()));
-    }
-
-    // bulk load HFiles
-    Table table = conn.getTable(tn);
-    final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
-    return new ClientServiceCallable<Void>(conn,
-        tn, Bytes.toBytes("row"), new RpcControllerFactory(conf).newController(), HConstants.PRIORITY_UNSET) {
-      @Override
-      public Void rpcCall() throws Exception {
-        SecureBulkLoadClient secureClient = null;
-        byte[] regionName = getLocation().getRegionInfo().getRegionName();
-        try (Table table = conn.getTable(getTableName())) {
-          secureClient = new SecureBulkLoadClient(conf, table);
-          secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-                true, null, bulkToken);
-        }
-        return null;
-      }
-    };
   }
 }

@@ -138,6 +138,7 @@ import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
@@ -2644,6 +2645,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // Set down the memstore size by amount of flush.
       this.decrMemStoreSize(prepareResult.totalFlushableSize);
+
+      // Increase the size of this Region for the purposes of quota. Noop if quotas are disabled.
+      // During startup, quota manager may not be initialized yet.
+      if (rsServices != null) {
+        RegionServerSpaceQuotaManager quotaManager = rsServices.getRegionServerSpaceQuotaManager();
+        if (quotaManager != null) {
+          quotaManager.getRegionSizeStore().incrementRegionSize(
+              this.getRegionInfo(), flushedOutputFileSize);
+        }
+      }
 
       if (wal != null) {
         // write flush marker to WAL. If fail, we should throw DroppedSnapshotException

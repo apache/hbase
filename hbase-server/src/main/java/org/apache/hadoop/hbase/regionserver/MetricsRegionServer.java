@@ -46,6 +46,7 @@ public class MetricsRegionServer {
   private MetricsRegionServerSource serverSource;
   private MetricsRegionServerWrapper regionServerWrapper;
   private RegionServerTableMetrics tableMetrics;
+  private MetricsRegionServerQuotaSource quotaSource;
 
   private MetricRegistry metricRegistry;
   private Timer bulkLoadTimer;
@@ -62,6 +63,8 @@ public class MetricsRegionServer {
 
     // create and use metrics from the new hbase-metrics based registry.
     bulkLoadTimer = metricRegistry.timer("Bulkload");
+
+    quotaSource = CompatibilitySingletonFactory.getInstance(MetricsRegionServerQuotaSource.class);
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -210,5 +213,19 @@ public class MetricsRegionServer {
 
   public void updateBulkLoad(long millis) {
     this.bulkLoadTimer.updateMillis(millis);
+  }
+
+  /**
+   * @see MetricsRegionServerQuotaSource#incrementNumRegionSizeReportsSent(long)
+   */
+  public void incrementNumRegionSizeReportsSent(long numReportsSent) {
+    quotaSource.incrementNumRegionSizeReportsSent(numReportsSent);
+  }
+
+  /**
+   * @see MetricsRegionServerQuotaSource#incrementRegionSizeReportingChoreTime(long)
+   */
+  public void incrementRegionSizeReportingChoreTime(long time) {
+    quotaSource.incrementRegionSizeReportingChoreTime(time);
   }
 }

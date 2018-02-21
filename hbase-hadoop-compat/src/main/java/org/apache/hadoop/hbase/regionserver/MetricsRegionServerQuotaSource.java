@@ -28,6 +28,14 @@ public interface MetricsRegionServerQuotaSource extends BaseSource {
   String METRICS_DESCRIPTION = "Metrics about HBase RegionServer Quotas";
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
+  String NUM_TABLES_IN_VIOLATION_NAME = "numTablesInViolation";
+  String NUM_SPACE_SNAPSHOTS_RECEIVED_NAME = "numSpaceSnapshotsReceived";
+  String FILE_SYSTEM_UTILIZATION_CHORE_TIME = "fileSystemUtilizationChoreTime";
+  String SPACE_QUOTA_REFRESHER_CHORE_TIME = "spaceQuotaRefresherChoreTime";
+
+  String NUM_REGION_SIZE_REPORT_NAME = "numRegionSizeReports";
+  String REGION_SIZE_REPORTING_CHORE_TIME_NAME = "regionSizeReportingChoreTime";
+
   /**
    * Updates the metric tracking how many tables this RegionServer has marked as in violation
    * of their space quota.
@@ -57,4 +65,20 @@ public interface MetricsRegionServerQuotaSource extends BaseSource {
    * @param time The execution time of the chore in milliseconds.
    */
   void incrementSpaceQuotaRefresherChoreTime(long time);
+
+  /**
+   * Updates the metric tracking how many region size reports were sent from this RegionServer to
+   * the Master. These reports contain information on the size of each Region hosted locally.
+   *
+   * @param numReportsSent The number of region size reports sent
+   */
+  void incrementNumRegionSizeReportsSent(long numReportsSent);
+
+  /**
+   * Updates the metric tracking how much time was spent sending region size reports to the Master
+   * by the RegionSizeReportingChore.
+   *
+   * @param time The execution time in milliseconds.
+   */
+  void incrementRegionSizeReportingChoreTime(long time);
 }

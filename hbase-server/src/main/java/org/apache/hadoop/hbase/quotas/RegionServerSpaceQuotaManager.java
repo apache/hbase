@@ -55,6 +55,8 @@ public class RegionServerSpaceQuotaManager {
   private boolean started = false;
   private final ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
   private SpaceViolationPolicyEnforcementFactory factory;
+  private RegionSizeStore regionSizeStore;
+  private RegionSizeReportingChore regionSizeReporter;
 
   public RegionServerSpaceQuotaManager(RegionServerServices rsServices) {
     this(rsServices, SpaceViolationPolicyEnforcementFactory.getInstance());
@@ -67,6 +69,8 @@ public class RegionServerSpaceQuotaManager {
     this.factory = factory;
     this.enforcedPolicies = new ConcurrentHashMap<>();
     this.currentQuotaSnapshots = new AtomicReference<>(new HashMap<>());
+    // Initialize the size store to not track anything -- create the real one if we're start()'ed
+    this.regionSizeStore = NoOpRegionSizeStore.getInstance();
   }
 
   public synchronized void start() throws IOException {
@@ -79,8 +83,13 @@ public class RegionServerSpaceQuotaManager {
       LOG.warn("RegionServerSpaceQuotaManager has already been started!");
       return;
     }
+    // Start the chores
     this.spaceQuotaRefresher = new SpaceQuotaRefresherChore(this, rsServices.getClusterConnection());
     rsServices.getChoreService().scheduleChore(spaceQuotaRefresher);
+    this.regionSizeReporter = new RegionSizeReportingChore(rsServices);
+    rsServices.getChoreService().scheduleChore(regionSizeReporter);
+    // Instantiate the real RegionSizeStore
+    this.regionSizeStore = RegionSizeStoreFactory.getInstance().createStore();
     started = true;
   }
 
@@ -88,6 +97,10 @@ public class RegionServerSpaceQuotaManager {
     if (spaceQuotaRefresher != null) {
       spaceQuotaRefresher.cancel();
       spaceQuotaRefresher = null;
+    }
+    if (regionSizeReporter != null) {
+      regionSizeReporter.cancel();
+      regionSizeReporter = null;
     }
     started = false;
   }
@@ -209,6 +222,15 @@ public class RegionServerSpaceQuotaManager {
       return enforcement.areCompactionsDisabled();
     }
     return false;
+  }
+
+  /**
+   * Returns the {@link RegionSizeStore} tracking filesystem utilization by each region.
+   *
+   * @return A {@link RegionSizeStore} implementation.
+   */
+  public RegionSizeStore getRegionSizeStore() {
+    return regionSizeStore;
   }
 
   /**

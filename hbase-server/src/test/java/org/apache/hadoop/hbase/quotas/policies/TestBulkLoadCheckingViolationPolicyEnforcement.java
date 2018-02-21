@@ -78,7 +78,7 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
 
     policy.initialize(rss, tableName, snapshot);
 
-    policy.checkBulkLoad(fs, paths);
+    policy.computeBulkLoadSize(fs, paths);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -97,7 +97,7 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     policy.initialize(rss, tableName, snapshot);
 
     // If the file to bulk load isn't a file, this should throw an exception
-    policy.checkBulkLoad(fs, paths);
+    policy.computeBulkLoadSize(fs, paths);
   }
 
   @Test(expected = SpaceLimitingException.class)
@@ -120,7 +120,7 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
 
     policy.initialize(rss, tableName, snapshot);
 
-    policy.checkBulkLoad(fs, paths);
+    policy.computeBulkLoadSize(fs, paths);
   }
 
   @Test(expected = SpaceLimitingException.class)
@@ -143,6 +143,6 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
 
     policy.initialize(rss, tableName, snapshot);
 
-    policy.checkBulkLoad(fs, paths);
+    policy.computeBulkLoadSize(fs, paths);
   }
 }

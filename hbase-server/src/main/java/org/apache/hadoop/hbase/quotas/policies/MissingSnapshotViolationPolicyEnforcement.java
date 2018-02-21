@@ -45,7 +45,13 @@ public class MissingSnapshotViolationPolicyEnforcement extends AbstractViolation
   }
 
   @Override
-  public void checkBulkLoad(FileSystem fs, List<String> paths) {}
+  public long computeBulkLoadSize(FileSystem fs, List<String> paths) throws SpaceLimitingException {
+    long size = 0;
+    for (String path : paths) {
+      size += getFileSize(fs, path);
+    }
+    return size;
+  }
 
   @Override
   public void enable() throws IOException {}

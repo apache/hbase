@@ -16,10 +16,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -36,7 +34,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A chore which computes the size of each {@link HRegion} on the FileSystem hosted by the given {@link HRegionServer}.
+ * A chore which computes the size of each {@link HRegion} on the FileSystem hosted by the given
+ * {@link HRegionServer}. The results of this computation are stored in the
+ * {@link RegionServerSpaceQuotaManager}'s {@link RegionSizeStore} object.
  */
 @InterfaceAudience.Private
 public class FileSystemUtilizationChore extends ScheduledChore {
@@ -53,9 +53,6 @@ public class FileSystemUtilizationChore extends ScheduledChore {
   static final String FS_UTILIZATION_MAX_ITERATION_DURATION_KEY = "hbase.regionserver.quotas.fs.utilization.chore.max.iteration.millis";
   static final long FS_UTILIZATION_MAX_ITERATION_DURATION_DEFAULT = 5000L;
 
-  private int numberOfCyclesToSkip = 0, prevNumberOfCyclesToSkip = 0;
-  private static final int CYCLE_UPPER_BOUND = 32;
-
   private final HRegionServer rs;
   private final long maxIterationMillis;
   private Iterator<Region> leftoverRegions;
@@ -70,11 +67,7 @@ public class FileSystemUtilizationChore extends ScheduledChore {
 
   @Override
   protected void chore() {
-    if (numberOfCyclesToSkip > 0) {
-      numberOfCyclesToSkip--;
-      return;
-    }
-    final Map<RegionInfo, Long> onlineRegionSizes = new HashMap<>();
+    final RegionSizeStore regionSizeStore = getRegionSizeStore();
     final Set<Region> onlineRegions = new HashSet<>(rs.getRegions());
     // Process the regions from the last run if we have any. If we are somehow having difficulty
     // processing the Regions, we want to avoid creating a backlog in memory of Region objs.
@@ -100,7 +93,7 @@ public class FileSystemUtilizationChore extends ScheduledChore {
       long timeRunning = EnvironmentEdgeManager.currentTime() - start;
       if (timeRunning > maxIterationMillis) {
         LOG.debug("Preempting execution of FileSystemUtilizationChore because it exceeds the"
-            + " maximum iteration configuration value. Will process remaining iterators"
+            + " maximum iteration configuration value. Will process remaining Regions"
             + " on a subsequent invocation.");
         setLeftoverRegions(iterator);
         break;
@@ -124,7 +117,7 @@ public class FileSystemUtilizationChore extends ScheduledChore {
         continue;
       }
       final long sizeInBytes = computeSize(region);
-      onlineRegionSizes.put(region.getRegionInfo(), sizeInBytes);
+      regionSizeStore.put(region.getRegionInfo(), sizeInBytes);
       regionSizesCalculated++;
     }
     if (LOG.isTraceEnabled()) {
@@ -132,14 +125,6 @@ public class FileSystemUtilizationChore extends ScheduledChore {
           + " of " + offlineRegionsSkipped + " regions due to not being online on this RS, "
           + skippedSplitParents + " regions due to being the parent of a split, and"
           + skippedRegionReplicas + " regions due to being region replicas.");
-    }
-    if (!reportRegionSizesToMaster(onlineRegionSizes)) {
-      // backoff reporting
-      numberOfCyclesToSkip = prevNumberOfCyclesToSkip > 0 ? 2 * prevNumberOfCyclesToSkip : 1;
-      if (numberOfCyclesToSkip > CYCLE_UPPER_BOUND) {
-        numberOfCyclesToSkip = CYCLE_UPPER_BOUND;
-      }
-      prevNumberOfCyclesToSkip = numberOfCyclesToSkip;
     }
   }
 
@@ -176,15 +161,9 @@ public class FileSystemUtilizationChore extends ScheduledChore {
     return regionSize;
   }
 
-  /**
-   * Reports the computed region sizes to the currently active Master.
-   *
-   * @param onlineRegionSizes The computed region sizes to report.
-   * @return {@code false} if FileSystemUtilizationChore should pause reporting to master,
-   *    {@code true} otherwise.
-   */
-  boolean reportRegionSizesToMaster(Map<RegionInfo,Long> onlineRegionSizes) {
-    return this.rs.reportRegionSizesForQuotas(onlineRegionSizes);
+  // VisibleForTesting
+  RegionSizeStore getRegionSizeStore() {
+    return rs.getRegionServerSpaceQuotaManager().getRegionSizeStore();
   }
 
   /**
