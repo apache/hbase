@@ -284,7 +284,7 @@ public class TestLockProcedure {
     sendHeartbeatAndCheckLocked(procId, true);
     Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(2 * HEARTBEAT_TIMEOUT);
+    Thread.sleep(4 * HEARTBEAT_TIMEOUT);
     sendHeartbeatAndCheckLocked(procId, false);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
