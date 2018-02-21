@@ -66,6 +66,8 @@ public class LocalHBaseCluster {
   public static final String LOCAL = "local";
   /** 'local:' */
   public static final String LOCAL_COLON = LOCAL + ":";
+  public static final String ASSIGN_RANDOM_PORTS = "hbase.localcluster.assign.random.ports";
+
   private final Configuration conf;
   private final Class<? extends HMaster> masterClass;
   private final Class<? extends HRegionServer> regionServerClass;
@@ -139,10 +141,15 @@ public class LocalHBaseCluster {
 
     // Always have masters and regionservers come up on port '0' so we don't
     // clash over default ports.
-    conf.set(HConstants.MASTER_PORT, "0");
-    conf.set(HConstants.REGIONSERVER_PORT, "0");
-    if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1) {
-      conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
+    if (conf.getBoolean(ASSIGN_RANDOM_PORTS, true)) {
+      conf.set(HConstants.MASTER_PORT, "0");
+      conf.set(HConstants.REGIONSERVER_PORT, "0");
+      if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1) {
+        conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
+      }
+      if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1) {
+        conf.set(HConstants.MASTER_INFO_PORT, "0");
+      }
     }
 
     this.masterClass = (Class<? extends HMaster>)
