@@ -57,9 +57,9 @@ public class ZKMainServer {
 
     /**
      * Run the command-line args passed.  Calls System.exit when done.
-     * @throws KeeperException
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws KeeperException zookeeper exception
+     * @throws IOException if fail to runCmdLine
+     * @throws InterruptedException unexpected thread exception
      */
     void runCmdLine() throws KeeperException, IOException, InterruptedException {
       processCmd(this.cl);

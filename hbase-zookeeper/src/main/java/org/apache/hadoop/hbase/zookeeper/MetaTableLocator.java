@@ -388,7 +388,7 @@ public class MetaTableLocator {
       service = connection.getAdmin(sn);
     } catch (RetriesExhaustedException e) {
       if (e.getCause() != null && e.getCause() instanceof ConnectException) {
-        // Catch this; presume it means the cached connection has gone bad.
+        LOG.debug("Catch this; presume it means the cached connection has gone bad.");
       } else {
         throw e;
       }
@@ -407,12 +407,12 @@ public class MetaTableLocator {
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
       if (ioe instanceof ConnectException) {
-        // Catch. Connect refused.
+        LOG.debug("Catch. Connect refused.");
       } else if (cause != null && cause instanceof EOFException) {
-        // Catch. Other end disconnected us.
+        LOG.debug("Catch. Other end disconnected us.");
       } else if (cause != null && cause.getMessage() != null &&
         cause.getMessage().toLowerCase(Locale.ROOT).contains("connection reset")) {
-        // Catch. Connection reset.
+        LOG.debug("Catch. Connection reset.");
       } else {
         throw ioe;
       }

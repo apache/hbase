@@ -76,14 +76,14 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   // Used if abortable is null
   private boolean aborted = false;
 
-  public final ZNodePaths znodePaths;
+  protected final ZNodePaths znodePaths;
 
   // listeners to be notified
   private final List<ZKListener> listeners = new CopyOnWriteArrayList<>();
 
   // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
   // negotiation to complete
-  public CountDownLatch saslLatch = new CountDownLatch(1);
+  private CountDownLatch saslLatch = new CountDownLatch(1);
 
   private final Configuration conf;
 
@@ -95,7 +95,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    * @param identifier string that is passed to RecoverableZookeeper to be used as
    *                   identifier for this instance. Use null for default.
    * @throws IOException if the connection to ZooKeeper fails
-   * @throws ZooKeeperConnectionException
+   * @throws ZooKeeperConnectionException if the client can't connect to zookeeper
    */
   public ZKWatcher(Configuration conf, String identifier,
                    Abortable abortable) throws ZooKeeperConnectionException, IOException {
@@ -111,7 +111,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    *          context.
    * @param canCreateBaseZNode true if a base ZNode can be created
    * @throws IOException if the connection to ZooKeeper fails
-   * @throws ZooKeeperConnectionException
+   * @throws ZooKeeperConnectionException if the client can't connect to zookeeper
    */
   public ZKWatcher(Configuration conf, String identifier,
                    Abortable abortable, boolean canCreateBaseZNode)
@@ -517,6 +517,8 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         }
         break;
       }
+      default:
+        throw new IllegalStateException("Received event is not valid: " + event.getState());
     }
   }
 
