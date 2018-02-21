@@ -1373,10 +1373,10 @@ public class HStore implements Store, HeapSize, StoreConfigInformation, Propagat
     writeCompactionWalRecord(filesToCompact, sfs);
     replaceStoreFiles(filesToCompact, sfs);
     if (cr.isMajor()) {
-      majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
+      majorCompactedCellsCount += getCompactionProgress().getTotalCompactingKVs();
       majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
     } else {
-      compactedCellsCount += getCompactionProgress().totalCompactingKVs;
+      compactedCellsCount += getCompactionProgress().getTotalCompactingKVs();
       compactedCellsSize += getCompactionProgress().totalCompactedSize;
     }
     long outputBytes = getTotalSize(sfs);
