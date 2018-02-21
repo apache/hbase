@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -62,6 +63,9 @@ public final class HBaseClassTestRule implements TestRule {
       if (c == SmallTests.class || c == MediumTests.class || c == LargeTests.class) {
         // All tests have a 10minute timeout.
         return TimeUnit.MINUTES.toSeconds(13);
+      }
+      if (c == IntegrationTests.class) {
+        return TimeUnit.MINUTES.toSeconds(Long.MAX_VALUE);
       }
     }
     throw new IllegalArgumentException(

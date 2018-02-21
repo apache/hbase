@@ -22,8 +22,12 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.Description;
 import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunListener.ThreadSafe;
@@ -37,6 +41,12 @@ public class HBaseClassTestRuleChecker extends RunListener {
 
   @Override
   public void testStarted(Description description) throws Exception {
+    Category[] categories = description.getTestClass().getAnnotationsByType(Category.class);
+    for (Class<?> c : categories[0].value()) {
+      if (c == IntegrationTests.class) {
+        return;
+      }
+    }
     for (Field field : description.getTestClass().getFields()) {
       if (Modifier.isStatic(field.getModifiers()) && field.getType() == HBaseClassTestRule.class &&
         field.isAnnotationPresent(ClassRule.class)) {

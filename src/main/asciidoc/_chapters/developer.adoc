@@ -1015,7 +1015,7 @@ The first three categories, `small`, `medium`, and `large`, are for test cases w
 type `$ mvn test`.
 In other words, these three categorizations are for HBase unit tests.
 The `integration` category is not for unit tests, but for integration tests.
-These are run when you invoke `$ mvn verify`.
+These are normally run when you invoke `$ mvn verify`.
 Integration tests are described in <<integration.tests,integration.tests>>.
 
 Keep reading to figure which annotation of the set `small`, `medium`, and `large`
@@ -1042,6 +1042,7 @@ Large Tests (((LargeTests)))::
 Integration Tests (((IntegrationTests)))::
   _Integration_ tests are system level tests.
   See <<integration.tests,integration.tests>> for more info.
+  If you invoke `$ mvn test` on integration tests, there is no timeout for the test.
 
 [[hbase.unittests.cmds]]
 === Running tests
