@@ -58,11 +58,10 @@ public class CellChunkMap extends CellFlatMap {
 
   private final Chunk[] chunks;             // the array of chunks, on which the index is based
 
-  // constant number of cell-representations in a chunk
+  // number of cell-representations in a chunk
+  // depends on the size of the chunks (may be index chunks or regular data chunks)
   // each chunk starts with its own ID following the cells data
-  public static final int NUM_OF_CELL_REPS_IN_CHUNK =
-      (ChunkCreator.getInstance().getChunkSize() - ChunkCreator.SIZEOF_CHUNK_HEADER) /
-          ClassSize.CELL_CHUNK_MAP_ENTRY;
+  private final int numOfCellRepsInChunk;
 
   /**
    * C-tor for creating CellChunkMap from existing Chunk array, which must be ordered
@@ -77,6 +76,12 @@ public class CellChunkMap extends CellFlatMap {
       Chunk[] chunks, int min, int max, boolean descending) {
     super(comparator, min, max, descending);
     this.chunks = chunks;
+    if (chunks != null && chunks.length != 0 && chunks[0] != null) {
+      this.numOfCellRepsInChunk = (chunks[0].size - ChunkCreator.SIZEOF_CHUNK_HEADER) /
+              ClassSize.CELL_CHUNK_MAP_ENTRY;
+    } else { // In case the chunks array was not allocated
+      this.numOfCellRepsInChunk = 0;
+    }
   }
 
   /* To be used by base (CellFlatMap) class only to create a sub-CellFlatMap
@@ -90,9 +95,9 @@ public class CellChunkMap extends CellFlatMap {
   @Override
   protected Cell getCell(int i) {
     // get the index of the relevant chunk inside chunk array
-    int chunkIndex = (i / NUM_OF_CELL_REPS_IN_CHUNK);
+    int chunkIndex = (i / numOfCellRepsInChunk);
     ByteBuffer block = chunks[chunkIndex].getData();// get the ByteBuffer of the relevant chunk
-    int j = i - chunkIndex * NUM_OF_CELL_REPS_IN_CHUNK; // get the index of the cell-representation
+    int j = i - chunkIndex * numOfCellRepsInChunk; // get the index of the cell-representation
 
     // find inside the offset inside the chunk holding the index, skip bytes for chunk id
     int offsetInBytes = ChunkCreator.SIZEOF_CHUNK_HEADER + j* ClassSize.CELL_CHUNK_MAP_ENTRY;

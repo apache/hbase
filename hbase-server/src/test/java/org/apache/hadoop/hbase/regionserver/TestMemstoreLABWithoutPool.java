@@ -148,7 +148,7 @@ public class TestMemstoreLABWithoutPool {
     }
     // all of the chunkIds would have been returned back
     assertTrue("All the chunks must have been cleared",
-        ChunkCreator.INSTANCE.numberOfMappedChunks() == 0);
+        ChunkCreator.instance.numberOfMappedChunks() == 0);
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,

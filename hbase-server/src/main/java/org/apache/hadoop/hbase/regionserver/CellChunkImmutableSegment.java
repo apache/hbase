@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 
-
 /**
  * CellChunkImmutableSegment extends the API supported by a {@link Segment},
  * and {@link ImmutableSegment}. This immutable segment is working with CellSet with
@@ -43,6 +42,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
 
   public static final long DEEP_OVERHEAD_CCM =
       ImmutableSegment.DEEP_OVERHEAD + ClassSize.CELL_CHUNK_MAP;
+  public static final float INDEX_CHUNK_UNUSED_SPACE_PRECENTAGE = 0.1f;
 
   /////////////////////  CONSTRUCTORS  /////////////////////
   /**------------------------------------------------------------------------
@@ -135,20 +135,12 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
   private void initializeCellSet(int numOfCells, MemStoreSegmentsIterator iterator,
       MemStoreCompactionStrategy.Action action) {
 
-    // calculate how many chunks we will need for index
-    int chunkSize = ChunkCreator.getInstance().getChunkSize();
-    int numOfCellsInChunk = CellChunkMap.NUM_OF_CELL_REPS_IN_CHUNK;
-    int numberOfChunks = calculateNumberOfChunks(numOfCells, numOfCellsInChunk);
     int numOfCellsAfterCompaction = 0;
     int currentChunkIdx = 0;
     int offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
     int numUniqueKeys=0;
     Cell prev = null;
-    // all index Chunks are allocated from ChunkCreator
-    Chunk[] chunks = new Chunk[numberOfChunks];
-    for (int i=0; i < numberOfChunks; i++) {
-      chunks[i] = this.getMemStoreLAB().getNewExternalChunk();
-    }
+    Chunk[] chunks = allocIndexChunks(numOfCells);
     while (iterator.hasNext()) {        // the iterator hides the elimination logic for compaction
       boolean alreadyCopied = false;
       Cell c = iterator.next();
@@ -161,7 +153,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
         c = copyCellIntoMSLAB(c);
         alreadyCopied = true;
       }
-      if (offsetInCurentChunk + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkSize) {
+      if (offsetInCurentChunk + ClassSize.CELL_CHUNK_MAP_ENTRY > chunks[currentChunkIdx].size) {
         currentChunkIdx++;              // continue to the next index chunk
         offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
@@ -207,15 +199,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
       int numOfCells, KeyValueScanner segmentScanner, CellSet oldCellSet,
       MemStoreCompactionStrategy.Action action) {
     Cell curCell;
-    // calculate how many chunks we will need for metadata
-    int chunkSize = ChunkCreator.getInstance().getChunkSize();
-    int numOfCellsInChunk = CellChunkMap.NUM_OF_CELL_REPS_IN_CHUNK;
-    int numberOfChunks = calculateNumberOfChunks(numOfCells, numOfCellsInChunk);
-    // all index Chunks are allocated from ChunkCreator
-    Chunk[] chunks = new Chunk[numberOfChunks];
-    for (int i=0; i < numberOfChunks; i++) {
-      chunks[i] = this.getMemStoreLAB().getNewExternalChunk();
-    }
+    Chunk[] chunks = allocIndexChunks(numOfCells);
 
     int currentChunkIdx = 0;
     int offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
@@ -231,7 +215,7 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
           // are copied into MSLAB here.
           curCell = copyCellIntoMSLAB(curCell);
         }
-        if (offsetInCurentChunk + ClassSize.CELL_CHUNK_MAP_ENTRY > chunkSize) {
+        if (offsetInCurentChunk + ClassSize.CELL_CHUNK_MAP_ENTRY > chunks[currentChunkIdx].size) {
           // continue to the next metadata chunk
           currentChunkIdx++;
           offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
@@ -279,12 +263,56 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
     return offset;
   }
 
-  private int calculateNumberOfChunks(int numOfCells, int numOfCellsInChunk) {
-    int numberOfChunks = numOfCells/numOfCellsInChunk;
-    if(numOfCells%numOfCellsInChunk!=0) { // if cells cannot be divided evenly between chunks
+  private int calculateNumberOfChunks(int numOfCells, int chunkSize) {
+    int numOfCellsInChunk = calcNumOfCellsInChunk(chunkSize);
+    int numberOfChunks = numOfCells / numOfCellsInChunk;
+    if(numOfCells % numOfCellsInChunk != 0) { // if cells cannot be divided evenly between chunks
       numberOfChunks++;                   // add one additional chunk
     }
     return numberOfChunks;
+  }
+
+  // Assuming we are going to use regular data chunks as index chunks,
+  // we check here how much free space will remain in the last allocated chunk
+  // (the least occupied one).
+  // If the percentage of its remaining free space is above the INDEX_CHUNK_UNUSED_SPACE
+  // threshold, then we will use index chunks (which are smaller) instead.
+  private ChunkCreator.ChunkType useIndexChunks(int numOfCells) {
+    int dataChunkSize = ChunkCreator.getInstance().getChunkSize();
+    int numOfCellsInChunk = calcNumOfCellsInChunk(dataChunkSize);
+    int cellsInLastChunk = numOfCells % numOfCellsInChunk;
+    if (cellsInLastChunk == 0) { // There is no free space in the last chunk and thus,
+      return ChunkCreator.ChunkType.DATA_CHUNK;               // no need to use index chunks.
+    } else {
+      int chunkSpace = dataChunkSize - ChunkCreator.SIZEOF_CHUNK_HEADER;
+      int freeSpaceInLastChunk = chunkSpace - cellsInLastChunk * ClassSize.CELL_CHUNK_MAP_ENTRY;
+      if (freeSpaceInLastChunk > INDEX_CHUNK_UNUSED_SPACE_PRECENTAGE * chunkSpace) {
+        return ChunkCreator.ChunkType.INDEX_CHUNK;
+      }
+      return ChunkCreator.ChunkType.DATA_CHUNK;
+    }
+  }
+
+  private int calcNumOfCellsInChunk(int chunkSize) {
+    int chunkSpace = chunkSize - ChunkCreator.SIZEOF_CHUNK_HEADER;
+    int numOfCellsInChunk = chunkSpace / ClassSize.CELL_CHUNK_MAP_ENTRY;
+    return numOfCellsInChunk;
+  }
+
+  private Chunk[] allocIndexChunks(int numOfCells) {
+    // Decide whether to use regular or small chunks and then
+    // calculate how many chunks we will need for index
+
+    ChunkCreator.ChunkType chunkType = useIndexChunks(numOfCells);
+    int chunkSize = ChunkCreator.getInstance().getChunkSize(chunkType);
+    int numberOfChunks = calculateNumberOfChunks(numOfCells, chunkSize);
+    // all index Chunks are allocated from ChunkCreator
+    Chunk[] chunks = new Chunk[numberOfChunks];
+    // all index Chunks are allocated from ChunkCreator
+    for (int i = 0; i < numberOfChunks; i++) {
+      chunks[i] = this.getMemStoreLAB().getNewExternalChunk(chunkType);
+    }
+    return chunks;
   }
 
   private Cell copyCellIntoMSLAB(Cell cell) {
