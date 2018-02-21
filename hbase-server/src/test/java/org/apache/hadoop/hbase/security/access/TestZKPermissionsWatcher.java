@@ -44,8 +44,8 @@ import org.junit.experimental.categories.Category;
  * Test the reading and writing of access permissions to and from zookeeper.
  */
 @Category(LargeTests.class)
-public class TestZKPermissionWatcher {
-  private static final Log LOG = LogFactory.getLog(TestZKPermissionWatcher.class);
+public class TestZKPermissionsWatcher {
+  private static final Log LOG = LogFactory.getLog(TestZKPermissionsWatcher.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableAuthManager AUTH_A;
   private static TableAuthManager AUTH_B;
