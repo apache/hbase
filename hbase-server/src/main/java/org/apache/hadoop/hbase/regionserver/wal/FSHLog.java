@@ -298,7 +298,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   @Override
-  protected long doReplaceWriter(Path oldPath, Path newPath, Writer nextWriter) throws IOException {
+  protected void doReplaceWriter(Path oldPath, Path newPath, Writer nextWriter) throws IOException {
     // Ask the ring buffer writer to pause at a safe point. Once we do this, the writer
     // thread will eventually pause. An error hereafter needs to release the writer thread
     // regardless -- hence the finally block below. Note, this method is called from the FSHLog
@@ -320,7 +320,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       zigzagLatch = this.ringBufferEventHandler.attainSafePoint();
     }
     afterCreatingZigZagLatch();
-    long oldFileLen = 0L;
     try {
       // Wait on the safe point to be achieved. Send in a sync in case nothing has hit the
       // ring buffer between the above notification of writer that we want it to go to
@@ -343,6 +342,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         LOG.warn(
           "Failed sync-before-close but no outstanding appends; closing WAL" + e.getMessage());
       }
+      long oldFileLen = 0L;
       // It is at the safe point. Swap out writer from under the blocked writer thread.
       // TODO: This is close is inline with critical section. Should happen in background?
       if (this.writer != null) {
@@ -363,6 +363,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           }
         }
       }
+      logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
       this.writer = nextWriter;
       if (nextWriter != null && nextWriter instanceof ProtobufLogWriter) {
         this.hdfs_out = ((ProtobufLogWriter) nextWriter).getStream();
@@ -397,7 +398,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         }
       }
     }
-    return oldFileLen;
   }
 
   @Override

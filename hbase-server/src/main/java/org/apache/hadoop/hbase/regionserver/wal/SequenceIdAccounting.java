@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
-import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,25 +27,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ImmutableByteArray;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ImmutableByteArray;
+
+import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
+ * <p>
  * Accounting of sequence ids per region and then by column family. So we can our accounting
  * current, call startCacheFlush and then finishedCacheFlush or abortCacheFlush so this instance can
  * keep abreast of the state of sequence id persistence. Also call update per append.
+ * </p>
  * <p>
  * For the implementation, we assume that all the {@code encodedRegionName} passed in is gotten by
- * {@link HRegionInfo#getEncodedNameAsBytes()}. So it is safe to use it as a hash key. And for
- * family name, we use {@link ImmutableByteArray} as key. This is because hash based map is much
- * faster than RBTree or CSLM and here we are on the critical write path. See HBASE-16278 for more
- * details.
+ * {@link org.apache.hadoop.hbase.client.RegionInfo#getEncodedNameAsBytes()}. So it is safe to use
+ * it as a hash key. And for family name, we use {@link ImmutableByteArray} as key. This is because
+ * hash based map is much faster than RBTree or CSLM and here we are on the critical write path. See
+ * HBASE-16278 for more details.
+ * </p>
  */
 @InterfaceAudience.Private
 class SequenceIdAccounting {
@@ -93,14 +94,17 @@ class SequenceIdAccounting {
    */
   private final Map<byte[], Map<ImmutableByteArray, Long>> flushingSequenceIds = new HashMap<>();
 
- /**
-  * Map of region encoded names to the latest/highest region sequence id.  Updated on each
-  * call to append.
-  * <p>
-  * This map uses byte[] as the key, and uses reference equality. It works in our use case as we
-  * use {@link HRegionInfo#getEncodedNameAsBytes()} as keys. For a given region, it always returns
-  * the same array.
-  */
+  /**
+   * <p>
+   * Map of region encoded names to the latest/highest region sequence id. Updated on each call to
+   * append.
+   * </p>
+   * <p>
+   * This map uses byte[] as the key, and uses reference equality. It works in our use case as we
+   * use {@link org.apache.hadoop.hbase.client.RegionInfo#getEncodedNameAsBytes()} as keys. For a
+   * given region, it always returns the same array.
+   * </p>
+   */
   private Map<byte[], Long> highestSequenceIds = new HashMap<>();
 
   /**
