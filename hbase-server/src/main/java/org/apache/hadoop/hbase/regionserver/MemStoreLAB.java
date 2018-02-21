@@ -52,6 +52,8 @@ public interface MemStoreLAB {
 
   String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
   int CHUNK_SIZE_DEFAULT = 2048 * 1024;
+  String INDEX_CHUNK_PERCENTAGE_KEY = "hbase.hregion.memstore.mslab.indexchunksize";
+  float INDEX_CHUNK_PERCENTAGE_DEFAULT = 0.1f;
   String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
   int MAX_ALLOC_DEFAULT = 256 * 1024; // allocs bigger than this don't go through
                                                    // allocator
@@ -94,25 +96,19 @@ public interface MemStoreLAB {
    */
   void decScannerCount();
 
-  /* Creating chunk to be used as index chunk in CellChunkMap, part of the chunks array.
-  ** Returning a new chunk, without replacing current chunk,
+  /* Returning a new pool chunk, without replacing current chunk,
   ** meaning MSLABImpl does not make the returned chunk as CurChunk.
   ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers
+  ** The interface is only for external callers.
   */
-  Chunk getNewExternalChunk();
+  Chunk getNewExternalChunk(ChunkCreator.ChunkType chunkType);
 
-  /* Creating chunk to be used as data chunk in CellChunkMap.
-  ** This chunk is bigger than normal constant chunk size, and thus called JumboChunk it is used for
-  ** jumbo cells (which size is bigger than normal chunks).
-  ** Jumbo Chunks are needed only for CCM and thus are created only in
-  ** CompactingMemStore.IndexType.CHUNK_MAP type.
-  ** Returning a new chunk, without replacing current chunk,
+  /* Returning a new chunk, without replacing current chunk,
   ** meaning MSLABImpl does not make the returned chunk as CurChunk.
   ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers
+  ** The interface is only for external callers.
   */
-  Chunk getNewExternalJumboChunk(int size);
+  Chunk getNewExternalChunk(int size);
 
   static MemStoreLAB newInstance(Configuration conf) {
     MemStoreLAB memStoreLAB = null;

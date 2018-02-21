@@ -206,8 +206,8 @@ public class TestMemStoreLAB {
       MemStoreLABImpl mslab = new MemStoreLABImpl();
       // by default setting, there should be no chunks initialized in the pool
       assertTrue(mslab.getPooledChunks().isEmpty());
-      oldInstance = ChunkCreator.INSTANCE;
-      ChunkCreator.INSTANCE = null;
+      oldInstance = ChunkCreator.instance;
+      ChunkCreator.instance = null;
       // reset mslab with chunk pool
       Configuration conf = HBaseConfiguration.create();
       conf.setDouble(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.1);
@@ -251,7 +251,7 @@ public class TestMemStoreLAB {
       }
       // none of the chunkIds would have been returned back
       assertTrue("All the chunks must have been cleared",
-          ChunkCreator.INSTANCE.numberOfMappedChunks() != 0);
+          ChunkCreator.instance.numberOfMappedChunks() != 0);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
@@ -261,7 +261,7 @@ public class TestMemStoreLAB {
           + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
           pooledChunksNum-queueLength == 0);
     } finally {
-      ChunkCreator.INSTANCE = oldInstance;
+      ChunkCreator.instance = oldInstance;
     }
   }
 

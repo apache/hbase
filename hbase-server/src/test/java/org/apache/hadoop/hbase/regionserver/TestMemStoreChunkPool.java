@@ -233,10 +233,10 @@ public class TestMemStoreChunkPool {
     final int chunkSize = 40;
     final int valSize = 7;
     ChunkCreator oldCreator = ChunkCreator.getInstance();
-    ChunkCreator newCreator = new ChunkCreator(chunkSize, false, 400, 1, 0.5f, null);
+    ChunkCreator newCreator = new ChunkCreator(chunkSize, false, 400, 1, 0.5f, null, 0);
     assertEquals(initialCount, newCreator.getPoolSize());
     assertEquals(maxCount, newCreator.getMaxCount());
-    ChunkCreator.INSTANCE = newCreator;// Replace the global ref with the new one we created.
+    ChunkCreator.instance = newCreator;// Replace the global ref with the new one we created.
                                              // Used it for the testing. Later in finally we put
                                              // back the original
     final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
@@ -265,7 +265,7 @@ public class TestMemStoreChunkPool {
       t3.join();
       assertTrue(newCreator.getPoolSize() <= maxCount);
     } finally {
-      ChunkCreator.INSTANCE = oldCreator;
+      ChunkCreator.instance = oldCreator;
     }
   }
 }
